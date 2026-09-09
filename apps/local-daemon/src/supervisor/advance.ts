@@ -8,14 +8,16 @@ import {
   updateCompeteGroupBase,
   type RunRow,
 } from "@otomat/db";
-import { readyPlanWork, type RunPlanCompetitor } from "@otomat/domain";
+import { isRunWorking, readyPlanWork, type RunPlanCompetitor } from "@otomat/domain";
 
 import type { WorktreeRecord } from "#git";
 
 import { failIdleRun, failureReason } from "./fail-run.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { spawnTurn } from "./lifecycle.js";
+import { finishSettle } from "./pass-boundary.js";
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
+import { settleRun } from "./settle/index.js";
 import { hasRunActivity, trackPending, type SupervisorState } from "./state.js";
 import { driveCompeteGroupTo } from "./transitions.js";
 import { insertTurn, scheduleTurn } from "./turn-scheduling.js";
@@ -35,13 +37,13 @@ async function startCompeteGroup(
   run: RunRow,
   groupId: string,
   competitors: readonly RunPlanCompetitor[],
-): Promise<void> {
+): Promise<boolean> {
   const group = getCompeteGroup(state.db, groupId);
   if (!group) throw new Error(`run ${run.id} compete group ${groupId} is missing`);
   const sessions = listAgentSessionsForRun(state.db, run.id);
   const sessionStepIds = new Set(sessions.map((session) => session.step_run_id));
   const unstarted = competitors.filter((competitor) => !sessionStepIds.has(competitor.id));
-  if (unstarted.length === 0) return;
+  if (unstarted.length === 0) return false;
 
   const binding = state.repositories.forRepository(run.repository_id);
   if (!binding) throw new Error(`run ${run.id} compete group requires a Git repository`);
@@ -93,6 +95,7 @@ async function startCompeteGroup(
   }
   const launches = contexts.map((ctx) => scheduleTurn(state, ctx));
   await launches[0];
+  return true;
 }
 
 /** Starts the next ready plan node; a compete node schedules all candidates under the global semaphore. */
@@ -105,8 +108,7 @@ export async function startNextReadyStep(state: SupervisorState, run: RunRow): P
   );
   if (next === null) return false;
   if (next.kind === "compete") {
-    await startCompeteGroup(state, run, next.group.id, next.competitors);
-    return true;
+    return startCompeteGroup(state, run, next.group.id, next.competitors);
   }
 
   const ctx = insertTurn(state, run, next.step, canonicalWorktreePath(state, run));
@@ -114,16 +116,33 @@ export async function startNextReadyStep(state: SupervisorState, run: RunRow): P
   return true;
 }
 
-/** Background variant of `startNextReadyStep`: the caller never waits for a slot, and a failure fails the run. */
+/** A working run whose plan can no longer move would keep its status until the next boot reconciliation. */
+function convergeIdleRun(state: SupervisorState, runId: string): void {
+  const current = getRun(state.db, runId);
+  if (!current || !isRunWorking(current.status) || hasRunActivity(state, runId)) return;
+  // No live turn to judge: a session row an earlier settle left open must not be re-settled as this run's turn.
+  const outcome = settleRun(state.db, state.dataDir, current, {
+    mode: "live",
+    turn: null,
+    now: new Date().toISOString(),
+  });
+  if (outcome === null) return;
+  console.log(`[otomat] run ${runId} had no step left to start; converged: ${outcome.reason}`);
+  finishSettle(state, outcome);
+}
+
+export async function startNextStepOrConverge(state: SupervisorState, run: RunRow): Promise<void> {
+  if (!(await startNextReadyStep(state, run))) convergeIdleRun(state, run.id);
+}
+
+/** Background variant of `startNextStepOrConverge`: the caller never waits for a slot, and a failure fails the run. */
 export function scheduleNextStep(state: SupervisorState, run: RunRow): Promise<void> {
   return trackPending(
     state,
-    startNextReadyStep(state, run)
-      .then(() => undefined)
-      .catch((error: unknown) => {
-        console.error(`[otomat] run ${run.id} failed to start its next step`, error);
-        failIdleRun(state, run.id, `next work failed to start: ${failureReason(error)}`);
-      }),
+    startNextStepOrConverge(state, run).catch((error: unknown) => {
+      console.error(`[otomat] run ${run.id} failed to start its next step`, error);
+      failIdleRun(state, run.id, `next work failed to start: ${failureReason(error)}`);
+    }),
   );
 }
 
@@ -137,7 +156,7 @@ export async function advanceRun(state: SupervisorState, runId: string): Promise
 
   state.advancing.add(runId);
   try {
-    await startNextReadyStep(state, run);
+    await startNextStepOrConverge(state, run);
   } catch (error) {
     console.error(`[otomat] run ${runId} failed to start its next work`, error);
     failIdleRun(state, runId, `next work failed to start: ${failureReason(error)}`);

@@ -14,8 +14,8 @@ export interface SettleOptions {
   mode: "live" | "boot";
   /** Exit observed live by the parent; recorded as the session's exit accounting. */
   observedExit?: ProcessExit;
-  /** The live-tracked turn; a follow-up runs on an already-terminal step/session so it cannot be derived from rows — boot omits it. */
-  turn?: { agentSessionId: string };
+  /** The live-tracked turn; a follow-up runs on an already-terminal step/session so it cannot be derived from rows — boot omits it, and `null` says this settle judges the plan, not a turn. */
+  turn?: { agentSessionId: string } | null;
   now: string;
 }
 
@@ -61,11 +61,13 @@ function findActiveSession(sessions: readonly AgentSessionRow[]): AgentSessionRo
   return null;
 }
 
-/** The session this settle judges: the explicitly tracked turn's, else the one still open. */
+/** The session this settle judges: the explicitly tracked turn's, the one still open when the caller cannot name it, and none at all when it states there is no turn. */
 export function resolveTurnSession(
   sessions: readonly AgentSessionRow[],
   turn: { agentSessionId: string } | null | undefined,
 ): AgentSessionRow | null {
-  if (turn) return sessions.find((session) => session.id === turn.agentSessionId) ?? null;
-  return findActiveSession(sessions);
+  if (turn === undefined) return findActiveSession(sessions);
+  return turn === null
+    ? null
+    : (sessions.find((session) => session.id === turn.agentSessionId) ?? null);
 }

@@ -9,11 +9,11 @@ import {
   type CompeteGroupRow,
   type RunRow,
 } from "@otomat/db";
-import { allStepsSucceeded, readyPlanWork } from "@otomat/domain";
 
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
-import { hasRunActivity, type SupervisorState } from "./state.js";
-import { driveCompeteGroupTo, driveRunTo } from "./transitions.js";
+import { resolveIdleRun } from "./settle/idle.js";
+import type { SupervisorState } from "./state.js";
+import { driveCompeteGroupTo, driveIdleRunTo, driveRunTo } from "./transitions.js";
 import type { ReconcileOutcome } from "./types.js";
 
 interface PromotionTarget {
@@ -48,26 +48,13 @@ function archiveCandidates(state: SupervisorState, run: RunRow, groupId: string)
   }
 }
 
-/** Rests a run whose whole plan is now satisfied; a run with work left stays `running` for the scheduler. */
-function finishSelectedGroup(state: SupervisorState, run: RunRow): void {
-  const current = getRun(state.db, run.id);
-  if (!current || current.status !== "running" || hasRunActivity(state, run.id)) return;
-  const steps = listStepRunsForRun(state.db, run.id);
-  const groups = listCompeteGroupsForRun(state.db, run.id);
-  if (allStepsSucceeded(current.plan_json, stepStatuses(steps), competeGroupStatuses(groups))) {
-    driveRunTo(state.db, run.id, current.status, "review_ready", new Date().toISOString());
-  }
-}
-
-/** Archives every candidate worktree, rests a satisfied run, then runs the post-turn composition so the queues the selection suppressed get routed. */
+/** Archives every candidate worktree, then runs the post-turn composition: it rests the run before delivery, which only routes on a follow-up state. */
 async function unlockAfterSelection(
   state: SupervisorState,
   run: RunRow,
   groupId: string,
 ): Promise<void> {
   archiveCandidates(state, run, groupId);
-  // Resting must precede the composition: delivery only routes on a follow-up state.
-  finishSelectedGroup(state, run);
   await state.advance?.(run.id);
 }
 
@@ -110,13 +97,18 @@ function restRecoveredRun(state: SupervisorState, runId: string): void {
   const run = getRun(state.db, runId);
   if (!run || run.status !== "running") return;
   const steps = listStepRunsForRun(state.db, run.id);
-  const groups = listCompeteGroupsForRun(state.db, run.id);
-  const statuses = stepStatuses(steps);
-  const groupStates = competeGroupStatuses(groups);
-  let target: "review_ready" | "awaiting_human" | "failed" = "failed";
-  if (allStepsSucceeded(run.plan_json, statuses, groupStates)) target = "review_ready";
-  else if (readyPlanWork(run.plan_json, statuses, groupStates)) target = "awaiting_human";
-  driveRunTo(state.db, run.id, run.status, target, new Date().toISOString());
+  const resolution = resolveIdleRun(
+    run.plan_json,
+    stepStatuses(steps),
+    competeGroupStatuses(listCompeteGroupsForRun(state.db, run.id)),
+  );
+  driveIdleRunTo(
+    state.db,
+    run,
+    resolution.target,
+    resolution.cancelRemaining ? steps : [],
+    new Date().toISOString(),
+  );
 }
 
 /** Completes a winner reservation interrupted by daemon exit, but never auto-starts dependent work on boot. */

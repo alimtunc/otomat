@@ -137,6 +137,20 @@ it("extends the cycle of a failed run in its own worktree, without a second one"
   expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(1);
 });
 
+it("converges a run whose appended step waits on a dependency that can never succeed", async () => {
+  const { supervisor, spawn } = makeSupervisor(fix, "fail");
+  const run = await supervisor.start({ issue_id: "i-work" });
+  await supervisor.settle();
+  const failed = listStepRunsForRun(fix.db, run.id);
+
+  await supervisor.appendStep(run.id, { ...FIX_STEP, dependsOn: failed.map((step) => step.id) });
+  await supervisor.settle();
+
+  expect(spawn.jobs).toHaveLength(1);
+  expect(getRun(fix.db, run.id)?.status).toBe("failed");
+  expect(listStepRunsForRun(fix.db, run.id).at(-1)?.status).toBe("canceled");
+});
+
 it("refuses a review fix while a turn is in flight — the fix must be the next settlement", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "linger");
   const run = await supervisor.start({ issue_id: "i-work" });

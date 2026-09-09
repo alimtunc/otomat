@@ -862,9 +862,15 @@ the case where the recovery is a new node. An unlinked step that merely succeeds
 next to a failure recovers nothing, which is what keeps a required failure from
 being masked by unrelated work. `settleTurn` and `settleIdleRun` ask the same two
 questions in the same order, so a hot settle and a boot reconciliation land the
-run on the same status. Because a stop cancels every unfinished step, an explicit
-resume requeues them (`requeueCanceledSteps`) and reopens the *earliest* stopped
-step: without that, the reopened step would be the last one the plan could run.
+run on the same status. `resolveIdleRun` is that reading for a run with no live
+turn, and it is the only one: every path that schedules work goes through
+`startNextStepOrConverge`, so a plan with nothing left to start converges at once
+instead of leaving the run working until the next boot, and a recovered compete
+selection rests on the same reading. A step that is merely stopped or waiting on
+a provider quota rests the run rather than finalizing it. Because a stop cancels
+every unfinished step, an explicit resume requeues them (`requeueCanceledSteps`)
+and reopens the *earliest* stopped step: without that, the reopened step would be
+the last one the plan could run.
 
 The ledger says the same thing the rows do. A worker's terminal marker only ever
 spoke for one turn, so every settle that leaves a run resting appends a

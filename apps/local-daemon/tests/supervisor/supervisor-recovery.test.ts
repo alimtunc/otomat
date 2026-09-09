@@ -5,6 +5,7 @@ import { readRunEvents } from "#events";
 import type { AppendStepInput, Supervisor } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { runLandings } from "../support/ledger.js";
 import { seedWorkflowRun } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
@@ -39,10 +40,7 @@ function stepStatus(runId: string, stepId: string): string | undefined {
 
 /** The run's own canonical status as the ledger tells it, which a turn's terminal marker never speaks for. */
 function landedStatus(runId: string): string | undefined {
-  const status = readRunEvents(fix.db, runId)
-    .filter((event) => event.payload["phase"] === "settled")
-    .at(-1)?.payload["run_status"];
-  return typeof status === "string" ? status : undefined;
+  return runLandings(fix.db, runId).at(-1)?.status;
 }
 
 it("leaves failed when the stale step itself is retried and succeeds", async () => {

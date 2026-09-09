@@ -10,6 +10,7 @@ import {
   listStepRunsForRun,
   schema,
   updateRepositoryInitCommands,
+  updateStepRunStatus,
   writeMaxConcurrentSessions,
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -20,6 +21,7 @@ import { createSupervisor, RunNotResumableError, type Supervisor } from "#superv
 
 import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { runLandings } from "../support/ledger.js";
 import { providerSessionEvent, writeRunEvents } from "../support/run-event-fixtures.js";
 import { deadPid, workerSpawn } from "../support/spawn.js";
 import { makeSupervisor } from "../support/supervisor.js";
@@ -153,6 +155,73 @@ it("runs competitors in isolated worktrees, waits for a winner, then continues o
   ).toSatisfy((worktrees: Array<{ status: string }>) =>
     worktrees.every((worktree) => worktree.status === "archived"),
   );
+});
+
+it("rests the run on the selection when the competition is the plan's last node", async () => {
+  const { supervisor } = makeCompeteSupervisor();
+
+  const run = await supervisor.start({
+    prompt: "the goal",
+    plan: { version: 1, steps: COMPETE_PLAN.steps.slice(0, 1) },
+  });
+  await supervisor.settle();
+
+  const [group] = listCompeteGroupsForRun(fix.db, run.id);
+  const winner = listStepRunsForRun(fix.db, run.id).find((step) => step.name === "Direct");
+  if (!group || !winner) throw new Error("expected frozen compete group");
+  await supervisor.selectWinner(run.id, group.id, winner.id);
+  await supervisor.settle();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
+  expect(runLandings(fix.db, run.id)).toEqual([
+    expect.objectContaining({ status: "awaiting_selection" }),
+    expect.objectContaining({ status: "review_ready" }),
+  ]);
+});
+
+it("rests on the plan, not on a loser's session an earlier settle left open", async () => {
+  const { supervisor } = makeCompeteSupervisor(["complete", "quota"]);
+
+  const run = await supervisor.start({
+    prompt: "the goal",
+    plan: { version: 1, steps: COMPETE_PLAN.steps.slice(0, 1) },
+  });
+  await supervisor.settle();
+
+  const [group] = listCompeteGroupsForRun(fix.db, run.id);
+  const winner = listStepRunsForRun(fix.db, run.id).find((step) => step.name === "Direct");
+  if (!group || !winner) throw new Error("expected frozen compete group");
+  expect(listAgentSessionsForRun(fix.db, run.id).some((session) => session.status === "idle")).toBe(
+    true,
+  );
+
+  await supervisor.selectWinner(run.id, group.id, winner.id);
+  await supervisor.settle();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
+});
+
+it("converges a selection that leaves no startable step instead of staying running", async () => {
+  const { supervisor } = makeCompeteSupervisor();
+
+  const run = await supervisor.start({ prompt: "the goal", plan: COMPETE_PLAN });
+  await supervisor.settle();
+
+  const [group] = listCompeteGroupsForRun(fix.db, run.id);
+  const steps = listStepRunsForRun(fix.db, run.id);
+  const winner = steps.find((step) => step.name === "Direct");
+  const dependent = steps.find((step) => step.name === "Verify");
+  if (!group || !winner || !dependent) throw new Error("expected frozen compete group");
+  updateStepRunStatus(fix.db, dependent.id, "canceled");
+
+  await supervisor.selectWinner(run.id, group.id, winner.id);
+  await supervisor.settle();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("canceled");
+  // The competition's own `awaiting_selection` landing stays; the terminal one is journaled once.
+  expect(
+    runLandings(fix.db, run.id).filter((landing) => landing.status === "canceled"),
+  ).toHaveLength(1);
 });
 
 it("initializes every candidate worktree before its agent starts", async () => {
@@ -398,6 +467,30 @@ it("finishes a reserved promotion after restart without auto-running dependents"
   await restarted.supervisor.settle();
   expect(restarted.spawn.calls).toBe(1);
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
+});
+
+it("leaves no step behind the run a recovered promotion lands terminal", async () => {
+  const first = makeCompeteSupervisor();
+  const run = await first.supervisor.start({ prompt: "the goal", plan: COMPETE_PLAN });
+  await first.supervisor.settle();
+  const [group] = listCompeteGroupsForRun(fix.db, run.id);
+  const steps = listStepRunsForRun(fix.db, run.id);
+  const winner = steps.find((step) => step.name === "Direct");
+  const loser = steps.find((step) => step.name === "Layered");
+  const dependent = steps.find((step) => step.name === "Verify");
+  if (!group || !winner || !loser || !dependent) throw new Error("expected winner candidate");
+  updateStepRunStatus(fix.db, loser.id, "awaiting_human");
+  updateStepRunStatus(fix.db, dependent.id, "canceled");
+  claimCompeteWinner(fix.db, group.id, winner.id);
+
+  makeCompeteSupervisor().supervisor.reconcile();
+
+  expect(getRun(fix.db, run.id)?.status).toBe("canceled");
+  expect(listStepRunsForRun(fix.db, run.id).map((step) => step.status)).toEqual([
+    "succeeded",
+    "canceled",
+    "canceled",
+  ]);
 });
 
 it("fails a reserved promotion instead of selecting it when the repository is unavailable", async () => {
