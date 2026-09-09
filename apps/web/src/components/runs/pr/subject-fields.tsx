@@ -1,4 +1,10 @@
-import { COMMIT_TYPES, commitScopeViolation, commitSummaryViolation } from "@otomat/domain";
+import {
+  COMMIT_SUBJECT_MAX_LENGTH,
+  COMMIT_TYPES,
+  commitScopeViolation,
+  commitSummaryBudget,
+  commitSummaryViolation,
+} from "@otomat/domain";
 import {
   Field,
   FieldControl,
@@ -16,11 +22,20 @@ import { fieldErrorProps } from "@web/lib/form";
 export interface PullRequestSubjectFieldsProps {
   form: PullRequestFormApi;
   disabled: boolean;
+  generationRefusal: string | null;
 }
 
 const TYPE_ITEMS = COMMIT_TYPES.map((type) => ({ value: type, label: type }));
 
-export function PullRequestSubjectFields({ form, disabled }: PullRequestSubjectFieldsProps) {
+function summaryHint(budget: number): string {
+  return `Otomat commits \`type(scope): summary\` — that subject is limited to ${String(COMMIT_SUBJECT_MAX_LENGTH)} characters, leaving ${String(budget)} for the summary. The PR title adds the issue reference.`;
+}
+
+export function PullRequestSubjectFields({
+  form,
+  disabled,
+  generationRefusal,
+}: PullRequestSubjectFieldsProps) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-3">
@@ -73,36 +88,51 @@ export function PullRequestSubjectFields({ form, disabled }: PullRequestSubjectF
           )}
         </form.Field>
       </div>
-      <form.Field
-        name="summary"
-        validators={{
-          onChangeListenTo: ["type", "scope"],
-          onChange: ({ value, fieldApi }) =>
-            commitSummaryViolation({
-              type: fieldApi.form.getFieldValue("type"),
-              scope: fieldApi.form.getFieldValue("scope").trim() || null,
-              summary: value,
-            }) ?? undefined,
-        }}
+      <form.Subscribe
+        selector={(state) =>
+          commitSummaryBudget({
+            type: state.values.type,
+            scope: state.values.scope.trim() || null,
+          })
+        }
       >
-        {(field) => (
-          <Field
-            hint="Otomat commits `type(scope): summary` and adds the issue reference itself."
-            {...fieldErrorProps(field.state.meta)}
+        {(budget) => (
+          <form.Field
+            name="summary"
+            validators={{
+              onChangeListenTo: ["type", "scope"],
+              onChange: ({ value, fieldApi }) =>
+                commitSummaryViolation({
+                  type: fieldApi.form.getFieldValue("type"),
+                  scope: fieldApi.form.getFieldValue("scope").trim() || null,
+                  summary: value,
+                }) ?? undefined,
+            }}
           >
-            <FieldLabel>Summary</FieldLabel>
-            <FieldControl>
-              <Input
-                value={field.state.value}
-                disabled={disabled}
-                onBlur={field.handleBlur}
-                onChange={(event) => field.handleChange(event.target.value)}
-                placeholder="unify run and workflow composers"
-              />
-            </FieldControl>
-          </Field>
+            {(field) => {
+              const own = fieldErrorProps(field.state.meta);
+              return (
+                <Field
+                  hint={summaryHint(budget)}
+                  invalid={own.invalid || generationRefusal !== null}
+                  error={own.error ?? generationRefusal ?? undefined}
+                >
+                  <FieldLabel>Summary</FieldLabel>
+                  <FieldControl>
+                    <Input
+                      value={field.state.value}
+                      disabled={disabled}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                      placeholder="unify run and workflow composers"
+                    />
+                  </FieldControl>
+                </Field>
+              );
+            }}
+          </form.Field>
         )}
-      </form.Field>
+      </form.Subscribe>
     </div>
   );
 }

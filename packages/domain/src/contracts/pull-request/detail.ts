@@ -29,6 +29,13 @@ export const publishPullRequestRequestSchema = z.strictObject({
 });
 export type PublishPullRequestRequest = z.infer<typeof publishPullRequestRequestSchema>;
 
+export const PR_GENERATION_INVALID_CODE = "pr_generation_invalid";
+
+export const pullRequestGenerationErrorSchema = z.object({
+  error: z.literal(PR_GENERATION_INVALID_CODE),
+  message: z.string().min(1),
+});
+
 /** AI-generated metadata for the run's pull request; every field stays editable, and generating publishes nothing. */
 export const pullRequestProposalSchema = z.object({
   subject: commitSubjectSchema,

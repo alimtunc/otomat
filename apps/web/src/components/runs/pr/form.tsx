@@ -36,6 +36,7 @@ export interface PullRequestFormProps {
   onModeChange: (mode: PullRequestPublicationMode) => void;
   onSubmit: (request: PublishPullRequestRequest) => Promise<boolean>;
   onGenerate: () => Promise<PullRequestProposal | null>;
+  generationRefusal: string | null;
   isPending: boolean;
   isGenerating: boolean;
 }
@@ -55,6 +56,7 @@ export function PullRequestForm({
   onModeChange,
   onSubmit,
   onGenerate,
+  generationRefusal,
   isPending,
   isGenerating,
 }: PullRequestFormProps) {
@@ -84,9 +86,11 @@ export function PullRequestForm({
       }}
     >
       <form.Subscribe
-        selector={(state) => [state.canSubmit, state.isDirty, state.values.mode] as const}
+        selector={(state) =>
+          [state.canSubmit, state.isDirty, state.values.mode, state.values.summary] as const
+        }
       >
-        {([canSubmit, isDirty, mode]) => {
+        {([canSubmit, isDirty, mode, summary]) => {
           const model = publicationModel({
             pullRequest,
             operation,
@@ -96,22 +100,28 @@ export function PullRequestForm({
             mode,
           });
           const busy = model.actionPending || isPending || isGenerating;
+          const refusal = summary.trim() === "" ? generationRefusal : null;
+          const showDetails = customize || refusal !== null;
           // Metadata already written is republished as it stands: a retry never pays the generator twice.
           const composeWithAi =
-            !branchLocked && !customize && !isDirty && pullRequest?.commit_subject == null;
+            !branchLocked && !showDetails && !isDirty && pullRequest?.commit_subject == null;
           return (
             <>
               <Chip>{model.stateLabel}</Chip>
-              <Collapsible open={customize} onOpenChange={onCustomizeChange}>
+              <Collapsible open={showDetails} onOpenChange={onCustomizeChange}>
                 <CollapsibleTrigger
                   render={
                     <Button type="button" variant="ghost" size="sm">
-                      {customize ? "Hide PR details" : "Customize PR"}
+                      {showDetails ? "Hide PR details" : "Customize PR"}
                     </Button>
                   }
                 />
                 <CollapsiblePanel className="flex flex-col gap-4 pt-4">
-                  <PullRequestSubjectFields form={form} disabled={busy} />
+                  <PullRequestSubjectFields
+                    form={form}
+                    disabled={busy}
+                    generationRefusal={refusal}
+                  />
                   <form.Field name="body">
                     {(field) => (
                       <Field hint="Optional description shown on GitHub.">

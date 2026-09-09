@@ -21,6 +21,7 @@ import { PullRequestSummary } from "@web/components/runs/pr/summary";
 import { PullRequestSyncPanel } from "@web/components/runs/pr/sync/panel";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
+import { pullRequestGenerationRefusal } from "@web/lib/pull-request/generation-refusal";
 
 export function RunPrView() {
   const { runId } = useParams({ from: "/runs/$runId/pr" });
@@ -70,6 +71,7 @@ export function RunPrView() {
 
   const headRef = pullRequest?.head_ref ?? null;
   const connection = pullRequestConnectionModel(connectionQuery.data, pullRequest);
+  const generationRefusal = pullRequestGenerationRefusal(generate.error, pullRequest);
 
   return (
     <div className="flex max-w-2xl flex-col gap-4 p-4">
@@ -108,6 +110,7 @@ export function RunPrView() {
         onSubmit={async (request) => {
           try {
             await publish.mutateAsync(request);
+            generate.reset();
             return true;
           } catch {
             return false;
@@ -120,6 +123,7 @@ export function RunPrView() {
             return null;
           }
         }}
+        generationRefusal={generationRefusal}
         isPending={publish.isPending}
         isGenerating={generate.isPending}
       />

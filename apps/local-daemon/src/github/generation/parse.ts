@@ -1,4 +1,4 @@
-import { COMMIT_TYPES } from "@otomat/domain";
+import { COMMIT_TYPES, PR_GENERATION_INVALID_CODE } from "@otomat/domain";
 import { z } from "zod";
 
 import { ISSUE_DELIVERIES } from "../conventions/compose.js";
@@ -40,7 +40,10 @@ function jsonBlock(stdout: string): string {
   const start = stdout.indexOf("{");
   const end = stdout.lastIndexOf("}");
   if (start === -1 || end <= start) {
-    throw new GitHubPublicationError("pr_generation_invalid", "The agent returned no JSON answer.");
+    throw new GitHubPublicationError(
+      PR_GENERATION_INVALID_CODE,
+      "The agent returned no JSON answer.",
+    );
   }
   return stdout.slice(start, end + 1);
 }
@@ -52,14 +55,14 @@ export function parseGenerationOutput(stdout: string): GenerationOutput {
   } catch (error) {
     if (error instanceof GitHubPublicationError) throw error;
     throw new GitHubPublicationError(
-      "pr_generation_invalid",
+      PR_GENERATION_INVALID_CODE,
       "The agent's answer was not valid JSON.",
     );
   }
   const result = generationOutputSchema.safeParse(parsed);
   if (!result.success) {
     throw new GitHubPublicationError(
-      "pr_generation_invalid",
+      PR_GENERATION_INVALID_CODE,
       `The agent's answer must name a type among ${COMMIT_TYPES.join(", ")}, with a summary, description, branch and delivery.`,
     );
   }
