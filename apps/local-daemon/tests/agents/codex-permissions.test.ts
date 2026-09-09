@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, symlinkSync } from "node:fs";
+import { join } from "node:path";
 
 import { insertAgentProfile, updateAgentProfile, writeExecutionDefaults } from "@otomat/db";
 import {
@@ -14,7 +15,7 @@ import { clearProviderProbeCache } from "#runtime";
 import { probeProviderCommand } from "#runtime/probe/command";
 
 import { setupTestDb, type TestDb } from "../support/db.js";
-import { stubFixture } from "../support/stub-harness.js";
+import { STUB_BIN, stubFixture } from "../support/stub-harness.js";
 
 vi.mock("#runtime/probe/command", async (original) => ({
   ...(await original<typeof import("#runtime/probe/command")>()),
@@ -36,6 +37,8 @@ const profile = {
 };
 beforeEach(() => {
   fixture = setupTestDb("otomat-codex-config-");
+  symlinkSync(STUB_BIN, join(fixture.dir, "codex"));
+  vi.stubEnv("PATH", fixture.dir);
   clearProviderProbeCache();
   vi.mocked(probeProviderCommand).mockImplementation((_binary, args) => ({
     status: "ok",
@@ -47,6 +50,7 @@ beforeEach(() => {
   insertAgentProfile(fixture.db, { id: "reviewed", ...profile });
 });
 afterEach(() => {
+  vi.unstubAllEnvs();
   fixture.cleanup();
   clearProviderProbeCache();
   vi.resetAllMocks();
