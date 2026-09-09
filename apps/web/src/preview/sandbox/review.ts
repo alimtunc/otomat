@@ -56,7 +56,7 @@ export const SANDBOX_DIFF: ReviewDiffResponse = {
     deletions: 2,
     sha: DIFF_SHA,
   },
-  scope: { kind: "branch", branch: "otomat/run/sandbox", base_ref: "main" },
+  scope: { kind: "pull_request", number: 412 },
   unavailable: null,
 };
 

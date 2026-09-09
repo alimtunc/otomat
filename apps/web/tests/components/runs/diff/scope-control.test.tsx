@@ -5,6 +5,7 @@ import type { RunDiffStep } from "@web/lib/run/diff-steps";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { reviewDiff } from "#support/diff-file";
 import { BRANCH_SCOPE } from "#support/diff-scope";
 import { findLabelled } from "#support/dom-queries";
 import { mount, type Mounted } from "#support/mount";
@@ -64,6 +65,7 @@ async function openControl(
     <DiffScopeControl
       runId="run-1"
       scope={scope}
+      diff={reviewDiff()}
       steps={STEPS}
       onSelect={(selector) => chosen.push(selector)}
     />,
@@ -107,6 +109,7 @@ it("names the scope the daemon answered with, pull request number included", asy
     <DiffScopeControl
       runId="run-1"
       scope={{ kind: "pull_request", number: 79 }}
+      diff={null}
       steps={STEPS}
       onSelect={(selector) => chosen.push(selector)}
     />,
@@ -121,6 +124,7 @@ it("says the pull request could not be read instead of dropping the choice", asy
     <DiffScopeControl
       runId="run-1"
       scope={BRANCH_SCOPE}
+      diff={null}
       steps={STEPS}
       onSelect={(selector) => chosen.push(selector)}
     />,

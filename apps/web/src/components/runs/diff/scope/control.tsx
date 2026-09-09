@@ -1,4 +1,4 @@
-import type { RunDiffScope, RunDiffScopeSelector } from "@otomat/domain";
+import type { ReviewDiffContract, RunDiffScope, RunDiffScopeSelector } from "@otomat/domain";
 import {
   ConfigMenu,
   ConfigMenuChoice,
@@ -23,11 +23,12 @@ import { useState } from "react";
 export interface DiffScopeControlProps {
   runId: string;
   scope: RunDiffScope;
+  diff: ReviewDiffContract | null;
   steps: readonly RunDiffStep[];
   onSelect: (selector: RunDiffScopeSelector) => void;
 }
 
-export function DiffScopeControl({ runId, scope, steps, onSelect }: DiffScopeControlProps) {
+export function DiffScopeControl({ runId, scope, diff, steps, onSelect }: DiffScopeControlProps) {
   const [open, setOpen] = useState(false);
   const pullRequest = useRunPullRequest(runId);
   // The answered scope keeps its choice on screen even before the read lands, so it never shows unchecked.
@@ -39,7 +40,7 @@ export function DiffScopeControl({ runId, scope, steps, onSelect }: DiffScopeCon
       <ConfigMenuTrigger
         label="Diff scope"
         summary={diffScopeSummary(scope)}
-        detail={diffScopeDetail(scope)}
+        detail={diffScopeDetail(scope, diff)}
         size="xs"
       />
       <ConfigMenuContent align="start" aria-label="Diff scope">

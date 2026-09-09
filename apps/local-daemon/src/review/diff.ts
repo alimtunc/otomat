@@ -1,4 +1,4 @@
-import { BRANCH_DIFF_SCOPE, type RunDiffScopeSelector } from "@otomat/domain";
+import type { RunDiffScopeSelector } from "@otomat/domain";
 
 import type { CanonicalDiff } from "#git";
 
@@ -13,7 +13,7 @@ export function computeDiff(subject: ReviewSubject): CanonicalDiff | null {
 export function getDiff(
   ctx: ReviewContext,
   ref: ReviewSubjectRef,
-  request: RunDiffScopeSelector = BRANCH_DIFF_SCOPE,
+  request: RunDiffScopeSelector,
 ): ReviewDiffResult {
   const resolved = resolveScope(ctx, ref, request);
   return {

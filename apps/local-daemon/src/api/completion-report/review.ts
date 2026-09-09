@@ -1,4 +1,4 @@
-import { reportReviewSchema, type RunCompletionReport } from "@otomat/domain";
+import { BRANCH_DIFF_SCOPE, reportReviewSchema, type RunCompletionReport } from "@otomat/domain";
 
 import type { ReviewService } from "#review";
 
@@ -16,7 +16,7 @@ function projectDiff({
   runId,
 }: ReviewProjectionInput): RunCompletionReport["diff"] {
   try {
-    const diff = review.getDiff({ kind: "run", id: runId }).diff;
+    const diff = review.getDiff({ kind: "run", id: runId }, BRANCH_DIFF_SCOPE).diff;
     if (diff === null) {
       return {
         state: "not_reported",

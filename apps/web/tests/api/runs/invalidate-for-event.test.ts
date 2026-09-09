@@ -26,8 +26,24 @@ it("invalidates the diff cache and completion report on git.diff_updated", () =>
   invalidateForEvent(client, local, "run-1", event("git.diff_updated"));
   expect(keys).toEqual([
     local.runCompletionReport("run-1"),
-    local.reviewDiff({ kind: "run", id: "run-1" }),
+    local.reviewDiffs({ kind: "run", id: "run-1" }),
   ]);
+});
+
+it("invalidates every scope's diff, so the scope the reviewer mounted is never left stale", () => {
+  const { client, keys } = fakeClient();
+  invalidateForEvent(client, local, "run-1", event("pr.updated"));
+  const target = { kind: "run", id: "run-1" } as const;
+  const prefix = local.reviewDiffs(target);
+  for (const scope of [
+    undefined,
+    { kind: "branch" } as const,
+    { kind: "pull_request" } as const,
+    { kind: "commit", commit: "abc" } as const,
+  ]) {
+    expect(local.reviewDiff(target, scope).slice(0, prefix.length)).toEqual(prefix);
+  }
+  expect(keys).toContainEqual(prefix);
 });
 
 it("invalidates the review cache on any review.* event", () => {
@@ -49,7 +65,7 @@ it("invalidates the PR, its diff, the issue and inbox caches on any pr.* event",
   const perEvent = [
     local.runCompletionReport("run-1"),
     local.runPullRequest("run-1"),
-    local.reviewDiff({ kind: "run", id: "run-1" }, { kind: "pull_request" }),
+    local.reviewDiffs({ kind: "run", id: "run-1" }),
     local.issues,
     local.reviews,
     local.inbox,

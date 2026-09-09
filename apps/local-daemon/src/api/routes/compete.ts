@@ -1,5 +1,5 @@
 import { CompeteWinnerConflictError } from "@otomat/db";
-import { selectCompeteWinnerRequestSchema } from "@otomat/domain";
+import { BRANCH_DIFF_SCOPE, selectCompeteWinnerRequestSchema } from "@otomat/domain";
 import { Hono } from "hono";
 
 import type { ApiDeps } from "../deps.js";
@@ -22,7 +22,10 @@ export function createCompeteRoutes(deps: ApiDeps): Hono<RunEnv> {
     );
     if (!step) return c.json({ error: "compete_candidate_not_found" }, 404);
     try {
-      const diff = deps.review.getDiff({ kind: "run", id: run.id, owner: step.id });
+      const diff = deps.review.getDiff(
+        { kind: "run", id: run.id, owner: step.id },
+        BRANCH_DIFF_SCOPE,
+      );
       return c.json(toReviewDiffResponse(run.id, diff));
     } catch (error) {
       console.error(`[otomat] compete candidate diff ${step.id} failed`, error);

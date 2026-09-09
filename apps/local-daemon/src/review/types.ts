@@ -163,7 +163,7 @@ export interface RunSettledOutcome {
 
 export interface ReviewService {
   /** A run reviews its worktree (a compete candidate names its step id as owner); a pull request reviews its imported head. */
-  getDiff(ref: ReviewSubjectRef, scope?: RunDiffScopeSelector): ReviewDiffResult;
+  getDiff(ref: ReviewSubjectRef, scope: RunDiffScopeSelector): ReviewDiffResult;
   getBranchCommits(runId: string): { commits: RunCommit[]; unavailable: string | null };
   getCommentFixProof(runId: string, commentId: string): CommentFixProof;
   getReviewDetail(ref: ReviewSubjectRef): ReviewDetailResult;

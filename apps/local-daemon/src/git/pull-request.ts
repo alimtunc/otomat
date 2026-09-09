@@ -1,5 +1,5 @@
 import { runGit } from "./git-cli.js";
-import { hasCommit, mergeBase, revParse } from "./repo.js";
+import { baseBranchForkPoint, hasCommit, mergeBase, revParse } from "./repo.js";
 
 export interface PullRequestFetchInput {
   repoRoot: string;
@@ -44,6 +44,6 @@ export function publishedPullRequestTrees(
   head: string,
 ): PullRequestTrees | null {
   if (!hasCommit(repoRoot, head)) return null;
-  const base = mergeBase(repoRoot, baseRef, head);
+  const base = baseBranchForkPoint(repoRoot, baseRef, head);
   return base === null ? null : { base, head };
 }

@@ -49,21 +49,23 @@ afterEach(() => {
   t.cleanup();
 });
 
-it("reads the branch scope when the query names none", async () => {
+it("asks for the subject's own default when the query names no scope", async () => {
   const res = await request(appEchoingScope(), `/api/runs/${RUN_ID}/diff`);
 
   expect(res.status).toBe(200);
-  expect(asked).toEqual([{ kind: "branch" }]);
+  expect(asked).toEqual([{ kind: "default" }]);
 });
 
 it("passes every named scope through verbatim", async () => {
   const app = appEchoingScope();
+  await request(app, `/api/runs/${RUN_ID}/diff?scope=branch`);
   await request(app, `/api/runs/${RUN_ID}/diff?scope=commit&commit=abc123`);
   await request(app, `/api/runs/${RUN_ID}/diff?scope=step&step=step-9`);
   await request(app, `/api/runs/${RUN_ID}/diff?scope=session&session=sess-9`);
   await request(app, `/api/runs/${RUN_ID}/diff?scope=pull_request`);
 
   expect(asked).toEqual([
+    { kind: "branch" },
     { kind: "commit", commit: "abc123" },
     { kind: "step", step: "step-9" },
     { kind: "session", session: "sess-9" },

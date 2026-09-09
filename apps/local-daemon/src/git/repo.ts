@@ -24,6 +24,42 @@ export function mergeBase(repoPath: string, a: string, b: string): string | null
   return sha === "" ? null : sha;
 }
 
+function verifyRef(repoPath: string, rev: string): string | null {
+  const res = runGit(["rev-parse", "--verify", "--quiet", rev], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  const sha = res.stdout.trim();
+  return res.exitCode === 0 && sha !== "" ? sha : null;
+}
+
+/** A base branch with no tracking config still has a published side when the repo has one remote. */
+function publishedBase(repoPath: string, branch: string): string | null {
+  const remote = runGit(["config", "--get", `branch.${branch}.remote`], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  // git writes `.` for a branch tracking a local one, which publishes nothing.
+  if (remote.stdout.trim() === ".") return null;
+  const tracked = verifyRef(repoPath, `${branch}@{upstream}`);
+  if (tracked !== null) return tracked;
+  const [only, ...rest] = repositoryRemotes(repoPath);
+  if (only === undefined || rest.length > 0) return null;
+  return verifyRef(repoPath, `refs/remotes/${only}/${branch}`);
+}
+
+/** Later of the local and published fork points: a clone whose base branch lags the remote reports one behind. */
+export function baseBranchForkPoint(repoPath: string, branch: string, ref: string): string | null {
+  const local = mergeBase(repoPath, branch, ref);
+  const upstream = publishedBase(repoPath, branch);
+  if (upstream === null) return local;
+  const published = mergeBase(repoPath, upstream, ref);
+  if (local === null || published === null) return local ?? published;
+  // A published side that already contains `ref` collapses onto it, which would read as an empty diff.
+  if (published === revParse(repoPath, ref)) return local;
+  return isAncestor(repoPath, local, published) ? published : local;
+}
+
 /** Whether the object store already holds `sha` as a commit — a remote sha it lacks cannot be compared without fetching. */
 export function hasCommit(repoPath: string, sha: string): boolean {
   return (
@@ -57,19 +93,17 @@ export function detectDefaultBranch(repoPath: string): string | null {
 }
 
 export function repositoryRemotes(repoPath: string): string[] {
-  return runGit(["remote"], { cwd: repoPath })
-    .stdout.split("\n")
+  const res = runGit(["remote"], { cwd: repoPath, allowFailure: true });
+  if (res.exitCode !== 0) return [];
+  return res.stdout
+    .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "");
 }
 
 /** Whether a local branch ref exists. */
 export function branchExists(repoPath: string, branch: string): boolean {
-  const res = runGit(["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], {
-    cwd: repoPath,
-    allowFailure: true,
-  });
-  return res.exitCode === 0;
+  return verifyRef(repoPath, `refs/heads/${branch}`) !== null;
 }
 
 /**
@@ -171,12 +205,7 @@ export function commitSummary(repoPath: string, ref: string): CommitSummary | nu
 }
 
 export function commitParent(repoPath: string, commit: string): string | null {
-  const res = runGit(["rev-parse", "--verify", "--quiet", `${commit}^`], {
-    cwd: repoPath,
-    allowFailure: true,
-  });
-  const sha = res.stdout.trim();
-  return res.exitCode === 0 && sha !== "" ? sha : null;
+  return verifyRef(repoPath, `${commit}^`);
 }
 
 /** A boundary tree is a loose object git may prune, so a pass's delta must check before diffing. */

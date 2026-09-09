@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 
 import { worktreeStateTree } from "./diff.js";
-import { isAncestor, mergeBase, revParse } from "./repo.js";
+import { baseBranchForkPoint, isAncestor, revParse } from "./repo.js";
 import type { WorktreeRow } from "./worktrees-store.js";
 
 export interface DiffScope {
@@ -33,7 +33,7 @@ function forkBase(
   against: string | undefined,
 ) {
   const baseRef = against ?? (row.base_ref === "" ? scope.defaultBranch : row.base_ref);
-  const merged = mergeBase(gitCwd, baseRef, ref);
+  const merged = baseBranchForkPoint(gitCwd, baseRef, ref);
   // Once the base branch contains `ref` the merge-base is `ref` itself, which would render the
   // cycle as an empty diff; the sha recorded at acquire is then the only fork point left.
   if (merged === null || merged === revParse(gitCwd, ref)) {
@@ -42,7 +42,7 @@ function forkBase(
       base: row.base_sha === "" ? revParse(gitCwd, scope.defaultBranch) : row.base_sha,
     };
   }
-  // A base branch still missing the fetched remote head reports a fork point behind the recorded one.
+  // The recorded sha is the only fork point left when git can name no published side of the base branch.
   const behindRecorded =
     row.base_sha !== "" &&
     merged !== row.base_sha &&

@@ -1002,16 +1002,22 @@ when none could; the reviewer keeps the scope control on screen in that state
 rather than falling back to the branch diff. Blob reads take the same scope, so
 expanded context always comes from the trees its patch was taken between.
 
-`branch` is the default because the question the main view answers is a git one:
-what does this branch currently carry against the base it will land on. That base
-is the pull request's target once one is attached, and the worktree's fork base
-otherwise — `review/pull-request.ts:runDiffBaseRef` decides it, and both
-`review/scope.ts` and `review/subject.ts` read it, so the diff a reviewer sees and
-the diff their comments anchor to are the same `{base, tree}` pair. The scope
+A run defaults to its pull request once one records a head, because that is the
+patch it is asked to be judged on; without one it defaults to `branch` — what the
+branch currently carries against the base it will land on. That base is the pull
+request's target once one is attached, and the worktree's fork base otherwise —
+`review/pull-request.ts:runDiffBaseRef` decides it, and both `review/scope.ts`
+and `review/subject.ts` read it, so the diff a reviewer sees and the diff their
+comments anchor to are the same `{base, tree}` pair. The scope
 descriptor carries the branch and the base ref, and `CanonicalDiff` carries both
 ends' shas, so a reader can state what was compared instead of inferring it. The
 prompt-context digest keeps the fork base: it answers what the worktree carries,
 not what the branch proposes.
+
+The default is its own selector kind (`default`, the absent `?scope=`) rather
+than an overloaded `branch`: an explicitly picked branch is then never re-read as
+the default, and a publication row with no head recorded falls back to the branch
+instead of answering that the pull request has no diff.
 
 The picker offers `branch`, `step`, `commit`, and `pull_request` once the run
 has one: those are the slices a reviewer chooses between. A step that captured no
@@ -1024,9 +1030,17 @@ The branch's fork point is recomputed (`git/diff-inputs.ts`), not read from
 `worktrees.base_sha`: rebasing a branch moves where it forks from its base ref,
 and the sha recorded at acquire would then make the diff carry everything the
 base branch gained since — the shape behind a reviewer counting 407 files against
-GitHub's 79. The recorded sha stays the fallback for a base ref git can no longer
-resolve, and one `worktreeGitView` serves the diff, the branch commits and the
-abandon confirmation so the three cannot drift.
+GitHub's 79. The fork point is the later of the local and the published one
+(`git/repo.ts:baseBranchForkPoint`): a clone whose `main` lags `origin/main`
+reports a fork point behind the base the pull request is actually published
+against, which is the shape behind a reviewer counting 127 files against GitHub's
+11. The published side is the base branch's upstream, or the single remote's copy
+of it when the branch tracks nothing. The recorded sha stays the fallback for the
+cases git cannot answer on its own: a base ref it can no longer resolve, a base
+branch that already contains the ref, and a computed fork point sitting behind
+the recorded base because no published side could be named. One `worktreeGitView`
+serves the diff, the branch commits and the abandon confirmation so the three
+cannot drift.
 
 The same boundary is the proof behind an addressed comment. Settle stamps
 `review_comments.fixed_by_session_id` with the pass that addressed it, and

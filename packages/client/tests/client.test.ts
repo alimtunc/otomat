@@ -361,9 +361,12 @@ it("fetches and parses the run diff (null diff allowed, never fabricated)", asyn
     });
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
-  const result = await client.getReviewDiff({ kind: "run", id: "run-1" }, { kind: "branch" });
+  const result = await client.getReviewDiff({ kind: "run", id: "run-1" }, { kind: "default" });
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/diff");
   expect(result.diff).toBeNull();
+
+  await client.getReviewDiff({ kind: "run", id: "run-1" }, { kind: "branch" });
+  expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/diff?scope=branch");
 });
 
 it("reads the newest ledger page, then the one above it by cursor", async () => {

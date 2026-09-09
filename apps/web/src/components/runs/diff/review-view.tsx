@@ -1,4 +1,4 @@
-import type { RunDiffScope, RunDiffScopeSelector } from "@otomat/domain";
+import type { ReviewDiffContract, RunDiffScope, RunDiffScopeSelector } from "@otomat/domain";
 import { EmptyState, ErrorState } from "@otomat/ui";
 import { useReviewDetail, useReviewDiff } from "@web/api/reviews/queries";
 import {
@@ -16,7 +16,7 @@ export interface ReviewDiffViewProps {
   workspace: ReviewWorkbenchProps["workspace"];
   emptyDescription: string;
   scope?: RunDiffScopeSelector;
-  scopeControl?: (scope: RunDiffScope) => ReactNode;
+  scopeControl?: (scope: RunDiffScope, diff: ReviewDiffContract | null) => ReactNode;
 }
 
 export function ReviewDiffView({
@@ -50,8 +50,8 @@ export function ReviewDiffView({
   }
 
   const answered = diffQuery.data.scope;
-  const control = scopeControl?.(answered);
   const diff = diffQuery.data.diff;
+  const control = scopeControl?.(answered, diff);
   if (diff === null) {
     return control === undefined ? (
       <CenteredState>

@@ -22,6 +22,7 @@ it("reads every named scope back out of the URL", () => {
 
 it("round-trips every selector through the search params", () => {
   for (const selector of [
+    { kind: "default" },
     { kind: "branch" },
     { kind: "commit", commit: "abc" },
     { kind: "step", step: "st1" },
@@ -45,17 +46,23 @@ it("clears the key the previous scope named when the next one does not use it", 
   expect(toDiffScopeSelector(moved)).toEqual({ kind: "step", step: "st1" });
 });
 
-it("falls back to the branch rather than asking for a scope naming nothing", () => {
-  expect(toDiffScopeSelector(readDiffScopeSearch({}))).toEqual({ kind: "branch" });
+it("falls back to the subject's default rather than asking for a scope naming nothing", () => {
+  expect(toDiffScopeSelector(readDiffScopeSearch({}))).toEqual({ kind: "default" });
   expect(toDiffScopeSelector(readDiffScopeSearch({ scope: "commit" }))).toEqual({
-    kind: "branch",
+    kind: "default",
   });
   expect(toDiffScopeSelector(readDiffScopeSearch({ scope: "step", step: "" }))).toEqual({
-    kind: "branch",
+    kind: "default",
   });
   expect(toDiffScopeSelector(readDiffScopeSearch({ scope: "nonsense", commit: "abc" }))).toEqual({
-    kind: "branch",
+    kind: "default",
   });
+});
+
+it("keeps an explicitly chosen branch scope, so it is not re-read as the default", () => {
+  expect(toDiffScopeSelector(readDiffScopeSearch({ scope: "branch" }))).toEqual({ kind: "branch" });
+  expect(runDiffScopeParams({ kind: "branch" }).scope).toBe("branch");
+  expect(runDiffScopeParams({ kind: "default" }).scope).toBeUndefined();
 });
 
 it("drops a value that is not a string, so a crafted URL cannot smuggle one through", () => {

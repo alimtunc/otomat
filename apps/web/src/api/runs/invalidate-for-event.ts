@@ -45,7 +45,7 @@ export function invalidateForEvent(
     return;
   }
   if (event.type === "git.diff_updated") {
-    client.invalidateQueries({ queryKey: keys.reviewDiff({ kind: "run", id: runId }) });
+    client.invalidateQueries({ queryKey: keys.reviewDiffs({ kind: "run", id: runId }) });
     return;
   }
   if (event.type.startsWith("review.")) {
@@ -61,10 +61,7 @@ export function invalidateForEvent(
   }
   if (event.type.startsWith("pr.")) {
     client.invalidateQueries({ queryKey: keys.runPullRequest(runId) });
-    // A push moves the published head, so the only scope whose diff a `pr.` event changes.
-    client.invalidateQueries({
-      queryKey: keys.reviewDiff({ kind: "run", id: runId }, { kind: "pull_request" }),
-    });
+    client.invalidateQueries({ queryKey: keys.reviewDiffs({ kind: "run", id: runId }) });
     client.invalidateQueries({ queryKey: keys.issues });
     client.invalidateQueries({ queryKey: keys.reviews });
     client.invalidateQueries({ queryKey: keys.inbox });
