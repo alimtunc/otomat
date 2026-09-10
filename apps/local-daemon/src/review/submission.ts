@@ -2,6 +2,7 @@ import { getReviewComment, setReviewCommentPublication, type ReviewCommentRow } 
 import {
   isPendingReviewComment,
   reviewCommentPublicationMachine,
+  reviewSubmissionRefusal,
   type ReviewCommentPublicationState,
   type SubmitReviewRequest,
 } from "@otomat/domain";
@@ -93,7 +94,7 @@ async function deliver(
   try {
     published = await ctx.submitPullRequestReview(pullRequestId, {
       commitSha,
-      body: request.body,
+      body: request.body.trim(),
       event: request.event,
       comments: marked.map(toCommentInput),
     });
@@ -138,11 +139,11 @@ export async function submitReview(
   }
 
   const pending = comments.filter(isPendingReviewComment);
-  if (request.body.trim() === "" && pending.length === 0) {
-    throw new ReviewSubmissionEmptyError(
-      "Write a summary or leave a comment on the diff before submitting.",
-    );
-  }
+  const refusal = reviewSubmissionRefusal(request.event, {
+    body: request.body,
+    comments: pending.length,
+  });
+  if (refusal !== null) throw new ReviewSubmissionEmptyError(refusal);
   assertAnchored(subject, pending);
 
   if (inFlight.has(pullRequest.id)) {

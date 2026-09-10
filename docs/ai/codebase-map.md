@@ -1422,9 +1422,13 @@ for nothing; `POST /:id/review/submit` then sends the summary, the verdict and
 every pending comment in one `POST /pulls/:n/reviews`. GitHub accepts all of it
 or none of it, which is what makes "never publish partially and announce a
 success" true by construction: a refusal marks every comment it carried `failed`,
-leaves the composer filled, and the same call retries. `approve` is withheld
-whenever the connected account authored the pull request, and a second submission
-on one surface is refused rather than queued. There is deliberately no
+leaves the composer filled, and the same call retries. What a verdict needs is
+GitHub's own contract, resolved once by `reviewSubmissionRefusal` and enforced by
+both the dialog and the daemon: `approve` carries nothing at all if the reviewer
+has nothing to say, `request_changes` needs a summary, and `comment` needs a
+summary or at least one pending comment. `approve` is withheld whenever the
+connected account authored the pull request, and a second submission on one
+surface is refused rather than queued. There is deliberately no
 publish-one-comment path any more — two ways to publish is exactly the partial
 publish the review model forbids.
 

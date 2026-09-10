@@ -77,7 +77,6 @@ export class ReviewSubmissionUnavailableError extends Error {
   }
 }
 
-/** GitHub rejects a review that carries neither a summary nor a comment. */
 export class ReviewSubmissionEmptyError extends Error {
   constructor(message: string) {
     super(message);
