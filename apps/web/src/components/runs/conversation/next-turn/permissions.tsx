@@ -1,4 +1,9 @@
-import { isCodexPermissionKey } from "@otomat/domain";
+import {
+  PROVIDER_OPTION_KEYS,
+  codexApprovalMode,
+  isCodexPermissionKey,
+  isCodexTechnicalPermissionKey,
+} from "@otomat/domain";
 import type { ProviderOptionKey, ProviderOptions, ProviderOptionSet } from "@otomat/domain";
 import {
   ConfigMenu,
@@ -13,6 +18,11 @@ import { providerOptionKeyLabel, providerOptionValueLabel } from "@web/lib/provi
 import { unsupportedProviderOptions } from "@web/lib/provider-options";
 import { useState } from "react";
 
+function approvalSummary(mode: string | null, hasSavedPermissions: boolean): string {
+  if (mode !== null) return providerOptionValueLabel("approval_mode", mode);
+  return hasSavedPermissions ? "Saved permissions" : "Runtime default";
+}
+
 export function NextTurnPermissions({
   value,
   onChange,
@@ -25,8 +35,17 @@ export function NextTurnPermissions({
   error: string | null;
 }) {
   const [pending, setPending] = useState<DangerConfirmProps["pending"] | null>(null);
+  const mode = codexApprovalMode(value);
+  const hasSavedPermissions = PROVIDER_OPTION_KEYS.some(
+    (key) => isCodexTechnicalPermissionKey(key) && value[key] !== undefined,
+  );
   const apply = (key: ProviderOptionKey, selected: string | undefined): void => {
     const options = { ...value };
+    if (key === "approval_mode") {
+      for (const candidate of PROVIDER_OPTION_KEYS) {
+        if (isCodexTechnicalPermissionKey(candidate)) delete options[candidate];
+      }
+    }
     if (selected === undefined) delete options[key];
     else options[key] = selected;
     setPending(null);
@@ -36,9 +55,9 @@ export function NextTurnPermissions({
     <div>
       <ConfigMenu>
         <ConfigMenuTrigger
-          label="Permissions for next turn"
-          summary="Permissions"
-          announce="Permissions for next turn"
+          label="Approval mode for next turn"
+          summary={approvalSummary(mode, hasSavedPermissions)}
+          announce="Approval mode for next turn"
         />
         <ConfigMenuContent>
           {unsupportedProviderOptions(value, support)
@@ -50,10 +69,18 @@ export function NextTurnPermissions({
                 use runtime permission defaults.
               </ConfigMenuNote>
             ))}
+          {mode === null && hasSavedPermissions ? (
+            <ConfigMenuNote>
+              This turn uses saved technical permissions. Choose an approval mode to replace them,
+              or leave them unchanged.
+            </ConfigMenuNote>
+          ) : null}
           {support.options
-            .filter((option) => isCodexPermissionKey(option.key))
+            .filter(
+              (option) => isCodexPermissionKey(option.key) && option.user_configurable !== false,
+            )
             .map((descriptor) => {
-              const selected = value[descriptor.key];
+              const selected = descriptor.key === "approval_mode" ? mode : value[descriptor.key];
               return (
                 <ExecutionOptionSubmenu
                   key={descriptor.key}
@@ -65,7 +92,9 @@ export function NextTurnPermissions({
                     resolved: { value: selected ?? null, source: "turn" },
                   }}
                   selection={
-                    selected === undefined ? undefined : { kind: "value", value: selected }
+                    selected === undefined || selected === null
+                      ? undefined
+                      : { kind: "value", value: selected }
                   }
                   onSelectionChange={(selection) => {
                     const next = selection?.kind === "value" ? selection.value : undefined;
@@ -83,6 +112,7 @@ export function NextTurnPermissions({
               delete options.sandbox;
               delete options.approval_policy;
               delete options.approvals_reviewer;
+              delete options.approval_mode;
               setPending(null);
               onChange(options);
             }}

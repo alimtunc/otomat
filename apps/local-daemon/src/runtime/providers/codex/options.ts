@@ -64,6 +64,7 @@ function sandboxDescriptor(
       dangerous: DANGEROUS_SANDBOXES.has(value),
     })),
     default_value: supported.includes(CODEX_DEFAULT_SANDBOX) ? CODEX_DEFAULT_SANDBOX : null,
+    user_configurable: false,
   };
 }
 
@@ -87,6 +88,7 @@ function reviewerDescriptor(binary: string, help: string): ProviderOptionDescrip
       },
     ],
     default_value: null,
+    user_configurable: false,
   };
 }
 
@@ -108,6 +110,48 @@ function approvalDescriptor(
           : (APPROVAL_DESCRIPTIONS.get(value) ?? null),
       dangerous: false,
     })),
+    default_value: null,
+    user_configurable: false,
+  };
+}
+
+function approvalModeDescriptor(
+  help: string,
+  sandbox: ProviderOptionDescriptor | null,
+  approval: ProviderOptionDescriptor | null,
+  reviewer: ProviderOptionDescriptor | null,
+): ProviderOptionDescriptor | null {
+  const sandboxes = sandbox?.choices.map((choice) => choice.value) ?? [];
+  const policies = approval?.choices.map((choice) => choice.value) ?? [];
+  const choices = [];
+  if (sandboxes.includes("workspace-write") && codexApprovalValues(help).includes("on-request")) {
+    choices.push({
+      value: "ask_for_approval",
+      description:
+        "Codex asks before leaving the worktree sandbox. Unanswered requests cannot proceed in non-interactive exec.",
+      dangerous: false,
+    });
+  }
+  if (sandboxes.includes("workspace-write") && reviewer !== null) {
+    choices.push({
+      value: "approve_for_me",
+      description:
+        "Codex reviews eligible requests itself inside the worktree sandbox and may deny them.",
+      dangerous: false,
+    });
+  }
+  if (sandboxes.includes("danger-full-access") && policies.includes("never")) {
+    choices.push({
+      value: "full_access",
+      description: "Codex skips approvals and may read or write anywhere the daemon can.",
+      dangerous: true,
+    });
+  }
+  if (choices.length === 0) return null;
+  return {
+    key: "approval_mode",
+    description: "How Codex handles approval requests and the protections attached to them.",
+    choices,
     default_value: null,
   };
 }
@@ -167,11 +211,14 @@ export function codexOptionSupport(binary: string, model: string | null): Runtim
   const capability = process.platform === "linux" ? probeCodexSandbox(binary, process.cwd()) : null;
   const reasoning = reasoningEffortDescriptor(binary, model);
   const reviewer = reviewerDescriptor(binary, probe.stdout);
+  const sandbox = sandboxDescriptor(probe.stdout, capability);
+  const approval = approvalDescriptor(probe.stdout, reviewer !== null);
   const options = [
-    sandboxDescriptor(probe.stdout, capability),
-    approvalDescriptor(probe.stdout, reviewer !== null),
-    reviewer,
+    approvalModeDescriptor(probe.stdout, sandbox, approval, reviewer),
     reasoning.descriptor,
+    sandbox,
+    approval,
+    reviewer,
   ].filter((option): option is ProviderOptionDescriptor => option !== null);
   return {
     detection: {

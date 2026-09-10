@@ -204,6 +204,19 @@ describe("claudePermissionModeStatus", () => {
 });
 
 describe("codex provider options", () => {
+  it("derives approval modes from the installed exec contract", () => {
+    codexFixtures();
+
+    const mode = descriptor(
+      new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol").options,
+      "approval_mode",
+    );
+
+    expect(values(mode)).toEqual(["ask_for_approval", "full_access"]);
+    expect(mode?.choices.find((choice) => choice.value === "full_access")?.dangerous).toBe(true);
+    expect(mode?.default_value).toBeNull();
+  });
+
   it("offers the sandbox and approval policies `codex exec --help` announces", () => {
     codexFixtures();
 
@@ -221,6 +234,8 @@ describe("codex provider options", () => {
       "on-request",
       "never",
     ]);
+    expect(descriptor(support.options, "sandbox")?.user_configurable).toBe(false);
+    expect(descriptor(support.options, "approval_policy")?.user_configurable).toBe(false);
   });
 
   it("keeps the worktree sandbox as its default and marks full access dangerous", () => {

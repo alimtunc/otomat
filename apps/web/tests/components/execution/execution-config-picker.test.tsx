@@ -154,35 +154,44 @@ it("keeps that warning off a real runtime, which does contact a provider", async
   expect(document.body.textContent).not.toContain(SIMULATED_RUNTIME_NOTE);
 });
 
-it("summarises the Codex keys for a Codex agent, and no Claude one", async () => {
-  announced = CODEX_ANNOUNCED;
-  await render({ agent: encodeRuntimeChoice("codex"), options: {} });
-
-  const label = triggerLabel();
-  expect(label).toContain("codex");
-  expect(label).toContain("Workspace write");
-  expect(label).not.toContain("Medium");
-  expect(label).not.toContain("Auto");
-});
-
-it("explains an incompatible inherited reviewer and keeps the choice visible", async () => {
+it("offers only model, reasoning effort and approval mode for Codex, including legacy profiles", async () => {
   announced = CODEX_ANNOUNCED;
   const profile = agentProfile({
     name: "Reviewed",
     runtime: "codex",
     options: {
       approvals_reviewer: "auto_review",
-      approval_policy: "never",
+      approval_policy: "on-request",
       sandbox: "workspace-write",
     },
   });
   await render({ agent: encodeProfileChoice(profile.id), options: {} }, [profile]);
-  expect(triggerLabel()).toContain("Approve for me");
-  expect(document.body.textContent).toContain("With never, no request reaches automatic review");
-  await openSubmenu("Approval reviewer");
-  expect(document.body.textContent).toContain(
-    "Automatic review keeps the sandbox and may deny a request",
+  expect(triggerLabel()).not.toContain("Workspace write");
+  expect(triggerLabel()).not.toContain("Approve for me");
+  await act(async () => trigger().click());
+  const labels = [...document.querySelectorAll("[aria-label]")].map(
+    (element) => element.getAttribute("aria-label") ?? "",
   );
+  for (const visible of ["Approval mode:", "Reasoning effort:"])
+    expect(labels.some((label) => label.startsWith(visible))).toBe(true);
+  for (const hidden of ["Sandbox:", "Approval policy:", "Approval reviewer:"])
+    expect(labels.some((label) => label.startsWith(hidden))).toBe(false);
+});
+
+it("labels Codex approval choices and warns before full access", async () => {
+  announced = CODEX_ANNOUNCED;
+  const mounted = await render({ agent: encodeRuntimeChoice("codex"), options: {} });
+  await openSubmenu("Approval mode");
+  const modes = [...document.querySelectorAll("[role='menuitemradio']")].map(
+    (choice) => choice.querySelector(".truncate")?.textContent ?? "",
+  );
+  expect(modes).toContain("Approve for me");
+  expect(modes).toContain("Full access — removes a safety boundary");
+  const full = [...document.querySelectorAll<HTMLElement>("[role='menuitemradio']")].find(
+    (choice) => choice.textContent?.startsWith("Full access"),
+  );
+  await act(async () => full?.click());
+  expect(mounted.container.textContent).toContain("Full access removes a safety boundary");
 });
 
 it("names each Claude permission mode as Claude does, without echoing the flag value", async () => {

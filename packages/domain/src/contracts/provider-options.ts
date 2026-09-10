@@ -30,6 +30,7 @@ export const providerOptionsSchema = z
     permission_mode: optionalValue,
     effort: optionalValue,
 
+    approval_mode: optionalValue,
     sandbox: optionalValue,
     approval_policy: optionalValue,
     approvals_reviewer: optionalValue,
@@ -44,15 +45,24 @@ type ProviderOptionKeyGroup = readonly (keyof ProviderOptions)[];
 /** Claude Code: `--permission-mode`, `--effort`. */
 const CLAUDE_OPTION_KEYS = ["permission_mode", "effort"] as const satisfies ProviderOptionKeyGroup;
 
-const CODEX_PERMISSION_KEYS = ["sandbox", "approval_policy", "approvals_reviewer"] as const;
+const CODEX_TECHNICAL_PERMISSION_KEYS = [
+  "sandbox",
+  "approval_policy",
+  "approvals_reviewer",
+] as const;
+
+export function isCodexTechnicalPermissionKey(key: keyof ProviderOptions): boolean {
+  return CODEX_TECHNICAL_PERMISSION_KEYS.some((permission) => permission === key);
+}
 
 export function isCodexPermissionKey(key: keyof ProviderOptions): boolean {
-  return CODEX_PERMISSION_KEYS.some((permission) => permission === key);
+  return key === "approval_mode" || isCodexTechnicalPermissionKey(key);
 }
 
 const CODEX_OPTION_KEYS = [
-  ...CODEX_PERMISSION_KEYS,
+  "approval_mode",
   "reasoning_effort",
+  ...CODEX_TECHNICAL_PERMISSION_KEYS,
 ] as const satisfies ProviderOptionKeyGroup;
 
 /** The flattened union every surface validates and orders against; grouping lives above. */
@@ -77,6 +87,7 @@ export const providerOptionDescriptorSchema = z.object({
   choices: z.array(providerOptionChoiceSchema).min(1),
   /** The value Otomat freezes and sends when no level selects one, or null when it sends no argument at all. */
   default_value: providerOptionValueSchema.nullable(),
+  user_configurable: z.boolean().optional(),
 });
 export type ProviderOptionDescriptor = z.infer<typeof providerOptionDescriptorSchema>;
 

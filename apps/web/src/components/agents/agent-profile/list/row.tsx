@@ -1,4 +1,9 @@
-import type { AgentProfileContract, RuntimeDescriptor, SkillContract } from "@otomat/domain";
+import {
+  isCodexTechnicalPermissionKey,
+  type AgentProfileContract,
+  type RuntimeDescriptor,
+  type SkillContract,
+} from "@otomat/domain";
 import { AgentAvatar, Chip, FOCUS_RING_INSET, ProviderMark } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { AgentProfileRowActions } from "@web/components/agents/agent-profile/list/row-actions";
@@ -26,7 +31,9 @@ export function AgentProfileRow({
 }) {
   const hostLabel = executionHostLabel(useRemoteSession());
   const descriptor = runtimeById(descriptors, profile.runtime);
-  const options = storedProviderOptions(profile.options);
+  const options = storedProviderOptions(profile.options).filter(
+    (option) => profile.runtime !== "codex" || !isCodexTechnicalPermissionKey(option.key),
+  );
   const mark = runtimeMark(profile.runtime);
   const availability = agentProfileAvailability(profile, descriptors, skills);
 

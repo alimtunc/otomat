@@ -38,6 +38,7 @@ export function NextTurnModelDialog({
   config: ResolvedAgentConfig;
   className?: string;
 }) {
+  const effortLabel = config.runtime === "codex" ? "Reasoning effort" : "Effort";
   const {
     open,
     setOpen,
@@ -130,7 +131,7 @@ export function NextTurnModelDialog({
               >
                 {(field) => (
                   <Field {...fieldErrorProps(field.state.meta)}>
-                    <FieldLabel>Effort</FieldLabel>
+                    <FieldLabel>{effortLabel}</FieldLabel>
                     <Select
                       items={effortItems}
                       value={field.state.value}
@@ -139,7 +140,7 @@ export function NextTurnModelDialog({
                       }}
                     >
                       <FieldControl>
-                        <SelectTrigger aria-label="Effort for next turn">
+                        <SelectTrigger aria-label={`${effortLabel} for next turn`}>
                           <SelectValue />
                         </SelectTrigger>
                       </FieldControl>
