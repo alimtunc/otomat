@@ -1,4 +1,9 @@
-import { activitySnapshotSchema, type ActivitySnapshot } from "@otomat/domain";
+import {
+  activitySnapshotSchema,
+  notificationSnapshotSchema,
+  type ActivitySnapshot,
+  type NotificationSnapshot,
+} from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
 import { deliverFrame, openEventSource } from "./event-source.js";
@@ -17,6 +22,9 @@ export interface ActivityStreamSubscription {
 
 export function createActivityClient(config: DaemonClientConfig) {
   return {
+    async listNotifications(): Promise<NotificationSnapshot> {
+      return notificationSnapshotSchema.parse(await getJson(config, "/api/activity/notifications"));
+    },
     async listActivity(): Promise<ActivitySnapshot> {
       return activitySnapshotSchema.parse(await getJson(config, "/api/activity"));
     },

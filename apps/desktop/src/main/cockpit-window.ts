@@ -3,6 +3,8 @@ export interface CockpitBrowserWindow {
   on(event: "close", listener: (event: { preventDefault(): void }) => void): void;
   on(event: "closed", listener: () => void): void;
   isMinimized(): boolean;
+  isVisible(): boolean;
+  isFocused(): boolean;
   restore(): void;
   show(): void;
   focus(): void;
@@ -27,6 +29,15 @@ export class CockpitWindow {
 
   get isOpen(): boolean {
     return this.window !== null;
+  }
+
+  get isForeground(): boolean {
+    return (
+      this.window !== null &&
+      this.window.isVisible() &&
+      this.window.isFocused() &&
+      !this.window.isMinimized()
+    );
   }
 
   open(): void {

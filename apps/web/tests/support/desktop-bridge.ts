@@ -1,5 +1,6 @@
 import {
   countWorkspaces,
+  DEFAULT_NOTIFICATION_PREFERENCES,
   type ExecutionHostSnapshot,
   type InboxSnapshot,
   type OtomatDesktopBridge,
@@ -47,6 +48,19 @@ export function fakeDesktopBridge(
 ): OtomatDesktopBridge {
   return {
     daemonUrl: "http://127.0.0.1:5000",
+    notifications: {
+      snapshot: async () => ({
+        preferences: DEFAULT_NOTIFICATION_PREFERENCES,
+        delivery: "system_managed",
+        error: null,
+      }),
+      save: async (preferences) => ({ preferences, delivery: "system_managed", error: null }),
+      openSettings: async () => {},
+      pending: async () => null,
+      acknowledge: async () => {},
+      onNotice: () => () => {},
+      onOpen: () => () => {},
+    },
     executionHostId: "local",
     executionHostSshAlias: null,
     build: { version: "0.0.0", commit: "abc1234", channel: "local" },

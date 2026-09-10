@@ -61,6 +61,7 @@ vi.mock("#main/support", () => ({
 }));
 vi.mock("#main/ipc", () => ({ registerIpc: vi.fn() }));
 vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
+vi.mock("#main/notifications/electron", () => ({ startNotifications: vi.fn() }));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#main/security")>()),

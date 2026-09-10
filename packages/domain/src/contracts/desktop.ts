@@ -26,6 +26,7 @@ import type {
 } from "./execution-host.js";
 import type { InboxSnapshot } from "./inbox.js";
 import type { ConnectLinearRequest, LinearErrorCode } from "./linear.js";
+import type { DesktopNotificationsBridge } from "./notifications.js";
 import type { ProjectHealthReport } from "./project-health.js";
 import type {
   WorkspaceCleanupResult,
@@ -119,6 +120,7 @@ export interface DesktopBuildSummary {
  * daemon URL comes from the build-time env and there is no native folder picker.
  */
 export interface OtomatDesktopBridge {
+  notifications: DesktopNotificationsBridge;
   /** Origin of the host active at page load: the local daemon, or the SSH tunnel's local end. */
   readonly daemonUrl: string;
   /** Active host at page load; a later switch answers with its own origin. */

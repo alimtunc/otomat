@@ -74,6 +74,7 @@ import {
   UPDATE_STATUS_CHANNEL,
 } from "#shared/ipc-channels";
 
+import { notifications } from "./notifications.js";
 import { subscribe } from "./subscribe.js";
 
 // Resolved synchronously so `window.otomat.daemonUrl` exists before the client module reads it.
@@ -96,6 +97,7 @@ if (!isDesktopBuildSummary(buildSummary)) {
 }
 
 contextBridge.exposeInMainWorld("otomat", {
+  notifications,
   daemonUrl,
   executionHostId: hostSync.id,
   executionHostSshAlias: hostSync.ssh_alias,
