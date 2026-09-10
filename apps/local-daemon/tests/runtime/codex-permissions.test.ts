@@ -66,6 +66,22 @@ it("offers only the approval policy exec can honor, without selecting it implici
   expect(support.detection.detail).toContain("non-interactive");
 });
 
+it("offers only the native approval modes this Codex exec can honor", () => {
+  const support = new CodexRuntimeAdapter(STUB_BIN).describeOptions(null);
+  expect(support.options.find((option) => option.key === "approval_mode")).toMatchObject({
+    choices: [
+      { value: "approve_for_me", dangerous: false },
+      { value: "full_access", dangerous: true },
+    ],
+    default_value: null,
+  });
+  expect(
+    support.options
+      .filter((option) => ["sandbox", "approval_policy", "approvals_reviewer"].includes(option.key))
+      .every((option) => option.user_configurable === false),
+  ).toBe(true);
+});
+
 it.each(["run", "resume"] as const)(
   "refuses an unsupported frozen approval policy on %s",
   async (mode) => {

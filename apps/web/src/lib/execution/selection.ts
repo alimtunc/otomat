@@ -1,5 +1,7 @@
 import {
   AGENT_DEFAULT_OPTION,
+  PROVIDER_OPTION_KEYS,
+  isCodexTechnicalPermissionKey,
   type ExecutionOptionSelections,
   type ExecutionSource,
   type ModelSelection,
@@ -50,6 +52,12 @@ export function withOptionSelection(
   next: ProviderOptionSelection | undefined,
 ): ExecutionSelection {
   const options = { ...selection.options };
+  if (key === "approval_mode" && next !== undefined) {
+    for (const candidate of PROVIDER_OPTION_KEYS) {
+      if (isCodexTechnicalPermissionKey(candidate)) delete options[candidate];
+    }
+  }
+  if (isCodexTechnicalPermissionKey(key) && next !== undefined) delete options.approval_mode;
   if (next === undefined) delete options[key];
   else options[key] = next;
   return { ...selection, options };

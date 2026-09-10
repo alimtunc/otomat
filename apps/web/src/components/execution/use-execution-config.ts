@@ -79,11 +79,12 @@ export function useExecutionConfig({
   const announced = useRuntimeProviderOptions(runtimeId, modelId);
 
   const descriptors = announced.data?.options ?? [];
-  const options = descriptors.map((descriptor) => ({
+  const resolvedOptions = descriptors.map((descriptor) => ({
     key: descriptor.key,
     descriptor,
     resolved: resolveExecutionOption(levels, descriptor.key),
   }));
+  const options = resolvedOptions.filter((option) => option.descriptor.user_configurable !== false);
   const stale =
     announced.data === undefined
       ? []
@@ -108,7 +109,7 @@ export function useExecutionConfig({
       runtimeId === "codex"
         ? codexPermissionProblem(
             Object.fromEntries(
-              options.map((option) => [
+              resolvedOptions.map((option) => [
                 option.key,
                 option.resolved.value ?? providerOptionDefault(option.descriptor) ?? undefined,
               ]),

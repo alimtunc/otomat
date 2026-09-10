@@ -1,4 +1,4 @@
-import type { RunContract } from "@otomat/domain";
+import { isCodexTechnicalPermissionKey, type RunContract } from "@otomat/domain";
 import { useRunEventStream } from "@web/api/runs/run-event-stream";
 import { ExecutionDetail } from "@web/components/issues/workspace/rail/execution-detail";
 import { Mono } from "@web/components/issues/workspace/rail/mono";
@@ -51,11 +51,16 @@ export function ExecutionSection({ run }: { run: RunContract }) {
           <RailRow label="Model">
             <ProvenanceValue value={selected.model.label} source={selected.model.source} />
           </RailRow>
-          {selected.options.map((option) => (
-            <RailRow key={option.key} label={providerOptionKeyLabel(option.key)}>
-              <ProvenanceValue value={option.label} source={option.source} />
-            </RailRow>
-          ))}
+          {selected.options
+            .filter(
+              (option) =>
+                selected.runtimeId !== "codex" || !isCodexTechnicalPermissionKey(option.key),
+            )
+            .map((option) => (
+              <RailRow key={option.key} label={providerOptionKeyLabel(option.key)}>
+                <ProvenanceValue value={option.label} source={option.source} />
+              </RailRow>
+            ))}
           {diverged ? (
             <RailRow label="Reported">
               <Mono>{reported}</Mono>

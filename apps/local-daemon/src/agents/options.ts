@@ -1,8 +1,10 @@
 import {
   PROVIDER_OPTION_KEYS,
+  codexApprovalModeOptions,
   codexApprovalPolicy,
   codexPermissionProblem,
   isCodexPermissionKey,
+  isCodexTechnicalPermissionKey,
   providerOptionDefault,
   providerOptionDescriptor,
   resolveExecutionOption,
@@ -93,6 +95,39 @@ export function resolveOptions(
     sources[key] = resolved.source;
   }
   if (runtime === "codex") {
+    const mode = options.approval_mode;
+    const modeSource = sources.approval_mode;
+    if (mode !== undefined && modeSource !== undefined) {
+      const modeRank = levels.findIndex((level) => level.source === modeSource);
+      const technicalWins = PROVIDER_OPTION_KEYS.some((key) => {
+        if (!isCodexTechnicalPermissionKey(key)) return false;
+        const source = sources[key];
+        return (
+          source !== undefined &&
+          source !== "provider" &&
+          levels.findIndex((level) => level.source === source) < modeRank
+        );
+      });
+      if (technicalWins) {
+        delete options.approval_mode;
+        delete sources.approval_mode;
+      } else {
+        const mapped = codexApprovalModeOptions(mode);
+        if (mapped !== null) {
+          for (const key of PROVIDER_OPTION_KEYS) {
+            if (!isCodexTechnicalPermissionKey(key)) continue;
+            delete options[key];
+            delete sources[key];
+          }
+          Object.assign(options, mapped);
+          for (const key of PROVIDER_OPTION_KEYS) {
+            if (isCodexTechnicalPermissionKey(key) && options[key] !== undefined) {
+              sources[key] = modeSource;
+            }
+          }
+        }
+      }
+    }
     const policy = codexApprovalPolicy(options);
     if (policy !== undefined && options.approval_policy === undefined) {
       options.approval_policy = policy;

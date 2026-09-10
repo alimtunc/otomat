@@ -4,6 +4,7 @@ import type { ProviderOptionKey } from "@otomat/domain";
 const KEY_LABELS = {
   permission_mode: "Permission mode",
   effort: "Effort",
+  approval_mode: "Approval mode",
   sandbox: "Sandbox",
   approval_policy: "Approval policy",
   approvals_reviewer: "Approval reviewer",
@@ -24,6 +25,14 @@ const PERMISSION_MODE_LABELS = new Map<string, string>([
 /** One option's vocabulary, which another option announcing the same value does not share. */
 const KEY_VALUE_LABELS = new Map<ProviderOptionKey, Map<string, string>>([
   ["permission_mode", PERMISSION_MODE_LABELS],
+  [
+    "approval_mode",
+    new Map([
+      ["ask_for_approval", "Ask for approval"],
+      ["approve_for_me", "Approve for me"],
+      ["full_access", "Full access"],
+    ]),
+  ],
   [
     "approvals_reviewer",
     new Map([

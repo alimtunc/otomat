@@ -1,4 +1,5 @@
 import type { ProviderOptionDescriptor, ProviderOptionSet } from "@otomat/domain";
+import { withOptionSelection } from "@web/lib/execution/selection";
 import { providerOptionValueLabel } from "@web/lib/provider-option-labels";
 import {
   effectiveProviderOptionLabel,
@@ -54,6 +55,26 @@ it("humanizes what the CLI announced without renaming it", () => {
   expect(providerOptionValueLabel("approval_policy", "on-request")).toBe("On request");
   expect(providerOptionValueLabel("effort", "xhigh")).toBe("Extra high");
   expect(providerOptionValueLabel("effort", "ultra")).toBe("Ultra");
+});
+
+it("replaces legacy Codex controls when an approval mode is selected", () => {
+  const selected = withOptionSelection(
+    {
+      agent: "runtime:codex",
+      options: {
+        sandbox: { kind: "value", value: "read-only" },
+        approval_policy: { kind: "value", value: "never" },
+        approvals_reviewer: { kind: "value", value: "user" },
+        reasoning_effort: { kind: "value", value: "high" },
+      },
+    },
+    "approval_mode",
+    { kind: "value", value: "approve_for_me" },
+  );
+  expect(selected.options).toEqual({
+    approval_mode: { kind: "value", value: "approve_for_me" },
+    reasoning_effort: { kind: "value", value: "high" },
+  });
 });
 
 it("names Claude's permission modes as Claude does, and only under that option", () => {

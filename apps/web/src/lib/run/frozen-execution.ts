@@ -20,6 +20,7 @@ export interface FrozenExecution {
   name: string;
   /** Identical configurations share it, so "several configurations" counts intent, not nodes. */
   configHash: string;
+  runtimeId: string;
   runtime: FrozenExecutionValue;
   model: FrozenExecutionValue;
   options: (FrozenExecutionValue & { key: ProviderOptionKey })[];
@@ -44,6 +45,7 @@ function describe(id: string, name: string, config: ResolvedAgentConfig): Frozen
     id,
     name,
     configHash: config.config_hash,
+    runtimeId: config.runtime,
     runtime: value(config.profile_name ?? config.runtime, sources?.runtime),
     model: value(frozenModelLabel(config.model ?? null), sources?.model),
     options: PROVIDER_OPTION_KEYS.flatMap((key) => {

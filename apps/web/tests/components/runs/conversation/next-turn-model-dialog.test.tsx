@@ -72,7 +72,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-it("edits the reviewer for the next turn and blocks a conflicting policy without changing the sandbox", async () => {
+it("replaces legacy Codex permissions with one approval mode for the next turn", async () => {
   const config = {
     ...CONFIG,
     runtime: "codex",
@@ -84,40 +84,23 @@ it("edits the reviewer for the next turn and blocks a conflicting policy without
   );
   await act(async () => findButton("Provider default")?.click());
   await act(async () =>
-    document.querySelector<HTMLElement>("[aria-label^='Permissions for next turn']")?.click(),
+    document.querySelector<HTMLElement>("[aria-label^='Approval mode for next turn']")?.click(),
   );
   await act(async () =>
-    document.querySelector<HTMLElement>("[aria-label^='Approval reviewer:']")?.click(),
+    document.querySelector<HTMLElement>("[aria-label^='Approval mode:']")?.click(),
   );
   const choice = [...document.querySelectorAll<HTMLElement>("[role='menuitemradio']")].find(
     (item) => item.textContent?.startsWith("Approve for me"),
   );
   expect(choice).toBeDefined();
   await act(async () => choice?.click());
-  expect(document.body.textContent).toContain("With never, no request reaches automatic review");
-  expect(findButton("Confirm next turn")?.disabled).toBe(true);
-  const permissionsTrigger = document.querySelector<HTMLElement>(
-    "[aria-label^='Permissions for next turn']",
-  );
-  if (permissionsTrigger?.getAttribute("aria-expanded") !== "true")
-    await act(async () => permissionsTrigger?.click());
-  await act(async () =>
-    document.querySelector<HTMLElement>("[aria-label^='Approval policy:']")?.click(),
-  );
-  const policy = [...document.querySelectorAll<HTMLElement>("[role='menuitemradio']")].find(
-    (item) => item.textContent?.startsWith("On request"),
-  );
-  expect(policy, document.body.textContent ?? "").toBeDefined();
-  await act(async () => policy?.click());
   expect(findButton("Confirm next turn")?.disabled).toBe(false);
   await act(async () => findButton("Confirm next turn")?.click());
   expect(mutate).toHaveBeenCalledWith(
     expect.objectContaining({
       model: null,
       options: {
-        sandbox: "workspace-write",
-        approval_policy: "on-request",
-        approvals_reviewer: "auto_review",
+        approval_mode: "approve_for_me",
       },
     }),
     expect.anything(),

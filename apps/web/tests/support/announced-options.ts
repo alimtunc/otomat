@@ -32,6 +32,23 @@ export const CODEX_ANNOUNCED = providerOptionSet({
   detection: { status: "ok", detail: "Announced by `codex exec --help`." },
   options: [
     {
+      key: "approval_mode",
+      description: "How Codex handles approval requests.",
+      choices: [
+        {
+          value: "approve_for_me",
+          description: "Codex reviews eligible requests itself.",
+          dangerous: false,
+        },
+        {
+          value: "full_access",
+          description: "No approvals or sandbox.",
+          dangerous: true,
+        },
+      ],
+      default_value: null,
+    },
+    {
       key: "approvals_reviewer",
       description: "Automatic review keeps the sandbox and may deny a request.",
       choices: [
@@ -43,6 +60,7 @@ export const CODEX_ANNOUNCED = providerOptionSet({
         },
       ],
       default_value: null,
+      user_configurable: false,
     },
     {
       key: "approval_policy",
@@ -56,6 +74,7 @@ export const CODEX_ANNOUNCED = providerOptionSet({
         },
       ],
       default_value: null,
+      user_configurable: false,
     },
     {
       key: "sandbox",
@@ -65,6 +84,7 @@ export const CODEX_ANNOUNCED = providerOptionSet({
         { value: "danger-full-access", description: "No sandbox.", dangerous: true },
       ],
       default_value: "workspace-write",
+      user_configurable: false,
     },
     {
       key: "reasoning_effort",

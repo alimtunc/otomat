@@ -93,6 +93,70 @@ it("freezes inherited and overridden reviewer permissions with provenance and a 
   expect(next.config_hash).not.toBe(config.config_hash);
 });
 
+it.each([
+  {
+    mode: "approve_for_me",
+    effective: {
+      approval_mode: "approve_for_me",
+      sandbox: "workspace-write",
+      approval_policy: "on-request",
+      approvals_reviewer: "auto_review",
+    },
+  },
+  {
+    mode: "full_access",
+    effective: {
+      approval_mode: "full_access",
+      sandbox: "danger-full-access",
+      approval_policy: "never",
+    },
+  },
+])("freezes $mode as its explicit compatible technical configuration", ({ mode, effective }) => {
+  const config = resolveAgentConfig(
+    fixture.db,
+    { kind: "runtime", runtimeId: "codex" },
+    {
+      levels: [
+        overrideLevel("launch", {
+          options: optionSelectionsFromValues({ approval_mode: mode }),
+        }),
+      ],
+    },
+  );
+  expect(config).toMatchObject({
+    options: effective,
+    sources: { options: Object.fromEntries(Object.keys(effective).map((key) => [key, "launch"])) },
+  });
+});
+
+it("keeps a legacy profile ahead of a broader global mode until a launch selects one explicitly", () => {
+  writeExecutionDefaults(fixture.db, {
+    runtime: "codex",
+    model: null,
+    options: { approval_mode: "full_access" },
+  });
+  const inherited = resolveAgentConfig(fixture.db, { kind: "profile", profileId: "reviewed" });
+  expect(inherited.options.approval_mode).toBeUndefined();
+  expect(inherited.options.sandbox).toBe("read-only");
+
+  const overridden = resolveAgentConfig(
+    fixture.db,
+    { kind: "profile", profileId: "reviewed" },
+    {
+      levels: [
+        overrideLevel("launch", {
+          options: optionSelectionsFromValues({ approval_mode: "full_access" }),
+        }),
+      ],
+    },
+  );
+  expect(overridden.options).toMatchObject({
+    approval_mode: "full_access",
+    sandbox: "danger-full-access",
+    approval_policy: "never",
+  });
+});
+
 it("retains unchanged permission provenance when tuning a resumed turn, independently of edited preferences", () => {
   const current = resolveAgentConfig(fixture.db, { kind: "profile", profileId: "reviewed" });
   updateAgentProfile(fixture.db, "reviewed", {

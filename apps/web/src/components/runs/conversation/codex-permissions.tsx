@@ -1,7 +1,8 @@
-import type { ProviderOptions } from "@otomat/domain";
+import { codexApprovalMode, type ProviderOptions } from "@otomat/domain";
 import { providerOptionValueLabel } from "@web/lib/provider-option-labels";
 
 export function CodexPermissions({ options }: { options: ProviderOptions | null }) {
+  const mode = options === null ? null : codexApprovalMode(options);
   const reviewer = options?.approvals_reviewer;
   const reviewerLabel =
     reviewer === undefined
@@ -9,6 +10,12 @@ export function CodexPermissions({ options }: { options: ProviderOptions | null 
       : providerOptionValueLabel("approvals_reviewer", reviewer);
   return (
     <div className="text-xs leading-relaxed text-text-tertiary">
+      <p>
+        Approval mode:{" "}
+        {mode === null
+          ? "Legacy or runtime default"
+          : providerOptionValueLabel("approval_mode", mode)}
+      </p>
       <p>
         Requested permissions: sandbox{" "}
         {options === null ? "not recorded" : (options.sandbox ?? "Runtime default")}
