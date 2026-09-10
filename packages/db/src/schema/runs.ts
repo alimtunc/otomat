@@ -1,4 +1,5 @@
 import type {
+  AgentSessionKind,
   AgentSessionState,
   CompeteGroupState,
   RunContributionState,
@@ -11,6 +12,7 @@ import type {
   SessionContext,
   StepProviderWait,
   StepRunState,
+  Supervision,
 } from "@otomat/domain";
 import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
@@ -31,6 +33,7 @@ export const runs = sqliteTable("runs", {
   status: text("status").$type<RunState>().notNull().default("queued"),
   branch: text("branch").notNull(),
   plan_json: text("plan_json", { mode: "json" }).notNull(),
+  supervision_json: text("supervision_json", { mode: "json" }).$type<Supervision>(),
   started_at: text("started_at"),
   completed_at: text("completed_at"),
   // The one manual closure of an issue's work cycle: stamped, never inferred.
@@ -96,6 +99,7 @@ export const agentSessions = sqliteTable(
       .notNull()
       .references(() => stepRuns.id),
     turn_index: integer("turn_index").notNull().default(0),
+    kind: text("kind").$type<AgentSessionKind>().notNull().default("step"),
     agent_id: text("agent_id").references(() => agents.id),
     status: text("status").$type<AgentSessionState>().notNull().default("created"),
     provider_session_id: text("provider_session_id"),

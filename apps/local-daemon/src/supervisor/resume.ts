@@ -88,7 +88,7 @@ export function requireWorktreePath(state: SupervisorState, run: RunRow): string
   return path;
 }
 
-type RunReadPoint = "spawn" | "resume" | "append" | "abandon";
+type RunReadPoint = "spawn" | "resume" | "append" | "abandon" | "override";
 
 export function requireRunRow(db: Db, runId: string, when: RunReadPoint): RunRow {
   const row = getRun(db, runId);
@@ -147,6 +147,7 @@ function resumeTurnFor(
       ...turn,
       runId: run.id,
       stepRunId: session.step_run_id,
+      kind: "step",
       contextSelection: step?.context ?? null,
       agentSessionDir: sessionDir(state.dataDir, run.id, turn.agentSessionId),
       worktreePath,

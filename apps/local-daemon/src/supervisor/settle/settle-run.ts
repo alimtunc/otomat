@@ -11,6 +11,7 @@ import { isRunSettled } from "@otomat/domain";
 import { drainRunEvents, drainSessionEvents, readRunEvents } from "#events";
 
 import { classify, describe, TARGETS } from "../classify.js";
+import { gateDelivery } from "../delivery/gate.js";
 import {
   eventsForSession,
   findFinalStatus,
@@ -19,7 +20,10 @@ import {
   findReportedModel,
 } from "../evidence.js";
 import { cancelSessionInteractions, ingestRunInteractions } from "../interaction/index.js";
+import { sessionRef } from "../markers.js";
 import { recordProviderWait } from "../provider-wait/record.js";
+import { gateSupervision } from "../supervision/gate.js";
+import { settleSupervisionTurn } from "../supervision/settle.js";
 import type { ReconcileOutcome } from "../types.js";
 import {
   resolveTurnSession,
@@ -69,12 +73,15 @@ export function settleRun(
   if (plan !== null && turnSession === null) return settleIdleRun(ctx, plan);
 
   const scoped = turnSession === null ? events : eventsForSession(events, turnSession.id);
+  if (turnSession !== null && turnSession.kind === "supervision") {
+    return settleSupervisionTurn(ctx, turnSession, scoped, events);
+  }
   const finalStatus = findFinalStatus(scoped);
   const providerSessionId = findProviderSessionId(scoped);
   const providerLimit = findProviderLimit(scoped);
   const reportedModel = findReportedModel(scoped);
   const classification = classify(finalStatus, providerSessionId, providerLimit);
-  const evidence: SettleEvidence = {
+  let evidence: SettleEvidence = {
     classification,
     reason: describe(classification, providerSessionId, orphanTerminated),
     providerSessionId,
@@ -95,6 +102,13 @@ export function settleRun(
     resolveSessionContributions(db, turnSession.id, classification, options.now);
     // Promotes any ledgered ask no pass reached into its row first: the cancel closes rows, and an unpromoted ask would otherwise resurrect as a pending question on the next turn.
     ingestRunInteractions(db, run.id);
+    // A competition is settled by the operator picking a winner; holding or judging a candidate would strand its group.
+    const turnStep = steps.find((step) => step.id === turnSession.step_run_id);
+    if (!turnStep?.compete_group_id) {
+      // Read before the cancel below: an ask still open when the process died is what blocks delivery, and the cancel would erase it.
+      evidence = gateDelivery(ctx, plan, turnSession, scoped, evidence);
+      evidence = gateSupervision(ctx, turnSession, evidence);
+    }
     cancelSessionInteractions(
       db,
       dataDir,
@@ -104,13 +118,7 @@ export function settleRun(
     );
     // Persisted before the step reaches `waiting_for_provider`, so the state and the schedule it stands for land together.
     if (classification === "provider_limited" && providerLimit !== null) {
-      recordProviderWait(
-        db,
-        dataDir,
-        { runId: run.id, stepRunId: turnSession.step_run_id, agentSessionId: turnSession.id },
-        providerLimit,
-        options.now,
-      );
+      recordProviderWait(db, dataDir, sessionRef(run.id, turnSession), providerLimit, options.now);
     }
   }
 

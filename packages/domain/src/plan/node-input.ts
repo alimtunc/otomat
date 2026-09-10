@@ -4,6 +4,7 @@ import { CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
 import { contextReferencesSchema } from "../context/reference.js";
 import { executionOptionSelectionsSchema } from "../contracts/execution-config.js";
 import { modelSelectionSchema } from "../contracts/runtime-model.js";
+import { deliveryExpectationSchema } from "../delivery/expectation.js";
 import {
   RUN_PLAN_MAX_STEPS,
   RUN_PLAN_STEP_ID_PATTERN,
@@ -30,6 +31,7 @@ export const planNodeTemplateShape = {
   options: executionOptionSelectionsSchema.optional(),
   /** The one instruction this node adds; absent sends the attached context and the profile's guidance alone. */
   note: planNodeNoteSchema.optional(),
+  delivery: deliveryExpectationSchema.optional(),
 };
 
 /** The execution choices every executable node accepts; a node that names none inherits the launch's. */

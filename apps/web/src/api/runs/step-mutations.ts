@@ -54,7 +54,22 @@ export function useSetNextTurnModel(runId: string, stepId: string) {
   });
 }
 
-function stopStepErrorMessage(error: unknown): string {
+export function useOverrideStepDelivery(runId: string) {
+  const keys = useQueryKeys();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: { stepId: string; note: string }) =>
+      daemon.overrideStepDelivery(runId, variables.stepId, { note: variables.note }),
+    onSuccess: (step) => {
+      seedStepRow(client, keys, runId, step);
+      invalidateRunCycleCaches(client, keys, runId);
+      toast.success(`${step.name} accepted — the run history records the override.`);
+    },
+    onError: (error) => toast.error(stepCommandErrorMessage(error, "Could not accept this step")),
+  });
+}
+
+function stepCommandErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof DaemonRequestError) {
     const body = error.body;
     if (
@@ -66,7 +81,7 @@ function stopStepErrorMessage(error: unknown): string {
       return body.message;
     }
   }
-  return "Could not stop this step — is the daemon running?";
+  return `${fallback} — is the daemon running?`;
 }
 
 export function useStopRunStep(runId: string) {
@@ -79,6 +94,6 @@ export function useStopRunStep(runId: string) {
       invalidateRunCycleCaches(client, keys, runId);
       toast.success("Step stopped — your next message resumes the same session.");
     },
-    onError: (error) => toast.error(stopStepErrorMessage(error)),
+    onError: (error) => toast.error(stepCommandErrorMessage(error, "Could not stop this step")),
   });
 }

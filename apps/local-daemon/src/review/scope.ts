@@ -8,6 +8,7 @@ import {
 import {
   shortSha,
   stepPassBounds,
+  stepSessions,
   type RunDiffScope,
   type RunDiffScopeSelector,
 } from "@otomat/domain";
@@ -132,9 +133,7 @@ function resolveStep(
     step_name: step.name,
     step_number: step.idx + 1,
   };
-  const passes = listAgentSessionsForRun(ctx.db, runId).filter(
-    (pass) => pass.step_run_id === stepRunId,
-  );
+  const passes = stepSessions(listAgentSessionsForRun(ctx.db, runId), stepRunId);
   const bounds = stepPassBounds(passes);
   if (bounds === null) return unavailable(scope, boundaryUnavailable(passes, "step"));
 

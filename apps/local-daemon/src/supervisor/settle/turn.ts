@@ -94,7 +94,12 @@ function resolveRunTarget(
     // The turn itself succeeded, so the run rests on what the plan's other steps still owe it — the same reading `settleIdleRun` makes on boot.
     return { run: haltedPlanOutcome(plan, projected) ?? "failed", cancelRemaining: true };
   }
-  if (classification === "interrupted") return { run: "awaiting_human", cancelRemaining: false };
+  if (classification === "awaiting_supervision") {
+    return { run: mode === "live" ? "running" : "awaiting_human", cancelRemaining: false };
+  }
+  if (classification === "interrupted" || classification === "undelivered") {
+    return { run: "awaiting_human", cancelRemaining: false };
+  }
   // The plan is not halted: the step still owes its work, and the scheduler owns when it starts again.
   if (classification === "provider_limited") {
     return { run: "waiting_for_provider", cancelRemaining: false };

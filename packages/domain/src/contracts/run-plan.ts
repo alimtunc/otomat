@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { contextSelectionSchema } from "../context/selection.js";
+import { deliveryExpectationSchema } from "../delivery/expectation.js";
 import { resolvedAgentConfigSchema } from "./entities/agents.js";
 
 const runPlanExecutableShape = {
@@ -11,6 +12,8 @@ const runPlanExecutableShape = {
   prompt: z.string().nullable(),
   /** Frozen at launch, but left out of the API's plan: a session's dossier is where a reader asks for its content. */
   context: contextSelectionSchema.nullish(),
+  /** What this node owes before a dependent may start; absent on plans frozen before the contract existed. */
+  delivery: deliveryExpectationSchema.nullish(),
   config: resolvedAgentConfigSchema.nullish(),
 };
 

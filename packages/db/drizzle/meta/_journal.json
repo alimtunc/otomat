@@ -288,6 +288,13 @@
       "when": 1788567246714,
       "tag": "0040_inbox_marks",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1788975216311,
+      "tag": "0041_supervised_delivery",
+      "breakpoints": true
     }
   ]
 }

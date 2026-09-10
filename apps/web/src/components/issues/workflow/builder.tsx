@@ -1,6 +1,7 @@
 import { AttachedContextRow } from "@web/components/context/attached-context-row";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
+import { SupervisionControl } from "@web/components/issues/workflow/supervision-control";
 import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { WorkflowPlanEditor } from "@web/components/workflow/plan-editor";
@@ -31,7 +32,7 @@ export function WorkflowPlanBuilder({
   target,
   worktreeTarget,
 }: WorkflowPlanBuilderProps) {
-  const { plan, planError, isPending } = workflow;
+  const { plan, planError, supervisor, setSupervisor, isPending } = workflow;
   const projectId = targetProjectId(target);
   const [saving, setSaving] = useState(false);
 
@@ -63,6 +64,13 @@ export function WorkflowPlanBuilder({
           label={COMPOSER_LABEL}
         />
       </div>
+      <SupervisionControl
+        form={workflow.form}
+        agents={execution.agents}
+        value={supervisor}
+        onChange={setSupervisor}
+        disabled={isPending}
+      />
       <WorkflowPlanEditor
         plan={plan}
         execution={{ agents: execution.agents, inherited: execution.selection }}

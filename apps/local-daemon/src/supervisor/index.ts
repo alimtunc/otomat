@@ -27,6 +27,8 @@ export { LaunchRefusedError } from "./launch-target.js";
 export { ProviderResumeRefusedError } from "./provider-wait/schedule.js";
 export { NextTurnModelError } from "./next-turn-model.js";
 export { StepStopRefusedError } from "./stop-step.js";
+export { DeliveryOverrideRefusedError } from "./delivery/override.js";
+export type { WorktreeDeltaProbe } from "./delivery/worktree.js";
 export { closeMergedIssue, closeMergedRun, type MergeClosureConfig } from "./merge-closure.js";
 export { buildTerminalMarker } from "./markers.js";
 export { createReexecSpawn, isProcessAlive, killProcessGroup } from "./process.js";

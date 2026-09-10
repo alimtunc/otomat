@@ -1,3 +1,4 @@
+import { DEFAULT_DELIVERY_EXPECTATION } from "@otomat/domain";
 import type {
   AppendRunStepRequest,
   AppendedRunStepResponse,
@@ -15,6 +16,7 @@ import { useLaunchExecution } from "@web/components/execution/use-launch-executi
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { RecoveryLinkField } from "@web/components/runs/steps/recovery-link-field";
 import { WorkspaceReuseNote } from "@web/components/runs/steps/workspace-reuse-note";
+import { WorkflowDeliverySelect } from "@web/components/workflow/delivery-select";
 import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
 import { agentSelectionFields } from "@web/lib/execution/request";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
@@ -50,7 +52,7 @@ export function AppendStepForm({
     profiles: launchExecution.agents.profiles,
   });
   const form = useForm({
-    defaultValues: { name: "" },
+    defaultValues: { name: "", delivery: DEFAULT_DELIVERY_EXPECTATION },
     onSubmit: ({ value }) => {
       const agent = agentSelectionFields(launchExecution.request);
       if (!launchExecution.canLaunch || agent === null) return;
@@ -58,6 +60,7 @@ export function AppendStepForm({
         name: value.name.trim(),
         ...contextRequestFields(context),
         ...agent,
+        delivery: value.delivery,
         depends_on: [],
       };
       if (recovered !== null && recovers) request.replaces = recovered.id;
@@ -115,6 +118,15 @@ export function AppendStepForm({
           onChange={onExecutionChange}
           label="Appended step"
         />
+        <form.Field name="delivery">
+          {(field) => (
+            <WorkflowDeliverySelect
+              value={field.state.value}
+              onChange={field.handleChange}
+              label="Appended step"
+            />
+          )}
+        </form.Field>
       </DialogBody>
       <IssueFormFooter
         onCancel={onCancel}

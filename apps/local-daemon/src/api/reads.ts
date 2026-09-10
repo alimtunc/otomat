@@ -32,7 +32,9 @@ import {
   repositoryContractSchema,
   runUsageResponseSchema,
   scopeUsage,
+  sessionsUsage,
   stepUsage,
+  supervisionSessionIds,
   type AgentProfileContract,
   type IssueContract,
   type IssueExecutionEvidence,
@@ -188,14 +190,18 @@ export function readRunInteractions(db: Db, runId: string): RunInteractionsRespo
 /** Read from the whole ledger, so a cockpit that has paged only the newest events still sees a true total. */
 export function readRunUsage(db: Db, run: { id: string; status: RunState }): RunUsageResponse {
   const events = readRunEvents(db, run.id);
+  const settled = isRunSettled(run.status);
+  const supervisors = supervisionSessionIds(listAgentSessionsForRun(db, run.id));
   return runUsageResponseSchema.parse({
     run_id: run.id,
-    total: toReportedUsage(scopeUsage(events, isRunSettled(run.status))),
+    total: toReportedUsage(scopeUsage(events, settled)),
+    supervision:
+      supervisors.size === 0 ? null : toReportedUsage(sessionsUsage(events, supervisors, settled)),
     steps: listStepRunsForRun(db, run.id).map((step) => ({
       step_run_id: step.id,
       name: step.name,
       status: step.status,
-      usage: toReportedUsage(stepUsage(events, step.id, isStepSettled(step.status))),
+      usage: toReportedUsage(stepUsage(events, step.id, isStepSettled(step.status), supervisors)),
     })),
   });
 }

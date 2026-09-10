@@ -57,6 +57,7 @@ function detail(status: RunState, providerSessionId: string | null = "ps-1"): Ru
       {
         id: "as1",
         step_run_id: "s1",
+        kind: "step" as const,
         agent_id: "claude",
         status: "active",
         provider_session_id: providerSessionId,
@@ -245,6 +246,7 @@ it("refuses a run whose every step is a losing compete candidate", () => {
     {
       id: "loser-session",
       step_run_id: "loser",
+      kind: "step" as const,
       agent_id: "claude",
       status: "terminated",
       provider_session_id: "provider-loser",
@@ -312,6 +314,7 @@ it("routes to the selected competitor, never to a later losing session", () => {
     {
       id: "winner-session",
       step_run_id: "winner",
+      kind: "step" as const,
       agent_id: "claude",
       status: "awaiting_input",
       provider_session_id: "provider-winner",
@@ -330,6 +333,7 @@ it("routes to the selected competitor, never to a later losing session", () => {
     {
       id: "loser-session",
       step_run_id: "loser",
+      kind: "step" as const,
       agent_id: "unregistered-runtime",
       status: "terminated",
       provider_session_id: "provider-loser",

@@ -5,7 +5,7 @@ import {
   setStepNextTurnConfig,
   type StepRunRow,
 } from "@otomat/db";
-import type { NEXT_TURN_MODEL_ERRORS, ProviderOptions } from "@otomat/domain";
+import { stepSessions, type NEXT_TURN_MODEL_ERRORS, type ProviderOptions } from "@otomat/domain";
 
 import { reviseAgentConfigForTurn } from "#agents";
 import { emitLedgerEvent } from "#events";
@@ -44,9 +44,7 @@ export function setNextTurnModel(
   if (!run || !step || step.run_id !== runId) {
     throw new NextTurnModelError("step_not_found", `step ${stepRunId} is not on run ${runId}`);
   }
-  const sessions = listAgentSessionsForRun(state.db, runId).filter(
-    (candidate) => candidate.step_run_id === stepRunId,
-  );
+  const sessions = stepSessions(listAgentSessionsForRun(state.db, runId), stepRunId);
   const session = sessions.find((candidate) => candidate.id === sessionId);
   if (!session) {
     throw new NextTurnModelError(

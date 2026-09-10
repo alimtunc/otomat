@@ -51,6 +51,14 @@ export function executableSteps(plan: RunPlan): Array<RunPlanStep | RunPlanCompe
   return plan.steps.flatMap((node) => (isRunPlanCompeteGroup(node) ? node.compete : [node]));
 }
 
+/** The plan node one launched step run came from. */
+export function planStepFor(
+  plan: RunPlan,
+  stepRunId: string,
+): RunPlanStep | RunPlanCompetitor | undefined {
+  return executableSteps(plan).find((step) => step.id === stepRunId);
+}
+
 /** Step appended to recover another, keyed by the step it replaces; append-only ordering puts a recovery after its target. */
 function replacementIds(plan: RunPlan): Map<string, string> {
   const byReplaced = new Map<string, string>();

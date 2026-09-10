@@ -5,9 +5,24 @@ import { resolveStepContributionRoute, selectLatestResumableSession } from "#dom
 describe("selectLatestResumableSession", () => {
   it("selects the latest session on the furthest eligible step", () => {
     const sessions = [
-      { id: "early", step_run_id: "early", provider_session_id: "provider-early" },
-      { id: "late-old", step_run_id: "late", provider_session_id: "provider-late-old" },
-      { id: "late-new", step_run_id: "late", provider_session_id: "provider-late-new" },
+      {
+        id: "early",
+        step_run_id: "early",
+        kind: "step" as const,
+        provider_session_id: "provider-early",
+      },
+      {
+        id: "late-old",
+        step_run_id: "late",
+        kind: "step" as const,
+        provider_session_id: "provider-late-old",
+      },
+      {
+        id: "late-new",
+        step_run_id: "late",
+        kind: "step" as const,
+        provider_session_id: "provider-late-new",
+      },
     ];
 
     expect(
@@ -22,10 +37,37 @@ describe("selectLatestResumableSession", () => {
     ).toBe("late-new");
   });
 
+  it("never resumes a supervision turn, which names the step it judged", () => {
+    const sessions = [
+      { id: "turn", step_run_id: "s1", kind: "step" as const, provider_session_id: "provider-1" },
+      {
+        id: "judge",
+        step_run_id: "s1",
+        kind: "supervision" as const,
+        provider_session_id: "provider-2",
+      },
+    ];
+
+    expect(
+      selectLatestResumableSession(sessions, [{ id: "s1", idx: 0, compete_group_id: null }], [])
+        ?.id,
+    ).toBe("turn");
+  });
+
   it("excludes losing compete candidates", () => {
     const sessions = [
-      { id: "loser-session", step_run_id: "loser", provider_session_id: "provider-loser" },
-      { id: "winner-session", step_run_id: "winner", provider_session_id: "provider-winner" },
+      {
+        id: "loser-session",
+        step_run_id: "loser",
+        kind: "step" as const,
+        provider_session_id: "provider-loser",
+      },
+      {
+        id: "winner-session",
+        step_run_id: "winner",
+        kind: "step" as const,
+        provider_session_id: "provider-winner",
+      },
     ];
 
     expect(
@@ -41,7 +83,14 @@ describe("selectLatestResumableSession", () => {
   });
 
   it("refuses to resume any candidate while its group is still undecided", () => {
-    const sessions = [{ id: "a-session", step_run_id: "a", provider_session_id: "provider-a" }];
+    const sessions = [
+      {
+        id: "a-session",
+        step_run_id: "a",
+        kind: "step" as const,
+        provider_session_id: "provider-a",
+      },
+    ];
 
     expect(
       selectLatestResumableSession(
@@ -58,7 +107,11 @@ describe("resolveStepContributionRoute", () => {
 
   it("steers a step that already owns a session, and opens the first turn of one that does not", () => {
     expect(
-      resolveStepContributionRoute(step, [{ step_run_id: "s1", provider_session_id: null }], []),
+      resolveStepContributionRoute(
+        step,
+        [{ step_run_id: "s1", kind: "step" as const, provider_session_id: null }],
+        [],
+      ),
     ).toBe("steering");
     expect(resolveStepContributionRoute(step, [], [])).toBe("first_turn");
   });
@@ -73,7 +126,7 @@ describe("resolveStepContributionRoute", () => {
     expect(
       resolveStepContributionRoute(
         { ...step, status: "succeeded" },
-        [{ step_run_id: "s1", provider_session_id: "provider-1" }],
+        [{ step_run_id: "s1", kind: "step" as const, provider_session_id: "provider-1" }],
         [],
       ),
     ).toBe("steering");
@@ -81,7 +134,9 @@ describe("resolveStepContributionRoute", () => {
 
   it("keeps every candidate open while its group is undecided, and closes only the ones it decided against", () => {
     const candidate = { ...step, compete_group_id: "group" };
-    const sessions = [{ step_run_id: "s1", provider_session_id: "provider-1" }];
+    const sessions = [
+      { step_run_id: "s1", kind: "step" as const, provider_session_id: "provider-1" },
+    ];
 
     expect(
       resolveStepContributionRoute(candidate, sessions, [

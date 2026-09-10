@@ -1,9 +1,11 @@
 import type { Db, RunContributionRow, RunInteractionRow, RunRow, StepRunRow } from "@otomat/db";
 import type {
   AgentCapacity,
+  AgentSessionKind,
   ContextReference,
   ContextReviewComment,
   ContextSelection,
+  DeliveryExpectation,
   ExecutionOverrides,
   LaunchHold,
   LinearLifecycleSync,
@@ -35,6 +37,7 @@ export interface AppendStepInput {
   reviewComments?: readonly ContextReviewComment[];
   /** The agent the user picked for this step; never inherited from the last session. */
   selector: AgentConfigSelector;
+  delivery: DeliveryExpectation;
   overrides: ExecutionOverrides;
   dependsOn: readonly string[];
   replaces: string | null;
@@ -48,6 +51,8 @@ export interface TurnContext {
   runId: string;
   stepRunId: string;
   agentSessionId: string;
+  /** A supervision turn judges the step it names; it neither advances it nor claims its messages. */
+  kind: AgentSessionKind;
   /** The instruction this turn adds to its dossier: a recovery brief, a native continuation, or a legacy run's frozen prompt. `null` when the dossier and the carried batch are the whole turn. */
   prompt: string | null;
   /** What the plan froze for this step; a fresh session materializes its dossier from it. */
@@ -67,7 +72,7 @@ export interface TurnContext {
 /** A job is a turn whose prompt is already composed — context included — so the worker never has to ask what to run. */
 export interface SupervisedJob extends Omit<
   TurnContext,
-  "prompt" | "contextSelection" | "carryContributionIds"
+  "kind" | "prompt" | "contextSelection" | "carryContributionIds"
 > {
   prompt: string;
   mode: "run" | "resume";
@@ -133,6 +138,8 @@ export interface Supervisor {
   ): StepRunRow;
   /** Interrupt the step's live turn without settling the run or starting dependents; the step lands `awaiting_human`, resumable on the same provider session. */
   stopStep(runId: string, stepRunId: string): Promise<StepRunRow>;
+  /** Close a step the delivery guard holds, on the operator's explicit decision; journaled as an override, never as a verified delivery. */
+  overrideStepDelivery(runId: string, stepRunId: string, note: string): StepRunRow;
   /** Resume a resting or stopped run on an explicit action — never auto-runs. */
   resume(runId: string): Promise<RunRow>;
   /** What that resume would do, so the cockpit shows native reattachment or a recovery session before it runs. */
@@ -186,6 +193,10 @@ export interface Supervisor {
 
 export type ReconcileClassification =
   | "completed"
+  /** The process ended cleanly but the snapshot did not meet the node's declared delivery expectation. */
+  | "undelivered"
+  /** Delivered, and held until the run's own supervisor judges it. */
+  | "awaiting_supervision"
   | "interrupted"
   | "provider_limited"
   | "failed"

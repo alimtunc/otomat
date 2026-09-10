@@ -14,6 +14,8 @@ import {
   reconcileContributionClaims,
   retryRunContribution,
 } from "./contribution/index.js";
+import { overrideStepDelivery } from "./delivery/override.js";
+import { createWorktreeDeltaProbe } from "./delivery/worktree.js";
 import { answerRunInteraction } from "./interaction/index.js";
 import { setLaunchHold } from "./launch-hold.js";
 import { setNextTurnModel } from "./next-turn-model.js";
@@ -56,6 +58,8 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     setNextTurnModel: (runId, stepRunId, sessionId, currentConfigHash, model, options) =>
       setNextTurnModel(state, runId, stepRunId, sessionId, currentConfigHash, model, options),
     stopStep: (runId, stepRunId) => stopStepTurn(state, runId, stepRunId),
+    overrideStepDelivery: (runId, stepRunId, note) =>
+      overrideStepDelivery(state, runId, stepRunId, note),
     resume: (runId) => resumeRun(state, runId),
     resumePlan: (runId) => runResumePlan(state, runId),
     scheduleProviderResume: (runId, resumeAt) => scheduleProviderResume(state, runId, resumeAt),
@@ -79,7 +83,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       const now = new Date().toISOString();
       reconcileContributionClaims(state.db, state.dataDir, now);
       const recovered = recoverCompeteSelections(state);
-      const report = reconcileRuns(state.db, state.dataDir, now);
+      const report = reconcileRuns(state.db, state.dataDir, now, createWorktreeDeltaProbe(state));
       const reconciled = [...recovered, ...report.reconciled];
       for (const outcome of reconciled) finishSettle(state, outcome);
       return { reconciled };

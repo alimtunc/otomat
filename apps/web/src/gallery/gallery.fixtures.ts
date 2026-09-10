@@ -117,6 +117,7 @@ export function runDetailFixture(
       status,
       branch: "otomat/run/run-1",
       plan_json: { version: 1, steps: [] },
+      supervision: null,
       updated_at: "2026-08-30T10:00:00.000Z",
     },
     steps: steps.map((step, idx) => ({

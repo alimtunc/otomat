@@ -74,6 +74,7 @@ it("gives an appended step the same frozen default as the launch", async () => {
     note: "keep going",
     references: [],
     selector: { kind: "runtime", runtimeId: "fake" },
+    delivery: "standard",
     overrides: { model: { kind: "model", id: "fake-thorough" } },
     dependsOn: [],
     replaces: null,

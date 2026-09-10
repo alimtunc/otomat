@@ -1,6 +1,7 @@
 import { getRun, listActiveRuns, listAgentSessionsForRun, type Db } from "@otomat/db";
 import { agentSessionMachine, type RunState } from "@otomat/domain";
 
+import type { WorktreeDeltaProbe } from "./delivery/worktree.js";
 import { settleRun, type SettleOptions } from "./settle/index.js";
 import type { ReconcileOutcome, ReconcileReport } from "./types.js";
 
@@ -13,7 +14,12 @@ const RESTING_RUN_STATES: ReadonlySet<RunState> = new Set([
 ]);
 
 /** Boot pass: settle every in-flight run left non-terminal by a crash or kill. */
-export function reconcileRuns(db: Db, dataDir: string, now: string): ReconcileReport {
+export function reconcileRuns(
+  db: Db,
+  dataDir: string,
+  now: string,
+  worktreeDelta: WorktreeDeltaProbe,
+): ReconcileReport {
   const active = listActiveRuns(db);
   for (const run of active.corrupt) {
     console.error(
@@ -31,7 +37,7 @@ export function reconcileRuns(db: Db, dataDir: string, now: string): ReconcileRe
     for (const session of turns) {
       const current = getRun(db, run.id);
       if (!current || RESTING_RUN_STATES.has(current.status)) break;
-      const settle: SettleOptions = { mode: "boot", now };
+      const settle: SettleOptions = { mode: "boot", worktreeDelta, now };
       if (session) settle.turn = { agentSessionId: session.id };
       const outcome = settleRun(db, dataDir, current, settle);
       if (outcome !== null) reconciled.push(outcome);
@@ -39,7 +45,7 @@ export function reconcileRuns(db: Db, dataDir: string, now: string): ReconcileRe
   }
   for (const run of active.corrupt) {
     if (RESTING_RUN_STATES.has(run.status)) continue;
-    const outcome = settleRun(db, dataDir, run, { mode: "boot", now });
+    const outcome = settleRun(db, dataDir, run, { mode: "boot", worktreeDelta, now });
     if (outcome !== null) reconciled.push(outcome);
   }
   return { reconciled };

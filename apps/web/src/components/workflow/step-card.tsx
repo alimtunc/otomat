@@ -1,5 +1,6 @@
 import { Icon, IconButton } from "@otomat/ui";
 import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
+import { WorkflowDeliverySelect } from "@web/components/workflow/delivery-select";
 import { DependencyToggles } from "@web/components/workflow/dependency-toggles";
 import { WorkflowNameField } from "@web/components/workflow/name-field";
 import { WorkflowNodeContext } from "@web/components/workflow/node-context";
@@ -10,6 +11,7 @@ import {
   moveWorkflowStep,
   removeWorkflowStep,
   setWorkflowStepContext,
+  setWorkflowStepDelivery,
   setWorkflowStepExecution,
   toggleWorkflowDependency,
 } from "@web/lib/workflow/steps";
@@ -75,6 +77,11 @@ export function WorkflowStepCard({ plan, index, execution, projectId }: Workflow
         label={label}
       />
       <div className="flex flex-wrap items-center justify-between gap-2">
+        <WorkflowDeliverySelect
+          value={step.delivery}
+          onChange={(next) => setSteps((value) => setWorkflowStepDelivery(value, index, next))}
+          label={label}
+        />
         <DependencyToggles
           earlier={steps.slice(0, index)}
           dependsOn={step.dependsOn}

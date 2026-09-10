@@ -1,6 +1,7 @@
 import type { RunDetail, StepRunContract } from "@otomat/domain";
 import { AgentAvatar, Badge, cn, Icon, LiveDot, resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { useRunUsage } from "@web/api/runs/queries";
+import { StepGuardNote } from "@web/components/runs/cockpit/steps/guard-note";
 import { SessionContextDialog } from "@web/components/runs/session/context-dialog";
 import { UsageTokens } from "@web/components/runs/usage/tokens";
 import { participantLabel } from "@web/lib/execution/labels";
@@ -21,6 +22,7 @@ function SessionRows({ detail, step }: { detail: RunDetail; step: StepRunContrac
           >
             <AgentAvatar size="sm" name={session.agent_id ?? "agent"} />
             <span className="truncate">{session.agent_id ?? "agent"}</span>
+            {session.kind === "supervision" ? <Badge variant="iris">supervisor</Badge> : null}
             <span className="ml-auto text-micro lowercase text-text-tertiary">
               {sessionMeta.label}
             </span>
@@ -95,6 +97,7 @@ export function StepRow({
         </p>
       )}
       {stepUsage === undefined ? null : <UsageTokens usage={stepUsage} className="mt-1 ml-5.5" />}
+      <StepGuardNote step={step} />
       <SessionRows detail={detail} step={step} />
     </div>
   );

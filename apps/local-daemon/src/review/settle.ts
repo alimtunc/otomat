@@ -93,6 +93,8 @@ export function onRunSettled(ctx: ReviewContext, outcome: RunSettledOutcome): vo
     (comment) => comment.status === "open",
   );
 
+  // The turn delivered and is held for its supervisor: releasing its fix requests would drop work that landed.
+  if (outcome.classification === "awaiting_supervision") return;
   if (outcome.classification !== "completed") {
     releasePendingFixes(ctx, open);
     return;

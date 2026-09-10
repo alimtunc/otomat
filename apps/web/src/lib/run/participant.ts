@@ -1,5 +1,6 @@
 import {
-  executableSteps,
+  planStepFor,
+  stepSessions,
   type AgentSessionContract,
   type ResolvedAgentConfig,
   type RunDetail,
@@ -15,12 +16,12 @@ export interface StepParticipant {
 }
 
 export function stepParticipant(detail: RunDetail, stepRunId: string): StepParticipant {
-  const sessions = detail.sessions.filter((row) => row.step_run_id === stepRunId);
+  const sessions = stepSessions(detail.sessions, stepRunId);
   const session = sessions.at(-1) ?? null;
   // Sessions recorded before `started_at` existed carry null there; any state past `created` proves the turn ran.
   const launched =
     sessions.findLast((row) => row.started_at !== null || row.status !== "created") ?? null;
-  const planned = executableSteps(detail.run.plan_json).find((node) => node.id === stepRunId);
+  const planned = planStepFor(detail.run.plan_json, stepRunId);
   const pending = detail.steps.find((row) => row.id === stepRunId)?.next_turn_config ?? null;
   return {
     session,

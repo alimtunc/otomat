@@ -1,7 +1,9 @@
+import type { AgentSessionKind } from "../contracts/entities/runs.js";
 import { isStepSettled, type StepRunState } from "../state-machines/step-run.js";
 
 interface ResumableSession {
   step_run_id: string;
+  kind: AgentSessionKind;
   provider_session_id: string | null;
 }
 
@@ -29,7 +31,15 @@ export function latestSessionForStep<Session extends ResumableSession>(
   sessions: readonly Session[],
   stepRunId: string,
 ): Session | undefined {
-  return sessions.filter((session) => session.step_run_id === stepRunId).at(-1);
+  return stepSessions(sessions, stepRunId).at(-1);
+}
+
+/** A supervision turn names the step it judges without being one of its turns; every step-scoped read excludes it. */
+export function stepSessions<Session extends ResumableSession>(
+  sessions: readonly Session[],
+  stepRunId: string,
+): Session[] {
+  return sessions.filter((session) => session.step_run_id === stepRunId && session.kind === "step");
 }
 
 export type StepContributionRoute = "steering" | "first_turn";
@@ -61,7 +71,7 @@ export function selectLatestResumableSession<Session extends ResumableSession>(
   let latest: Session | undefined;
   let latestStepIndex = -1;
   for (const session of sessions) {
-    if (session.provider_session_id === null) continue;
+    if (session.provider_session_id === null || session.kind !== "step") continue;
     const step = stepById.get(session.step_run_id);
     if (step?.compete_group_id && !winnerStepIds.has(step.id)) continue;
     const stepIndex = step?.idx ?? -1;

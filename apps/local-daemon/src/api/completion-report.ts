@@ -1,5 +1,6 @@
 import { listAgentSessionsForRun, listStepRunsForRun, schema, type Db } from "@otomat/db";
 import {
+  collectReportedCommands,
   runCompletionReportResponseSchema,
   runPlanSchema,
   type RunCompletionReport,
@@ -10,7 +11,6 @@ import { eq } from "drizzle-orm";
 import { readRunEventProjection } from "#events";
 import type { ReviewService } from "#review";
 
-import { collectReportedCommands } from "./completion-report/commands.js";
 import { projectDelivery } from "./completion-report/delivery.js";
 import { projectExecution } from "./completion-report/execution.js";
 import { renderRunCompletionMarkdown } from "./completion-report/markdown.js";

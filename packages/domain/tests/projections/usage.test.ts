@@ -77,7 +77,16 @@ describe("stepUsage", () => {
       usageEvent(3, { input_tokens: 7 }, null),
     ];
 
-    expect(stepUsage(events, "step-1", true).input).toBe(100);
-    expect(stepUsage(events, "step-2", true).input).toBe(900);
+    expect(stepUsage(events, "step-1", true, new Set()).input).toBe(100);
+    expect(stepUsage(events, "step-2", true, new Set()).input).toBe(900);
+  });
+
+  it("leaves out the sessions it was told to exclude, so a judge's cost is not the step's", () => {
+    const events = [
+      usageEvent(1, { input_tokens: 100 }, "step-1"),
+      { ...usageEvent(2, { input_tokens: 900 }, "step-1"), agent_session_id: "judge" },
+    ];
+
+    expect(stepUsage(events, "step-1", true, new Set(["judge"])).input).toBe(100);
   });
 });

@@ -17,6 +17,13 @@ export interface Targets {
 /** Each classification's canonical resting/terminal states across the three machines. */
 export const TARGETS = {
   completed: { run: "review_ready", step: "succeeded", session: "terminated" },
+  // The provider conversation is intact, so the step rests exactly where a resume can pick it up again.
+  undelivered: { run: "awaiting_human", step: "awaiting_human", session: "awaiting_input" },
+  awaiting_supervision: {
+    run: "awaiting_human",
+    step: "awaiting_human",
+    session: "awaiting_input",
+  },
   canceled: { run: "canceled", step: "canceled", session: "terminated" },
   interrupted: { run: "awaiting_human", step: "awaiting_human", session: "awaiting_input" },
   // The session is left `idle`, not `awaiting_input`: nobody is being asked anything, and a resume must still be able to reattach it.

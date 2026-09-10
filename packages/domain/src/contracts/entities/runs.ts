@@ -11,6 +11,7 @@ import {
 } from "../entity-states.js";
 import { runPlanSchema } from "../run-plan.js";
 import { runtimeInteractionAnswerSchema, runtimeInteractionQuestionSchema } from "../runtime.js";
+import { supervisionSchema } from "../supervision.js";
 import { resolvedAgentConfigSchema } from "./agents.js";
 import { worktreeStatusSchema } from "./workspace.js";
 
@@ -20,6 +21,8 @@ export const runContractSchema = z.object({
   status: z.enum(RUN_STATES),
   branch: z.string(),
   plan_json: runPlanSchema,
+  /** Defaulted so an older daemon reads as unsupervised. */
+  supervision: supervisionSchema.nullable().default(null),
   /** Last time the daemon wrote this run row; the honest "last activity" of a collapsed run. */
   updated_at: z.iso.datetime(),
 });
@@ -128,9 +131,14 @@ export const sessionPassBoundarySchema = z.object({
 });
 export type SessionPassBoundary = z.infer<typeof sessionPassBoundarySchema>;
 
+/** Whether a session is a plan step's own turn or a supervisor judging one; the two never share a conversation surface. */
+const AGENT_SESSION_KINDS = ["step", "supervision"] as const;
+export type AgentSessionKind = (typeof AGENT_SESSION_KINDS)[number];
+
 export const agentSessionContractSchema = z.object({
   id: z.string(),
   step_run_id: z.string(),
+  kind: z.enum(AGENT_SESSION_KINDS).default("step"),
   agent_id: z.string().nullable(),
   status: z.enum(AGENT_SESSION_STATES),
   /** Provider session id, reused when resuming after the runtime assigns it. */

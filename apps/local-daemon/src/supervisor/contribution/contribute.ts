@@ -14,10 +14,11 @@ import {
   type StepRunRow,
 } from "@otomat/db";
 import {
-  executableSteps,
   isRunContributionCancelable,
   isRunContributionRetriable,
+  planStepFor,
   resolveStepContributionRoute,
+  stepSessions,
   type ResolvedAgentConfig,
 } from "@otomat/domain";
 
@@ -93,7 +94,7 @@ function stepAcceptingContributions(
       `step ${stepRunId} is ${step.status} and will not run another turn`,
     );
   }
-  return { step, sessions: sessions.filter((session) => session.step_run_id === stepRunId) };
+  return { step, sessions: stepSessions(sessions, stepRunId) };
 }
 
 interface ContributionTarget {
@@ -126,9 +127,7 @@ function contributionTarget(
       "This step now has a participant session. Refresh before sending the message.",
     );
   }
-  const planConfig = executableSteps(run.plan_json).find(
-    (candidate) => candidate.id === step.id,
-  )?.config;
+  const planConfig = planStepFor(run.plan_json, step.id)?.config;
   const config = step.next_turn_config_json ?? session?.config_json ?? planConfig ?? null;
   if (config === null) {
     throw new RunContributionTargetChangedError(

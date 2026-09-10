@@ -8,6 +8,7 @@ import {
 } from "@otomat/db";
 import {
   CONTEXT_MAX_REVIEW_COMMENTS,
+  DEFAULT_DELIVERY_EXPECTATION,
   FIX_REVIEW_COMMENTS_STEP_NAME,
   isAgentFixEligible,
   isRunPlanCompeteGroup,
@@ -110,6 +111,7 @@ export async function requestFix(
     overrides: request.overrides,
     dependsOn: preparation.dependsOn,
     replaces: null,
+    delivery: DEFAULT_DELIVERY_EXPECTATION,
     origin: "review_fix",
   });
   markFixRequested(ctx, run.id, preparation.comments);

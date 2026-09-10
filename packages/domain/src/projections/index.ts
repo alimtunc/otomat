@@ -1,4 +1,5 @@
 export * from "./activity.js";
+export * from "./commands.js";
 export * from "./evidence.js";
 export * from "./inbox.js";
 export * from "./issue-execution.js";
@@ -8,6 +9,7 @@ export * from "./primary-state.js";
 export * from "./publication-operation.js";
 export * from "./pull-request-reference.js";
 export * from "./review-inbox.js";
+export * from "./supervision.js";
 export * from "./usage-dashboard.js";
 export * from "./usage-figures.js";
 export * from "./usage.js";

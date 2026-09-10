@@ -1,8 +1,6 @@
-import {
-  isExplicitTestCommand,
-  type EventEnvelope,
-  type RunCompletionReport,
-} from "@otomat/domain";
+import type { RunCompletionReport } from "../contracts/completion-report.js";
+import type { EventEnvelope } from "../events/envelope.js";
+import { isExplicitTestCommand } from "../report/test-command.js";
 
 const COMMAND_TOOLS = new Set(["bash", "command_execution"]);
 

@@ -166,6 +166,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
           note: request.note ?? null,
           references: request.context ?? [],
           selector: appendStepSelector(request),
+          delivery: request.delivery,
           overrides: { model: request.model, options: request.options },
           dependsOn: request.depends_on,
           replaces: request.replaces ?? null,

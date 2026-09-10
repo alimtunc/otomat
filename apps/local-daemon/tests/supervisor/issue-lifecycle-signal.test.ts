@@ -15,6 +15,7 @@ const FIX_STEP: AppendStepInput = {
   note: "address the review",
   references: [],
   selector: { kind: "runtime", runtimeId: "fake" },
+  delivery: "standard",
   overrides: {},
   dependsOn: [],
   replaces: null,

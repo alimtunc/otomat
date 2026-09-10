@@ -54,13 +54,33 @@ export function scopeUsage(events: readonly EventEnvelope[], settled: boolean): 
   return { ...totals, availability: settled ? "final" : "live" };
 }
 
+/** The turns of a named set of sessions; a supervisor's cost is read apart from the steps it judged. */
+export function sessionsUsage(
+  events: readonly EventEnvelope[],
+  agentSessionIds: ReadonlySet<string>,
+  settled: boolean,
+): ScopeUsage {
+  return scopeUsage(
+    events.filter(
+      (event) => event.agent_session_id !== null && agentSessionIds.has(event.agent_session_id),
+    ),
+    settled,
+  );
+}
+
+/** A supervision turn names the step it judges, so its own sessions are excluded from that step's cost. */
 export function stepUsage(
   events: readonly EventEnvelope[],
   stepRunId: string,
   settled: boolean,
+  excludedSessionIds: ReadonlySet<string>,
 ): ScopeUsage {
   return scopeUsage(
-    events.filter((event) => event.step_run_id === stepRunId),
+    events.filter(
+      (event) =>
+        event.step_run_id === stepRunId &&
+        (event.agent_session_id === null || !excludedSessionIds.has(event.agent_session_id)),
+    ),
     settled,
   );
 }

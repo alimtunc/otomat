@@ -91,6 +91,7 @@ function runDetail(status: RunState, providerSessionId: string | null = "ps-1"):
       {
         id: "as1",
         step_run_id: "s1",
+        kind: "step" as const,
         agent_id: "claude",
         status: "awaiting_input",
         provider_session_id: providerSessionId,

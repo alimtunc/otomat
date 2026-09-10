@@ -107,6 +107,7 @@ function toPlanShape(plan: RunPlan): RunPlan {
 export function toRun(row: RunRow): RunContract {
   return runContractSchema.parse({
     ...row,
+    supervision: row.supervision_json,
     plan_json: toPlanShape(row.plan_json),
     updated_at: sqliteToIso(row.updated_at),
   });

@@ -33,6 +33,15 @@ function toHandle(child: ReturnType<typeof spawn>, start: SessionProcess["start"
 
 export type WorkerBehavior =
   | "complete"
+  /** Completes after leaving a file behind, so the delivery guard has a real workspace delta to read. */
+  | "write"
+  | "ask-complete"
+  /** Changes the workspace, but the one command it ran failed. */
+  | "failed-command"
+  | "supervise-pass"
+  | "supervise-changes"
+  | "supervise-blocked"
+  | "supervise-silent"
   | "slow"
   | "fail"
   | "crash"

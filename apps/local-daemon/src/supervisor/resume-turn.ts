@@ -103,6 +103,7 @@ export async function resumeCompeteGroup(
         runId: run.id,
         stepRunId: candidate.id,
         agentSessionId: session.id,
+        kind: "step",
         prompt: planStep.prompt ?? NATIVE_CONTINUATION,
         contextSelection: planStep.context ?? null,
         agentSessionDir: sessionDir(state.dataDir, run.id, session.id),

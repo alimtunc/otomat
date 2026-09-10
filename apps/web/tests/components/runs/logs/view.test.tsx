@@ -49,6 +49,7 @@ const detail: RunDetail = {
     {
       id: "session-1",
       step_run_id: "s1",
+      kind: "step" as const,
       agent_id: "claude",
       status: "active",
       provider_session_id: "prov-123",
@@ -125,6 +126,7 @@ it("separates requested Codex permissions from unreported effective permissions"
   const session = agentSessionContractSchema.parse({
     id: "codex-1",
     step_run_id: "s1",
+    kind: "step" as const,
     agent_id: "codex",
     status: "terminated",
     provider_session_id: "thread-1",

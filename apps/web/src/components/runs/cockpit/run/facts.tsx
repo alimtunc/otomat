@@ -47,6 +47,11 @@ export function RunFacts({ detail }: { detail: RunDetail }) {
           </span>
         )}
       </Fact>
+      {usage.data?.supervision == null ? null : (
+        <Fact label="of which supervision">
+          <UsageTokens usage={usage.data.supervision} />
+        </Fact>
+      )}
     </dl>
   );
 }
