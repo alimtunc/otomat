@@ -700,11 +700,27 @@ it("keeps every comment pending when GitHub refuses the review, and submits them
   expect(detail.comments[0]?.publication_error).toBeNull();
 });
 
-it("refuses a submission with neither a summary nor a pending comment", async () => {
+it("refuses a comment with neither a summary nor a pending comment", async () => {
   openPullRequest();
   await expect(review.submitReview(runTarget(), { body: "  ", event: "comment" })).rejects.toThrow(
     ReviewSubmissionEmptyError,
   );
+  expect(submissions).toEqual([]);
+});
+
+it("refuses to request changes on a summary that is only whitespace", async () => {
+  openPullRequest();
+  await addComment(runTarget(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: currentAnchor().sha,
+    destination: "pr_review",
+    body: "on the PR",
+  });
+
+  await expect(
+    review.submitReview(runTarget(), { body: " \n ", event: "request_changes" }),
+  ).rejects.toThrow(ReviewSubmissionEmptyError);
   expect(submissions).toEqual([]);
 });
 
@@ -737,6 +753,19 @@ it("approves a pull request the connected account did not open", async () => {
   const detail = await review.submitReview(runTarget(), { body: "lgtm", event: "approve" });
   expect(submissions).toEqual([
     { commitSha: "f".repeat(40), body: "lgtm", event: "approve", comments: [] },
+  ]);
+  expect(detail.review?.status).toBe("resolved");
+});
+
+it("approves with no summary, no comment and no reviewed file", async () => {
+  openPullRequest();
+  writeGitHubViewer(fix.db, { login: "octocat", teams: null });
+  updatePullRequest(fix.db, "pr-review", { author_login: "contrib" });
+
+  const detail = await review.submitReview(runTarget(), { body: "  ", event: "approve" });
+
+  expect(submissions).toEqual([
+    { commitSha: "f".repeat(40), body: "", event: "approve", comments: [] },
   ]);
   expect(detail.review?.status).toBe("resolved");
 });

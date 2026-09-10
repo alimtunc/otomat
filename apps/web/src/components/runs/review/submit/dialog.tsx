@@ -27,7 +27,7 @@ export interface SubmitReviewDialogProps {
 export function SubmitReviewDialog({ target, detail }: SubmitReviewDialogProps) {
   const [open, setOpen] = useState(false);
   const pending = detail.comments.filter(isPendingReviewComment);
-  const { form, submitting } = useSubmitReviewForm({
+  const { form, refusal, submitting } = useSubmitReviewForm({
     target,
     events: detail.submission.events,
     pendingComments: pending.length,
@@ -54,13 +54,13 @@ export function SubmitReviewDialog({ target, detail }: SubmitReviewDialogProps) 
           </p>
           <form.Field name="body">
             {(field) => (
-              <Field>
+              <Field invalid={refusal !== undefined} error={refusal}>
                 <FieldLabel>Summary</FieldLabel>
                 <FieldControl>
                   <Textarea
                     rows={5}
                     value={field.state.value}
-                    placeholder="Optional — what the author should know before reading the comments."
+                    placeholder="What the author should know before reading the comments."
                     onChange={(event) => field.handleChange(event.target.value)}
                     onBlur={field.handleBlur}
                     onKeyDown={submitOnCmdEnter(() => {
@@ -86,17 +86,14 @@ export function SubmitReviewDialog({ target, detail }: SubmitReviewDialogProps) 
           <Button type="button" size="sm" variant="ghost" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <form.Subscribe
-            selector={(state) => ({ canSubmit: state.canSubmit, refusal: state.errors[0] })}
-          >
-            {({ canSubmit, refusal }) => (
+          <form.Subscribe selector={(state) => state.canSubmit}>
+            {(canSubmit) => (
               <Button
                 type="button"
                 size="sm"
                 variant="primary"
                 loading={submitting}
                 disabled={!canSubmit}
-                title={typeof refusal === "string" ? refusal : undefined}
                 onClick={() => void form.handleSubmit()}
               >
                 Submit to GitHub

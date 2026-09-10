@@ -33,6 +33,15 @@ const OPEN_DETAIL = reviewDetail([reviewedFile({ file_path: "a.ts", reviewed: tr
   submission: { events: ["comment", "request_changes"], reason: "You opened this pull request." },
 });
 
+const APPROVABLE_DETAIL = reviewDetail([], {
+  comments: [],
+  destinations: { pr_review: true, reason: "Pull request #7 is open for review." },
+  submission: {
+    events: ["comment", "request_changes", "approve"],
+    reason: "Pull request #7 is open for review.",
+  },
+});
+
 async function openDialog(detail = OPEN_DETAIL, inFlight = false) {
   submitted.length = 0;
   refusal = null;
@@ -121,13 +130,65 @@ it("refuses to open on a surface the daemon offers no verdict for", async () => 
   await mounted.cleanup();
 });
 
-it("refuses an empty submission from the first paint, not after a dead click", async () => {
-  const empty = reviewDetail([], {
-    comments: [],
-    destinations: { pr_review: true, reason: "Pull request #7 is open for review." },
-    submission: { events: ["comment"], reason: "Pull request #7 is open for review." },
+it("approves with an empty summary, no comment and no reviewed file", async () => {
+  const mounted = await openDialog(APPROVABLE_DETAIL);
+  expect(findButton("Submit to GitHub")?.disabled).toBe(true);
+
+  await act(async () => {
+    findButton("Approve")?.click();
   });
-  const mounted = await openDialog(empty);
+  expect(findButton("Submit to GitHub")?.disabled).toBe(false);
+
+  await act(async () => {
+    findButton("Submit to GitHub")?.click();
+  });
+
+  expect(submitted).toEqual([{ body: "", event: "approve" }]);
+  await mounted.cleanup();
+});
+
+it("submits a comment carrying no summary but an inline comment", async () => {
+  const mounted = await openDialog();
+  await act(async () => {
+    findButton("Submit to GitHub")?.click();
+  });
+
+  expect(submitted).toEqual([{ body: "", event: "comment" }]);
+  await mounted.cleanup();
+});
+
+it("refuses a request for changes without a summary, and says so next to the summary", async () => {
+  const mounted = await openDialog(APPROVABLE_DETAIL);
+  await act(async () => {
+    findButton("Request changes")?.click();
+  });
+
+  const validation = document.body.querySelector("[role='alert']");
+  expect(validation?.textContent).toBe("GitHub needs a summary to request changes.");
+  expect(validation?.parentElement?.contains(summary())).toBe(true);
+
+  await act(async () => {
+    findButton("Submit to GitHub")?.click();
+  });
+  expect(submitted).toEqual([]);
+  await mounted.cleanup();
+});
+
+it("takes a summary of whitespace alone for an empty one", async () => {
+  const mounted = await openDialog(APPROVABLE_DETAIL);
+  await act(async () => {
+    setTextareaValue(summary(), "   ");
+  });
+
+  expect(findButton("Submit to GitHub")?.disabled).toBe(true);
+  expect(document.body.textContent).toContain(
+    "Write a summary or leave a comment on the diff before submitting.",
+  );
+  await mounted.cleanup();
+});
+
+it("refuses an empty submission from the first paint, not after a dead click", async () => {
+  const mounted = await openDialog(APPROVABLE_DETAIL);
 
   expect(findButton("Submit to GitHub")?.disabled).toBe(true);
   await mounted.cleanup();

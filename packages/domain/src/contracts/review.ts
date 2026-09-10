@@ -59,11 +59,23 @@ export const reviewDetailSchema = z.object({
 });
 export type ReviewDetail = z.infer<typeof reviewDetailSchema>;
 
-/** Submit the pending pull-request comments as one GitHub review; the summary alone is enough to submit. */
+/** Submit the pending pull-request comments as one GitHub review. */
 export const submitReviewRequestSchema = z
   .object({ body: z.string().max(65_536), event: pullRequestReviewEventSchema })
   .strict();
 export type SubmitReviewRequest = z.infer<typeof submitReviewRequestSchema>;
+
+/** GitHub takes an approval carrying nothing; its other two verdicts must say something. */
+export function reviewSubmissionRefusal(
+  event: PullRequestReviewEvent,
+  review: { body: string; comments: number },
+): string | null {
+  if (event === "approve" || review.body.trim() !== "") return null;
+  if (event === "request_changes") return "GitHub needs a summary to request changes.";
+  return review.comments > 0
+    ? null
+    : "Write a summary or leave a comment on the diff before submitting.";
+}
 
 /** Create a comment pinned to the diff the reviewer is looking at; the daemon verifies the anchor. */
 export const createReviewCommentRequestSchema = z
