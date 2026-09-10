@@ -21,6 +21,7 @@ import { resolveExpectedBuild } from "./expected-build.js";
 import { buildIpcActions } from "./ipc-actions.js";
 import { registerIpc, type IpcState } from "./ipc.js";
 import { installApplicationMenu } from "./menu.js";
+import { startNotifications } from "./notifications/electron.js";
 import type { AppPaths } from "./paths.js";
 import { serveAppScheme } from "./protocol.js";
 import { QuitSequence } from "./quit.js";
@@ -47,6 +48,7 @@ export class DesktopApp {
   private readonly support: DesktopSupport;
   private runtime: DesktopRuntime | null = null;
   private localDaemonUrl = "";
+  private notificationsStarted = false;
   private diagnostic: DesktopStartupDiagnostic | null = null;
   private operation: "restoring" | "starting" | null = null;
   private readonly csp = new RendererCsp(() => [
@@ -171,6 +173,8 @@ export class DesktopApp {
       await this.runtime.linear.reconcile();
       this.rejectedBackupPaths.clear();
       this.diagnostic = null;
+      if (!this.notificationsStarted) startNotifications(this.runtime, this.cockpit);
+      this.notificationsStarted = true;
       this.cockpit.open();
       this.splash.close();
       this.runtime.updater.start();

@@ -29,6 +29,7 @@ import { Route as SettingsAppearanceRouteImport } from './routes/settings/appear
 import { Route as SettingsExecutionRouteImport } from './routes/settings/execution'
 import { Route as SettingsHostRouteImport } from './routes/settings/host'
 import { Route as SettingsIntegrationsRouteImport } from './routes/settings/integrations'
+import { Route as SettingsNotificationsRouteImport } from './routes/settings/notifications'
 import { Route as SettingsRepositoriesRouteImport } from './routes/settings/repositories'
 import { Route as SettingsRuntimesRouteImport } from './routes/settings/runtimes'
 import { Route as SettingsSandboxRouteImport } from './routes/settings/sandbox'
@@ -150,6 +151,11 @@ const SettingsIntegrationsRoute = SettingsIntegrationsRouteImport.update({
   path: '/integrations',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsNotificationsRoute = SettingsNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const SettingsRepositoriesRoute = SettingsRepositoriesRouteImport.update({
   id: '/repositories',
   path: '/repositories',
@@ -267,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByTo {
   '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
@@ -346,6 +354,7 @@ export interface FileRoutesById {
   '/settings/execution': typeof SettingsExecutionRoute
   '/settings/host': typeof SettingsHostRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
+  '/settings/notifications': typeof SettingsNotificationsRoute
   '/settings/repositories': typeof SettingsRepositoriesRoute
   '/settings/runtimes': typeof SettingsRuntimesRoute
   '/settings/sandbox': typeof SettingsSandboxRoute
@@ -389,6 +398,7 @@ export interface FileRouteTypes {
     | '/settings/execution'
     | '/settings/host'
     | '/settings/integrations'
+    | '/settings/notifications'
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
@@ -426,6 +436,7 @@ export interface FileRouteTypes {
     | '/settings/execution'
     | '/settings/host'
     | '/settings/integrations'
+    | '/settings/notifications'
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
@@ -467,6 +478,7 @@ export interface FileRouteTypes {
     | '/settings/execution'
     | '/settings/host'
     | '/settings/integrations'
+    | '/settings/notifications'
     | '/settings/repositories'
     | '/settings/runtimes'
     | '/settings/sandbox'
@@ -649,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsIntegrationsRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/notifications': {
+      id: '/settings/notifications'
+      path: '/notifications'
+      fullPath: '/settings/notifications'
+      preLoaderRoute: typeof SettingsNotificationsRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/settings/repositories': {
       id: '/settings/repositories'
       path: '/repositories'
@@ -791,6 +810,7 @@ interface SettingsRouteRouteChildren {
   SettingsExecutionRoute: typeof SettingsExecutionRoute
   SettingsHostRoute: typeof SettingsHostRoute
   SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
+  SettingsNotificationsRoute: typeof SettingsNotificationsRoute
   SettingsRepositoriesRoute: typeof SettingsRepositoriesRoute
   SettingsRuntimesRoute: typeof SettingsRuntimesRoute
   SettingsSandboxRoute: typeof SettingsSandboxRoute
@@ -811,6 +831,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsExecutionRoute: SettingsExecutionRoute,
   SettingsHostRoute: SettingsHostRoute,
   SettingsIntegrationsRoute: SettingsIntegrationsRoute,
+  SettingsNotificationsRoute: SettingsNotificationsRoute,
   SettingsRepositoriesRoute: SettingsRepositoriesRoute,
   SettingsRuntimesRoute: SettingsRuntimesRoute,
   SettingsSandboxRoute: SettingsSandboxRoute,
