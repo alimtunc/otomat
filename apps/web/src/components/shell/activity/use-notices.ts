@@ -3,6 +3,7 @@ import { toast } from "@otomat/ui";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useActivity } from "@web/api/activity/queries";
 import { activityTarget } from "@web/components/shell/activity/target";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useEffect, useRef } from "react";
 
 const ANNOUNCED: ReadonlySet<ActivityBucket> = new Set<ActivityBucket>(["attention", "recent"]);
@@ -27,6 +28,7 @@ export function useActivityNotices(): void {
 
   // otomat-allow-effect: the daemon settling work off-screen is an external transition, not a render result.
   useEffect(() => {
+    if (desktopBridge() !== null) return;
     const previous = seen.current;
     seen.current = new Map(activities.map((activity) => [activity.id, activity.bucket]));
     if (previous === null) return;

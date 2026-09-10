@@ -2,6 +2,7 @@ import type { RunInteractionContract } from "@otomat/domain";
 import { Button, Chip, RelativeTime } from "@otomat/ui";
 import { useAnswerRunInteraction } from "@web/api/runs/interaction-mutations";
 import { InteractionAnswerForm } from "@web/components/runs/conversation/interaction/answer-form";
+import { useNotificationAnchor } from "@web/components/runs/conversation/interaction/use-notification-anchor";
 import {
   interactionAnswerLabel,
   interactionErrorMessage,
@@ -20,9 +21,11 @@ export function InteractionCard({
   const answer = useAnswerRunInteraction(runId, interaction.id);
   const pending = interaction.state === "pending";
   const inFlight = answer.isPending ? answer.variables : undefined;
+  const anchorId = `interaction-${interaction.id}`;
+  const anchorRef = useNotificationAnchor(anchorId);
 
   return (
-    <li className="flex flex-col gap-2 px-6 py-3">
+    <li id={anchorId} ref={anchorRef} className="flex flex-col gap-2 px-6 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-text-secondary">Agent is asking</span>
         <RelativeTime date={interaction.requested_at} className="text-xs" />

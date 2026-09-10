@@ -118,6 +118,7 @@ vi.mock("#main/update/electron-updater", () => ({ createElectronUpdaterPort: () 
 vi.mock("#main/ipc", () => ({ registerIpc: vi.fn() }));
 vi.mock("#main/ipc-actions", () => ({ buildIpcActions: () => ({}) }));
 vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
+vi.mock("#main/notifications/electron", () => ({ startNotifications: vi.fn() }));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", () => ({
   hardenWebContents: vi.fn(),

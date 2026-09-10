@@ -33,6 +33,7 @@ const EVERY_HOST_ENTRIES: SettingsNavEntry[] = [
   { to: "/settings/host", label: "Execution hosts", icon: "monitor" },
   { to: "/settings/integrations", label: "Integrations", icon: "plug" },
   { to: "/settings/appearance", label: "Appearance", icon: "palette" },
+  { to: "/settings/notifications", label: "Notifications", icon: "activity" },
 ];
 
 /** The desktop shell's own test data: a reset refuses while a remote host is active. */
