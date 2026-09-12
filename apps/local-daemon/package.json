@@ -48,8 +48,8 @@
     "@otomat/db": "workspace:*",
     "@otomat/domain": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.13.5",
-    "zod": "^4.5.4"
+    "hono": "^4.13.7",
+    "zod": "^4.6.1"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
