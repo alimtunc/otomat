@@ -103,12 +103,31 @@ export const RUN_LAUNCH_ERRORS = [
 ] as const;
 export type RunLaunchError = (typeof RUN_LAUNCH_ERRORS)[number];
 
-/** Stable refusal code plus a user-facing daemon message. `run_id` names the workspace holder on `issue_workspace_open`. */
+/** `no_upstream` is a configuration the caller must fix; the rest classify a fetch that failed. */
+const REMOTE_BASE_FAILURES = [
+  "unreachable",
+  "access_denied",
+  "not_found",
+  "no_upstream",
+  "unclassified",
+] as const;
+export type RemoteBaseFailure = (typeof REMOTE_BASE_FAILURES)[number];
+
+const remoteBaseRefusalSchema = z.object({
+  failure: z.enum(REMOTE_BASE_FAILURES),
+  /** git's stderr, redacted on the host. */
+  detail: z.string().nullable(),
+});
+export type RemoteBaseRefusal = z.infer<typeof remoteBaseRefusalSchema>;
+
+/** Stable refusal code plus a user-facing daemon message. `run_id` names the workspace holder on `issue_workspace_open`; `remote` is set only on `base_remote_unavailable`. */
 export const runLaunchErrorSchema = z.object({
   error: z.enum(RUN_LAUNCH_ERRORS),
   message: z.string(),
   run_id: z.string().min(1).nullable().default(null),
+  remote: remoteBaseRefusalSchema.nullable().default(null),
 });
+export type RunLaunchErrorBody = z.infer<typeof runLaunchErrorSchema>;
 
 /** Launch from an issue or an ad-hoc prompt (one required); an optional `plan` replaces the implicit single step. */
 export const startRunRequestSchema = z

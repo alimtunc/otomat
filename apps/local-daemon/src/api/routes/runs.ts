@@ -73,7 +73,10 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     } catch (error) {
       if (error instanceof LaunchRefusedError) {
         const status = LAUNCH_REFUSAL_STATUS[error.code];
-        return c.json({ error: error.code, message: error.message, run_id: error.runId }, status);
+        return c.json(
+          { error: error.code, message: error.message, run_id: error.runId, remote: error.remote },
+          status,
+        );
       }
       const runtimeRefusal = runtimeUnavailableResponse(c, error);
       if (runtimeRefusal) return runtimeRefusal;

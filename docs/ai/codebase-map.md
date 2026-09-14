@@ -806,6 +806,17 @@ same diff's base for its commit list, so one launch base reaches both. Follow-up
 and resumes stay in the cycle's worktree, and a compete candidate forks its own from
 the run branch; none of them re-resolves a base.
 
+The refusal carries `remote.failure`: `no_upstream` for a configuration the
+operator must fix, otherwise a classification of what git, ssh or curl printed
+(`unreachable`, `access_denied`, `not_found`, `unclassified`) behind an
+action-oriented message, with the redacted stderr as `remote.detail`. The fetch
+runs with `GIT_TERMINAL_PROMPT=0` so a remote asking for credentials fails and is
+classified instead of blocking the daemon. The cockpit's `useLaunchRun` hands that
+one refusal to the form as `baseRefusal` rather than toasting it:
+`BaseRemoteRefusal` renders under the base-branch control with a Retry that
+re-submits the same untouched draft, since the launch was refused before any
+issue, run, branch or worktree existed.
+
 A failure, a cancel, a lost session or a provider quota error therefore does
 **not** close the cycle: the branch, the worktree and the diff are still there, so
 `failed` and `canceled` are resting states the run machine can leave through

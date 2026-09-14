@@ -11,6 +11,7 @@ import { findActiveByOwner } from "#git/worktrees-store";
 import type { AppendStepInput } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { branches } from "../support/git.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -88,8 +89,35 @@ it("refuses the launch when the remote cannot be read instead of using a stale l
   await expect(supervisor.start({ prompt: "build it" })).rejects.toMatchObject({
     name: "LaunchRefusedError",
     code: "base_remote_unavailable",
+    remote: { failure: "not_found" },
   });
   expect(fix.db.select().from(schema.runs).all()).toHaveLength(0);
+});
+
+it("leaves no issue, run, branch or worktree behind a refused launch, then succeeds once as-is", async () => {
+  const published = advanceRemote("remote-only.md");
+  const url = fix.repo.git("remote", "get-url", "origin").trim();
+  fix.repo.git("remote", "set-url", "origin", "https://otomat-unreachable.invalid/x/y.git");
+  const { supervisor } = makeSupervisor(fix, "complete");
+  const request = { prompt: "build it" };
+  const seededIssues = fix.db.select().from(schema.issues).all().length;
+
+  await expect(supervisor.start(request)).rejects.toMatchObject({
+    code: "base_remote_unavailable",
+    remote: { failure: "unreachable" },
+  });
+  expect(fix.db.select().from(schema.issues).all()).toHaveLength(seededIssues);
+  expect(fix.db.select().from(schema.runs).all()).toHaveLength(0);
+  expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(0);
+  expect(branches(fix.repo)).toEqual(["main"]);
+
+  fix.repo.git("remote", "set-url", "origin", url);
+  const run = await supervisor.start(request);
+  await supervisor.settle();
+
+  expect(fix.db.select().from(schema.issues).all()).toHaveLength(seededIssues + 1);
+  expect(fix.db.select().from(schema.runs).all()).toHaveLength(1);
+  expect(findActiveByOwner(fix.db, run.id)?.base_sha).toBe(published);
 });
 
 it("refuses a repository with no remote until the launch asks for the local base explicitly", async () => {

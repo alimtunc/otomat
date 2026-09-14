@@ -1,5 +1,11 @@
 // @vitest-environment happy-dom
-import type { CreateIssueRequest, RunContract, RuntimeDescriptor } from "@otomat/domain";
+import type {
+  CreateIssueRequest,
+  RunContract,
+  RuntimeDescriptor,
+  StartRunRequest,
+} from "@otomat/domain";
+import type { BaseRefusal } from "@web/api/runs/use-launch-run";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { act } from "react";
@@ -16,16 +22,20 @@ import {
   repositoryBranchesErrorResult,
   repositoryBranchesQueryResult,
 } from "#support/launch-target";
+import { runContract } from "#support/run";
 import { modelCatalogQueryResult } from "#support/runtime-models";
 import { providerOptionSetQueryResult } from "#support/runtime-options";
 
-// SAFETY: the dialogs read only the launched run's id.
-const launch = vi.fn(async () => ({ id: "run-1" }) as RunContract);
+const LAUNCHED = runContract();
+const launch = vi.fn<(request: StartRunRequest) => Promise<RunContract | null>>(
+  async () => LAUNCHED,
+);
 const navigate = vi.fn();
 const create = vi.fn(async (_request: CreateIssueRequest) => true);
 let runtimesData: RuntimeDescriptor[] = [];
 let repositories = [repository()];
 let branchesFailed = false;
+let baseRefusal: BaseRefusal | null = null;
 const pickerProps = vi.fn();
 
 interface ExecutionPickerProbeProps {
@@ -37,7 +47,7 @@ interface ExecutionPickerProbeProps {
 }
 
 vi.mock("@web/api/runs/use-launch-run", () => ({
-  useLaunchRun: () => ({ launch, isPending: false }),
+  useLaunchRun: () => ({ launch, isPending: false, baseRefusal }),
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
@@ -137,7 +147,14 @@ afterEach(async () => {
   runtimesData = [];
   repositories = [repository()];
   branchesFailed = false;
+  baseRefusal = null;
 });
+
+const UNREACHABLE: BaseRefusal = {
+  message:
+    '"origin" could not be reached to read "main"; check this host\'s network connection and DNS, then retry.',
+  remote: { failure: "unreachable", detail: "ssh: Could not resolve hostname github.com" },
+};
 
 async function renderDialog(
   onOpenChange: (open: boolean) => void = () => undefined,
@@ -423,6 +440,48 @@ describe("NewIssueDialog", () => {
       base_branch: "main",
       runtime: "claude",
     });
+    expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId: "run-1" } });
+  });
+
+  it("keeps the agent draft behind a base refusal and retries the same launch from the form", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    launch.mockImplementationOnce(async () => {
+      baseRefusal = UNREACHABLE;
+      return null;
+    });
+    const dialog = await renderDialog();
+    const prompt = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Issue prompt']",
+    );
+    if (!prompt) throw new Error("issue prompt not found");
+    await act(async () => setTextareaValue(prompt, "implement the thing"));
+    await act(async () => buttonByLabel("Create & launch").click());
+    await dialog.render(true);
+
+    const alert = document.querySelector<HTMLElement>("[role='alert']");
+    expect(alert?.textContent).toContain("The remote could not be reached");
+    expect(alert?.textContent).toContain(UNREACHABLE.message);
+    expect(alert?.textContent).not.toContain("Could not resolve hostname");
+    expect(document.querySelector("textarea[aria-label='Issue prompt']")).toBe(prompt);
+    expect(prompt.value).toBe("implement the thing");
+    expect(navigate).not.toHaveBeenCalled();
+
+    launch.mockImplementationOnce(async () => {
+      baseRefusal = null;
+      return LAUNCHED;
+    });
+    await act(async () => buttonByText("Retry").click());
+    await dialog.render(true);
+
+    expect(launch).toHaveBeenCalledTimes(2);
+    expect(launch.mock.calls[1]).toEqual(launch.mock.calls[0]);
+    expect(launch).toHaveBeenLastCalledWith({
+      prompt: "implement the thing",
+      project_id: "p1",
+      base_branch: "main",
+      runtime: "claude",
+    });
+    expect(document.querySelector("[role='alert']")).toBeNull();
     expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId: "run-1" } });
   });
 

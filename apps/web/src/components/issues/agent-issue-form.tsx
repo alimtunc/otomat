@@ -5,7 +5,7 @@ import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { useDraftPresence } from "@web/components/issues/use-draft-presence";
-import { launchBaseFields } from "@web/components/runs/launch/base-request";
+import { launchBaseFields } from "@web/components/runs/launch/base/request";
 import { LaunchComposer } from "@web/components/runs/launch/launch-composer";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { contextRequestFields } from "@web/lib/context/draft";
@@ -45,7 +45,7 @@ export function AgentIssueForm({
   onDraftChange,
 }: AgentIssueFormProps) {
   const [references, setReferences] = useState<readonly ContextReference[]>([]);
-  const { launch, isPending } = useLaunchRun();
+  const { launch, isPending, baseRefusal } = useLaunchRun();
   const launchExecution = useLaunchExecution(execution);
 
   const form = useForm({
@@ -82,6 +82,7 @@ export function AgentIssueForm({
           action={LAUNCH_ACTION}
           unavailableReason={unavailableReason(isPending, hasPrompt, launchExecution.canLaunch)}
           pending={isPending}
+          baseRefusal={baseRefusal}
           onSubmit={() => void form.handleSubmit()}
         >
           <form.Field name="prompt">

@@ -1,5 +1,5 @@
 import { getProject, listRepositories, type Db, type IssueRow } from "@otomat/db";
-import type { RunLaunchError, StartRunRequest } from "@otomat/domain";
+import type { RemoteBaseRefusal, RunLaunchError, StartRunRequest } from "@otomat/domain";
 
 import {
   branchExists,
@@ -16,15 +16,17 @@ import { issueWorkspace } from "./workspace.js";
 export class LaunchRefusedError extends Error {
   /** The run the caller should act on instead; set only when the refusal names one. */
   readonly runId: string | null;
+  readonly remote: RemoteBaseRefusal | null;
 
   constructor(
     readonly code: RunLaunchError,
     message: string,
-    options?: ErrorOptions & { runId?: string },
+    options?: ErrorOptions & { runId?: string; remote?: RemoteBaseRefusal },
   ) {
     super(message, options);
     this.name = "LaunchRefusedError";
     this.runId = options?.runId ?? null;
+    this.remote = options?.remote ?? null;
   }
 }
 
@@ -108,7 +110,10 @@ function launchBaseSha(rootPath: string, baseRef: string, request: StartRunReque
     return resolveBaseSha(rootPath, baseRef, request.local_base === true);
   } catch (error) {
     if (!(error instanceof RemoteBaseError)) throw error;
-    throw new LaunchRefusedError("base_remote_unavailable", error.message, { cause: error });
+    throw new LaunchRefusedError("base_remote_unavailable", error.message, {
+      cause: error,
+      remote: error.remote,
+    });
   }
 }
 

@@ -4,7 +4,7 @@ import { useStore } from "@tanstack/react-form";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { useDraftPresence } from "@web/components/issues/use-draft-presence";
-import { launchBaseFields } from "@web/components/runs/launch/base-request";
+import { launchBaseFields } from "@web/components/runs/launch/base/request";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { hasText, submitOnCmdEnter } from "@web/lib/form";

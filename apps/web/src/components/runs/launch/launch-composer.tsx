@@ -1,10 +1,12 @@
 import { contextReferenceKey, type ContextReference, type IssueContract } from "@otomat/domain";
 import { Icon, IconButton } from "@otomat/ui";
+import type { BaseRefusal } from "@web/api/runs/use-launch-run";
 import { AddContextPopover } from "@web/components/context/add-context-popover";
 import { AttachedContextRow } from "@web/components/context/attached-context-row";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
-import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
+import { BaseBranchControl } from "@web/components/runs/launch/base/branch-control";
+import { BaseRemoteRefusal } from "@web/components/runs/launch/base/remote-refusal";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { addContextReference, removeContextReference } from "@web/lib/context/draft";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
@@ -22,6 +24,7 @@ export interface LaunchComposerProps {
   action: string;
   unavailableReason: string | null;
   pending: boolean;
+  baseRefusal: BaseRefusal | null;
   onSubmit: () => void;
   children: ReactNode;
 }
@@ -37,6 +40,7 @@ export function LaunchComposer({
   action,
   unavailableReason,
   pending,
+  baseRefusal,
   onSubmit,
   children,
 }: LaunchComposerProps) {
@@ -87,6 +91,11 @@ export function LaunchComposer({
           onClick={submit}
         />
       </div>
+      {baseRefusal === null ? null : (
+        <div className="border-t border-border-subtle p-1.5">
+          <BaseRemoteRefusal refusal={baseRefusal} onRetry={submit} />
+        </div>
+      )}
     </div>
   );
 }

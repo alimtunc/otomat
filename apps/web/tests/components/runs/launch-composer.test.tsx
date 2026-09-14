@@ -1,12 +1,13 @@
 // @vitest-environment happy-dom
 import type { ContextReference, IssueContract, RuntimeDescriptor } from "@otomat/domain";
+import type { BaseRefusal } from "@web/api/runs/use-launch-run";
 import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
 import { LaunchComposer } from "@web/components/runs/launch/launch-composer";
 import { EMPTY_EXECUTION_SELECTION } from "@web/lib/execution/selection";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { findLabelled } from "#support/dom-queries";
+import { findButton, findLabelled } from "#support/dom-queries";
 import { referencedIssue } from "#support/issue";
 import { readyLaunchTarget } from "#support/launch-target";
 import { mount } from "#support/mount";
@@ -81,6 +82,7 @@ interface ComposerOptions {
   issue?: IssueContract | null;
   references?: ContextReference[];
   unavailableReason?: string | null;
+  baseRefusal?: BaseRefusal | null;
   onSubmit?: () => void;
 }
 
@@ -88,6 +90,7 @@ function composer({
   issue = null,
   references = [],
   unavailableReason = null,
+  baseRefusal = null,
   onSubmit,
 }: ComposerOptions) {
   return (
@@ -102,6 +105,7 @@ function composer({
       action="Create & launch"
       unavailableReason={unavailableReason}
       pending={false}
+      baseRefusal={baseRefusal}
       onSubmit={onSubmit ?? vi.fn()}
     >
       <textarea aria-label="Issue prompt" />
@@ -232,4 +236,50 @@ it("says why the action is unavailable in the only name an icon has", async () =
   expect(action?.getAttribute("aria-label")).toBe("Create & launch — write a prompt first");
   expect(action?.getAttribute("title")).toContain("⌘↵");
   expect(action?.disabled).toBe(true);
+});
+
+const UNREACHABLE: BaseRefusal = {
+  message:
+    '"origin" could not be reached to read "main"; check this host\'s network connection and DNS, then retry.',
+  remote: { failure: "unreachable", detail: "ssh: Could not resolve hostname github.com" },
+};
+
+it("renders a base refusal under the branch choice with a Retry that re-submits the draft", async () => {
+  const onSubmit = vi.fn();
+  await render({ baseRefusal: UNREACHABLE, onSubmit });
+
+  const alert = document.querySelector<HTMLElement>("[role='alert']");
+  expect(alert?.textContent).toContain("The remote could not be reached");
+  expect(alert?.textContent).toContain(UNREACHABLE.message);
+  expect(alert?.textContent).not.toContain("Could not resolve hostname");
+  expect(alert?.compareDocumentPosition(bar())).toBe(Node.DOCUMENT_POSITION_PRECEDING);
+
+  await act(async () => findButton("Retry")?.click());
+
+  expect(onSubmit).toHaveBeenCalledTimes(1);
+  expect(findLabelled("Copy diagnostic")).toBeDefined();
+});
+
+it("names an access refusal as such, never as a network outage", async () => {
+  await render({
+    baseRefusal: {
+      message: '"origin" refused access while reading "main"; check the credentials, then retry.',
+      remote: { failure: "access_denied", detail: "Permission denied (publickey)." },
+    },
+  });
+
+  const alert = document.querySelector<HTMLElement>("[role='alert']");
+  expect(alert?.textContent).toContain("The remote refused access");
+  expect(alert?.textContent).not.toContain("could not be reached");
+});
+
+it("keeps Retry behind the same gate as the action while a launch is unavailable", async () => {
+  const onSubmit = vi.fn();
+  await render({ baseRefusal: UNREACHABLE, unavailableReason: "write a prompt first", onSubmit });
+  const retry = findButton("Retry");
+  expect(retry).toBeDefined();
+
+  await act(async () => retry?.click());
+
+  expect(onSubmit).not.toHaveBeenCalled();
 });

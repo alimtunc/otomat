@@ -6,7 +6,7 @@ import { ContextSourcesPanel } from "@web/components/context/context-sources-pan
 import { useContextSources } from "@web/components/context/use-context-sources";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { launchBaseFields } from "@web/components/runs/launch/base-request";
+import { launchBaseFields } from "@web/components/runs/launch/base/request";
 import { LaunchComposer } from "@web/components/runs/launch/launch-composer";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { contextRequestFields } from "@web/lib/context/draft";
@@ -41,7 +41,7 @@ export function SingleRunLaunchForm({
 }: SingleRunLaunchFormProps) {
   const [references, setReferences] = useState<readonly ContextReference[]>([]);
   const launchExecution = useLaunchExecution(execution);
-  const { launch, isPending } = useLaunchRun();
+  const { launch, isPending, baseRefusal } = useLaunchRun();
 
   const form = useForm({
     defaultValues: { note: "" },
@@ -77,6 +77,7 @@ export function SingleRunLaunchForm({
           action={LAUNCH_ACTION}
           unavailableReason={unavailableReason(isPending, launchExecution.canLaunch)}
           pending={isPending}
+          baseRefusal={baseRefusal}
           onSubmit={() => void form.handleSubmit()}
         >
           <form.Field name="note">

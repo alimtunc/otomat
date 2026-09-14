@@ -41,7 +41,7 @@ function runtimeDescriptor(id: string): RuntimeDescriptor {
 }
 
 vi.mock("@web/api/runs/use-launch-run", () => ({
-  useLaunchRun: () => ({ launch, isPending: false }),
+  useLaunchRun: () => ({ launch, isPending: false, baseRefusal: null }),
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({

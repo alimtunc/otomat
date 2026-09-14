@@ -1,3 +1,5 @@
+import { redactLogText, type RemoteBaseFailure } from "@otomat/domain";
+
 import { RemoteBaseError } from "./errors.js";
 import { runGit } from "./git-cli.js";
 import { repositoryRemotes, revParse } from "./repo.js";
@@ -5,6 +7,40 @@ import { repositoryRemotes, revParse } from "./repo.js";
 interface RemoteBranch {
   remote: string;
   ref: string;
+}
+
+/** A credential prompt would block the whole daemon: an unauthenticated remote must fail so it can be classified. */
+const NO_PROMPT_ENV = { GIT_TERMINAL_PROMPT: "0" };
+
+const UNREACHABLE =
+  /could not resolve host|name or service not known|nodename nor servname|temporary failure in name resolution|connection (?:refused|reset)|network is unreachable|no route to host|failed to connect|timed out/i;
+const ACCESS_DENIED =
+  /permission denied|authentication failed|could not read (?:username|password)|host key verification failed|returned error: 40[13]|access denied|invalid username or password/i;
+const NOT_FOUND =
+  /repository not found|does not appear to be a git repository|couldn't find remote ref|returned error: 404/i;
+
+type FetchFailure = Exclude<RemoteBaseFailure, "no_upstream">;
+
+export function classifyRemoteFailure(stderr: string): FetchFailure {
+  if (UNREACHABLE.test(stderr)) return "unreachable";
+  if (ACCESS_DENIED.test(stderr)) return "access_denied";
+  if (NOT_FOUND.test(stderr)) return "not_found";
+  return "unclassified";
+}
+
+const FAILURE_MESSAGE = {
+  unreachable: (branch, remote) =>
+    `"${remote}" could not be reached to read "${branch}"; check this host's network connection and DNS, then retry.`,
+  access_denied: (branch, remote) =>
+    `"${remote}" refused access while reading "${branch}"; check the credentials or SSH key this host uses for it, then retry.`,
+  not_found: (branch, remote) =>
+    `"${branch}" could not be found on "${remote}"; check that the remote and the branch still exist, then retry.`,
+  unclassified: (branch, remote) =>
+    `"${branch}" could not be read from "${remote}"; see the details, fix the remote, then retry.`,
+} satisfies Record<FetchFailure, (branch: string, remote: string) => string>;
+
+function noUpstream(message: string): RemoteBaseError {
+  return new RemoteBaseError(message, { failure: "no_upstream", detail: null });
 }
 
 function config(repoPath: string, key: string): string | null {
@@ -18,7 +54,7 @@ function resolveRemoteBranch(repoPath: string, branch: string, remotes: string[]
   if (configured === null) {
     const [only, ...rest] = remotes;
     if (only === undefined || rest.length > 0) {
-      throw new RemoteBaseError(
+      throw noUpstream(
         `"${branch}" has no upstream in ${repoPath}; set its upstream, then relaunch.`,
       );
     }
@@ -26,7 +62,7 @@ function resolveRemoteBranch(repoPath: string, branch: string, remotes: string[]
   }
   // git writes `.` for a branch tracking a local one; fetching it answers the operator's checkout.
   if (configured === ".") {
-    throw new RemoteBaseError(
+    throw noUpstream(
       `"${branch}" tracks the local repository, not a remote; retarget its upstream, then relaunch.`,
     );
   }
@@ -40,13 +76,14 @@ export function resolveBaseSha(repoPath: string, branch: string, allowLocal: boo
   const remotes = repositoryRemotes(repoPath);
   if (remotes.length === 0) {
     if (allowLocal) return revParse(repoPath, branch);
-    throw new RemoteBaseError(
+    throw noUpstream(
       `${repoPath} has no git remote to read "${branch}" from; add one, or launch from the local branch explicitly.`,
     );
   }
   const { remote, ref } = resolveRemoteBranch(repoPath, branch, remotes);
   const fetched = runGit(["fetch", "--no-tags", remote, ref], {
     cwd: repoPath,
+    env: NO_PROMPT_ENV,
     allowFailure: true,
   });
   // No other daemon work can move `FETCH_HEAD` before this read: the launch path is synchronous.
@@ -54,12 +91,16 @@ export function resolveBaseSha(repoPath: string, branch: string, allowLocal: boo
   // `--exit-code` answers 2 only for a ref the remote never advertised: local-only work.
   const advertised = runGit(["ls-remote", "--exit-code", remote, ref], {
     cwd: repoPath,
+    env: NO_PROMPT_ENV,
     allowFailure: true,
   });
   if (advertised.exitCode === 2) return revParse(repoPath, branch);
-  throw new RemoteBaseError(
-    `"${branch}" could not be read from ${remote}: ${fetched.stderr.trim()}`,
-  );
+  const failure = classifyRemoteFailure(fetched.stderr);
+  const detail = redactLogText(fetched.stderr).trim();
+  throw new RemoteBaseError(FAILURE_MESSAGE[failure](branch, remote), {
+    failure,
+    detail: detail === "" ? null : detail,
+  });
 }
 
 const REMOTE_PROBE_TIMEOUT_MS = 10_000;
@@ -87,7 +128,7 @@ export function probeRemoteBranch(repoPath: string, branch: string): RemoteBranc
 
   const advertised = runGit(["ls-remote", "--exit-code", target.remote, target.ref], {
     cwd: repoPath,
-    env: { GIT_TERMINAL_PROMPT: "0" },
+    env: NO_PROMPT_ENV,
     allowFailure: true,
     timeoutMs: REMOTE_PROBE_TIMEOUT_MS,
   });
