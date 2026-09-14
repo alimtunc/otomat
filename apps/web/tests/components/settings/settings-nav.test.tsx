@@ -61,6 +61,7 @@ it("groups every screen by what owns it, naming the daemon the global one belong
     "Execution hosts",
     "Integrations",
     "Appearance",
+    "Notifications",
   ]);
   expect(groupOf(container, "Reference")).toEqual(["Runtimes", "About · Daemon", "Design system"]);
 });
