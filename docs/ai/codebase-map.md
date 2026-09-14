@@ -1618,6 +1618,14 @@ macOS notification. The renderer's older Activity toasts are disabled in desktop
 mode. A native click stays pending until the renderer selects the owning host
 and project and navigates to the request's step, run diff or PR surface.
 
+Every notice reads its headline and tone from the notification category, never
+from the Activity bucket: the internal notice and the native body share
+`NOTIFICATION_HEADLINES`, the browser fallback classifies a run through
+`RUN_NOTIFICATION_CATEGORY` from its canonical status, and
+`shell/notifications/category-toast.ts` maps a category to one toast tone. A
+`review_ready` run is therefore a neutral "Ready for review", a wait is an orange
+"Action required", and only `failed`, blocked or stopped work is red.
+
 Settings → Notifications controls native categories and generic/category-only
 copy. Neither level includes project names, issue titles, prompts, code, paths
 or responses, including on the lock screen. Persisting preferences or replay

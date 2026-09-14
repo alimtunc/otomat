@@ -8,6 +8,7 @@ import { toast } from "@otomat/ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { shellKeys } from "@web/api/query-keys";
+import { CATEGORY_TOAST } from "@web/components/shell/notifications/category-toast";
 import {
   notificationRoute,
   selectNotificationProject,
@@ -51,7 +52,7 @@ export function useDesktopNotifications(): void {
     };
     const unsubscribeOpen = bridge.notifications.onOpen((notification) => void open(notification));
     const unsubscribeNotice = bridge.notifications.onNotice((notification) => {
-      toast(NOTIFICATION_HEADLINES[notification.category], {
+      CATEGORY_TOAST[notification.category](NOTIFICATION_HEADLINES[notification.category], {
         action: { label: "Open", onClick: () => void open(notification) },
       });
     });

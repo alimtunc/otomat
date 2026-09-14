@@ -1,12 +1,20 @@
 import {
   NOTIFICATION_CATEGORIES,
-  NOTIFICATION_HEADLINES,
+  type NotificationCategory,
   type NotificationPreferences,
 } from "@otomat/domain";
 import { Button, Switch } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { AppearanceRow } from "@web/components/settings/appearance-row";
 import type { NotificationSettingsResult } from "@web/components/settings/notifications/use-notification-settings";
+
+const CATEGORY_LABELS = {
+  permission: "Permission or choice requested",
+  question: "A question needs your answer",
+  review: "Work is ready to review",
+  completed: "Run completed",
+  blocked: "Work failed or is blocked",
+} satisfies Record<NotificationCategory, string>;
 
 export interface NotificationPreferencesFormProps {
   preferences: NotificationPreferences;
@@ -35,11 +43,11 @@ export function NotificationPreferencesForm({
         <form.Field key={category} name={`categories.${category}`}>
           {(field) => (
             <AppearanceRow
-              label={NOTIFICATION_HEADLINES[category]}
+              label={CATEGORY_LABELS[category]}
               description="Allow native notifications when Otomat is in the background."
               control={
                 <Switch
-                  aria-label={NOTIFICATION_HEADLINES[category]}
+                  aria-label={CATEGORY_LABELS[category]}
                   checked={field.state.value}
                   onCheckedChange={field.handleChange}
                   onBlur={field.handleBlur}

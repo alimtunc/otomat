@@ -154,5 +154,5 @@ it("uses only fixed copy for both privacy levels and isolates host identities", 
   const remote = { host_id: "remote", host_alias: "vps" } as const;
   delivery.receive(remote, []);
   delivery.receive(remote, [sensitive]);
-  expect(options.native.mock.calls[1][0]).toBe("Permission or choice requested");
+  expect(options.native.mock.calls[1][0]).toBe("Action required");
 });

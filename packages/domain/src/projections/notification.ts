@@ -6,6 +6,7 @@ import type {
   NotificationPreferences,
   NotificationIntent,
 } from "../contracts/notifications.js";
+import type { RunState } from "../state-machines/run.js";
 import type { ActivityEvidence } from "./activity.js";
 
 const INBOX_NOTIFICATION_CATEGORY = {
@@ -75,12 +76,26 @@ export function projectCompletedNotifications(rows: ActivityEvidence[]): Notific
 }
 
 export const NOTIFICATION_HEADLINES = {
-  permission: "Permission or choice requested",
-  question: "A question needs your answer",
-  review: "Work is ready to review",
+  permission: "Action required",
+  question: "Action required",
+  review: "Ready for review",
   completed: "Run completed",
-  blocked: "Work failed or is blocked",
+  blocked: "Run failed or is blocked",
 } satisfies Record<NotificationCategory, string>;
+
+export const RUN_NOTIFICATION_CATEGORY = {
+  queued: null,
+  preparing: null,
+  running: null,
+  waiting_for_provider: null,
+  awaiting_permission: "permission",
+  awaiting_selection: "permission",
+  awaiting_human: "question",
+  review_ready: "review",
+  completed: "completed",
+  failed: "blocked",
+  canceled: null,
+} satisfies Record<RunState, NotificationCategory | null>;
 
 export function notificationBody(
   category: NotificationCategory,
