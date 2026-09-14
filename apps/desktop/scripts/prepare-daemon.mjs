@@ -28,13 +28,26 @@ execFileSync("pnpm", ["--filter", "@otomat/local-daemon...", "run", "build"], {
   stdio: "inherit",
 });
 
-// 2. Deploy a self-contained daemon into .daemon.
+// 2. Deploy a self-contained daemon into .daemon. The web-only patch is unused here; pnpm 12
+// refuses an unused patch unless told otherwise.
 rmSync(STAGE, { recursive: true, force: true });
-execFileSync("pnpm", ["--filter", "@otomat/local-daemon", "deploy", "--prod", "--legacy", STAGE], {
-  cwd: REPO_ROOT,
-  stdio: "inherit",
-  env: { ...process.env, CI: "true" },
-});
+execFileSync(
+  "pnpm",
+  [
+    "--filter",
+    "@otomat/local-daemon",
+    "deploy",
+    "--prod",
+    "--legacy",
+    "--config.allow-unused-patches=true",
+    STAGE,
+  ],
+  {
+    cwd: REPO_ROOT,
+    stdio: "inherit",
+    env: { ...process.env, CI: "true" },
+  },
+);
 if (!existsSync(join(STAGE, "dist", "index.js"))) {
   throw new Error(`daemon deploy missing dist/index.js at ${STAGE}`);
 }
