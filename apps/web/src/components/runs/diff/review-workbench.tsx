@@ -7,6 +7,7 @@ import {
   type RunDiffScopeSelector,
 } from "@otomat/domain";
 import {
+  Chip,
   ResizablePanel,
   ResizablePanelGroup,
   SidePanel,
@@ -22,6 +23,7 @@ import { DiffFileNav } from "@web/components/runs/diff/files/nav";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
 import { RunDiffHeader } from "@web/components/runs/diff/header";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
+import { diffScopeSummary } from "@web/components/runs/diff/scope/label";
 import { DiffSearchField } from "@web/components/runs/diff/search/field";
 import { DiffSidebar } from "@web/components/runs/diff/sidebar";
 import { useDiffInteractions } from "@web/components/runs/diff/use-diff-interactions";
@@ -112,12 +114,9 @@ export function ReviewWorkbench({
         maxSize="40%"
       >
         <DiffSidebar
-          additions={diff.additions}
-          deletions={diff.deletions}
           files={ordered}
           browserMode={prefs.browser}
           grouping={prefs.grouping}
-          stats={prefs.stats}
           activePath={active.path}
           reviewedPaths={reviewed.paths}
           onSelectFile={(file) => interactions.revealFile(file.path)}
@@ -147,22 +146,22 @@ export function ReviewWorkbench({
       {notice}
       <RunDiffHeader
         diff={diff}
-        scopeControl={scopeControl}
+        scopeControl={scopeControl ?? <Chip tone="neutral">{diffScopeSummary(answered)}</Chip>}
         search={<DiffSearchField search={interactions.search} />}
-        reviewStatus={review.review?.status ?? null}
         prefs={prefs}
         onPrefsChange={diffPrefsStore.actions.set}
         browsable={wide && diff.files.length > 0}
         reviewedCount={reviewed.paths.size}
-        activePath={active.path}
+        actions={
+          <DiffFixBar
+            target={target}
+            workspaceOpen={workspace.open}
+            issueId={workspace.issueId}
+            review={review}
+          />
+        }
       />
       {diff.files.length === 0 ? emptyRegion : browsedRegion}
-      <DiffFixBar
-        target={target}
-        workspaceOpen={workspace.open}
-        issueId={workspace.issueId}
-        review={review}
-      />
     </div>
   );
 }

@@ -1,9 +1,8 @@
-import type { AgentProfileContract, IssueContract } from "@otomat/domain";
+import { issueShortId, type AgentProfileContract, type IssueContract } from "@otomat/domain";
 import { useSkills } from "@web/api/skills/queries";
 import { agentChoiceProfile } from "@web/lib/agent/choice";
 import type { ContextDraft } from "@web/lib/context/draft";
 import { contextSources, type ContextSource } from "@web/lib/context/sources";
-import { issueShortId } from "@web/lib/ids";
 
 export interface UseContextSourcesOptions {
   draft: ContextDraft;

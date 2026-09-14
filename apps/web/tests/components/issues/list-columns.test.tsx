@@ -1,10 +1,12 @@
 // @vitest-environment happy-dom
+
 import type { IssueContract } from "@otomat/domain";
 import { IssuesTable } from "@web/components/issues/list/table";
 import { groupIssues } from "@web/lib/issue/grouping";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { issueContract, openWorkspace } from "#support/issue";
+import { mockListViewport } from "#support/list-viewport";
 import { type Mounted } from "#support/mount";
 import { mountRouted } from "#support/router";
 
@@ -49,3 +51,47 @@ it("stops naming the execution of a cycle an abandon closed", async () => {
   expect(container.textContent).toContain("Backlog");
   expect(container.textContent).not.toContain("Reviewing");
 });
+
+it("hides optional columns and a status already named by every group", async () => {
+  const rendered = await mountRouted(
+    <IssuesTable
+      groups={groupIssues([issueContract({ status: "backlog" })], "status", new Map())}
+      showGroupHeadings
+      collapsed={[]}
+      onToggleGroup={vi.fn()}
+    />,
+  );
+  mounted.push(rendered);
+  const headers = [...rendered.container.querySelectorAll("thead th")].map(
+    (node) => node.textContent,
+  );
+  expect(headers).not.toContain("Status");
+  expect(headers).not.toContain("Source");
+  expect(headers).not.toContain("Assignee");
+  expect(rendered.container.textContent?.match(/Backlog/g)).toHaveLength(1);
+});
+
+it("restores selected optional columns without hiding a different source status", async () => {
+  const issue = issueContract({
+    status: "backlog",
+    execution: { state: "reviewing", run_id: "run-1" },
+    workspace: openWorkspace("run-1", "review_ready"),
+  });
+  const rendered = await mountRouted(
+    <IssuesTable
+      groups={groupIssues([issue], "status", new Map())}
+      showGroupHeadings
+      optionalColumns={["source", "assignee"]}
+      collapsed={[]}
+      onToggleGroup={vi.fn()}
+    />,
+  );
+  mounted.push(rendered);
+  const headers = [...rendered.container.querySelectorAll("thead th")].map(
+    (node) => node.textContent,
+  );
+  expect(headers).toContain("Source");
+  expect(headers).toContain("Assignee");
+});
+
+mockListViewport();

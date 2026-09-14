@@ -1,17 +1,24 @@
 import type { CreateIssueRequest } from "@otomat/domain";
 import { Button, DialogBody, Field, FieldControl, FieldLabel, Input, Textarea } from "@otomat/ui";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useCreateIssueAndNavigate } from "@web/api/issues/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
-import { fieldErrorProps } from "@web/lib/form";
+import { useDraftPresence } from "@web/components/issues/use-draft-presence";
+import { fieldErrorProps, hasText } from "@web/lib/form";
 
 export interface ManualIssueFormProps {
   projectId: string | undefined;
   onCreated: () => void;
   onCancel: () => void;
+  onDraftChange: (hasDraft: boolean) => void;
 }
 
-export function ManualIssueForm({ projectId, onCreated, onCancel }: ManualIssueFormProps) {
+export function ManualIssueForm({
+  projectId,
+  onCreated,
+  onCancel,
+  onDraftChange,
+}: ManualIssueFormProps) {
   const { create, isPending } = useCreateIssueAndNavigate();
   const form = useForm({
     defaultValues: { title: "", body: "" },
@@ -28,14 +35,21 @@ export function ManualIssueForm({ projectId, onCreated, onCancel }: ManualIssueF
     },
   });
 
+  const hasDraft = useStore(
+    form.store,
+    (state) => hasText(state.values.title) || hasText(state.values.body),
+  );
+  useDraftPresence(hasDraft, onDraftChange);
+
   return (
     <form
+      className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
       }}
     >
-      <DialogBody className="flex flex-col gap-3">
+      <DialogBody className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
         <form.Field
           name="title"
           validators={{
@@ -48,7 +62,6 @@ export function ManualIssueForm({ projectId, onCreated, onCancel }: ManualIssueF
               <FieldLabel>Title</FieldLabel>
               <FieldControl>
                 <Input
-                  autoFocus
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(event) => field.handleChange(event.target.value)}

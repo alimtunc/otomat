@@ -19,7 +19,7 @@ export function StepsPane({
   return (
     <div className="min-h-0 min-w-0 flex-1 overflow-auto bg-sidebar">
       <PaneHeader className="bg-sidebar">
-        Steps &amp; sessions
+        Steps
         <SidePanelToggle className="-mr-1.5 ml-auto" />
       </PaneHeader>
       <StepsList

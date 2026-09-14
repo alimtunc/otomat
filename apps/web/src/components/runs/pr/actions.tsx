@@ -20,17 +20,7 @@ export function PullRequestActions({
   isGenerating,
 }: PullRequestActionsProps) {
   return (
-    <div className="flex flex-wrap justify-end gap-2">
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={onGenerate}
-        loading={isGenerating}
-        disabled={generateDisabled}
-      >
-        Generate title &amp; description with AI
-      </Button>
+    <div className="flex flex-wrap justify-start gap-2">
       <Button
         type={onCompose === null ? "submit" : "button"}
         variant="primary"
@@ -40,6 +30,16 @@ export function PullRequestActions({
         loading={primaryLoading}
       >
         {primaryLabel}
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={onGenerate}
+        loading={isGenerating}
+        disabled={generateDisabled}
+      >
+        Generate title &amp; description with AI
       </Button>
     </div>
   );

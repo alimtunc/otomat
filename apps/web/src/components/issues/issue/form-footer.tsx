@@ -8,7 +8,7 @@ export interface IssueFormFooterProps {
 
 export function IssueFormFooter({ onCancel, submit }: IssueFormFooterProps) {
   return (
-    <DialogFooter>
+    <DialogFooter className="mt-auto shrink-0">
       <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
         Cancel
       </Button>

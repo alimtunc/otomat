@@ -1,0 +1,35 @@
+import { formatCommitSubject, type CommitType } from "@otomat/domain";
+import type { AnyFieldMeta } from "@tanstack/react-form";
+
+const METADATA_FIELDS = ["type", "scope", "summary", "body", "branch"] as const;
+
+export function metadataDirty(
+  fieldMeta: Partial<Record<(typeof METADATA_FIELDS)[number], AnyFieldMeta>>,
+): boolean {
+  return METADATA_FIELDS.some((field) => fieldMeta[field]?.isDirty === true);
+}
+
+const isText = (error: unknown): error is string => typeof error === "string";
+
+export function firstDraftError(
+  fieldMeta: Record<string, AnyFieldMeta | undefined>,
+  errors: readonly unknown[],
+): string | undefined {
+  return (
+    Object.values(fieldMeta)
+      .flatMap((meta) => meta?.errors ?? [])
+      .find(isText) ?? errors.find(isText)
+  );
+}
+
+export function subjectLength(values: {
+  type: CommitType;
+  scope: string;
+  summary: string;
+}): number {
+  return formatCommitSubject({
+    type: values.type,
+    scope: values.scope.trim() || null,
+    summary: values.summary,
+  }).length;
+}

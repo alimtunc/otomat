@@ -1,6 +1,5 @@
-import type { IssueContract } from "@otomat/domain";
+import { issueShortId, type IssueContract } from "@otomat/domain";
 import { Markdown } from "@otomat/ui";
-import { issueShortId } from "@web/lib/ids";
 
 export interface ContextIssuePreviewProps {
   issue: IssueContract;

@@ -78,7 +78,10 @@ it("reads only its own connection's hosts", async () => {
     [
       {
         connection_id: "c-otomat",
-        hosts: [CONNECTED_LOCAL],
+        hosts: [
+          CONNECTED_LOCAL,
+          { host_id: "remote", label: "build-box", state: "pending_revocation", detail: null },
+        ],
       },
       {
         connection_id: "c-crm",
@@ -95,7 +98,7 @@ it("reads only its own connection's hosts", async () => {
     "c-otomat",
   );
 
-  expect(container.textContent).toContain("Local");
+  expect(container.textContent).toContain("build-box");
   expect(container.textContent).not.toContain("otomat-vps");
 });
 

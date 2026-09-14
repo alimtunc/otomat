@@ -1,5 +1,5 @@
 import type { ExternalIssueSource, IssueState, SourceLabel } from "@otomat/domain";
-import { and, eq } from "drizzle-orm";
+import { and, eq, getTableColumns, sql } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { issues } from "../schema/index.js";
@@ -95,9 +95,15 @@ export function updateIssueProject(db: Db, id: string, projectId: string): void 
     .run();
 }
 
-export function listIssues(db: Db, options: { projectId?: string } = {}): IssueRow[] {
+export function listIssues(
+  db: Db,
+  options: { projectId?: string; includeBody?: boolean } = {},
+): IssueRow[] {
   return db
-    .select()
+    .select({
+      ...getTableColumns(issues),
+      body: options.includeBody === false ? sql<null>`NULL` : issues.body,
+    })
     .from(issues)
     .where(options.projectId ? eq(issues.project_id, options.projectId) : undefined)
     .orderBy(issues.created_at)

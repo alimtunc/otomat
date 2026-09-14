@@ -41,7 +41,6 @@ export function UsageView() {
     <RouteShell
       active="usage"
       titleIcon="bar-chart"
-      titleNote="What the providers reported for this host's runs — nothing is estimated."
       breadcrumbs={[{ label: "Usage", current: true }]}
       actions={
         <div className="flex items-center gap-2">

@@ -6,6 +6,7 @@ import {
   IllegalTransitionError,
   scheduleProviderResumeRequestSchema,
   startRunRequestSchema,
+  runSummarySchema,
   type RunLaunchError,
   type SessionContextResponse,
 } from "@otomat/domain";
@@ -52,6 +53,14 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
         issueId: c.req.query("issueId"),
         projectId: c.req.query("projectId"),
       }),
+    ),
+  );
+
+  routes.get("/catalog", (c) =>
+    c.json(
+      readRuns(deps.db, { projectId: c.req.query("projectId") }).map((run) =>
+        runSummarySchema.parse(run),
+      ),
     ),
   );
 

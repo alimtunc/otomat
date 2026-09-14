@@ -1,7 +1,8 @@
-import { Button, ErrorState, Skeleton } from "@otomat/ui";
+import { ErrorState, Icon, IconButton, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunCompletionReport } from "@web/api/runs/queries";
 import { CenteredState } from "@web/components/shell/centered-state";
+import { QueryBoundary } from "@web/components/shell/query-boundary";
 
 import { DeliverySections } from "./delivery-sections";
 import { ExecutionSections } from "./execution-sections";
@@ -11,57 +12,55 @@ import { ReportSummary } from "./summary";
 export function RunCompletionReportView() {
   const { runId } = useParams({ from: "/runs/$runId/report" });
   const query = useRunCompletionReport(runId);
-  if (query.isPending) {
-    return (
-      <div className="space-y-3 p-6">
-        <Skeleton height={24} width="32%" />
-        <Skeleton height={120} />
-      </div>
-    );
-  }
-  if (query.isError) {
-    return (
-      <CenteredState>
-        <ErrorState
-          title="Could not load the completion report"
-          description="The daemon could not regenerate this report from persisted evidence."
-          onRetry={() => void query.refetch()}
-        />
-      </CenteredState>
-    );
-  }
-
-  const { report, markdown } = query.data;
   return (
-    <div className="h-full overflow-auto bg-surface">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4 sm:p-6">
-        <header className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Completion report</h1>
-            <p className="mt-1 text-sm text-text-secondary">
-              A deterministic projection of persisted evidence. No AI-authored narrative.
-            </p>
-          </div>
-          <Button
-            variant="primary"
-            render={
-              <a
-                href={`data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`}
-                download={`run-${report.run.id}-completion.md`}
-                aria-label="Export completion report as Markdown"
+    <QueryBoundary
+      query={query}
+      pending={<Skeleton height={120} />}
+      error={
+        <CenteredState>
+          <ErrorState
+            title="Could not load the completion report"
+            description="The daemon could not regenerate this report from persisted evidence."
+            onRetry={() => void query.refetch()}
+          />
+        </CenteredState>
+      }
+    >
+      {({ report, markdown }) => (
+        <div className="h-full overflow-auto bg-surface">
+          <div className="mx-auto flex max-w-6xl flex-col gap-4 p-4 sm:p-6">
+            <header className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Completion report</h1>
+                <p className="mt-1 text-sm text-text-secondary">
+                  Built from recorded run evidence.{" "}
+                  <Icon name="file-text" size="xs" aria-hidden className="inline" /> opens the
+                  source for each fact.
+                </p>
+              </div>
+              <IconButton
+                label="Export Markdown"
+                icon={<Icon name="download" aria-hidden />}
+                nativeButton={false}
+                role="link"
+                render={
+                  <a
+                    href={`data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`}
+                    download={`run-${report.run.id}-completion.md`}
+                    aria-label="Export Markdown"
+                  />
+                }
               />
-            }
-          >
-            Export Markdown
-          </Button>
-        </header>
-        <ReportSummary report={report} />
-        <div data-report-grid className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <ExecutionSections report={report} />
-          <DeliverySections report={report} />
+            </header>
+            <ReportSummary report={report} />
+            <div data-report-grid className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <ExecutionSections report={report} />
+              <DeliverySections report={report} />
+            </div>
+            <ReportMessages report={report} />
+          </div>
         </div>
-        <ReportMessages report={report} />
-      </div>
-    </div>
+      )}
+    </QueryBoundary>
   );
 }

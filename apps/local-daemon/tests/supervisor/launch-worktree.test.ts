@@ -168,6 +168,7 @@ it("follows the issue to its new project once the issue is moved", async () => {
     const before = await supervisor.start({ issue_id: "i-move" });
     await supervisor.settle();
     expect(before.repository_id).toBe(fix.repositoryId);
+    const originalBranches = branches(fix.repo);
 
     // The issue only takes a second launch once its first workspace is closed.
     closeWorkspace(before.id);
@@ -177,7 +178,7 @@ it("follows the issue to its new project once the issue is moved", async () => {
 
     expect(after.repository_id).toBe("r-moved");
     expect(branches(moved)).toContain(after.branch);
-    expect(branches(fix.repo)).not.toContain(after.branch);
+    expect(branches(fix.repo)).toEqual(originalBranches);
   } finally {
     moved.cleanup();
   }

@@ -1,5 +1,6 @@
-import { issueShortId, shortId } from "@web/lib/ids";
 import { describe, expect, it } from "vitest";
+
+import { issueShortId, shortId } from "#domain/projections/short-id";
 
 describe("shortId", () => {
   it("keeps the first 8 characters", () => {

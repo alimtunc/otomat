@@ -1,4 +1,4 @@
-import type { IssueContract } from "@otomat/domain";
+import type { IssueSummary } from "@otomat/domain";
 import { EmptyState } from "@otomat/ui";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
@@ -9,23 +9,28 @@ import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryList } from "@web/components/shell/query-list";
 import type { IssueGroup } from "@web/lib/issue/grouping";
 import type { IssuesLayout } from "@web/lib/issue/layout";
+import type { IssueOptionalColumn } from "@web/lib/issue/view-config";
 
 export interface IssuesContentProps {
-  query: UseQueryResult<IssueContract[]>;
-  groups: (issues: IssueContract[]) => IssueGroup[];
+  query: UseQueryResult<IssueSummary[]>;
+  groups: (issues: IssueSummary[]) => IssueGroup[];
   layout: IssuesLayout;
+  optionalColumns?: IssueOptionalColumn[];
   showGroupHeadings: boolean;
   collapsed: string[];
   onToggleGroup: (key: string) => void;
+  scrollId?: string;
 }
 
 export function IssuesContent({
   query,
   groups,
   layout,
+  optionalColumns,
   showGroupHeadings,
   collapsed,
   onToggleGroup,
+  scrollId = "issues",
 }: IssuesContentProps) {
   return (
     <QueryList
@@ -60,11 +65,12 @@ export function IssuesContent({
           showGroupHeadings,
           collapsed,
           onToggleGroup,
+          scrollId: `${scrollId}:${layout}`,
         };
         return layout === "board" ? (
           <IssuesBoard {...layoutProps} />
         ) : (
-          <IssuesTable {...layoutProps} />
+          <IssuesTable {...layoutProps} optionalColumns={optionalColumns} />
         );
       }}
     </QueryList>

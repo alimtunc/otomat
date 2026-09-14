@@ -27,8 +27,7 @@ export function WorkspacesTable({ rows, selection, onSelectionChange }: Workspac
 
   return (
     <div className="overflow-auto">
-      {/* Fixed layout: a nowrap branch or path would otherwise widen the table past its pane. */}
-      <table className={cn(TABLE, "table-fixed")}>
+      <table className={cn(TABLE, "min-w-172 table-fixed xl:min-w-220")}>
         <TableHead table={table} />
         <tbody>
           {table.getRowModel().rows.map((row) => (

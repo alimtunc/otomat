@@ -1,6 +1,6 @@
 import type { DiffFileContract, ReviewedFileContract } from "@otomat/domain";
-import { Checkbox, cn, DiffFileStatusChip, Icon, IconButton } from "@otomat/ui";
-import { diffFileLabels } from "@web/components/runs/diff/files/path";
+import { Checkbox, cn, DiffFileStatusChip, Icon, IconButton, Kbd } from "@otomat/ui";
+import { baseName, diffFileLabels } from "@web/components/runs/diff/files/path";
 import { ReviewedSyncBadge } from "@web/components/runs/diff/files/reviewed-sync";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import type { ReactNode } from "react";
@@ -19,7 +19,6 @@ export interface DiffFileCardHeaderProps {
   fullFile: boolean;
   /** Absent when the file has no text to expand, so no full-file action is offered. */
   onFullFileChange: ((fullFile: boolean) => void) | null;
-  onCommentFile: () => void;
 }
 
 export function DiffFileCardHeader({
@@ -35,7 +34,6 @@ export function DiffFileCardHeader({
   onCollapsedChange,
   fullFile,
   onFullFileChange,
-  onCommentFile,
 }: DiffFileCardHeaderProps) {
   const labels = diffFileLabels(file);
   return (
@@ -53,7 +51,14 @@ export function DiffFileCardHeader({
       />
       <DiffFileStatusChip status={file.status} showLabel={false} />
       <span className="min-w-0 truncate" title={labels.full}>
-        {labels.full}
+        {file.old_path === null || file.old_path === file.path ? null : (
+          <span className="text-text-tertiary">{file.old_path} → </span>
+        )}
+        <span className="text-text-tertiary">
+          {labels.directory}
+          {labels.directory === "" ? "" : "/"}
+        </span>
+        <span className="text-foreground">{baseName(file.path)}</span>
       </span>
       <span className="ml-auto flex items-center gap-1.5">
         {indicator}
@@ -62,12 +67,6 @@ export function DiffFileCardHeader({
             <DiffStat additions={file.additions} deletions={file.deletions} />
           </span>
         ) : null}
-        <IconButton
-          size="sm"
-          label={`Comment on ${file.path}`}
-          icon={<Icon name="message-square" />}
-          onClick={onCommentFile}
-        />
         {onFullFileChange === null ? null : (
           <IconButton
             size="sm"
@@ -87,7 +86,7 @@ export function DiffFileCardHeader({
             checked={reviewed}
             onCheckedChange={(checked) => onReviewedChange(checked === true)}
           />
-          Reviewed
+          Reviewed <Kbd>V</Kbd>
         </label>
       </span>
     </header>

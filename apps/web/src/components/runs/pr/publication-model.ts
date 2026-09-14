@@ -10,7 +10,10 @@ export interface PublicationModel {
   actionDisabled: boolean;
   actionPending: boolean;
   stateLabel: string;
+  status: "Not published" | "Publishing" | "Published";
 }
+
+type PublicationAction = Omit<PublicationModel, "status">;
 
 export interface PublicationModelInput {
   pullRequest: PullRequestContract | null;
@@ -24,7 +27,11 @@ export interface PublicationModelInput {
 const UPDATE_LABEL = "Update PR details";
 const RETRY_LABEL = "Retry publication";
 
-function createdModel(hasDraftChanges: boolean, connected: boolean): PublicationModel {
+export function isPublished(pullRequest: PullRequestContract | null): boolean {
+  return pullRequest?.number != null;
+}
+
+function createdModel(hasDraftChanges: boolean, connected: boolean): PublicationAction {
   return {
     actionLabel: UPDATE_LABEL,
     actionDisabled: !hasDraftChanges || !connected,
@@ -33,11 +40,19 @@ function createdModel(hasDraftChanges: boolean, connected: boolean): Publication
   };
 }
 
+export function generationBlocked(publishability: PullRequestPublishability): boolean {
+  return (
+    publishability.blocker?.code === "worktree_missing" ||
+    publishability.blocker?.code === "remote_missing" ||
+    publishability.changed_files === 0
+  );
+}
+
 function createLabel(mode: PullRequestPublicationMode): string {
   return mode === "draft" ? "Create draft PR" : "Create PR ready for review";
 }
 
-function creationModel(input: PublicationModelInput): PublicationModel {
+function creationModel(input: PublicationModelInput): PublicationAction {
   const { publishability, connected, mode } = input;
   if (publishability.blocker !== null) {
     return {
@@ -55,7 +70,7 @@ function creationModel(input: PublicationModelInput): PublicationModel {
   };
 }
 
-function runningModel(operation: OperationContract): PublicationModel {
+function runningModel(operation: OperationContract): PublicationAction {
   const label = operation.phases.find((phase) => phase.state === "active")?.label ?? "Publishing";
   return {
     actionLabel: `${label}…`,
@@ -69,8 +84,8 @@ function stoppedModel(
   input: PublicationModelInput,
   pullRequest: PullRequestContract,
   interrupted: boolean,
-): PublicationModel {
-  if (pullRequest.number !== null) {
+): PublicationAction {
+  if (isPublished(pullRequest)) {
     return {
       actionLabel: interrupted ? RETRY_LABEL : UPDATE_LABEL,
       actionDisabled: !input.connected,
@@ -85,11 +100,20 @@ function stoppedModel(
   };
 }
 
-/** The operation is the only account of the publication: reading `publication_status` beside it is how the two disagree. A terminal pull request never reaches this model — the PR tab renders its outcome view instead. */
-export function publicationModel(input: PublicationModelInput): PublicationModel {
+function publicationAction(input: PublicationModelInput): PublicationAction {
   const { pullRequest, operation } = input;
   if (pullRequest === null || operation === null) return creationModel(input);
   if (operation.state === "running") return runningModel(operation);
   if (operation.state === "succeeded") return createdModel(input.hasDraftChanges, input.connected);
   return stoppedModel(input, pullRequest, operation.state === "interrupted");
+}
+
+/** The operation is the only account of the publication: reading `publication_status` beside it is how the two disagree. A terminal pull request never reaches this model — the PR tab renders its outcome view instead. */
+export function publicationModel(input: PublicationModelInput): PublicationModel {
+  const action = publicationAction(input);
+  let status: PublicationModel["status"] = isPublished(input.pullRequest)
+    ? "Published"
+    : "Not published";
+  if (action.actionPending) status = "Publishing";
+  return { ...action, status };
 }

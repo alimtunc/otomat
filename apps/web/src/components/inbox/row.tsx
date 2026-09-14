@@ -37,7 +37,7 @@ export function InboxRow({
     <div className="flex items-center gap-1 rounded-md hover:bg-hover">
       {selection}
       <Link {...link} className={LINK_CLASS}>
-        <span className="flex w-37.5 shrink-0 items-center gap-2">{leading}</span>
+        <span className="flex shrink-0 items-center gap-2 xl:w-37.5">{leading}</span>
         <span
           className={`min-w-0 flex-1 truncate text-sm ${muted ? "text-text-secondary" : "text-foreground"}`}
         >
@@ -45,7 +45,7 @@ export function InboxRow({
             <span className="font-mono text-xs text-text-tertiary">{identifier} </span>
           )}
           <span className="font-medium">{title}</span>
-          <span className="text-xs text-text-tertiary"> — {reason}</span>
+          {reason === "" ? null : <span className="text-xs text-text-tertiary"> — {reason}</span>}
         </span>
         {chips}
         <span className="shrink-0 text-xs text-text-tertiary">

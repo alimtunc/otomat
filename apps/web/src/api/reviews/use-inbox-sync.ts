@@ -49,11 +49,12 @@ export function usePullRequestInboxSync(projectId: string | undefined): PullRequ
 
   const repositories = inbox?.sync.repositories ?? null;
   const syncedAt = inbox?.sync.last_synced_at ?? null;
+  const running = inbox?.sync.running === true;
   const refreshIfStale = useCallback(() => {
-    if (repositories === 0) return;
+    if (repositories === null || repositories === 0 || running) return;
     if (syncedAt !== null && Date.now() - Date.parse(syncedAt) < FRESH_FOR_MS) return;
     start(false);
-  }, [start, repositories, syncedAt]);
+  }, [start, repositories, syncedAt, running]);
 
   // otomat-allow-effect: subscribe the inbox to its own cadence — mount, window focus and an interval that stops with the view.
   useEffect(() => {

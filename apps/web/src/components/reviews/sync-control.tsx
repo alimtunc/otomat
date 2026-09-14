@@ -1,4 +1,4 @@
-import { Button, RelativeTime } from "@otomat/ui";
+import { Icon, IconButton, RelativeTime } from "@otomat/ui";
 import type { PullRequestInboxSyncState } from "@web/api/reviews/use-inbox-sync";
 import type { ReactNode } from "react";
 
@@ -22,16 +22,14 @@ export function ReviewSyncControl({ sync }: ReviewSyncControlProps) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-text-tertiary">{freshness()}</span>
-      <Button
-        type="button"
-        size="xs"
-        variant="outline"
+      <IconButton
+        size="sm"
+        label={sync.running ? "Syncing…" : "Sync now"}
+        icon={<Icon name="refresh-cw" aria-hidden />}
         loading={sync.running}
-        disabled={sync.repositories === 0}
+        disabled={sync.running || sync.repositories === 0}
         onClick={sync.refresh}
-      >
-        Sync now
-      </Button>
+      />
     </div>
   );
 }

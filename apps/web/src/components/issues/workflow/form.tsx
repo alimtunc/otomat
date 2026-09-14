@@ -1,16 +1,22 @@
 import type { RunContract } from "@otomat/domain";
-import { Button, DialogBody, Field, FieldControl, FieldLabel, Kbd, Textarea } from "@otomat/ui";
+import { Button, DialogBody, Kbd } from "@otomat/ui";
+import { useStore } from "@tanstack/react-form";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
+import { useDraftPresence } from "@web/components/issues/use-draft-presence";
 import { launchBaseFields } from "@web/components/runs/launch/base-request";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
-import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
+import { hasText, submitOnCmdEnter } from "@web/lib/form";
 import { isWorkflowNodeComplete } from "@web/lib/workflow-draft";
+import { hasWorkflowDraft } from "@web/lib/workflow/content";
+import { clearInheritedNodeOverrides } from "@web/lib/workflow/steps";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 import { WorkflowPlanBuilder } from "./builder";
 import { type WorkflowLaunchTarget } from "./launch-target";
-import { useWorkflowForm, type WorkflowForm } from "./use-form";
+import { WorkflowTargetIntro } from "./target-intro";
+import { useWorkflowForm } from "./use-form";
 
 export interface WorkflowLaunchFormProps {
   target: WorkflowLaunchTarget;
@@ -19,46 +25,8 @@ export interface WorkflowLaunchFormProps {
   onExecutionChange: (execution: ExecutionSelection) => void;
   onLaunched: (run: RunContract) => void;
   onCancel: () => void;
-}
-
-function WorkflowTargetIntro({
-  target,
-  form,
-}: {
-  target: WorkflowLaunchTarget;
-  form: WorkflowForm;
-}) {
-  if (target.kind === "issue") {
-    return (
-      <p className="text-xs text-text-tertiary">
-        Every step runs on this issue, in order, on the same branch. Steps with no dependency start
-        together.
-      </p>
-    );
-  }
-  return (
-    <form.Field
-      name="goal"
-      validators={{ onChange: requiredTrimmed("Describe the overall goal.") }}
-    >
-      {(field) => (
-        <Field {...fieldErrorProps(field.state.meta)}>
-          <FieldLabel>Goal</FieldLabel>
-          <FieldControl>
-            <Textarea
-              autoFocus
-              rows={2}
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="What should this workflow achieve? Becomes the issue."
-              aria-label="Workflow goal"
-            />
-          </FieldControl>
-        </Field>
-      )}
-    </form.Field>
-  );
+  onDraftChange?: (hasDraft: boolean) => void;
+  autoFocus?: boolean;
 }
 
 export function WorkflowLaunchForm({
@@ -68,6 +36,8 @@ export function WorkflowLaunchForm({
   onExecutionChange,
   onLaunched,
   onCancel,
+  onDraftChange,
+  autoFocus = true,
 }: WorkflowLaunchFormProps) {
   const launchExecution = useLaunchExecution(execution);
   const workflow = useWorkflowForm({
@@ -78,19 +48,30 @@ export function WorkflowLaunchForm({
     onLaunched,
   });
   const { form, plan, isPending } = workflow;
+  const inheritedAgent = launchExecution.selection.agent;
+  const previousAgent = useRef(inheritedAgent);
+  const rescope = useEffectEvent(() => plan.setSteps(clearInheritedNodeOverrides));
+  // otomat-allow-effect: a shared launch agent change invalidates inherited step overrides even while this mode is hidden.
+  useEffect(() => {
+    if (previousAgent.current !== inheritedAgent) rescope();
+    previousAgent.current = inheritedAgent;
+  }, [inheritedAgent]);
+  const hasGoal = useStore(form.store, (state) => hasText(state.values.goal));
+  useDraftPresence(hasGoal || hasWorkflowDraft(plan.steps), onDraftChange);
   const composed =
     launchExecution.canLaunch && plan.steps.length > 0 && plan.steps.every(isWorkflowNodeComplete);
 
   return (
     <form
+      className="flex min-h-0 flex-1 flex-col"
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
       }}
       onKeyDown={submitOnCmdEnter(() => void form.handleSubmit())}
     >
-      <DialogBody className="flex max-h-[62vh] flex-col gap-3 overflow-y-auto">
-        <WorkflowTargetIntro target={target} form={form} />
+      <DialogBody className="flex max-h-[62vh] min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+        <WorkflowTargetIntro target={target} form={form} autoFocus={autoFocus} />
         <WorkflowPlanBuilder
           execution={launchExecution}
           onExecutionChange={onExecutionChange}

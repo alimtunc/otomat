@@ -9,6 +9,8 @@ export * from "./primary-state.js";
 export * from "./publication-operation.js";
 export * from "./pull-request-reference.js";
 export * from "./review-inbox.js";
+export * from "./search.js";
+export * from "./short-id.js";
 export * from "./supervision.js";
 export * from "./usage-dashboard.js";
 export * from "./usage-figures.js";

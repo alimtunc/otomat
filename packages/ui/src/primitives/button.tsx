@@ -1,6 +1,6 @@
 import { Button as BaseButton } from "@base-ui/react/button";
 import type { VariantProps } from "class-variance-authority";
-import type { ComponentPropsWithoutRef } from "react";
+import type { ComponentPropsWithRef } from "react";
 
 import { injectStyleOnce } from "../lib/inject-style";
 import { injectSpinKeyframes } from "../lib/spin";
@@ -16,7 +16,7 @@ const BTN_LOADING_CSS = `
 
 export interface ButtonProps
   extends
-    Omit<ComponentPropsWithoutRef<typeof BaseButton>, "className" | "color">,
+    Omit<ComponentPropsWithRef<typeof BaseButton>, "className" | "color">,
     VariantProps<typeof buttonVariants> {
   className?: string;
   loading?: boolean;

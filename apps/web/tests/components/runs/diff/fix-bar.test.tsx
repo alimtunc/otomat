@@ -107,10 +107,10 @@ describe("diff fix bar", () => {
     await cleanup();
   });
 
-  it("leaves the submit composer to the reviewer header on a pull request surface", async () => {
+  it("offers the submit composer in the toolbar on a pull request surface", async () => {
     const { cleanup } = await bar([], OTOMAT, true, { kind: "pull_request", id: "pr-1" }, true);
 
-    expect(findButton("Submit review")).toBeUndefined();
+    expect(findButton("Submit review")).toBeDefined();
     await cleanup();
   });
 });

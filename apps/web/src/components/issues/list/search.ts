@@ -3,7 +3,11 @@ import { asMember, asString, normalizedMembers, normalizedSelection } from "@web
 import { ISSUE_SOURCES, knownPriority } from "@web/lib/issue/filter-options";
 import { ISSUE_GROUPINGS, type IssueGrouping } from "@web/lib/issue/grouping";
 import { ISSUE_SORTS, type IssueSort } from "@web/lib/issue/sort";
-import type { IssuesViewConfig } from "@web/lib/issue/view-config";
+import {
+  ISSUE_OPTIONAL_COLUMNS,
+  type IssueOptionalColumn,
+  type IssuesViewConfig,
+} from "@web/lib/issue/view-config";
 
 /** `[]` and `all` are values, not absence: an emptied axis still travels. */
 export interface IssuesListSearch {
@@ -18,6 +22,7 @@ export interface IssuesListSearch {
   assignee?: string;
   priority?: number | "all";
   collapsed?: string[];
+  columns?: IssueOptionalColumn[];
 }
 
 function selection(value: unknown): string[] | undefined {
@@ -46,6 +51,7 @@ export function parseIssuesListSearch(search: Record<string, unknown>): IssuesLi
     assignee: asString(search.assignee) ?? undefined,
     priority: parsePriority(search.priority),
     collapsed: selection(search.collapsed),
+    columns: members(search.columns, ISSUE_OPTIONAL_COLUMNS),
   };
 }
 
@@ -66,6 +72,7 @@ export function issuesConfigFromSearch(
       priority: search.priority ?? view.advanced.priority,
     },
     collapsedGroups: search.collapsed ?? view.collapsedGroups,
+    columns: search.columns ?? view.columns,
   };
 }
 
@@ -80,6 +87,9 @@ export function issuesSearchFromConfig(
   const next = config.advanced;
   const base = view.advanced;
   return {
+    columns: sameSelection(config.columns ?? [], view.columns ?? [])
+      ? undefined
+      : (config.columns ?? []),
     group: config.grouping === view.grouping ? undefined : config.grouping,
     sort: config.sort === view.sort ? undefined : config.sort,
     sources: sameSelection(next.sources, base.sources) ? undefined : next.sources,

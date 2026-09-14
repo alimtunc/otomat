@@ -13,7 +13,7 @@ export interface BulkCleanup {
   outcomes: Record<string, CleanupOutcome>;
   running: boolean;
   receipt: string | null;
-  start: (rows: readonly WorkspaceRow[], force: boolean) => Promise<void>;
+  start: (rows: readonly WorkspaceRow[], forcedIds: ReadonlySet<string>) => Promise<void>;
   reset: () => void;
 }
 
@@ -37,7 +37,10 @@ export function useBulkCleanup(): BulkCleanup {
     setOutcomes((current) => ({ ...current, [id]: outcome }));
   };
 
-  const start = async (rows: readonly WorkspaceRow[], force: boolean): Promise<void> => {
+  const start = async (
+    rows: readonly WorkspaceRow[],
+    forcedIds: ReadonlySet<string>,
+  ): Promise<void> => {
     setTargets([...rows]);
     setOutcomes({});
     setRunning(true);
@@ -47,7 +50,7 @@ export function useBulkCleanup(): BulkCleanup {
         const result = await cleanup.mutateAsync({
           hostId: row.host.id,
           workspaceId: row.id,
-          force,
+          force: forcedIds.has(row.id),
         });
         record(row.id, { outcome: result.outcome, message: result.message });
       } catch (error) {

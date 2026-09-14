@@ -26,7 +26,7 @@ it("renders an agent reply as Markdown and keeps its raw text copyable", async (
   expect(container.textContent).not.toContain("## Result");
   expect(
     [...container.querySelectorAll("button")].some(
-      (button) => button.getAttribute("aria-label") === "Copy raw text",
+      (button) => button.getAttribute("aria-label") === "Copy message",
     ),
   ).toBe(true);
 

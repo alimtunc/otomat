@@ -66,10 +66,10 @@ function instructionsField(): HTMLTextAreaElement {
 async function openDialog(count: number) {
   requests.length = 0;
   const mounted = await mount(
-    <ReviewFixStepDialog runId="run-1" issueId="i1" count={count} disabled={false} />,
+    <ReviewFixStepDialog runId="run-1" issueId="i1" count={count} disabled={false} hint="" />,
   );
   await act(async () => {
-    findButton(count === 1 ? "Fix 1 agent comment" : `Fix ${count} agent comments`)?.click();
+    findButton(count === 1 ? "Send 1 comment" : `Send ${count} comments`)?.click();
   });
   return mounted;
 }

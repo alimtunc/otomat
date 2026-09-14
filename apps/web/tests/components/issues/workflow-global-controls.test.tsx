@@ -5,7 +5,7 @@ import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/exe
 import { act, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { findButton } from "#support/dom-queries";
+import { findButton, findLabelled } from "#support/dom-queries";
 import { referencedIssue } from "#support/issue";
 import { readyLaunchTarget, repositoriesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
@@ -166,6 +166,8 @@ it("leaves a step with its own override only, repeating no global control", asyn
   await openWorkflow();
   const card = stepCard();
 
+  expect(card.querySelector("[data-testid='execution-picker'][data-level='step']")).toBeNull();
+  await act(async () => findLabelled("Override Step 1 execution")?.click());
   expect(card.querySelector("[data-testid='execution-picker'][data-level='step']")).not.toBeNull();
   expect(card.querySelector("button[aria-label^='Base branch']")).toBeNull();
   expect(card.textContent).not.toContain("Presets");
@@ -176,6 +178,8 @@ it("rescopes an inherited node when the global agent changes, and leaves an expl
   await openWorkflow();
   await click("Add step");
 
+  await act(async () => findLabelled("Override Step 1 execution")?.click());
+  await act(async () => findLabelled("Override Step 2 execution")?.click());
   await click("pick opus for Step 1");
   await click("pick codex for Step 2");
   expect(lastPickerValue("Step 1")).toEqual({

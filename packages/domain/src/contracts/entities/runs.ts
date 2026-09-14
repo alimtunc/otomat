@@ -28,6 +28,9 @@ export const runContractSchema = z.object({
 });
 export type RunContract = z.infer<typeof runContractSchema>;
 
+export const runSummarySchema = runContractSchema.omit({ plan_json: true });
+export type RunSummary = z.infer<typeof runSummarySchema>;
+
 /** `status` is the delivery lifecycle, never a read receipt. */
 export const runContributionContractSchema = z.object({
   id: z.string(),

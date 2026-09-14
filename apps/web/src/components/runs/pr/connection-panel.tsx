@@ -13,9 +13,17 @@ export function PullRequestConnectionPanel({
   isConnecting,
 }: PullRequestConnectionPanelProps) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface-2 p-3">
+    <div
+      className={
+        model.connected
+          ? "flex items-center justify-between gap-3"
+          : "flex items-center justify-between gap-3 rounded-md border border-border bg-surface-2 p-3"
+      }
+    >
       <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{model.connectionLabel}</p>
+        {model.connected ? null : (
+          <p className="text-sm font-medium text-foreground">{model.connectionLabel}</p>
+        )}
         {model.deviceAuthorization ? (
           <p className="mt-1 text-xs text-muted-foreground">
             Enter code{" "}
@@ -34,7 +42,9 @@ export function PullRequestConnectionPanel({
           </p>
         ) : null}
         {model.errorMessage ? (
-          <p className="mt-1 text-xs text-danger">{model.errorMessage}</p>
+          <p role="alert" className="mt-1 text-xs text-danger">
+            {model.errorMessage}
+          </p>
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-2">

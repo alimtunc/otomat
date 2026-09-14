@@ -1,5 +1,5 @@
 import type { AgentSessionContract } from "@otomat/domain";
-import { AgentAvatar, CopyButton, StatusChip } from "@otomat/ui";
+import { AgentAvatar, CopyButton, resolveStatus, TONE_TEXT } from "@otomat/ui";
 import { CodexPermissions } from "@web/components/runs/conversation/codex-permissions";
 import { codexResumeCommand } from "@web/lib/workspace/open";
 
@@ -12,6 +12,7 @@ export function SessionRow({
   stepName: string | null;
   worktreePath: string | null;
 }) {
+  const status = resolveStatus("session", session.status);
   const command =
     session.agent_id === "codex" &&
     session.provider_session_id !== null &&
@@ -30,13 +31,10 @@ export function SessionRow({
         <span className="ml-auto flex items-center gap-2">
           {session.provider_session_id !== null ? (
             <span className="flex items-center gap-1 font-mono text-micro text-text-tertiary">
-              <span className="max-w-40 truncate" title={session.provider_session_id}>
-                {session.provider_session_id}
-              </span>
               <CopyButton value={session.provider_session_id} label="Copy provider session id" />
             </span>
           ) : null}
-          <StatusChip kind="session" status={session.status} />
+          <span className={`text-xs ${TONE_TEXT[status.tone]}`}>{status.label}</span>
         </span>
       </div>
       {session.agent_id === "codex" ? (

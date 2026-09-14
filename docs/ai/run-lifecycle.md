@@ -84,7 +84,7 @@ circuite la relecture pour ne pas courir contre son propre push.
 
 Quand la réconciliation atteint `merged`, le même événement solde la run
 (`closeMergedRun`) : `cleanup()` du service git — worktree, branche locale
-`otomat/run/*`, `git worktree prune` —, la run non terminale rejoint `completed`
+enregistrée pour ce cycle, `git worktree prune` —, la run non terminale rejoint `completed`
 (sans quoi elle continuerait à se projeter en `reviewing`, ramenant la carte en
 arrière et laissant publish/fix ouverts), puis l'issue rejoint `done` par
 `issueMachine`. `done` est terminal : toute reprise ultérieure (`resume`,

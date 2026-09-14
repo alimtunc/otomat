@@ -138,12 +138,14 @@ it("scopes an explicit refresh to the active project and reports what landed", a
 it("says nothing changed instead of implying an import happened", async () => {
   syncLinear.mockResolvedValue({ results: [{ imported: 0, updated: 0 }] });
   const container = await renderProbe();
+  const invalidateQueries = vi.spyOn(client, "invalidateQueries");
 
   click(container, "Refresh");
 
   await vi.waitFor(() =>
     expect(toastSuccess).toHaveBeenCalledWith("Issues are already up to date."),
   );
+  expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: keys.issues });
 });
 
 it("asks for a full reconciliation only when one is requested", async () => {

@@ -1,7 +1,7 @@
 import { COMMIT_SUBJECT_MAX_LENGTH, formatCommitSubject } from "@otomat/domain";
 import { describe, expect, it } from "vitest";
 
-import { createPullRequestGenerator, sanitizeBranchName, type GenerationInput } from "#github";
+import { createPullRequestGenerator, type GenerationInput } from "#github";
 import type { CommandRequest, CommandResult } from "#github";
 import { RuntimeUnavailableError } from "#runtime";
 
@@ -49,21 +49,6 @@ function runner(results: CommandResult[]) {
     },
   };
 }
-
-describe("sanitizeBranchName", () => {
-  it.each([
-    ["Feat/Add Note!", "feat/add-note"],
-    ["  fix: crash on boot  ", "fix-crash-on-boot"],
-    ["feat//double--dash-", "feat/double-dash"],
-  ])("slugs %j to %j", (raw, expected) => {
-    expect(sanitizeBranchName(raw)).toBe(expected);
-  });
-
-  it("rejects run-branch collisions and empty results", () => {
-    expect(sanitizeBranchName("otomat/run/abc")).toBeNull();
-    expect(sanitizeBranchName("???")).toBeNull();
-  });
-});
 
 describe("pull request generator", () => {
   it("maps a sandbox preflight refusal before invoking the generator command", async () => {

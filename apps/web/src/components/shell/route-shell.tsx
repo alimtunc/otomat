@@ -12,10 +12,11 @@ import {
   useCommandPalette,
   useTheme,
 } from "@otomat/ui";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { ActivityCenter } from "@web/components/shell/activity/center";
 import type { ShellSection } from "@web/components/shell/nav-items";
+import { recordPaletteVisit } from "@web/components/shell/palette/history";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { ProjectTabsBar } from "@web/components/shell/project-tabs/bar";
@@ -24,7 +25,7 @@ import { Sidebar } from "@web/components/shell/sidebar";
 import type { BackNavigation } from "@web/components/shell/use-back-navigation";
 import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
 import { useShellData } from "@web/components/shell/use-shell-data";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 export interface RouteShellProps {
   breadcrumbs: BreadcrumbItem[];
@@ -60,8 +61,21 @@ export function RouteShell({
   const palette = useCommandPalette();
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
+  const projectTrigger = useRef<HTMLButtonElement>(null);
   const openNewIssue = useCallback(() => setNewIssueOpen(true), []);
-  const paletteGroups = usePaletteGroups({ search: palette.search, onNewIssue: openNewIssue });
+  const href = useRouterState({ select: (state) => state.location.href });
+  const scope = shell.currentSwitcherId;
+  const visitLabel = breadcrumbs.map((entry) => entry.label).join(" · ");
+  // otomat-allow-effect: record visited routes for the palette after navigation commits.
+  useEffect(() => {
+    if (scope !== undefined) recordPaletteVisit(scope, { href, label: visitLabel });
+  }, [scope, href, visitLabel]);
+  const paletteGroups = usePaletteGroups({
+    search: palette.search,
+    open: palette.open,
+    onNewIssue: openNewIssue,
+    scope,
+  });
   useNewIssueShortcut(openNewIssue);
 
   const isTitle = breadcrumbs.length === 1;
@@ -141,9 +155,7 @@ export function RouteShell({
       sidebar={
         <Sidebar
           active={active}
-          online={shell.connectionState === "online"}
-          daemonVersion={shell.daemonVersion}
-          hostAlias={shell.hostAlias ?? undefined}
+          projectTriggerRef={projectTrigger}
           projects={shell.projects}
           currentProjectId={shell.currentSwitcherId}
           onProjectSelect={shell.selectProject}
@@ -179,6 +191,7 @@ export function RouteShell({
       />
       <AddProjectDialog
         open={addProjectOpen}
+        finalFocus={projectTrigger}
         onOpenChange={setAddProjectOpen}
         hosts={shell.hostOptions}
         onSelect={shell.selectProject}

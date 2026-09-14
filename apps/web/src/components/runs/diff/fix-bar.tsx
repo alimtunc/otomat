@@ -18,13 +18,13 @@ function ownedHint(workspaceOpen: boolean, count: number): string {
 
 export function DiffFixBar({ target, workspaceOpen, issueId, review }: DiffFixBarProps) {
   const count = review.comments.filter(isAgentFixEligible).length;
-  const owned = review.fix_authority.kind === "otomat";
+  const owned = target.kind === "run" && review.fix_authority.kind === "otomat";
   const hint = owned ? ownedHint(workspaceOpen, count) : review.fix_authority.reason;
-  const reviewable = target.kind === "run" && review.destinations.pr_review;
+  const reviewable = target.kind === "pull_request" || review.destinations.pr_review;
 
   return (
-    <footer className="flex h-12 flex-none items-center gap-2.5 border-t border-border-subtle bg-surface-1 px-4.5">
-      {owned ? null : (
+    <span className="flex shrink-0 items-center gap-2">
+      {owned || target.kind === "pull_request" ? null : (
         <Chip tone="neutral" hint={hint}>
           Review only
         </Chip>
@@ -41,6 +41,6 @@ export function DiffFixBar({ target, workspaceOpen, issueId, review }: DiffFixBa
           />
         ) : null}
       </span>
-    </footer>
+    </span>
   );
 }

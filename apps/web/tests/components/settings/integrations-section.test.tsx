@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
 import type { LinearConnectionContract } from "@otomat/domain";
 import { IntegrationsSection } from "@web/components/settings/integrations/section";
+import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
+import { findButton } from "#support/dom-queries";
 import type { FakeQueryState } from "#support/fake-query";
 import { linearConnection as connection } from "#support/linear";
 import { mountWithQuery, type Mounted } from "#support/mount";
@@ -74,16 +76,20 @@ it("invites a first connection when the catalogue is empty", async () => {
   const container = await renderSection();
 
   expect(container.textContent).toContain("No Linear connection yet");
-  expect(container.querySelector("[data-testid='linear-connect-form']")).not.toBeNull();
+  expect(container.querySelector("[data-testid='linear-connect-form']")).toBeNull();
+  await act(async () => {
+    findButton("Add workspace")?.click();
+  });
+  expect(document.body.querySelector("[data-testid='linear-connect-form']")).not.toBeNull();
 });
 
-it("does not render stale connection controls after a background read error", async () => {
+it("retains connections behind the stale notice after a background read error", async () => {
   connectionsState = { ...connectionsState, isError: true, isSuccess: false };
 
   const container = await renderSection();
 
-  expect(container.textContent).toContain("Could not read the Linear connections.");
-  expect(container.textContent).not.toContain("Otomat");
+  expect(container.textContent).toContain("Otomat");
+  expect(container.textContent).toContain("Couldn’t refresh");
 });
 
 it("manages Linear from a project on the remote host too", async () => {
@@ -95,7 +101,11 @@ it("manages Linear from a project on the remote host too", async () => {
 
   const container = await renderSection();
 
-  expect(container.querySelector("[data-testid='linear-connect-form']")).not.toBeNull();
+  expect(container.querySelector("[data-testid='linear-connect-form']")).toBeNull();
+  await act(async () => {
+    findButton("Add workspace")?.click();
+  });
+  expect(document.body.querySelector("[data-testid='linear-connect-form']")).not.toBeNull();
   expect(container.textContent).not.toContain("local daemon only");
 });
 

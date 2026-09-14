@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+
 import { RunsTable } from "@web/components/runs/list/table";
 import { RunsToolbar } from "@web/components/runs/list/toolbar";
 import { useRunsView } from "@web/components/runs/list/use-runs-view";
@@ -9,9 +10,12 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { findButton } from "#support/dom-queries";
 import { linearIssueContract, openWorkspace } from "#support/issue";
+import { mockListViewport } from "#support/list-viewport";
 import { mount, type Mounted } from "#support/mount";
 import { mountRouted } from "#support/router";
 import { runContract as run } from "#support/run";
+
+mockListViewport();
 
 const mounted: Mounted[] = [];
 
@@ -44,12 +48,14 @@ it("heads each group with the issue's key, title, link and run count, and lists 
   const rendered = await mountRouted(<RunsTable groups={groups} />);
   mounted.push(rendered);
 
-  const header = rendered.container.querySelector("th[scope='colgroup']");
+  const header = rendered.container.querySelector("tbody th");
   expect(header?.textContent).toContain("OTO-42");
   expect(header?.textContent).toContain("Group the runs");
   expect(header?.querySelector(":scope > div > span:last-child")?.textContent).toBe("2");
   expect(header?.querySelector("a")?.getAttribute("href")).toBe("/issues/issue-1");
-  expect(rendered.container.querySelectorAll("tbody:last-of-type tr")).toHaveLength(2);
+  expect(rendered.container.querySelectorAll("tbody tr[data-virtual-index]:has(td)")).toHaveLength(
+    2,
+  );
 });
 
 it("states each run's own status and never the issue's, whichever way the two diverge", async () => {
@@ -63,10 +69,10 @@ it("states each run's own status and never the issue's, whichever way the two di
   const rendered = await mountRouted(<RunsTable groups={groups} />);
   mounted.push(rendered);
 
-  const header = rendered.container.querySelector("th[scope='colgroup']");
+  const header = rendered.container.querySelector("tbody th");
   expect(header?.textContent).not.toContain("Ready");
   expect(header?.textContent).not.toContain("Running");
-  const rows = [...rendered.container.querySelectorAll("tbody:last-of-type tr")];
+  const rows = [...rendered.container.querySelectorAll("tbody tr[data-virtual-index]:has(td)")];
   expect(rows[0]?.textContent).toContain("Running");
   expect(rows[1]?.textContent).toContain("Failed");
 });
@@ -75,9 +81,7 @@ it("names the issue honestly when the project does not list it", async () => {
   const groups = groupRunsByIssue([run({ issue_id: "issue-gone" })], []);
   const rendered = await mountRouted(<RunsTable groups={groups} />);
   mounted.push(rendered);
-  expect(rendered.container.querySelector("th[scope='colgroup']")?.textContent).toContain(
-    "Issue not loaded",
-  );
+  expect(rendered.container.querySelector("tbody th")?.textContent).toContain("Issue not loaded");
 });
 
 it("says what its filters are hiding, and stays quiet when they hide nothing", async () => {

@@ -115,3 +115,21 @@ it("folds the rows away without dropping the header or the count", async () => {
   expect(container.querySelectorAll("li")).toHaveLength(0);
   expect(container.textContent).toContain("Needs your review1");
 });
+
+it("routes blockers to Overview and hides the current viewer’s author label", async () => {
+  const rendered = await mountRouted(
+    <ReviewInboxGroup
+      group="needs_action"
+      entries={[entry({ group: "needs_action", author_login: "contrib" })]}
+      viewerLogin="contrib"
+      collapsed={false}
+      onToggle={vi.fn()}
+    />,
+  );
+  mounted.push(rendered);
+  expect(rendered.container.querySelector("li a")?.getAttribute("href")).toBe(
+    "/pull-requests/pr-1/overview",
+  );
+  expect(rendered.container.textContent).toContain("Inspect blockers");
+  expect(rendered.container.textContent).not.toContain("@contrib");
+});

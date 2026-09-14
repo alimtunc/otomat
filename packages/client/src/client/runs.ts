@@ -1,6 +1,7 @@
 import {
   appendedRunStepResponseSchema,
   runContractSchema,
+  runSummarySchema,
   runCommitsResponseSchema,
   runCompletionReportResponseSchema,
   runContributionContractSchema,
@@ -31,6 +32,11 @@ import { getJson, postJson, queryString } from "./http.js";
 
 export function createRunsClient(config: DaemonClientConfig) {
   return {
+    async listRunSummaries(projectId: string) {
+      return runSummarySchema
+        .array()
+        .parse(await getJson(config, `/api/runs/catalog${queryString({ projectId })}`));
+    },
     async listRuns(params: { issueId?: string; projectId?: string } = {}) {
       return runContractSchema
         .array()

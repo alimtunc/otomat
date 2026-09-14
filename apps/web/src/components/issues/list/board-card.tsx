@@ -1,18 +1,19 @@
 import {
+  issueShortId,
   projectIssuePrimaryState,
   projectOpenCycleExecution,
-  type IssueContract,
+  type IssueSummary,
 } from "@otomat/domain";
 import { Avatar, FOCUS_RING, IssueSourceGlyph, IssueStatusChip, StatusGlyph } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { CardChips } from "@web/components/issues/list/card-chips";
-import { issueShortId } from "@web/lib/ids";
 import { divergentSourceStatus } from "@web/lib/issue/divergent-status";
 import { failureSummary } from "@web/lib/issue/execution-failure";
+import type { ComponentProps } from "react";
 
-export function BoardCard({ issue }: { issue: IssueContract }) {
+export function BoardCard({ issue, ...props }: { issue: IssueSummary } & ComponentProps<"li">) {
   const primary = projectIssuePrimaryState(issue);
   const sourceStatus = divergentSourceStatus(issue);
   const overlay = primary.axis === "status" ? projectOpenCycleExecution(issue) : null;
@@ -21,7 +22,7 @@ export function BoardCard({ issue }: { issue: IssueContract }) {
       ? issue.execution.failure
       : null;
   return (
-    <li>
+    <li {...props}>
       <Link
         to="/issues/$issueId"
         params={{ issueId: issue.id }}

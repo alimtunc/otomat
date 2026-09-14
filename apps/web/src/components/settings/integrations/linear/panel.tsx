@@ -10,12 +10,11 @@ export function LinearConnectionsPanel() {
       query={connections}
       pending={<Skeleton className="h-14" />}
       error={<ErrorState variant="inline" title="Could not read the Linear connections." />}
-      staleData="block"
     >
       {(rows) =>
         rows.length === 0 ? (
           <p className="text-xs text-text-tertiary">
-            No Linear connection yet. Connect one below, then map its teams from a project&apos;s
+            No Linear connection yet. Add a workspace, then map its teams from a project&apos;s
             settings.
           </p>
         ) : (

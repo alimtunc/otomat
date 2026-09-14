@@ -72,7 +72,7 @@ export function SidebarNavItem({
   const inner = (
     <>
       {iconEl}
-      {!collapsed ? <span className="truncate">{label}</span> : null}
+      <span className={collapsed ? "sr-only" : "truncate"}>{label}</span>
       {rightEl}
     </>
   );

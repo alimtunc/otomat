@@ -4,7 +4,7 @@ import { DEFAULT_DIFF_PREFS, type DiffPrefs } from "@web/components/runs/diff/pr
 import { act } from "react";
 import { describe, expect, it } from "vitest";
 
-import { findButton } from "#support/dom-queries";
+import { findButton, findLabelled } from "#support/dom-queries";
 import { mount } from "#support/mount";
 
 async function openPopover(browsable: boolean, patches: Partial<DiffPrefs>[]) {
@@ -16,7 +16,7 @@ async function openPopover(browsable: boolean, patches: Partial<DiffPrefs>[]) {
     />,
   );
   await act(async () => {
-    findButton("View")?.click();
+    findLabelled("Diff view options")?.click();
   });
   return mounted;
 }
@@ -47,7 +47,7 @@ describe("reviewer preferences popover", () => {
 
     expect(findButton("Files")).toBeUndefined();
     expect(findButton("Tree")).toBeUndefined();
-    expect(findButton("Unified")).toBeDefined();
+    expect(findButton("Unified")).toBeUndefined();
     await cleanup();
   });
 

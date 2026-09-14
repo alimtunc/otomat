@@ -1,4 +1,4 @@
-import type { IssueContract } from "@otomat/domain";
+import type { IssueSummary } from "@otomat/domain";
 import { Chip } from "@otomat/ui";
 import type { ProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { LinearSyncControl } from "@web/components/issues/linear-sync/control";
@@ -16,7 +16,7 @@ import type { IssuesViewConfig } from "@web/lib/issue/view-config";
 
 export interface IssuesToolbarProps {
   config: IssuesViewConfig;
-  issues: IssueContract[];
+  issues: IssueSummary[];
   projectNames: ReadonlyMap<string, string>;
   sync: ProjectLinearSync;
   dirty: boolean;

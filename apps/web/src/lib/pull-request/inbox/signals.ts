@@ -14,8 +14,14 @@ export const CHECKS_SIGNAL = {
   none: { label: "No checks", tone: "neutral" },
 } satisfies Record<PullRequestChecksState, InboxSignal>;
 
-export const REVIEW_DECISION_SIGNAL = {
+const REVIEW_DECISION_SIGNAL = {
   approved: { label: "Approved", tone: "success" },
   changes_requested: { label: "Changes requested", tone: "warning" },
   review_required: { label: "Review required", tone: "review" },
 } satisfies Record<PullRequestReviewDecision, InboxSignal>;
+
+export function reviewDecisionSignal(
+  decision: PullRequestReviewDecision | null,
+): InboxSignal | null {
+  return decision === null ? null : REVIEW_DECISION_SIGNAL[decision];
+}

@@ -1,6 +1,7 @@
 import { DaemonRequestError } from "@otomat/client";
 import type {
   AttachPullRequestRequest,
+  IssuePullRequests,
   MergePullRequestRequest,
   PublishPullRequestRequest,
   PushPullRequestRequest,
@@ -121,8 +122,19 @@ export function useAttachPullRequest(issueId: string) {
   return useMutation({
     mutationFn: (request: AttachPullRequestRequest) => daemon.attachPullRequest(issueId, request),
     onSuccess: (pullRequest) => {
+      client.setQueryData<IssuePullRequests>(keys.issuePullRequests(issueId), (current) =>
+        current === undefined
+          ? current
+          : {
+              ...current,
+              attached: [...current.attached.filter((pr) => pr.id !== pullRequest.id), pullRequest],
+              candidates: current.candidates.filter(
+                (candidate) => candidate.evidence.number !== pullRequest.number,
+              ),
+            },
+      );
       invalidateIssuePullRequests(client, keys, issueId);
-      toast.success(`Pull request #${pullRequest.number ?? ""} attached`);
+      toast.success(`Pull request #${pullRequest.number ?? ""} linked`);
     },
   });
 }

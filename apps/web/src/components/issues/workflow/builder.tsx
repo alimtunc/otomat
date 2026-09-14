@@ -9,7 +9,6 @@ import { WorkflowPresetPicker } from "@web/components/workflow/preset/preset-pic
 import { SavePresetDialog } from "@web/components/workflow/preset/save-preset-dialog";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { draftsFromPresetPlan } from "@web/lib/workflow/preset";
-import { clearInheritedNodeOverrides } from "@web/lib/workflow/steps";
 import { useState } from "react";
 
 import { targetProjectId, type WorkflowLaunchTarget } from "./launch-target";
@@ -55,12 +54,7 @@ export function WorkflowPlanBuilder({
         <BaseBranchControl target={worktreeTarget} disabled={isPending} />
         <LaunchExecutionPicker
           execution={execution}
-          onChange={(next) => {
-            if (next.agent !== execution.selection.agent) {
-              plan.setSteps(clearInheritedNodeOverrides);
-            }
-            onExecutionChange(next);
-          }}
+          onChange={onExecutionChange}
           label={COMPOSER_LABEL}
         />
       </div>

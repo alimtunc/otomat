@@ -11,7 +11,11 @@ export function WorkspaceStateCell({
 }: TableCellProps<WorkspaceRow, WorkspaceState>) {
   const state = WORKSPACE_STATE[getValue()];
   return (
-    <Chip tone={state.tone} hint={workspaceReason(row.original)}>
+    <Chip
+      tone={state.tone}
+      hint={workspaceReason(row.original)}
+      className="bg-transparent px-0 before:size-1.5 before:rounded-full before:bg-current before:content-['']"
+    >
       {state.label}
     </Chip>
   );

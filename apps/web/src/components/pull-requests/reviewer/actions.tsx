@@ -1,7 +1,8 @@
-import { Button, CopyButton } from "@otomat/ui";
-import { useReviewDetail } from "@web/api/reviews/queries";
-import { SubmitReviewButton } from "@web/components/runs/review/submit/button";
-import { SubmitReviewDialog } from "@web/components/runs/review/submit/dialog";
+import { CopyButton, ExternalLinkIconButton, Icon } from "@otomat/ui";
+import { useMatchRoute } from "@tanstack/react-router";
+import { usePullRequestReviewContext } from "@web/api/prs/queries";
+import { SubmitPullRequestReview } from "@web/components/pull-requests/submit-review";
+import { IconLink } from "@web/components/shell/icon-link";
 
 export interface PullRequestReviewerActionsProps {
   pullRequestId: string;
@@ -12,41 +13,36 @@ export function PullRequestReviewerActions({
   pullRequestId,
   url,
 }: PullRequestReviewerActionsProps) {
-  const detail = useReviewDetail({ kind: "pull_request", id: pullRequestId });
+  const matchRoute = useMatchRoute();
+  const context = usePullRequestReviewContext(pullRequestId);
+  const inDiff = Boolean(
+    matchRoute({ to: "/pull-requests/$pullRequestId/diff", params: { pullRequestId } }),
+  );
+  const reviewInToolbar =
+    inDiff && context.data !== undefined && context.data.pull_request.head_sha !== null;
+  const runId =
+    context.data?.issue?.evidence === "attachment" ? context.data.pull_request.run_id : null;
   return (
     <>
-      {detail.data === undefined ? (
-        <SubmitReviewButton
-          disabled
-          title={
-            detail.isError
-              ? "Otomat could not read this review from the daemon."
-              : "Reading this review…"
-          }
+      {runId ? (
+        <IconLink
+          label="Open cockpit"
+          icon={<Icon name="monitor" aria-hidden />}
+          to="/runs/$runId"
+          params={{ runId }}
         />
-      ) : (
-        <SubmitReviewDialog
-          target={{ kind: "pull_request", id: pullRequestId }}
-          detail={detail.data}
-        />
-      )}
+      ) : null}
+      {inDiff && !reviewInToolbar ? (
+        <SubmitPullRequestReview pullRequestId={pullRequestId} />
+      ) : null}
       {url === null ? null : (
         <>
-          <CopyButton value={url} label="Copy the GitHub link" copiedLabel="Link copied" />
-          <Button
-            size="sm"
-            variant="ghost"
-            render={
-              <a
-                href={url}
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Open this pull request on GitHub"
-              />
-            }
-          >
-            Open on GitHub
-          </Button>
+          <CopyButton
+            value={url}
+            label="Copy pull request URL"
+            copiedLabel="Pull request URL copied"
+          />
+          <ExternalLinkIconButton href={url} label="Open this pull request on GitHub" />
         </>
       )}
     </>

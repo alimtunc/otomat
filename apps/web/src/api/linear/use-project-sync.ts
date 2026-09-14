@@ -52,11 +52,14 @@ export function useProjectLinearSync(projectId: string | undefined): ProjectLine
       if (variables.announce !== true || isSupersededLinearError(error)) return;
       toast.error(linearErrorMessage(error));
     },
-    onSettled: async () => {
+    onSettled: async (response) => {
       await Promise.all([
         client.invalidateQueries({ queryKey: keys.linearConnections }),
         client.invalidateQueries({ queryKey: keys.issueSources }),
-        client.invalidateQueries({ queryKey: keys.issues }),
+        response === undefined ||
+        response.results.some((result) => result.imported + result.updated > 0)
+          ? client.invalidateQueries({ queryKey: keys.issues })
+          : Promise.resolve(),
         client.invalidateQueries({ queryKey: keys.linearSyncStatus(projectId ?? "") }),
       ]);
     },

@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 import type { ExecutionHostRepositoriesEntry, RepositoryContract } from "@otomat/domain";
 import { RepositoriesSection } from "@web/components/settings/repositories/section";
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
-import { findButton } from "#support/dom-queries";
+import { findButton, findLabelled, findMenuItem } from "#support/dom-queries";
 import { mountWithQuery, type Mounted } from "#support/mount";
 
 vi.mock("@web/components/shell/project-selection/use-project-switcher", () => ({
@@ -74,11 +75,11 @@ it("separates the local and VPS repositories, each with its path and reachabilit
     },
   ]);
 
-  expect(container.textContent).toContain("This machine");
-  expect(container.textContent).toContain("SSH tunnel");
+  expect(container.textContent).toContain("Local");
+  expect(container.textContent).toContain("Connected");
   expect(container.textContent).toContain("/Users/alim/code/otomat");
   expect(container.textContent).toContain("/home/otomat/work/api");
-  expect(container.textContent).toContain("Available");
+  expect(container.textContent).not.toContain("Available");
   expect(container.textContent).toContain("Path unavailable");
 });
 
@@ -122,11 +123,47 @@ it("deletes on the owning host and shows that host's refusal without falling bac
     deleteRepository,
   );
 
-  findButton("Remove")?.click();
+  await act(async () => {
+    findLabelled("Actions for api")?.click();
+  });
+  await act(async () => {
+    findMenuItem("Remove")?.click();
+  });
   await rendered?.rerender(<RepositoriesSection />);
   findButton("Delete repository and runs")?.click();
   await rendered?.rerender(<RepositoriesSection />);
 
   expect(deleteRepository).toHaveBeenCalledWith("remote", "r-remote");
   expect(container.textContent).toContain("active runs before deleting it");
+});
+
+it.each(["Cancel", "Escape"])("returns focus to the repository menu after %s", async (action) => {
+  const deleteRepository = vi.fn();
+  await renderSection(
+    [
+      {
+        host: { id: "local", label: "Local", kind: "local" },
+        active: true,
+        status: null,
+        repositories: [repository()],
+      },
+    ],
+    deleteRepository,
+  );
+  const trigger = findLabelled("Actions for otomat");
+  await act(async () => {
+    trigger?.focus();
+    trigger?.click();
+  });
+  await act(async () => {
+    findMenuItem("Remove")?.click();
+  });
+  expect(document.querySelector("[role=dialog]")).not.toBeNull();
+  await act(async () => {
+    if (action === "Cancel") findButton("Cancel")?.click();
+    else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+  expect(document.activeElement).toBe(trigger);
+  expect(deleteRepository).not.toHaveBeenCalled();
 });

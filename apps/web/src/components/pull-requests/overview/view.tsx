@@ -2,6 +2,7 @@ import { ErrorState } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { usePullRequestOverview } from "@web/api/prs/queries";
 import { PullRequestChecks } from "@web/components/pull-requests/overview/checks";
+import { PullRequestDescription } from "@web/components/pull-requests/overview/description";
 import { PullRequestMergePanel } from "@web/components/pull-requests/overview/merge-panel";
 import { PullRequestReviewers } from "@web/components/pull-requests/overview/reviewers";
 import { PullRequestOverviewSummary } from "@web/components/pull-requests/overview/summary";
@@ -30,11 +31,14 @@ export function PullRequestOverviewView() {
       {(overview) => (
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 p-4">
           <PullRequestOverviewSummary overview={overview} />
-          <div className="grid gap-4 lg:grid-cols-2">
-            <PullRequestChecks checks={overview.checks} />
-            <PullRequestReviewers overview={overview} />
-          </div>
           <PullRequestMergePanel overview={overview} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <PullRequestChecks checks={overview.checks} />
+            <div className="flex flex-col gap-4">
+              <PullRequestReviewers overview={overview} />
+              <PullRequestDescription body={overview.pull_request.body} />
+            </div>
+          </div>
         </div>
       )}
     </QueryBoundary>

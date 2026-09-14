@@ -128,12 +128,22 @@ vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
 }));
 
+let refreshFailed = false;
+
 vi.mock("@web/api/runs/queries", () => ({
-  useRunCompletionReport: () => ({ isPending: false, isError: false, data: RESPONSE }),
+  useRunCompletionReport: () => ({
+    isPending: false,
+    isError: refreshFailed,
+    data: RESPONSE,
+    dataUpdatedAt: Date.now(),
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
 }));
 
 afterEach(() => {
   vi.restoreAllMocks();
+  refreshFailed = false;
 });
 
 it("renders a responsive evidence-backed report with factual next actions", async () => {
@@ -168,11 +178,9 @@ it("renders report prose through the shared Markdown renderer", async () => {
 
 it("exports the exact Markdown locally", async () => {
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-  const { container, cleanup } = await mount(<RunCompletionReportView />);
+  const { cleanup } = await mount(<RunCompletionReportView />);
 
-  const anchor = [...container.querySelectorAll("a")].find(
-    (candidate) => candidate.textContent === "Export Markdown",
-  );
+  const anchor = document.querySelector<HTMLAnchorElement>('a[aria-label="Export Markdown"]');
   if (!anchor) throw new Error("export link missing");
   await act(async () => anchor.click());
 
@@ -181,4 +189,13 @@ it("exports the exact Markdown locally", async () => {
   expect(click).toHaveBeenCalledOnce();
 
   await cleanup();
+});
+
+it("retains the report evidence when a refresh fails", async () => {
+  refreshFailed = true;
+  const view = await mount(<RunCompletionReportView />);
+  expect(view.container.textContent).toContain("Couldn’t refresh");
+  expect(view.container.textContent).toContain("pnpm test");
+  expect(view.container.textContent).not.toContain("Could not load the completion report");
+  await view.cleanup();
 });

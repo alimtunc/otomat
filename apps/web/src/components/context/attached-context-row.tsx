@@ -1,8 +1,12 @@
-import { contextReferenceKey, type ContextReference, type IssueContract } from "@otomat/domain";
+import {
+  contextReferenceKey,
+  issueShortId,
+  type ContextReference,
+  type IssueContract,
+} from "@otomat/domain";
 import { useProjectIssues } from "@web/api/issues/queries";
 import { ContextChip } from "@web/components/context/context-chip";
 import { ContextIssuePreview } from "@web/components/context/context-issue-preview";
-import { issueShortId } from "@web/lib/ids";
 import type { ReactNode } from "react";
 
 const FILE_PREVIEW =

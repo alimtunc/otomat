@@ -16,11 +16,13 @@ describe("parseIssuesViewConfig", () => {
     expect(
       parseIssuesViewConfig({
         grouping: "assignee",
+        columns: ["source", "source", "assignee", "unknown", 7],
         sort: "wildcard",
         advanced: { labels: ["bug"] },
         collapsedGroups: ["assignee:Ada", "assignee:Ada", 7],
       }),
     ).toEqual({
+      columns: ["assignee", "source"],
       grouping: "assignee",
       sort: DEFAULT_ISSUES_VIEW_CONFIG.sort,
       advanced: { ...NO_ADVANCED_FILTERS, labels: ["bug"] },

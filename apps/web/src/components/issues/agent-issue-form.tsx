@@ -4,6 +4,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
+import { useDraftPresence } from "@web/components/issues/use-draft-presence";
 import { launchBaseFields } from "@web/components/runs/launch/base-request";
 import { LaunchComposer } from "@web/components/runs/launch/launch-composer";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
@@ -32,6 +33,7 @@ export interface AgentIssueFormProps {
   onExecutionChange: (execution: ExecutionSelection) => void;
   onLaunched: (run: RunContract) => void;
   onCancel: () => void;
+  onDraftChange: (hasDraft: boolean) => void;
 }
 
 export function AgentIssueForm({
@@ -40,6 +42,7 @@ export function AgentIssueForm({
   onExecutionChange,
   onLaunched,
   onCancel,
+  onDraftChange,
 }: AgentIssueFormProps) {
   const [references, setReferences] = useState<readonly ContextReference[]>([]);
   const { launch, isPending } = useLaunchRun();
@@ -63,9 +66,11 @@ export function AgentIssueForm({
   });
   const hasPrompt = useStore(form.store, (state) => hasText(state.values.prompt));
 
+  useDraftPresence(hasPrompt || references.length > 0, onDraftChange);
+
   return (
     <>
-      <DialogBody>
+      <DialogBody className="min-h-0 flex-1 overflow-y-auto">
         <LaunchComposer
           issue={null}
           target={target}

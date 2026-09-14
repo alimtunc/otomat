@@ -63,9 +63,7 @@ it("marks the slice the filters already stand on", async () => {
 it("says a slice reported no tokens rather than drawing it as zero", async () => {
   await mountBreakdown(NO_USAGE_FILTERS);
 
-  expect(findLabelled("Second: no tokens reported, $0.02, 2 run(s)")?.textContent).toContain(
-    "Not reported",
-  );
+  expect(findLabelled("Second: no tokens reported, $0.02, 2 run(s)")?.textContent).toContain("—");
 });
 
 it("keeps an empty breakdown explicit", async () => {

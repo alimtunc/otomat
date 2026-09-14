@@ -779,6 +779,15 @@ so the daemon and the cockpit answer "where does this issue work?" identically. 
 second launch on that issue is refused with `issue_workspace_open` before any row
 is written; new work appends a step instead.
 
+New branches use the issue title as a Git-safe slug under its conventional type
+(`feat`, `fix`, `hotfix`, `refactor`, `chore`, `docs`, `perf`, and the other commit
+types, plus `release`). An explicit title prefix wins over a recognized tracker
+label; otherwise the type defaults to `feat`. Accents are folded, and an empty
+slug falls back to the issue identifier or a short run id. A local or known remote
+ref with the same name adds the run's eight-character suffix. Naming happens only
+at launch: existing workspaces, resumptions and follow-ups retain their recorded
+branch. Git normalization is shared with the pull-request draft generator.
+
 A new cycle forks from the base branch **as its remote carries it now**, never from
 the operator's checkout: `resolveBaseSha` (`git/remote-base.ts`) reads the branch's
 own `branch.<b>.remote`/`.merge` configuration — or the single remote when it has
@@ -1306,6 +1315,11 @@ with `gh`, and stores what GitHub answered as `attachment_evidence` next to who
 attached it and when; detaching stamps `detached_at` and keeps the row, because
 the audit has to answer what was attached and on what.
 
+The issue rail links an existing PR through an inline disclosure, with detected
+candidates and a labelled number-or-URL field. A successful attachment seeds the
+issue’s PR list before refreshing it, then closes the form and returns focus to
+its trigger. A refusal keeps the input and its explanation visible for correction.
+
 Detection adds a second verification, because GitHub's search answers on tokens:
 unquoted, `OTO-119` splits into `OTO` and `119` and matches a pull request
 carrying neither as a value. The search is a quoted phrase scoped to title and
@@ -1405,8 +1419,10 @@ as the workspace the AI fix may act on.
 ## The Pull Request Reviewer
 
 `/pull-requests/:id` is a tab shell — `Overview` and `Diff` — so the header,
-`Open on GitHub`, the copy-link action and `Submit review` are written once and
-belong to both tabs. Overview is a **live read cached client-side**: the daemon
+cockpit and GitHub links and the copy-link action belong to both tabs. Overview
+groups `Review diff` and `Submit review` in its decision panel; Diff keeps submission
+in its workbench toolbar, with a header fallback while no head is available.
+Overview is a **live read cached client-side**: the daemon
 answers `GET /api/pull-requests/:id/overview` from one `gh pr view` (the mirror's
 fields plus commits, changed files, additions, deletions, the latest review per
 reviewer and `mergeStateStatus`) and one `gh api repos/:repo` for the merge
@@ -1790,6 +1806,28 @@ things the reload used to conflate:
   so no view paints one host's data under another's tab), and the tabs' badges
   come from the per-host Inbox polls described above.
 
+## Issue And Run Catalogs
+
+Issues and Runs use project-scoped catalogs (`/api/issues/catalog` and
+`/api/runs/catalog`) without issue bodies or frozen run plans. Detail reads keep
+the complete contracts. On a daemon that returns 404 for a catalog or search
+endpoint, the renderer shares its cached legacy project read between the
+catalog and searches; other failures remain visible. A fallback is refused if
+the selected host changed during the first request.
+
+Tables and Board columns use TanStack Virtual with measured row heights. The
+focused row and its neighbours stay mounted for keyboard navigation. Scroll
+restoration uses the router's URL key and a selector-safe identity containing
+the host, project and view configuration; measured geometry is retained across
+route changes. The cache snapshot persists summaries rather than legacy full
+lists or search results, saves after successful reads or removals rather than
+observer changes, and fits the most recent whole queries into a
+four-million-character budget. Evicted snapshots do not evict the
+session's live query data. A successful Linear sync with no imported or updated
+issues leaves the catalog fresh; a failed partial sync still invalidates it.
+Reviews waits for its inbox freshness and running state before starting an
+automatic sync.
+
 ## Saved Issue Views
 
 An operator's issue views are named configurations — layout, grouping, sort,
@@ -1885,6 +1923,11 @@ item, and the explicit control carries a reader whose window never overflows the
 viewport. The cockpit and the conversation embedded in an issue therefore open on
 the same single window, however much room each of them has.
 
+An issue gives its embedded conversation a non-shrinking pane of at least 40rem,
+independent of the description above it. The page scrolls around that pane while
+the message history scrolls inside it, so the session header and composer cannot
+consume all the space left after a long issue title.
+
 ## Frontend Stack Direction
 
 React, Vite, TanStack Router/Query/Form, Tailwind, Base UI (shadcn-style
@@ -1909,6 +1952,12 @@ through `MarkdownLink`; an image renders as a link because Linear's uploads need
 credentials the cockpit does not send. `lib/markdown/open-fence.ts` is the one
 thing a compiler cannot tell us — it sees a finished document — so an unclosed
 fence can be labelled as still arriving.
+
+Secondary icon actions use `IconButton`, which supplies the accessible name and
+a shared tooltip on hover or keyboard focus. `CopyButton` requires a label naming
+the copied value and uses the same control when its text is hidden. Navigation
+actions retain link semantics. Page and diff toolbars wrap to their available
+width; only the tab strip scrolls when the group itself cannot fit.
 
 ### Motion
 
@@ -1935,19 +1984,20 @@ audit behind these decisions is `docs/design/motion-audit-2026-09-03`.
 
 ## Command Palette Search
 
-The palette searches one scope: the issues TanStack Query already holds for the
-selected project, the same cache the Issues view renders. `lib/issue/search.ts`
-matches an identifier, a title and a body case-insensitively, in that order, so
-an issue visible in the list is reachable by what the list shows. Cross-project
-listing is gone; the heading names the project (and the SSH alias on a remote
-host) so a scope is never implied.
+The palette queries `/api/issues/search` for the selected project only while
+open. `packages/domain/src/projections/search.ts` ranks case-insensitive matches
+by identifier, title, then complete description. The daemon returns up to twenty
+summaries and the total match count; the palette shows eight. Query results are
+cached by host, project and search term, so a closed search does not load a full
+issue catalog on unrelated routes. The heading names the project and the SSH
+alias on a remote host.
 
 `CommandPalette` therefore runs with cmdk's `shouldFilter` off and a controlled
 search value: cmdk's fuzzy score cannot see a body, and force-mounting
 externally-filtered items would leave them out of its `filtered.count` and
 contradict the group's own empty state. One filter owns matching, so the palette
 renders exactly what it is given and each group carries its own `notice` —
-loading, stale-with-Retry, "no loaded issue matches", or a capped-result count.
+loading, stale-with-Retry, "no issue matches", or a capped-result count.
 Results survive a failed refresh because the notice, not the result list, tells
 the truth about freshness.
 

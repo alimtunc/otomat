@@ -12,6 +12,9 @@ import {
   createIssueRequestSchema,
   IllegalTransitionError,
   issueMachine,
+  issueSummarySchema,
+  issueSearchQuerySchema,
+  searchIssues,
   moveIssueProjectRequestSchema,
   setIssueStatusRequestSchema,
 } from "@otomat/domain";
@@ -28,6 +31,27 @@ export function createIssueRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
   routes.get("/", (c) => c.json(readIssues(deps.db, c.req.query("projectId"))));
+
+  routes.get("/catalog", (c) =>
+    c.json(
+      readIssues(deps.db, c.req.query("projectId"), false).map((issue) =>
+        issueSummarySchema.parse(issue),
+      ),
+    ),
+  );
+
+  routes.get("/search", (c) => {
+    const parsed = issueSearchQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) {
+      return c.json({ error: "invalid_request", issues: parsed.error.issues }, 400);
+    }
+    const { projectId, query } = parsed.data;
+    const matches = searchIssues(readIssues(deps.db, projectId), query);
+    return c.json({
+      issues: matches.slice(0, 20).map((issue) => issueSummarySchema.parse(issue)),
+      total: matches.length,
+    });
+  });
 
   routes.post("/", validateJson(createIssueRequestSchema), (c) => {
     const request = c.req.valid("json");

@@ -11,7 +11,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mountRouted } from "#support/router";
 
-const detail = vi.hoisted<{ data: PullRequestDetail | null }>(() => ({ data: null }));
+const detail = vi.hoisted<{ data: PullRequestDetail | null; isError: boolean }>(() => ({
+  data: null,
+  isError: false,
+}));
 const mocks = vi.hoisted(() => ({
   generate: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false, reset: vi.fn() },
   publish: { mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false },
@@ -25,12 +28,20 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 }));
 
 vi.mock("@web/api/runs/queries", () => ({
+  useRunWorkspace: () => ({ data: { worktree_path: null }, isError: false }),
   useRunDetail: () => ({ isPending: false, isError: false, data: runDetailFixture("completed") }),
   useRunCompletionReport: () => ({ isError: false, data: undefined }),
 }));
 
 vi.mock("@web/api/prs/queries", () => ({
-  useRunPullRequest: () => ({ isPending: false, isError: false, data: detail.data }),
+  useRunPullRequest: () => ({
+    isPending: false,
+    isError: detail.isError,
+    data: detail.data,
+    dataUpdatedAt: Date.now(),
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
   useGitHubConnection: () => ({ isPending: false, isError: false, data: { status: "connected" } }),
 }));
 
@@ -48,6 +59,7 @@ const REFUSAL = "The subject is 79 characters; remove 7 to stay within 72.";
 
 describe("RunPrView", () => {
   beforeEach(() => {
+    detail.isError = false;
     detail.data = pullRequestDetailFixture(pullRequestFixture({ status: "merged" }));
   });
 
@@ -86,4 +98,15 @@ describe("RunPrView", () => {
     expect(view.container.querySelectorAll("input").length).toBeGreaterThan(0);
     await view.cleanup();
   });
+});
+
+it("keeps the loaded publication outcome behind a stale notice when refresh fails", async () => {
+  detail.isError = true;
+  detail.data = pullRequestDetailFixture(pullRequestFixture({ status: "merged" }));
+  const view = await mountRouted(<RunPrView />);
+  expect(view.container.textContent).toContain("Couldn’t refresh");
+  expect(view.container.textContent).toContain("Open on GitHub");
+  expect(view.container.textContent).not.toContain("View diff");
+  expect(view.container.textContent).not.toContain("Could not load GitHub publication state");
+  await view.cleanup();
 });

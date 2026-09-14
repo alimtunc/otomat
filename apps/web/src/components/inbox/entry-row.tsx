@@ -24,7 +24,7 @@ export function InboxEntryRow({
 
   return (
     <InboxRow
-      link={inboxRoute(entry.target)}
+      link={inboxRoute(entry)}
       selection={
         <Checkbox
           className="ml-1.5"

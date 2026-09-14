@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+
 import { IssuesBoard } from "@web/components/issues/list/board";
 import { IssuesTable } from "@web/components/issues/list/table";
 import { groupIssues } from "@web/lib/issue/grouping";
@@ -6,6 +7,7 @@ import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { issueContract, linearIssueContract, openWorkspace } from "#support/issue";
+import { mockListViewport } from "#support/list-viewport";
 import { type Mounted } from "#support/mount";
 import { mountRouted } from "#support/router";
 
@@ -66,8 +68,8 @@ it("folds a collapsed group away without dropping its header or its count", asyn
   const [backlog] = [...container.querySelectorAll("button[aria-expanded]")];
   expect(backlog.getAttribute("aria-expanded")).toBe("false");
   expect(backlog.textContent).toContain("1");
-  expect(document.getElementById("issue-group-status:backlog")?.children).toHaveLength(0);
-  expect(document.getElementById("issue-group-status:ready")?.children).toHaveLength(1);
+  expect(container.textContent).not.toContain("Backlog one");
+  expect(container.textContent).toContain("Ready one");
 
   if (!(backlog instanceof HTMLElement)) throw new Error("backlog header is not an element");
   await act(async () => {
@@ -88,8 +90,8 @@ it("gives the board one column per group and hides a folded column's cards only"
   expect(
     [...container.querySelectorAll("section")].map((s) => s.getAttribute("aria-label")),
   ).toEqual(["Backlog", "Ready"]);
-  expect(document.getElementById("board-group-status:ready")?.children).toHaveLength(0);
-  expect(document.getElementById("board-group-status:backlog")?.children).toHaveLength(1);
+  expect(document.querySelectorAll('[aria-label="Ready"] li')).toHaveLength(0);
+  expect(document.querySelectorAll('[aria-label="Backlog"] li')).toHaveLength(1);
 });
 
 it("names the stopped cycle only on the card whose column reports it", async () => {
@@ -126,10 +128,10 @@ it("names the stopped cycle only on the card whose column reports it", async () 
       onToggleGroup={vi.fn()}
     />,
   );
-  expect(document.getElementById("board-group-status:failed")?.textContent).toContain(
+  expect(document.querySelector('[aria-label="Failed"]')?.textContent).toContain(
     "Failed at Reviewer",
   );
-  expect(document.getElementById("board-group-status:done")?.textContent).not.toContain(
+  expect(document.querySelector('[aria-label="Done"]')?.textContent).not.toContain(
     "Failed at Reviewer",
   );
 });
@@ -144,5 +146,7 @@ it("drops the board's headers too when the view groups by nothing", async () => 
     />,
   );
   expect(headers(container)).toEqual([]);
-  expect(document.getElementById("board-group-all")?.children).toHaveLength(2);
+  expect(document.querySelectorAll('[aria-label="All issues"] li')).toHaveLength(2);
 });
+
+mockListViewport();

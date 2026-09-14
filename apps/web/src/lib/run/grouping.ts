@@ -1,11 +1,11 @@
-import { isIssueClosed, type IssueContract, type RunContract } from "@otomat/domain";
+import { isIssueClosed, type IssueSummary, type RunSummary } from "@otomat/domain";
 import type { RunsViewConfig } from "@web/lib/run/view-config";
 
 export interface RunIssueGroup {
   issueId: string;
   /** Null while the project's issues are still loading, or for a run whose issue this project no longer lists. */
-  issue: IssueContract | null;
-  runs: RunContract[];
+  issue: IssueSummary | null;
+  runs: RunSummary[];
 }
 
 interface VisibleRunGroups {
@@ -19,7 +19,7 @@ function recency(group: RunIssueGroup): string {
 }
 
 /** Groups keep the freshest run first and sort by it, so the issue worked on last leads the list. */
-export function groupRunsByIssue(runs: RunContract[], issues: IssueContract[]): RunIssueGroup[] {
+export function groupRunsByIssue(runs: RunSummary[], issues: IssueSummary[]): RunIssueGroup[] {
   const byId = new Map(issues.map((issue) => [issue.id, issue]));
   const groups = new Map<string, RunIssueGroup>();
   for (const run of runs) {

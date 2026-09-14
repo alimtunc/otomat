@@ -1,6 +1,5 @@
-import type { RunState } from "@otomat/domain";
+import { shortId, type RunState } from "@otomat/domain";
 import { CopyButton, RunStatusChip } from "@otomat/ui";
-import { shortId } from "@web/lib/ids";
 
 export interface RunIdentityProps {
   runId: string;

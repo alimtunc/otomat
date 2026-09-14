@@ -107,10 +107,10 @@ function FileBrowser() {
         minSize={168}
         maxSize="40%"
       >
-        <div>
+        <section>
           <SidePanelToggle />
           <span>file list</span>
-        </div>
+        </section>
       </SidePanel>
       <ResizablePanel id="diff" minSize="40%">
         diff
@@ -151,16 +151,19 @@ describe("side panels", () => {
     expect(toggleOf(container, "files").getAttribute("aria-expanded")).toBe("true");
     expect(container.textContent).toContain("file list");
 
+    toggleOf(container, "files").focus();
     await click(toggleOf(container, "files"));
 
     expect(toggleOf(container, "files").getAttribute("aria-label")).toBe("Expand Changed files");
     expect(toggleOf(container, "files").getAttribute("aria-expanded")).toBe("false");
     expect(container.textContent).not.toContain("file list");
     expect(container.textContent).toContain("Changed files");
+    expect(document.activeElement).toBe(toggleOf(container, "files"));
 
     await click(toggleOf(container, "files"));
 
     expect(container.textContent).toContain("file list");
+    expect(document.activeElement).toBe(toggleOf(container, "files"));
     expect(toggleOf(container, "files").getAttribute("aria-expanded")).toBe("true");
   });
 

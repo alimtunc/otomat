@@ -1,16 +1,15 @@
 import type { ExecutionHostId } from "@otomat/domain";
-import { Button, Field, FieldControl, FieldLabel, Input } from "@otomat/ui";
+import { Field, FieldControl, FieldLabel, Input } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
+import { SavedNotice } from "@web/components/settings/saved-notice";
 import { fieldErrorProps } from "@web/lib/form";
+import { useState } from "react";
 
 import { useHostCapacity } from "./use-host-capacity";
 
 const POSITIVE_INTEGER = /^[1-9][0-9]*$/;
 
 const INVALID = "Enter a whole number of sessions, 1 or more.";
-
-const IMPACT =
-  "Launches past this limit are created immediately and start in order as slots free up. Raising it starts queued runs at once; lowering it never stops a session already running.";
 
 function isSessionCount(value: string): boolean {
   return POSITIVE_INTEGER.test(value.trim());
@@ -22,6 +21,7 @@ export interface HostCapacityFieldProps {
 }
 
 export function HostCapacityField({ hostId, hostLabel }: HostCapacityFieldProps) {
+  const [saved, setSaved] = useState(false);
   const capacity = useHostCapacity(hostId);
   const applied = capacity.capacity;
   const loading = applied === undefined && capacity.loadError === null;
@@ -33,7 +33,16 @@ export function HostCapacityField({ hostId, hostLabel }: HostCapacityFieldProps)
     },
     onSubmit: async ({ value }) => {
       const sessions = value.sessions.trim();
-      if (await capacity.save(Number(sessions))) form.reset({ sessions });
+      if (
+        capacity.saving ||
+        !isSessionCount(sessions) ||
+        sessions === String(applied?.max_concurrent_sessions)
+      )
+        return;
+      if (await capacity.save(Number(sessions))) {
+        form.reset({ sessions });
+        setSaved(true);
+      }
     },
   });
 
@@ -54,7 +63,6 @@ export function HostCapacityField({ hostId, hostLabel }: HostCapacityFieldProps)
           return (
             <Field
               invalid={fieldError.invalid || capacity.loadError !== null}
-              hint={IMPACT}
               error={capacity.loadError ?? fieldError.error ?? capacity.saveError}
             >
               <FieldLabel>Maximum concurrent agent sessions</FieldLabel>
@@ -62,37 +70,28 @@ export function HostCapacityField({ hostId, hostLabel }: HostCapacityFieldProps)
                 <FieldControl>
                   <Input
                     value={field.state.value}
+                    type="number"
+                    min={1}
+                    step={1}
                     inputMode="numeric"
                     className="w-16"
-                    disabled={loading}
+                    disabled={loading || capacity.saving}
                     spellCheck={false}
                     aria-label={`Maximum concurrent agent sessions on ${hostLabel}`}
-                    onBlur={field.handleBlur}
-                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={() => {
+                      field.handleBlur();
+                      if (!loading) void form.handleSubmit();
+                    }}
+                    onChange={(event) => {
+                      setSaved(false);
+                      field.handleChange(event.target.value);
+                    }}
                   />
                 </FieldControl>
-                <form.Subscribe selector={(state) => state.values.sessions.trim()}>
-                  {(sessions) => (
-                    <Button
-                      type="submit"
-                      size="sm"
-                      loading={capacity.saving}
-                      disabled={
-                        !isSessionCount(sessions) ||
-                        (applied !== undefined &&
-                          sessions === String(applied.max_concurrent_sessions)) ||
-                        capacity.saving ||
-                        loading
-                      }
-                    >
-                      Apply
-                    </Button>
-                  )}
-                </form.Subscribe>
+                {saved ? <SavedNotice>Saved</SavedNotice> : null}
                 {applied === undefined ? null : (
                   <span className="text-xs text-text-tertiary">
-                    Applying {applied.max_concurrent_sessions} — {applied.active_sessions} active,{" "}
-                    {applied.waiting_sessions} queued
+                    {applied.active_sessions} active · {applied.waiting_sessions} queued
                   </span>
                 )}
               </div>

@@ -1,9 +1,7 @@
-import { projectOpenCycleExecution, type IssueContract, type RunContract } from "@otomat/domain";
+import { type IssueContract, type RunContract } from "@otomat/domain";
 import { cn, SidePanelToggle, useSidePanel } from "@otomat/ui";
-import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
-import { ExecutionSection } from "@web/components/issues/workspace/rail/execution-section";
-import { FollowedRunSection } from "@web/components/issues/workspace/rail/followed-run-section";
+import { CycleDetails } from "@web/components/issues/workspace/rail/cycle-details";
 import { IssuePullRequestsSection } from "@web/components/issues/workspace/rail/issue-pull-requests-section";
 import { IssueStatusControl } from "@web/components/issues/workspace/rail/issue-status-control";
 import { Mono } from "@web/components/issues/workspace/rail/mono";
@@ -17,8 +15,6 @@ import {
 } from "@web/components/issues/workspace/rail/rail-primitives";
 import { StoppedSection } from "@web/components/issues/workspace/rail/stopped-section";
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
-import { UsageSection } from "@web/components/issues/workspace/rail/usage-section";
-import { WorkspaceSection } from "@web/components/issues/workspace/rail/workspace/section";
 
 function ExternalIdentifier({ identifier, url }: { identifier: string; url: string | null }) {
   const label = <Mono>{identifier}</Mono>;
@@ -39,7 +35,6 @@ function ExternalIdentifier({ identifier, url }: { identifier: string; url: stri
 /** The run-scoped sections read the run event stream, so this must render inside its RunEventsProvider. */
 export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunContract | null }) {
   const panel = useSidePanel();
-  const cycleExecution = projectOpenCycleExecution(issue);
   const cycleRunId = issue.workspace.run_id ?? run?.id ?? null;
   return (
     <aside
@@ -60,13 +55,6 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
           <RailRow label="Issue status">
             <IssueStatusControl issue={issue} />
           </RailRow>
-          <RailRow label="Execution">
-            {cycleExecution === null ? (
-              <span className="text-xs text-text-tertiary">No open workspace</span>
-            ) : (
-              <IssueExecutionChip execution={cycleExecution} />
-            )}
-          </RailRow>
           <RailRow label="Source">
             <span className="text-text-secondary">{issue.source}</span>
           </RailRow>
@@ -83,16 +71,13 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
       </RailSection>
       {cycleRunId === null ? null : <ProviderWaitSection runId={cycleRunId} />}
       <StoppedSection execution={issue.execution} />
-      {cycleRunId === null ? null : <WorkspaceSection runId={cycleRunId} />}
-      <IssuePullRequestsSection issueId={issue.id} />
       {issue.source === "linear" ? <LinearRailSection issue={issue} run={run} /> : null}
+      {cycleRunId === null ? null : <CycleDetails runId={cycleRunId} run={run} />}
+      <IssuePullRequestsSection issueId={issue.id} />
       {run !== null ? (
         <>
           <PullRequestSection run={run} />
-          <FollowedRunSection run={run} />
-          <ExecutionSection run={run} />
           <PermissionSection />
-          <UsageSection runId={run.id} />
         </>
       ) : null}
     </aside>

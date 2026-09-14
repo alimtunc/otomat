@@ -1,6 +1,7 @@
-import { Icon, IconButton, Input } from "@otomat/ui";
+import { Icon, IconButton, Input, cn } from "@otomat/ui";
 import type { DiffSearch } from "@web/components/runs/diff/search/use-diff-search";
 import { useFindShortcut } from "@web/components/runs/diff/search/use-find-shortcut";
+import { useRef, useState } from "react";
 
 export interface DiffSearchFieldProps {
   search: DiffSearch;
@@ -8,52 +9,80 @@ export interface DiffSearchFieldProps {
 
 export function DiffSearchField({ search }: DiffSearchFieldProps) {
   const field = useFindShortcut();
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
   const total = search.matches.length;
 
   return (
-    <span className="flex items-center gap-0.5">
-      <span className="relative flex items-center">
-        <Input
-          ref={field}
-          value={search.query}
-          onChange={(event) => search.setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              search.step(event.shiftKey ? -1 : 1);
-              return;
-            }
-            if (event.key !== "Escape") return;
-            event.preventDefault();
-            search.setQuery("");
-            field.current?.blur();
-          }}
-          placeholder="Find in diff"
-          aria-label="Find in the diff"
+    <span className="flex shrink-0 items-center gap-0.5">
+      <span className={open ? "sr-only" : "shrink-0"}>
+        <IconButton
+          ref={trigger}
+          size="sm"
+          label="Find in diff"
           icon={<Icon name="search" aria-hidden />}
-          className="h-6.5 w-40 pr-10 text-xs selection:bg-iris selection:text-on-accent"
+          tabIndex={open ? -1 : 0}
+          onClick={() => field.current?.focus()}
         />
-        <span
-          aria-live="polite"
-          className="pointer-events-none absolute right-1.5 font-mono text-micro tabular-nums text-text-tertiary"
-        >
-          {search.query === "" ? "" : `${search.activeIndex + 1}/${total}`}
-        </span>
       </span>
-      <IconButton
-        size="sm"
-        label="Previous match"
-        icon={<Icon name="arrow-up" />}
-        disabled={total === 0}
-        onClick={() => search.step(-1)}
-      />
-      <IconButton
-        size="sm"
-        label="Next match"
-        icon={<Icon name="arrow-down" />}
-        disabled={total === 0}
-        onClick={() => search.step(1)}
-      />
+      <span
+        aria-hidden={!open}
+        className={cn("flex shrink-0 items-center gap-0.5", !open && "sr-only")}
+      >
+        <search.form.Field name="query">
+          {(queryField) => (
+            <span className="relative flex shrink-0 items-center">
+              <Input
+                ref={field}
+                value={queryField.state.value}
+                tabIndex={open ? 0 : -1}
+                onFocus={() => setOpen(true)}
+                onBlur={queryField.handleBlur}
+                onChange={(event) => search.setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    search.step(event.shiftKey ? -1 : 1);
+                    return;
+                  }
+                  if (event.key !== "Escape") return;
+                  event.preventDefault();
+                  search.setQuery("");
+                  setOpen(false);
+                  trigger.current?.focus();
+                }}
+                placeholder="Find in diff"
+                aria-label="Find in the diff"
+                icon={<Icon name="search" aria-hidden />}
+                className="h-6.5 w-27.5 min-w-27.5 pr-10 text-xs selection:bg-iris selection:text-on-accent"
+              />
+              <span
+                aria-live="polite"
+                aria-label="Search matches"
+                className="pointer-events-none absolute right-1.5 font-mono text-micro tabular-nums text-text-tertiary"
+              >
+                {search.query === "" ? "" : `${search.activeIndex + 1}/${total}`}
+              </span>
+            </span>
+          )}
+        </search.form.Field>
+        <IconButton
+          size="sm"
+          label="Previous match"
+          icon={<Icon name="arrow-up" />}
+          tabIndex={open ? 0 : -1}
+          disabled={total === 0}
+          onClick={() => search.step(-1)}
+        />
+        <IconButton
+          size="sm"
+          label="Next match"
+          icon={<Icon name="arrow-down" />}
+          tabIndex={open ? 0 : -1}
+          disabled={total === 0}
+          onClick={() => search.step(1)}
+        />
+      </span>
     </span>
   );
 }

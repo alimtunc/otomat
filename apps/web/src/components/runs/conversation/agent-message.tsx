@@ -8,7 +8,7 @@ export function AgentMessage({ event, text }: { event: EventEnvelope; text: stri
         <AgentAvatar name={event.source} size="sm" />
         <span className="text-xs font-semibold text-text-secondary">Agent</span>
         <RelativeTime date={event.occurred_at} className="text-xs" />
-        <CopyButton value={text} label="Copy raw text" className="ml-auto" />
+        <CopyButton value={text} label="Copy message" className="ml-auto" />
       </div>
       <Markdown
         value={text}

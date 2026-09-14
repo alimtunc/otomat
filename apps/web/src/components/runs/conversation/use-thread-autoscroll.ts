@@ -32,15 +32,18 @@ export function useThreadAutoscroll(runId: string, topSeq: number | null): Threa
 
     const distanceToBottom = () =>
       viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop;
+    let lastTop = viewport.scrollTop;
 
     const stick = () => {
       if (pinnedRef.current) viewport.scrollTop = viewport.scrollHeight;
       else lastDistanceRef.current = distanceToBottom();
+      lastTop = viewport.scrollTop;
     };
     const onScroll = () => {
       const distance = distanceToBottom();
       const atBottom = distance <= PIN_THRESHOLD_PX;
-      const receding = distance > lastDistanceRef.current;
+      const receding = viewport.scrollTop < lastTop;
+      lastTop = viewport.scrollTop;
       lastDistanceRef.current = distance;
       if (atBottom || receding) pin(atBottom);
     };

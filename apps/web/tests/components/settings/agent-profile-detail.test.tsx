@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { AgentProfileContract, RuntimeDescriptor, SkillContract } from "@otomat/domain";
 import { AgentProfileDetail } from "@web/components/agents/agent-profile/detail/content";
-import type { ReactNode } from "react";
+import { act, type ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { agentProfile, runtimeDescriptor, skillContract } from "#support/agent";
@@ -78,7 +78,12 @@ it("shows the profile's own runtime, instructions and skills", async () => {
   expect(container.textContent).toContain("Claude Code");
   expect(container.querySelector("textarea")?.value).toBe("Read the diff before answering.");
   expect(container.textContent).toContain("Review");
-  expect(container.textContent).toContain("/repo/.agents/skills/review/SKILL.md");
+  await act(async () => {
+    container
+      .querySelector<HTMLButtonElement>('button[aria-label="Details for Review · .agents/skills"]')
+      ?.click();
+  });
+  expect(document.body.textContent).toContain("/repo/.agents/skills/review/SKILL.md");
   expect(container.textContent).toContain("Available on the local host");
 });
 

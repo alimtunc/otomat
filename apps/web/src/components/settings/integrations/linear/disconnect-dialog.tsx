@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@otomat/ui";
+import type { RefObject } from "react";
 
 export interface DisconnectLinearDialogProps {
   connection: LinearConnectionContract;
@@ -18,6 +19,8 @@ export interface DisconnectLinearDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   isPending: boolean;
+  finalFocus: RefObject<HTMLButtonElement | null>;
+  error: string | null;
 }
 
 export function DisconnectLinearDialog({
@@ -27,10 +30,12 @@ export function DisconnectLinearDialog({
   onOpenChange,
   onConfirm,
   isPending,
+  finalFocus,
+  error,
 }: DisconnectLinearDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-label={`Disconnect ${connection.label}`}>
+      <DialogContent finalFocus={finalFocus} aria-label={`Disconnect ${connection.label}`}>
         <DialogHeader>
           <DialogTitle>Disconnect {connection.label}</DialogTitle>
           <DialogDescription>
@@ -54,6 +59,11 @@ export function DisconnectLinearDialog({
                 ))}
               </ul>
             </>
+          )}
+          {error === null ? null : (
+            <p role="alert" className="text-xs text-danger">
+              {error}
+            </p>
           )}
         </DialogBody>
         <DialogFooter>

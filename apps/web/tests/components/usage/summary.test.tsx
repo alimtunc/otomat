@@ -38,8 +38,8 @@ it("says a metric was not reported instead of showing a zero", async () => {
     />,
   );
 
-  expect(view.container.textContent).toContain("Not reported");
-  expect(view.container.textContent).toContain("Not measured");
+  expect(view.container.querySelector('[aria-label="Not reported"]')?.textContent).toBe("—");
+  expect(view.container.querySelector('[aria-label="Not measured"]')?.textContent).toBe("—");
   expect(view.container.textContent).toContain("2 run(s) not measured");
   expect(view.container.textContent).not.toContain("$0");
 });

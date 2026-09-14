@@ -14,7 +14,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
-import { findButton, findLabelled } from "#support/dom-queries";
+import { findButton, findLabelled, findMenuItem } from "#support/dom-queries";
 import { mountRoutedWithQuery } from "#support/router";
 import { workspaceEntry as entry } from "#support/workspace";
 
@@ -118,7 +118,7 @@ it("counts the maintenance states and says why each workspace is where it is", a
   ).toBe(true);
 });
 
-it("puts the path last, behind what identifies the row, and keeps it copyable", async () => {
+it("keeps paths copyable in the actions menu without a permanent column", async () => {
   await renderSection([entry({ id: "a" })]);
 
   expect([...document.body.querySelectorAll("th")].map((head) => head.textContent)).toEqual([
@@ -129,10 +129,12 @@ it("puts the path last, behind what identifies the row, and keeps it copyable", 
     "Git",
     "PR",
     "Updated",
-    "Path",
     "",
   ]);
-  expect(findLabelled("Worktree path: /tmp/worktrees/a")).toBeDefined();
+  await act(async () => {
+    findLabelled("Workspace actions")?.click();
+  });
+  expect(document.body.textContent).toContain("/tmp/worktrees/a");
   expect(findLabelled("Copy Worktree path")).toBeDefined();
   expect(document.body.querySelector("table")?.className).toContain("table-fixed");
 });
@@ -150,9 +152,20 @@ it("offers a deletion for the workspaces Otomat still holds, and none for the re
     }),
   ]);
 
-  expect(
-    document.body.querySelectorAll('button[aria-label="Delete this workspace…"]'),
-  ).toHaveLength(2);
+  const actions = [
+    ...document.body.querySelectorAll<HTMLButtonElement>('button[aria-label="Workspace actions"]'),
+  ];
+  const offered: boolean[] = [];
+  for (const action of actions) {
+    await act(async () => {
+      action.click();
+    });
+    offered.push(findMenuItem("Delete this workspace…") !== undefined);
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+  }
+  expect(offered).toEqual([true, false, true, false]);
 });
 
 it("says what a reconciliation does before it is clicked", async () => {
@@ -161,7 +174,7 @@ it("says what a reconciliation does before it is clicked", async () => {
   const described = findButton("Reconcile worktrees")?.getAttribute("aria-describedby");
   expect(described).toBeTruthy();
   expect(document.getElementById(described ?? "")?.textContent).toContain(
-    "Nothing on disk is deleted, except a clean worktree whose pull request is merged",
+    "Auto-delete is on: clean worktrees from merged PRs may be removed.",
   );
 });
 
@@ -210,7 +223,7 @@ it("selects several rows and deletes them on the owning host in one operation", 
     findButton("Clean up 2")?.click();
   });
   await act(async () => {
-    findButton("Delete 2 workspaces")?.click();
+    findButton("Delete 2 clean workspaces")?.click();
   });
 
   expect(cleanupWorkspace.mock.calls).toEqual([
@@ -239,7 +252,7 @@ it("keeps its receipt on screen while the refetched list drops the rows it delet
     findButton("Clean up 1")?.click();
   });
   await act(async () => {
-    findButton("Delete 1 workspace")?.click();
+    findButton("Delete 1 clean workspace")?.click();
   });
 
   expect(document.body.textContent).toContain("1 cleaned");
@@ -377,11 +390,22 @@ it("deletes on the host that holds the project rather than through the bridge", 
     findButton("Clean up 1")?.click();
   });
   await act(async () => {
-    findButton("Delete 1 workspace")?.click();
+    findButton("Delete 1 clean workspace")?.click();
   });
 
   expect(cleanupWorkspace).toHaveBeenCalledWith("a", false);
   expect(viaBridge).not.toHaveBeenCalled();
   expect(document.body.textContent).toContain("is the daemon running?");
   expect(document.body.textContent).toContain("0 cleaned · 1 failed");
+});
+
+it("keeps host-wide deletion consequences visible when this project's auto-delete is off", async () => {
+  workspaceSettings.mockResolvedValue({ auto_delete_after_merge: false });
+  await renderSection([entry({ id: "a" })]);
+  const described = findButton("Reconcile worktrees")?.getAttribute("aria-describedby");
+  expect(document.getElementById(described ?? "")?.textContent).toContain(
+    "may be removed where auto-delete is on",
+  );
+  expect(document.body.textContent).not.toContain("Reads only");
+  expect(reconcileWorkspaces).not.toHaveBeenCalled();
 });

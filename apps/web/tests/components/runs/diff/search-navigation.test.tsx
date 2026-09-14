@@ -137,7 +137,7 @@ async function mountReviewer(reviewedFiles: ReviewedFileContract[] = [], diff = 
   if (field === null) throw new Error("the reviewer toolbar shows no find field");
 
   const counter = (): string => {
-    const live = mounted.container.querySelector('[aria-live="polite"]');
+    const live = mounted.container.querySelector('[aria-label="Search matches"]');
     if (live === null) throw new Error("the counter's live region is not mounted");
     return live.textContent ?? "";
   };
@@ -259,6 +259,7 @@ describe("searching the loaded hunks from the reviewer toolbar", () => {
     await view.press({ key: "Escape" });
     expect(view.field.value).toBe("");
     expect(view.counter()).toBe("");
+    expect(document.activeElement).toBe(view.button("Find in diff"));
 
     await view.type("answer");
     await view.press({ key: "Escape" }, window);

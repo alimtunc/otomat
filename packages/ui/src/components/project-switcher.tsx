@@ -1,5 +1,5 @@
 import { Check, ChevronsUpDown, FolderGit2, Pin, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, type Ref } from "react";
 
 import { FOCUS_RING_INSET } from "../lib/focus";
 import type { ProjectSummary } from "../lib/project-summary";
@@ -28,6 +28,7 @@ const HEALTH_COLOR = {
 
 export interface ProjectSwitcherProps {
   projects: ProjectSummary[];
+  triggerRef?: Ref<HTMLButtonElement>;
   currentId?: string;
   onSelect: (id: string) => void;
   collapsed?: boolean;
@@ -40,6 +41,7 @@ export interface ProjectSwitcherProps {
 
 export function ProjectSwitcher({
   projects,
+  triggerRef,
   currentId,
   onSelect,
   collapsed = false,
@@ -66,6 +68,7 @@ export function ProjectSwitcher({
       }}
     >
       <ComboboxTrigger
+        ref={triggerRef}
         disabled={loading}
         aria-label="Switch project"
         render={

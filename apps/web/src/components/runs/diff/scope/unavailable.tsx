@@ -18,12 +18,11 @@ export function DiffScopeUnavailable({ scopeControl, reason }: DiffScopeUnavaila
       <RunDiffHeader
         diff={null}
         scopeControl={scopeControl}
-        reviewStatus={null}
+        actions={null}
         prefs={prefs}
         onPrefsChange={diffPrefsStore.actions.set}
         browsable={false}
         reviewedCount={0}
-        activePath={null}
       />
       <CenteredState>
         <EmptyState

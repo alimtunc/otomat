@@ -1,16 +1,25 @@
-import { HostTag, Spinner } from "@otomat/ui";
+import {
+  Button,
+  Collapsible,
+  CollapsiblePanel,
+  CollapsibleTrigger,
+  HostTag,
+  Spinner,
+} from "@otomat/ui";
 import type { CleanupOutcome } from "@web/components/workspaces/use-bulk-cleanup";
 import { plural } from "@web/lib/plural";
 import { workspaceReason } from "@web/lib/workspace/blocker";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
 import { workspaceGitState } from "@web/lib/workspace/state";
+import type { ReactNode } from "react";
 
 export interface CleanupTargetRowProps {
   target: WorkspaceRow;
   outcome: CleanupOutcome | undefined;
+  children?: ReactNode;
 }
 
-export function CleanupTargetRow({ target, outcome }: CleanupTargetRowProps) {
+export function CleanupTargetRow({ target, outcome, children }: CleanupTargetRowProps) {
   const git = workspaceGitState(target.present, target.uncommitted_files);
   const facts = [
     target.repository_name,
@@ -29,18 +38,13 @@ export function CleanupTargetRow({ target, outcome }: CleanupTargetRowProps) {
       <span className="flex items-center gap-2 text-xs">
         <HostTag tag={target.host.label} />
         <span className="min-w-0 flex-1 truncate font-mono text-text-secondary">
-          {target.branch ?? target.path}
+          {target.issue_identifier ?? target.repository_name}
         </span>
         {outcome === "pending" ? <Spinner /> : null}
         {outcome !== undefined && outcome !== "pending" ? (
           <span
             role="status"
-            className={
-              outcome.outcome === "cleaned"
-                ? "shrink-0 text-success"
-                : "max-w-1/2 truncate text-danger"
-            }
-            title={outcome.message}
+            className={outcome.outcome === "cleaned" ? "shrink-0 text-success" : "text-danger"}
           >
             {outcome.outcome === "cleaned" ? "cleaned" : outcome.message}
           </span>
@@ -48,6 +52,18 @@ export function CleanupTargetRow({ target, outcome }: CleanupTargetRowProps) {
       </span>
       <span className="text-micro text-text-tertiary">{facts.join(" · ")}</span>
       <span className="text-micro text-text-tertiary">{workspaceReason(target)}</span>
+      <Collapsible>
+        <CollapsibleTrigger render={<Button size="xs" variant="ghost" />}>
+          Path and branch
+        </CollapsibleTrigger>
+        <CollapsiblePanel>
+          <p className="break-all font-mono text-xs text-text-secondary">{target.path}</p>
+          <p className="break-all font-mono text-xs text-text-secondary">
+            {target.branch ?? "detached"}
+          </p>
+        </CollapsiblePanel>
+      </Collapsible>
+      {children}
     </li>
   );
 }

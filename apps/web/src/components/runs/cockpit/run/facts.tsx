@@ -2,6 +2,7 @@ import type { RunDetail } from "@otomat/domain";
 import { RunStatusChip } from "@otomat/ui";
 import { useRunUsage } from "@web/api/runs/queries";
 import { CopyablePath } from "@web/components/runs/copyable-path";
+import { baseName } from "@web/components/runs/diff/files/path";
 import { UsageTokens } from "@web/components/runs/usage/tokens";
 import type { ReactNode } from "react";
 
@@ -30,13 +31,12 @@ export function RunFacts({ detail }: { detail: RunDetail }) {
         {detail.worktree_path === null ? (
           <span className="text-xs text-text-tertiary">Not recorded</span>
         ) : (
-          <CopyablePath value={detail.worktree_path} label="worktree path" />
+          <CopyablePath
+            value={detail.worktree_path}
+            displayValue={baseName(detail.worktree_path)}
+            label="worktree path"
+          />
         )}
-      </Fact>
-      <Fact label="sessions">
-        <span className="font-mono text-xs tabular-nums text-text-secondary">
-          {detail.sessions.length}
-        </span>
       </Fact>
       <Fact label="tokens">
         {usage.data !== undefined ? (

@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogBody,
   DialogContent,
+  type DialogContentProps,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -33,9 +34,16 @@ export interface AddProjectDialogProps {
   onOpenChange: (open: boolean) => void;
   hosts: Array<{ id: ExecutionHostId; label: string; active: boolean }>;
   onSelect: (switcherId: string) => void;
+  finalFocus?: DialogContentProps["finalFocus"];
 }
 
-export function AddProjectDialog({ open, onOpenChange, hosts, onSelect }: AddProjectDialogProps) {
+export function AddProjectDialog({
+  open,
+  onOpenChange,
+  hosts,
+  onSelect,
+  finalFocus,
+}: AddProjectDialogProps) {
   const bridge = desktopBridge();
   const client = useQueryClient();
   const browserRegister = useRegisterRepository();
@@ -95,7 +103,7 @@ export function AddProjectDialog({ open, onOpenChange, hosts, onSelect }: AddPro
 
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? onOpenChange(true) : close())}>
-      <DialogContent aria-label="Add project">
+      <DialogContent aria-label="Add project" finalFocus={finalFocus}>
         <DialogHeader>
           <DialogTitle>Add project</DialogTitle>
         </DialogHeader>

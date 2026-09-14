@@ -1,4 +1,4 @@
-import type { IssueContract } from "@otomat/domain";
+import type { IssueContract } from "../contracts/entities/issues.js";
 
 export function shortId(id: string): string {
   return id.slice(0, 8);

@@ -24,6 +24,7 @@ import {
 import { resolveAgentConfig } from "#agents";
 import { createContextFreezer, type ContextIssueRow } from "#context";
 import {
+  availableBranchName,
   GitCommandError,
   WorktreeConflictError,
   type AcquireWorktreeInput,
@@ -31,6 +32,7 @@ import {
   type WorktreeRecord,
 } from "#git";
 
+import { issueBranchName } from "./branch-name.js";
 import {
   freezePlan,
   resolvePlanConfigs,
@@ -42,13 +44,6 @@ import { preflightRunPlan } from "./runtime-preflight.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 import { freezeSupervision } from "./supervision/freeze.js";
-
-const RUN_BRANCH_PREFIX = "otomat/run/";
-
-/** 8 hex chars of the run UUID: readable branch names with a negligible per-repo collision surface. */
-function runBranchName(runId: string): string {
-  return `${RUN_BRANCH_PREFIX}${runId.slice(0, 8)}`;
-}
 
 function firstLine(text: string): string {
   const [first = ""] = text.split("\n");
@@ -140,13 +135,17 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
   }
 
   const runId = randomUUID();
-  const branch = runBranchName(runId);
   const { projectId, binding, baseRef, baseSha } = resolveLaunchTarget(
     state,
     request,
     existingIssue,
   );
   const issue = launchIssue(projectId, request, existingIssue);
+  const branch = availableBranchName(
+    binding.rootPath,
+    issueBranchName(issue.row, runId),
+    runId.slice(0, 8),
+  );
 
   // The plan freezes attached files from the base tree: the run's own worktree does not exist yet.
   const plan = freezePlan(

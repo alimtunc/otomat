@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { TONE_FACETS } from "../lib/tone";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
+import { IconButton } from "./icon-button";
 
 type CopyStatus = "idle" | "copied" | "error";
 
@@ -21,7 +22,7 @@ const COLOR_BY_STATUS = {
 
 export interface CopyButtonProps {
   value: string;
-  label?: string;
+  label: string;
   copiedLabel?: string;
   showLabel?: boolean;
   resetAfterMs?: number;
@@ -33,7 +34,7 @@ export interface CopyButtonProps {
 
 export function CopyButton({
   value,
-  label = "Copy",
+  label,
   copiedLabel = "Copied",
   showLabel = false,
   resetAfterMs = 1600,
@@ -81,6 +82,20 @@ export function CopyButton({
   } satisfies Record<CopyStatus, string>;
   const text = textByStatus[status];
 
+  if (!showLabel) {
+    return (
+      <IconButton
+        label={text}
+        icon={<Icon aria-hidden="true" style={{ color: COLOR_BY_STATUS[status] }} />}
+        disabled={disabled}
+        onClick={copy}
+        aria-live="polite"
+        data-status={status}
+        className={cn("copybtn", className)}
+      />
+    );
+  }
+
   return (
     <Button
       type="button"
@@ -98,7 +113,7 @@ export function CopyButton({
       style={{ transition: "color var(--motion-fast) var(--ease)" }}
     >
       <Icon size={12} aria-hidden="true" style={{ color: COLOR_BY_STATUS[status] }} />
-      {showLabel ? <span className="text-xs">{text}</span> : null}
+      <span className="text-xs">{text}</span>
     </Button>
   );
 }

@@ -19,10 +19,13 @@ interface FakeIssueQuery {
 
 let detail: FakeDetailQuery;
 let issue: FakeIssueQuery;
+let publication: { pull_request: { url: string; number: number } } | undefined;
 
 vi.mock("@tanstack/react-router", () => ({
   Outlet: () => <div>outlet</div>,
   useParams: () => ({ runId: "run-1" }),
+  useSearch: () => ({ step: "step-2" }),
+  useMatchRoute: () => (options: { to: string }) => (options.to === "/runs/$runId" ? {} : false),
 }));
 
 vi.mock("@web/api/runs/queries", () => ({
@@ -30,7 +33,7 @@ vi.mock("@web/api/runs/queries", () => ({
 }));
 
 vi.mock("@web/api/prs/queries", () => ({
-  useRunPullRequest: () => ({ data: undefined }),
+  useRunPullRequest: () => ({ data: publication }),
 }));
 
 vi.mock("@web/components/runs/next-action/strip", () => ({
@@ -59,12 +62,14 @@ vi.mock("@web/components/shell/route-shell", () => ({
     breadcrumbs,
     breadcrumbExtra,
     banner,
+    actions,
     children,
   }: {
     active: string;
     breadcrumbs: BreadcrumbItem[];
     breadcrumbExtra: ReactNode;
     banner: ReactNode;
+    actions: ReactNode;
     children: ReactNode;
   }) => (
     <div data-active-section={active}>
@@ -77,6 +82,7 @@ vi.mock("@web/components/shell/route-shell", () => ({
       </ol>
       {breadcrumbExtra}
       {banner}
+      {actions}
       {children}
     </div>
   ),
@@ -106,6 +112,7 @@ async function render() {
 
 describe("RunCockpitLayout", () => {
   beforeEach(() => {
+    publication = undefined;
     detail = { data: { run: { issue_id: "issue-1", status: "completed" } } };
     issue = {
       isPending: false,
@@ -115,6 +122,15 @@ describe("RunCockpitLayout", () => {
         title: "Readable cockpit",
       }),
     };
+  });
+
+  it("opens the published PR directly from the shared run header", async () => {
+    publication = { pull_request: { url: "https://github.com/example/repo/pull/42", number: 42 } };
+    const view = await render();
+    const link = view.container.querySelector('a[href="https://github.com/example/repo/pull/42"]');
+    expect(link?.getAttribute("aria-label")).toBe("Open PR #42 on GitHub");
+    expect(link?.getAttribute("target")).toBe("_blank");
+    await view.cleanup();
   });
 
   it("activates the Runs section for run routes", async () => {
@@ -142,7 +158,7 @@ describe("RunCockpitLayout", () => {
     const view = await render();
     const crumb = view.crumbs.find((item) => item.label?.includes("OTO-57"));
     expect(crumb?.label).toBe("OTO-57 · Readable cockpit");
-    expect(crumb?.href).toBe("/issues/issue-1");
+    expect(crumb?.href).toBe("/issues/issue-1?run=run-1&step=step-2");
     await view.cleanup();
   });
 
@@ -176,7 +192,7 @@ describe("RunCockpitLayout", () => {
     expect(labels).not.toContain("Unlinked");
     expect(labels).toContain("Issue unavailable");
     expect(view.crumbs.find((item) => item.label === "Issue unavailable")?.href).toBe(
-      "/issues/issue-1",
+      "/issues/issue-1?run=run-1&step=step-2",
     );
     await view.cleanup();
   });

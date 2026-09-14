@@ -69,7 +69,7 @@ export function ReviewFixStepDialog({
         render={
           <Button variant="primary" size="sm" disabled={disabled} title={hint}>
             <Icon name="wand-2" aria-hidden />
-            {count === 1 ? "Fix 1 agent comment" : `Fix ${count} agent comments`}
+            {count === 1 ? "Send 1 comment" : `Send ${count} comments`}
           </Button>
         }
       />

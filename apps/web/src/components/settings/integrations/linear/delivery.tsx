@@ -16,9 +16,12 @@ export function ConnectionDelivery({ connectionId }: { connectionId: string }) {
   );
   if (connection === undefined) return null;
 
+  const problems = connection.hosts.filter((host) => host.state !== "delivered");
+  if (problems.length === 0) return null;
+
   return (
     <ul className="flex flex-col gap-1.5 border-t border-border-subtle px-3 py-2">
-      {connection.hosts.map((host) => (
+      {problems.map((host) => (
         <li key={host.host_id} className="flex flex-col gap-0.5">
           <div className="flex items-baseline justify-between gap-3">
             <span className="truncate text-xs text-text-secondary">{host.label}</span>

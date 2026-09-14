@@ -1,11 +1,7 @@
 import type { RunDetail, StepRunContract } from "@otomat/domain";
 import { AgentAvatar, Badge, cn, Icon, LiveDot, resolveStatus, TONE_TEXT } from "@otomat/ui";
-import { useRunUsage } from "@web/api/runs/queries";
 import { StepGuardNote } from "@web/components/runs/cockpit/steps/guard-note";
 import { SessionContextDialog } from "@web/components/runs/session/context-dialog";
-import { UsageTokens } from "@web/components/runs/usage/tokens";
-import { participantLabel } from "@web/lib/execution/labels";
-import { stepParticipant } from "@web/lib/run/participant";
 
 function SessionRows({ detail, step }: { detail: RunDetail; step: StepRunContract }) {
   const sessions = detail.sessions.filter((session) => session.step_run_id === step.id);
@@ -54,10 +50,6 @@ export function StepRow({
   newActivity?: boolean;
 }) {
   const meta = resolveStatus("step", step.status);
-  const usage = useRunUsage(detail.run.id);
-  const stepUsage = usage.data?.steps.find((entry) => entry.step_run_id === step.id)?.usage;
-  const { config, launchedConfig, pending } = stepParticipant(detail, step.id);
-  const shown = launchedConfig ?? config;
   return (
     <div className={cn("py-1.75", nested ? "ml-5 border-l border-border-strong pl-2.5" : "px-3.5")}>
       <button
@@ -90,15 +82,8 @@ export function StepRow({
         ) : null}
         <span className={`ml-auto text-xs lowercase ${TONE_TEXT[meta.tone]}`}>{meta.label}</span>
       </button>
-      {shown === null ? null : (
-        <p className="mt-0.5 ml-5.5 truncate text-micro text-text-tertiary">
-          {participantLabel(shown)}
-          {pending?.model ? ` · next: ${pending.model.id}` : ""}
-        </p>
-      )}
-      {stepUsage === undefined ? null : <UsageTokens usage={stepUsage} className="mt-1 ml-5.5" />}
       <StepGuardNote step={step} />
-      <SessionRows detail={detail} step={step} />
+      {selected ? <SessionRows detail={detail} step={step} /> : null}
     </div>
   );
 }

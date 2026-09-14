@@ -6,7 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge, twoHostSnapshot } from "#support/desktop-bridge";
 import { setInputValue } from "#support/dom-events";
-import { findButton } from "#support/dom-queries";
+import { findButton, findLabelled, findMenuItem } from "#support/dom-queries";
 import { mountWithQuery } from "#support/mount";
 
 const { agentCapacity, setAgentCapacity } = vi.hoisted(() => ({
@@ -58,7 +58,7 @@ it("still sets the cap of the daemon a browser cockpit is talking to", async () 
     setInputValue(input, "6");
   });
   await act(async () => {
-    input.closest("form")?.querySelector("button")?.click();
+    input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
   });
 
   expect(setAgentCapacity).toHaveBeenCalledWith({ max_concurrent_sessions: 6 });
@@ -142,7 +142,10 @@ it("removes the host after an explicit confirm, warning what actually happens", 
   window.otomat = bridge;
   await renderSection();
 
-  const remove = findButton("Remove");
+  await act(async () => {
+    findLabelled("Remote host actions")?.click();
+  });
+  const remove = findMenuItem("Remove");
   await act(async () => {
     remove?.click();
   });
@@ -165,7 +168,10 @@ it("surfaces the refusal when the host cannot be removed while active", async ()
   window.otomat = bridge;
   await renderSection();
 
-  const remove = findButton("Remove");
+  await act(async () => {
+    findLabelled("Remote host actions")?.click();
+  });
+  const remove = findMenuItem("Remove");
   await act(async () => {
     remove?.click();
   });
@@ -191,7 +197,7 @@ it("saves the configured alias", async () => {
   await act(async () => {
     setInputValue(input, "otomat-vps");
   });
-  const save = findButton("Save");
+  const save = findButton("Save alias");
   await act(async () => {
     save?.click();
   });
@@ -202,9 +208,8 @@ function capacityForm(hostLabel: string) {
   const input = document.querySelector<HTMLInputElement>(
     `input[aria-label='Maximum concurrent agent sessions on ${hostLabel}']`,
   );
-  const apply = input?.closest("form")?.querySelector("button");
-  if (input === null || !apply) throw new Error(`no capacity form for ${hostLabel}`);
-  return { input, apply };
+  if (input === null) throw new Error(`no capacity form for ${hostLabel}`);
+  return { input };
 }
 
 it("reads each host's own cap and saves it on that host", async () => {
@@ -231,13 +236,13 @@ it("reads each host's own cap and saves it on that host", async () => {
 
   expect(capacityForm("Local").input.value).toBe("4");
   expect(capacityForm("otomat-vps").input.value).toBe("8");
-  expect(document.body.textContent).toContain("Applying 4 — 4 active, 2 queued");
+  expect(document.body.textContent).toContain("4 active · 2 queued");
 
   await act(async () => {
     setInputValue(capacityForm("otomat-vps").input, "6");
   });
   await act(async () => {
-    capacityForm("otomat-vps").apply.click();
+    capacityForm("otomat-vps").input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
   });
 
   expect(writeCapacity).toHaveBeenCalledWith("remote", 6);
@@ -256,9 +261,8 @@ it("refuses a cap that is not a positive whole number before asking the host", a
   });
 
   expect(document.body.textContent).toContain("Enter a whole number of sessions, 1 or more.");
-  expect(capacityForm("Local").apply.disabled).toBe(true);
   await act(async () => {
-    capacityForm("Local").apply.click();
+    capacityForm("Local").input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
   });
   expect(writeCapacity).not.toHaveBeenCalled();
 });
@@ -277,7 +281,7 @@ it("shows the cap the host confirmed, not the one that was typed", async () => {
     setInputValue(capacityForm("Local").input, "99");
   });
   await act(async () => {
-    capacityForm("Local").apply.click();
+    capacityForm("Local").input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
   });
 
   expect(capacityForm("Local").input.value).toBe("12");
@@ -298,7 +302,7 @@ it("says a remote save was refused instead of showing the value as applied", asy
     setInputValue(capacityForm("otomat-vps").input, "9");
   });
   await act(async () => {
-    capacityForm("otomat-vps").apply.click();
+    capacityForm("otomat-vps").input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
   });
 
   expect(document.body.textContent).toContain("The remote host is not connected yet.");

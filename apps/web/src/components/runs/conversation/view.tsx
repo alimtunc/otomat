@@ -5,6 +5,7 @@ import {
   Skeleton,
   useMediaQuery,
   usePanelGroupLayout,
+  ROOMY_VIEWPORT_MEDIA_QUERY,
   WIDE_VIEWPORT_MEDIA_QUERY,
 } from "@otomat/ui";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
@@ -21,6 +22,7 @@ import { StepConversationThread } from "@web/components/runs/conversation/step-t
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { selectedStepRunId } from "@web/lib/run/plan";
+import { STREAM_LABEL } from "@web/lib/run/stream";
 
 export function RunConversationView() {
   const { runId } = useParams({ from: "/runs/$runId/" });
@@ -29,6 +31,7 @@ export function RunConversationView() {
   const detail = useRunDetail(runId);
   const stream = useRunEventStream();
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
+  const roomy = useMediaQuery(ROOMY_VIEWPORT_MEDIA_QUERY);
   const panesLayout = usePanelGroupLayout("otomat.run-conversation");
 
   return (
@@ -64,7 +67,9 @@ export function RunConversationView() {
               <PaneHeader>
                 {data.steps.find((step) => step.id === selectedStepId)?.name ?? "Conversation"}
                 {stream.state === "open" ? (
-                  <span className="ml-auto font-normal normal-case text-live">live</span>
+                  <span className="ml-auto font-normal normal-case text-text-tertiary">
+                    {STREAM_LABEL.open}
+                  </span>
                 ) : null}
               </PaneHeader>
               <ConversationHeader detail={data} stepRunId={selectedStepId} />
@@ -118,6 +123,7 @@ export function RunConversationView() {
             <SidePanel
               id="run-context"
               label="Run context"
+              defaultCollapsed={!roomy}
               side="right"
               defaultSize={270}
               minSize={220}

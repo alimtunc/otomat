@@ -1,3 +1,4 @@
+import { Button, Collapsible, CollapsiblePanel, CollapsibleTrigger, Icon } from "@otomat/ui";
 import { ContextComposer } from "@web/components/context/context-composer";
 import { ContextNoteField } from "@web/components/context/note-field";
 import type { ContextDraft } from "@web/lib/context/draft";
@@ -17,24 +18,38 @@ export function WorkflowNodeContext({
   onChange,
   label,
 }: WorkflowNodeContextProps) {
-  if (projectId === null) {
-    return (
+  const content =
+    projectId === null ? (
       <ContextNoteField
         value={value.note}
         onChange={(note) => onChange({ ...value, note })}
         label={label}
         rows={2}
       />
+    ) : (
+      <ContextComposer
+        issue={null}
+        projectId={projectId}
+        value={value}
+        onChange={onChange}
+        label={label}
+        noteRows={2}
+      />
     );
-  }
   return (
-    <ContextComposer
-      issue={null}
-      projectId={projectId}
-      value={value}
-      onChange={onChange}
-      label={label}
-      noteRows={2}
-    />
+    <Collapsible>
+      <CollapsibleTrigger
+        render={<Button size="xs" variant="ghost" className="group justify-start" />}
+        aria-label={`${label} context and instructions`}
+      >
+        <Icon name="plus" aria-hidden className="group-data-[panel-open]:hidden" />
+        <Icon name="chevron-down" aria-hidden className="hidden group-data-[panel-open]:block" />
+        Context & instructions
+        {value.note.trim().length > 0 || value.references.length > 0 ? (
+          <span aria-label="Context added" className="size-1.25 rounded-full bg-warning" />
+        ) : null}
+      </CollapsibleTrigger>
+      <CollapsiblePanel keepMounted>{content}</CollapsiblePanel>
+    </Collapsible>
   );
 }
