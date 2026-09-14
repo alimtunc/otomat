@@ -80,7 +80,7 @@ vi.mock("@web/api/runs/mutations", () => ({
 }));
 
 vi.mock("@web/api/runs/use-launch-run", () => ({
-  useLaunchRun: () => ({ launch, isPending: false }),
+  useLaunchRun: () => ({ launch, isPending: false, baseRefusal: null }),
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));

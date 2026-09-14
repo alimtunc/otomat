@@ -2,7 +2,7 @@
 import { DaemonRequestError } from "@otomat/client";
 import type { RunContract } from "@otomat/domain";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useLaunchRun } from "@web/api/runs/use-launch-run";
+import { useLaunchRun, type LaunchRun } from "@web/api/runs/use-launch-run";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { mount, type Mounted } from "#support/mount";
@@ -22,6 +22,7 @@ vi.mock("@web/api/client", () => ({ daemon: { startRun: (r: unknown) => startRun
 
 let rendered: Mounted | null = null;
 let launched: RunContract | null | undefined;
+let baseRefusal: LaunchRun["baseRefusal"] | undefined;
 
 afterEach(async () => {
   await rendered?.cleanup();
@@ -31,10 +32,12 @@ afterEach(async () => {
   toastError.mockReset();
   toastSuccess.mockReset();
   launched = undefined;
+  baseRefusal = undefined;
 });
 
 function Harness() {
-  const { launch } = useLaunchRun();
+  const { launch, ...state } = useLaunchRun();
+  baseRefusal = state.baseRefusal;
   return (
     <button
       type="button"
@@ -87,6 +90,33 @@ it("shows the base-branch refusal verbatim so the user can pick another branch",
   await vi.waitFor(() => {
     expect(toastError).toHaveBeenCalledWith('branch "ghost" does not exist in /repo');
   });
+});
+
+it("hands a base-remote refusal to the form instead of a toast, and clears it on the next launch", async () => {
+  const body = {
+    error: "base_remote_unavailable",
+    message: '"origin" could not be reached to read "main"',
+    run_id: null,
+    remote: { failure: "unreachable", detail: "ssh: Could not resolve hostname github.com" },
+  };
+  startRun.mockRejectedValueOnce(new DaemonRequestError(409, "POST", "/api/runs", body));
+  startRun.mockResolvedValueOnce({ run: { id: "run-1" }, wait: null });
+
+  await launchOnce();
+
+  await vi.waitFor(() => {
+    expect(baseRefusal).toEqual({ message: body.message, remote: body.remote });
+  });
+  expect(toastError).not.toHaveBeenCalled();
+  expect(launched).toBeNull();
+
+  rendered?.container.querySelector("button")?.click();
+
+  await vi.waitFor(() => {
+    expect(launched).toEqual({ id: "run-1" });
+  });
+  expect(baseRefusal).toBeNull();
+  expect(startRun).toHaveBeenCalledTimes(2);
 });
 
 it("falls back to a generic message for an unrecognised refusal body", async () => {

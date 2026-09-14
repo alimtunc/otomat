@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
+import { BaseBranchControl } from "@web/components/runs/launch/base/branch-control";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 

@@ -1,4 +1,4 @@
-import { launchBaseFields } from "@web/components/runs/launch/base-request";
+import { launchBaseFields } from "@web/components/runs/launch/base/request";
 import { expect, it } from "vitest";
 
 import { readyLaunchTarget } from "#support/launch-target";

@@ -2,6 +2,7 @@ import { DaemonRequestError } from "@otomat/client";
 import {
   agentProfileErrorSchema,
   runLaunchErrorSchema,
+  type RemoteBaseRefusal,
   type RunContract,
   type RunLaunchResponse,
   type StartRunRequest,
@@ -26,6 +27,14 @@ function useStartRun() {
   });
 }
 
+function baseRefusalOf(error: unknown): BaseRefusal | null {
+  if (!(error instanceof DaemonRequestError)) return null;
+  const refusal = runLaunchErrorSchema.safeParse(error.body);
+  if (!refusal.success || refusal.data.error !== "base_remote_unavailable") return null;
+  const { message, remote } = refusal.data;
+  return remote === null ? null : { message, remote };
+}
+
 function startRunErrorMessage(error: unknown): string {
   if (error instanceof DaemonRequestError) {
     const launchRefusal = runLaunchErrorSchema.safeParse(error.body);
@@ -47,10 +56,16 @@ function toastLaunched(launched: RunLaunchResponse): void {
   toast.info("Run queued", { description: describeRunWait(launched.wait) });
 }
 
+export interface BaseRefusal {
+  message: string;
+  remote: RemoteBaseRefusal;
+}
+
 export interface LaunchRun {
-  /** Null when the daemon refused the launch; an error toast was already shown. */
+  /** Null when the daemon refused the launch; the failure was toasted, or is `baseRefusal`. */
   launch: (request: StartRunRequest) => Promise<RunContract | null>;
   isPending: boolean;
+  baseRefusal: BaseRefusal | null;
 }
 
 export function useLaunchRun(): LaunchRun {
@@ -62,10 +77,10 @@ export function useLaunchRun(): LaunchRun {
       toastLaunched(launched);
       return launched.run;
     } catch (error) {
-      toast.error(startRunErrorMessage(error));
+      if (baseRefusalOf(error) === null) toast.error(startRunErrorMessage(error));
       return null;
     }
   }
 
-  return { launch, isPending: startRun.isPending };
+  return { launch, isPending: startRun.isPending, baseRefusal: baseRefusalOf(startRun.error) };
 }

@@ -1,7 +1,7 @@
 import { runPlanInputSchema, type RunContract, type StartRunRequest } from "@otomat/domain";
 import { useForm } from "@tanstack/react-form";
 import { useLaunchRun } from "@web/api/runs/use-launch-run";
-import type { LaunchBaseFields } from "@web/components/runs/launch/base-request";
+import type { LaunchBaseFields } from "@web/components/runs/launch/base/request";
 import { usePlanDraft } from "@web/components/workflow/use-plan-draft";
 import type { ExecutionRequestFields } from "@web/lib/execution/request";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
@@ -36,7 +36,7 @@ export function useWorkflowForm({
   base,
   onLaunched,
 }: UseWorkflowFormOptions) {
-  const { launch, isPending } = useLaunchRun();
+  const { launch, isPending, baseRefusal } = useLaunchRun();
   const plan = usePlanDraft(() => [newWorkflowStep(1)]);
   const [rejected, setRejected] = useState<RejectedPlan | null>(null);
   const [supervisor, setSupervisor] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
@@ -83,6 +83,7 @@ export function useWorkflowForm({
     supervisor,
     setSupervisor,
     isPending,
+    baseRefusal,
   };
 }
 

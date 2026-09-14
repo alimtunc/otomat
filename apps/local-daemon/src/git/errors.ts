@@ -1,3 +1,5 @@
+import type { RemoteBaseRefusal } from "@otomat/domain";
+
 /** A worktree cannot be acquired because its owner, branch, or path is taken. */
 export class WorktreeConflictError extends Error {
   constructor(message: string) {
@@ -29,7 +31,10 @@ export class GitCommandError extends Error {
 
 /** The base a new cycle must fork from could not be resolved. */
 export class RemoteBaseError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly remote: RemoteBaseRefusal,
+  ) {
     super(message);
     this.name = "RemoteBaseError";
   }

@@ -2,7 +2,8 @@ import { AttachedContextRow } from "@web/components/context/attached-context-row
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import type { LaunchExecution } from "@web/components/execution/use-launch-execution";
 import { SupervisionControl } from "@web/components/issues/workflow/supervision-control";
-import { BaseBranchControl } from "@web/components/runs/launch/base-branch-control";
+import { BaseBranchControl } from "@web/components/runs/launch/base/branch-control";
+import { BaseRemoteRefusal } from "@web/components/runs/launch/base/remote-refusal";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
 import { WorkflowPlanEditor } from "@web/components/workflow/plan-editor";
 import { WorkflowPresetPicker } from "@web/components/workflow/preset/preset-picker";
@@ -31,7 +32,7 @@ export function WorkflowPlanBuilder({
   target,
   worktreeTarget,
 }: WorkflowPlanBuilderProps) {
-  const { plan, planError, supervisor, setSupervisor, isPending } = workflow;
+  const { form, plan, planError, supervisor, setSupervisor, isPending, baseRefusal } = workflow;
   const projectId = targetProjectId(target);
   const [saving, setSaving] = useState(false);
 
@@ -58,8 +59,11 @@ export function WorkflowPlanBuilder({
           label={COMPOSER_LABEL}
         />
       </div>
+      {baseRefusal === null ? null : (
+        <BaseRemoteRefusal refusal={baseRefusal} onRetry={() => void form.handleSubmit()} />
+      )}
       <SupervisionControl
-        form={workflow.form}
+        form={form}
         agents={execution.agents}
         value={supervisor}
         onChange={setSupervisor}

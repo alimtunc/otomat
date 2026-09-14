@@ -294,6 +294,7 @@ it("returns a conflict with the refusal code when the project has no usable repo
     error: "repository_required",
     message: "project p1 has no repository to run in",
     run_id: null,
+    remote: null,
   });
 });
 
@@ -314,6 +315,28 @@ it("sends a second launch on an unmerged issue back to the run that holds its wo
     error: "issue_workspace_open",
     message: "issue i1 already works in b",
     run_id: "run-holding",
+    remote: null,
+  });
+});
+
+it("carries the classified remote failure and its redacted detail on a base refusal", async () => {
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      start: async () => {
+        throw new LaunchRefusedError("base_remote_unavailable", '"origin" could not be reached', {
+          remote: { failure: "unreachable", detail: "ssh: Could not resolve hostname github.com" },
+        });
+      },
+    }),
+  });
+  const res = await post(app, "/api/runs", { prompt: "goal" });
+
+  expect(res.status).toBe(409);
+  expect(await res.json()).toEqual({
+    error: "base_remote_unavailable",
+    message: '"origin" could not be reached',
+    run_id: null,
+    remote: { failure: "unreachable", detail: "ssh: Could not resolve hostname github.com" },
   });
 });
 
