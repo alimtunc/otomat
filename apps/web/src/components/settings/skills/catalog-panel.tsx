@@ -1,4 +1,5 @@
-import { Button, EmptyState, ErrorState, Icon, Skeleton } from "@otomat/ui";
+import { Button, EmptyState, ErrorState, Icon, Input, Skeleton } from "@otomat/ui";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useScanSkills } from "@web/api/skills/mutations";
 import { useSkills } from "@web/api/skills/queries";
 import { SkillRow } from "@web/components/settings/skills/row";
@@ -15,6 +16,8 @@ export function SkillCatalogPanel({
 }) {
   const skills = useSkills();
   const scan = useScanSkills();
+  const form = useForm({ defaultValues: { search: "" } });
+  const search = useStore(form.store, (state) => state.values.search.trim().toLowerCase());
 
   const rescan = (
     <Button variant="outline" size="sm" loading={scan.isPending} onClick={() => scan.mutate()}>
@@ -23,18 +26,32 @@ export function SkillCatalogPanel({
     </Button>
   );
   const empty = (
-    <EmptyState
-      icon="book"
-      variant="inline"
-      title={emptyTitle}
-      description={emptyDescription}
-      action={rescan}
-    />
+    <EmptyState icon="book" variant="inline" title={emptyTitle} description={emptyDescription} />
   );
 
   return (
     <>
-      <div className="mb-4 flex justify-end">{rescan}</div>
+      <div className="mb-4 flex items-center gap-2">
+        <form.Field name="search">
+          {(field) => (
+            <Input
+              value={field.state.value}
+              onChange={(event) => field.handleChange(event.target.value)}
+              onBlur={field.handleBlur}
+              aria-label="Search skills"
+              placeholder="Search name, description or path"
+              icon={<Icon name="search" />}
+              className="min-w-0 flex-1"
+            />
+          )}
+        </form.Field>
+        {rescan}
+      </div>
+      {scan.isError ? (
+        <p role="alert" className="mb-2 text-xs text-danger">
+          Could not rescan skills: {scan.error.message}
+        </p>
+      ) : null}
       <div className="rounded-lg border border-border-subtle bg-card">
         <QueryList
           query={skills}
@@ -51,9 +68,16 @@ export function SkillCatalogPanel({
           {(items) => {
             const owned = items.filter((skill) => skill.project_id === owner);
             if (owned.length === 0) return empty;
+            const matching = owned.filter((skill) =>
+              [skill.name, skill.description ?? "", skill.canonical_path].some((value) =>
+                value.toLowerCase().includes(search),
+              ),
+            );
+            if (matching.length === 0)
+              return <p className="p-4 text-xs text-text-tertiary">No skills match this search.</p>;
             return (
               <div className="divide-y divide-border-subtle">
-                {owned.map((skill) => (
+                {matching.map((skill) => (
                   <SkillRow key={skill.id} skill={skill} />
                 ))}
               </div>

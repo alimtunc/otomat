@@ -1,5 +1,15 @@
-import { Button, Chip, Icon } from "@otomat/ui";
+import {
+  Chip,
+  Icon,
+  IconButton,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@otomat/ui";
+import { SkillDetails } from "@web/components/agents/agent-profile/shared/skill-details";
 import { skillAvailabilityLabel, type SkillAvailability } from "@web/lib/skill-availability";
+import { skillSourceRoot } from "@web/lib/skill-source";
 
 export function ActivatedSkillCard({
   skillId,
@@ -23,21 +33,37 @@ export function ActivatedSkillCard({
           <span className="truncate text-sm font-medium text-foreground">
             {skill?.name ?? skillId}
           </span>
-          {skill ? <Chip tone="ghost">{skill.source}</Chip> : null}
-          <Chip tone={status === "available" ? "success" : "warning"}>
-            {skillAvailabilityLabel(availability, hostLabel)}
-          </Chip>
+          {skill ? (
+            <span className="font-mono text-micro text-text-tertiary">
+              {skillSourceRoot(skill)}
+            </span>
+          ) : null}
+          {status === "available" ? null : (
+            <Chip tone="warning">{skillAvailabilityLabel(availability, hostLabel)}</Chip>
+          )}
         </div>
         <p className="truncate text-xs text-text-tertiary">
           {skill?.description ?? "Configured on this profile, but no longer discoverable."}
         </p>
-        {skill ? (
-          <p className="truncate text-micro text-text-tertiary">{skill.canonical_path}</p>
-        ) : null}
       </div>
-      <Button variant="ghost" size="xs" disabled={disabled} onClick={onRemove}>
-        Remove
-      </Button>
+      {skill === null ? null : <SkillDetails skill={skill} />}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <IconButton
+              size="sm"
+              disabled={disabled}
+              label={`Actions for ${skill?.name ?? skillId}`}
+              icon={<Icon name="more-horizontal" />}
+            />
+          }
+        />
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem disabled={disabled} onClick={onRemove}>
+            Remove
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

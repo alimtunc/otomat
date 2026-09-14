@@ -28,7 +28,12 @@ export function useSubmitReviewForm({
   const form = useForm({
     defaultValues,
     // `onMount` too: without it TanStack Form reports `canSubmit` until the first change.
-    validators: { onMount: submittable, onChange: submittable },
+    validators: {
+      onMount: submittable,
+      onChange: submittable,
+      onBlur: submittable,
+      onSubmit: submittable,
+    },
     onSubmit: ({ value }) => {
       submit.mutate(value, {
         onSuccess: () => {

@@ -8,9 +8,16 @@ export interface NextActionCtaButtonProps {
   cta: NextActionCta;
   size: ButtonProps["size"];
   className?: string;
+  variant?: ButtonProps["variant"];
 }
 
-export function NextActionCtaButton({ runId, cta, size, className }: NextActionCtaButtonProps) {
+export function NextActionCtaButton({
+  runId,
+  cta,
+  size,
+  className,
+  variant,
+}: NextActionCtaButtonProps) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const target = cta.target;
   if (ctaTargetsCurrentTab(cta, pathname, runId)) return null;
@@ -33,7 +40,7 @@ export function NextActionCtaButton({ runId, cta, size, className }: NextActionC
     }
   };
   return (
-    <Button size={size} className={className} render={link()}>
+    <Button size={size} variant={variant} className={className} render={link()}>
       {cta.label}
     </Button>
   );

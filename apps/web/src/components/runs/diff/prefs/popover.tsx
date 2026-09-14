@@ -1,6 +1,6 @@
 import { isReviewCommentDestination } from "@otomat/domain";
 import {
-  Button,
+  IconButton,
   Icon,
   Popover,
   PopoverContent,
@@ -33,30 +33,13 @@ export function DiffPrefsPopover({ prefs, onChange, browsable }: DiffPrefsPopove
     <Popover>
       <PopoverTrigger
         render={
-          <Button variant="ghost" size="sm">
-            <Icon name="sliders-horizontal" aria-hidden />
-            View
-          </Button>
+          <IconButton
+            label="Diff view options"
+            icon={<Icon name="sliders-horizontal" aria-hidden />}
+          />
         }
       />
       <PopoverContent align="end" className="flex w-64 flex-col gap-2.5 p-3">
-        <PrefRow label="Layout">
-          <SegmentedControl
-            type="single"
-            value={prefs.mode}
-            onValueChange={(value) => {
-              if (value === "unified" || value === "split") onChange({ mode: value });
-            }}
-            aria-label="Diff view mode"
-          >
-            <SegmentedItem value="unified" icon={<Icon name="rows-3" />}>
-              Unified
-            </SegmentedItem>
-            <SegmentedItem value="split" icon={<Icon name="columns-3" />}>
-              Split
-            </SegmentedItem>
-          </SegmentedControl>
-        </PrefRow>
         {browsable ? (
           <PrefRow label="Browser">
             <SegmentedControl

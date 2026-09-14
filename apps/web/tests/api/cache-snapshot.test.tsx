@@ -21,17 +21,17 @@ const HOUR_MS = 3_600_000;
 
 function seeded(issues: IssueContract[], updatedAt: number): QueryClient {
   const source = testQueryClient();
-  source.setQueryData(keys.issuesList("p1"), issues, { updatedAt });
+  source.setQueryData(keys.issueCatalog("p1"), issues, { updatedAt });
   return source;
 }
 
 function listedIssues(cache: QueryClient): IssueContract[] | undefined {
-  return cache.getQueryData(keys.issuesList("p1"));
+  return cache.getQueryData(keys.issueCatalog("p1"));
 }
 
 function Probe() {
   const query = useQuery<IssueContract[]>({
-    queryKey: keys.issuesList("p1"),
+    queryKey: keys.issueCatalog("p1"),
     queryFn: () => Promise.reject(new Error("daemon unreachable")),
   });
   return (
@@ -58,7 +58,7 @@ it("restores the lists a visited project was last showing, still marked as of th
   restoreQuerySnapshot(restored, storage);
 
   expect(listedIssues(restored)?.map((issue) => issue.id)).toEqual(["i1"]);
-  expect(restored.getQueryState(keys.issuesList("p1"))?.dataUpdatedAt).toBe(fetchedAt);
+  expect(restored.getQueryState(keys.issueCatalog("p1"))?.dataUpdatedAt).toBe(fetchedAt);
 });
 
 it("revalidates a restored list even when it is younger than the stale time", () => {
@@ -68,7 +68,7 @@ it("revalidates a restored list even when it is younger than the stale time", ()
   const restored = testQueryClient();
   restoreQuerySnapshot(restored, storage);
 
-  expect(restored.getQueryState(keys.issuesList("p1"))?.isInvalidated).toBe(true);
+  expect(restored.getQueryState(keys.issueCatalog("p1"))?.isInvalidated).toBe(true);
 });
 
 it("leaves a cold cache empty when the project was never visited", () => {
@@ -96,7 +96,7 @@ it("keeps the restored rows behind the stale notice when the refresh fails", asy
 it("keeps every host's lists apart inside the one snapshot", () => {
   const storage = memoryStorage();
   const source = seeded([issueContract({ id: "i1" })], Date.now());
-  source.setQueryData(hostKeys("remote").issuesList("p1"), [issueContract({ id: "i2" })]);
+  source.setQueryData(hostKeys("remote").issueCatalog("p1"), [issueContract({ id: "i2" })]);
   saveQuerySnapshot(source, storage);
 
   const restored = testQueryClient();
@@ -105,7 +105,7 @@ it("keeps every host's lists apart inside the one snapshot", () => {
   expect(listedIssues(restored)?.map((issue) => issue.id)).toEqual(["i1"]);
   expect(
     restored
-      .getQueryData<IssueContract[]>(hostKeys("remote").issuesList("p1"))
+      .getQueryData<IssueContract[]>(hostKeys("remote").issueCatalog("p1"))
       ?.map((issue) => issue.id),
   ).toEqual(["i2"]);
 });
@@ -144,7 +144,7 @@ it("keeps writing while the window lives, so a crash loses at most one interval"
   const attached = testQueryClient();
   attachQuerySnapshot(attached);
 
-  attached.setQueryData(keys.issuesList("p1"), [issueContract({ id: "i1" })]);
+  attached.setQueryData(keys.issueCatalog("p1"), [issueContract({ id: "i1" })]);
   vi.advanceTimersByTime(30_000);
 
   const reopened = testQueryClient();
@@ -159,10 +159,54 @@ it("restores on attach and writes the snapshot back when the document goes away"
   attachQuerySnapshot(attached);
   expect(listedIssues(attached)?.map((issue) => issue.id)).toEqual(["i1"]);
 
-  attached.setQueryData(keys.issuesList("p1"), [issueContract({ id: "i2" })]);
+  attached.setQueryData(keys.issueCatalog("p1"), [issueContract({ id: "i2" })]);
   window.dispatchEvent(new Event("pagehide"));
 
   const reopened = testQueryClient();
   restoreQuerySnapshot(reopened);
   expect(listedIssues(reopened)?.map((issue) => issue.id)).toEqual(["i2"]);
+});
+
+it("keeps legacy full lists and searches out of the stored catalog", () => {
+  const source = seeded([issueContract()], Date.now());
+  source.setQueryData(keys.issuesList("p1"), [issueContract({ body: "large body" })]);
+  source.setQueryData(keys.issueSearch("p1", "large"), { issues: [], total: 0 });
+  source.setQueryData(keys.runsList("p1"), [{ plan_json: { steps: [] } }]);
+  const storage = memoryStorage();
+  saveQuerySnapshot(source, storage);
+  const restored = testQueryClient();
+  restoreQuerySnapshot(restored, storage);
+  expect(listedIssues(restored)).toBeDefined();
+  expect(restored.getQueryData(keys.issuesList("p1"))).toBeUndefined();
+  expect(restored.getQueryData(keys.issueSearch("p1", "large"))).toBeUndefined();
+  expect(restored.getQueryData(keys.runsList("p1"))).toBeUndefined();
+});
+
+it("bounds persisted data by dropping whole older queries while retaining the live cache", () => {
+  const source = testQueryClient();
+  source.setQueryData(keys.issueCatalog("old"), "a".repeat(3_000_000), { updatedAt: 1 });
+  source.setQueryData(keys.issueCatalog("recent"), "b".repeat(3_000_000), { updatedAt: 2 });
+  const storage = memoryStorage();
+  saveQuerySnapshot(source, storage);
+  expect(storage.getItem("otomat.query-snapshot")!.length).toBeLessThan(4_000_100);
+  const restored = testQueryClient();
+  restoreQuerySnapshot(restored, storage);
+  expect(restored.getQueryData(keys.issueCatalog("old"))).toBeUndefined();
+  expect(restored.getQueryData(keys.issueCatalog("recent"))).toBeDefined();
+  expect(source.getQueryData(keys.issueCatalog("old"))).toBeDefined();
+});
+
+it("does not serialize again for invalidations or page exits without new data", () => {
+  vi.useFakeTimers();
+  const write = vi.spyOn(window.localStorage, "setItem");
+  const client = testQueryClient();
+  attachQuerySnapshot(client);
+  client.setQueryData(keys.issueCatalog("p1"), []);
+  vi.advanceTimersByTime(30_000);
+  expect(write).toHaveBeenCalledTimes(1);
+  void client.invalidateQueries({ queryKey: keys.issues });
+  vi.advanceTimersByTime(30_000);
+  window.dispatchEvent(new Event("pagehide"));
+  expect(write).toHaveBeenCalledTimes(1);
+  write.mockRestore();
 });

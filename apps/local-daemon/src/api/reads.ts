@@ -130,9 +130,9 @@ function groupExecutionEvidence(
   return byIssue;
 }
 
-export function readIssues(db: Db, projectId?: string): IssueContract[] {
+export function readIssues(db: Db, projectId?: string, includeBody = true): IssueContract[] {
   const evidence = groupExecutionEvidence(listIssueExecutionEvidence(db, { projectId }));
-  return listIssues(db, { projectId }).map((row) => {
+  return listIssues(db, { projectId, includeBody }).map((row) => {
     const rows = evidence.get(row.id) ?? [];
     return toIssue(row, projectIssueExecution(rows), projectIssueWorkspace(rows));
   });

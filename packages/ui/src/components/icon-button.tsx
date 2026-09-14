@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "../lib/utils";
 import { Button, type ButtonProps } from "../primitives/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 
 const SIZE_CLASS = {
   default: "size-7 [&>svg]:size-3.75",
@@ -20,18 +21,27 @@ export function IconButton({
   variant = "ghost",
   label,
   icon,
+  title,
   ...props
 }: IconButtonProps) {
   return (
-    <Button
-      variant={variant}
-      data-slot="icon-button"
-      aria-label={label}
-      title={label}
-      className={cn("gap-0 p-0", SIZE_CLASS[size], className)}
-      {...props}
-    >
-      {icon}
-    </Button>
+    <Tooltip>
+      <TooltipTrigger
+        delay={300}
+        render={
+          <Button
+            variant={variant}
+            data-slot="icon-button"
+            aria-label={label}
+            title={props.disabled ? (title ?? label) : undefined}
+            className={cn("shrink-0 gap-0 p-0", SIZE_CLASS[size], className)}
+            {...props}
+          >
+            {icon}
+          </Button>
+        }
+      />
+      <TooltipContent>{title ?? label}</TooltipContent>
+    </Tooltip>
   );
 }

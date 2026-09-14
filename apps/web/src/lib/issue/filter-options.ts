@@ -1,7 +1,7 @@
 import {
   ISSUE_BOARD_COLUMNS,
   LINEAR_PRIORITIES,
-  type IssueContract,
+  type IssueSummary,
   type IssueSource,
 } from "@otomat/domain";
 import { resolveStatus } from "@otomat/ui";
@@ -51,7 +51,7 @@ function sortedOptions(values: Map<string, IssueFilterOption>): IssueFilterOptio
   return [...values.values()].toSorted((a, b) => a.label.localeCompare(b.label));
 }
 
-export function assigneeOptions(issues: IssueContract[]): IssueFilterOption[] {
+export function assigneeOptions(issues: IssueSummary[]): IssueFilterOption[] {
   const names = new Map<string, IssueFilterOption>();
   for (const issue of issues) {
     const name = issue.source_assignee_name;
@@ -60,7 +60,7 @@ export function assigneeOptions(issues: IssueContract[]): IssueFilterOption[] {
   return sortedOptions(names);
 }
 
-export function linearStateOptions(issues: IssueContract[]): IssueFilterOption[] {
+export function linearStateOptions(issues: IssueSummary[]): IssueFilterOption[] {
   const states = new Map<string, IssueFilterOption>();
   for (const issue of issues) {
     const name = issue.source_state_name;
@@ -75,7 +75,7 @@ export function linearStateOptions(issues: IssueContract[]): IssueFilterOption[]
   return sortedOptions(states);
 }
 
-export function labelOptions(issues: IssueContract[]): IssueFilterOption[] {
+export function labelOptions(issues: IssueSummary[]): IssueFilterOption[] {
   const labels = new Map<string, IssueFilterOption>();
   for (const issue of issues) {
     for (const label of issue.source_labels ?? []) {
@@ -88,7 +88,7 @@ export function labelOptions(issues: IssueContract[]): IssueFilterOption[] {
 }
 
 export function projectOptions(
-  issues: IssueContract[],
+  issues: IssueSummary[],
   names: ReadonlyMap<string, string>,
 ): IssueFilterOption[] {
   const projects = new Map<string, IssueFilterOption>();

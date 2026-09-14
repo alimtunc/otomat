@@ -1,5 +1,6 @@
 import { countWorkspaces, type WorkspaceState } from "@otomat/domain";
-import { Icon, Input, Skeleton } from "@otomat/ui";
+import { Button, Icon, Input, Popover, PopoverContent, PopoverTrigger, Skeleton } from "@otomat/ui";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useProjectWorkspaces } from "@web/api/workspaces/queries";
 import { NoProjectSelectedState } from "@web/components/settings/project/no-project-selected-state";
 import { SectionHeading } from "@web/components/settings/section-heading";
@@ -18,14 +19,14 @@ export function WorkspacesSection() {
   const host = useActiveHostDescriptor();
   const snapshot = useHostSnapshot();
   const workspaces = useProjectWorkspaces(projectId);
-  const [filter, setFilter] = useState(DEFAULT_WORKSPACES_FILTER);
+  const [states, setStates] = useState(DEFAULT_WORKSPACES_FILTER.states);
+  const form = useForm({ defaultValues: { search: "" } });
+  const search = useStore(form.store, (state) => state.values.search);
+  const filter = { states, search };
   const toggleState = (state: WorkspaceState): void => {
-    setFilter((current) => ({
-      ...current,
-      states: current.states.includes(state)
-        ? current.states.filter((kept) => kept !== state)
-        : [...current.states, state],
-    }));
+    setStates((current) =>
+      current.includes(state) ? current.filter((kept) => kept !== state) : [...current, state],
+    );
   };
 
   let content: ReactNode;
@@ -49,16 +50,22 @@ export function WorkspacesSection() {
               onToggle={toggleState}
             />
           )}
-          <Input
-            value={filter.search}
-            icon={<Icon name="search" aria-hidden />}
-            placeholder="Search issue, branch, path or host"
-            aria-label="Search workspaces"
-            className="min-w-44 flex-1"
-            onChange={(event) => setFilter({ ...filter, search: event.target.value })}
-          />
+          <form.Field name="search">
+            {(field) => (
+              <Input
+                value={field.state.value}
+                icon={<Icon name="search" aria-hidden />}
+                placeholder="Search issue, branch, path or host"
+                aria-label="Search workspaces"
+                className="min-w-44 flex-1"
+                onChange={(event) => field.handleChange(event.target.value)}
+                onBlur={field.handleBlur}
+              />
+            )}
+          </form.Field>
         </div>
         <WorkspaceHostGroup
+          projectId={projectId}
           host={host}
           status={host.kind === "local" ? null : (snapshot.data?.remote_status ?? null)}
           inventory={workspaces}
@@ -70,10 +77,20 @@ export function WorkspacesSection() {
 
   return (
     <div>
-      <SectionHeading
-        title="Workspaces"
-        description="The worktrees this project holds on its host, reconciled against real git state."
-      />
+      <SectionHeading title="Workspaces" description="Worktrees this project holds on its host." />
+      <Popover>
+        <PopoverTrigger
+          render={
+            <Button size="xs" variant="ghost" className="mb-3">
+              How reconciliation works
+            </Button>
+          }
+        />
+        <PopoverContent className="max-w-sm p-3 text-xs">
+          Each repository is one project on one host. Reconciliation reads the host’s git worktrees
+          and pull requests; automatic deletion follows each project’s setting.
+        </PopoverContent>
+      </Popover>
       <ProjectQueryBoundary query={projects}>{content}</ProjectQueryBoundary>
     </div>
   );

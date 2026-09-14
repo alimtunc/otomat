@@ -2,6 +2,11 @@ import { z } from "zod";
 
 import { MANUAL_ISSUE_STATES } from "./entity-states.js";
 
+export const issueSearchQuerySchema = z.object({
+  projectId: z.string().min(1),
+  query: z.string().max(500).default(""),
+});
+
 /** Create a local issue without launching a run. */
 export const createIssueRequestSchema = z.object({
   project_id: z.string().min(1),

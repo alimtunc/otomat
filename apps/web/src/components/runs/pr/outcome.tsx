@@ -18,7 +18,7 @@ export interface PullRequestOutcomeProps {
   pullRequest: PullRequestContract;
   runId: string;
   issueTitle: string;
-  hasWorktree: boolean;
+  hasWorktree: boolean | null;
 }
 
 export function PullRequestOutcome({
@@ -96,7 +96,9 @@ export function PullRequestOutcome({
             </Button>
           ) : (
             <p className="text-xs text-text-tertiary">
-              The run's worktree was removed — there is no local diff to show.
+              {hasWorktree === null
+                ? "Local diff availability could not be confirmed."
+                : "The run's worktree was removed — there is no local diff to show."}
             </p>
           )}
         </div>

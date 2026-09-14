@@ -2,22 +2,33 @@ import type { ExecutionHostDescriptor, RemoteHostStatus, WorkspaceInventory } fr
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { RowSelectionState } from "@tanstack/react-table";
+import { useWorkspaceSettings } from "@web/api/workspaces/queries";
 import { HostRow } from "@web/components/settings/execution-host/host-row";
 import { WorkspaceBulkBar } from "@web/components/settings/workspaces/bulk-bar";
 import { ReconcileWorkspacesButton } from "@web/components/settings/workspaces/reconcile-button";
+import { WorkspaceReconciliationNote } from "@web/components/settings/workspaces/reconciliation-note";
 import { WorkspacesTable } from "@web/components/settings/workspaces/table";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { filterWorkspaces, type WorkspacesFilter } from "@web/lib/workspace/filter";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 export interface WorkspaceHostGroupProps {
+  projectId: string;
   host: ExecutionHostDescriptor;
   status: RemoteHostStatus | null;
   inventory: UseQueryResult<WorkspaceInventory>;
   filter: WorkspacesFilter;
 }
 
-export function WorkspaceHostGroup({ host, status, inventory, filter }: WorkspaceHostGroupProps) {
+export function WorkspaceHostGroup({
+  projectId,
+  host,
+  status,
+  inventory,
+  filter,
+}: WorkspaceHostGroupProps) {
+  const settings = useWorkspaceSettings(projectId);
+  const descriptionId = useId();
   // Selection lives above the row list: an emptied or filtered list unmounts the table under it.
   const [selection, setSelection] = useState<RowSelectionState>({});
   const rows = (inventory.data?.entries ?? []).map((entry) => ({ ...entry, host }));
@@ -29,7 +40,11 @@ export function WorkspaceHostGroup({ host, status, inventory, filter }: Workspac
         host={host}
         active
         status={status}
-        action={<ReconcileWorkspacesButton hostId={host.id} />}
+        action={<ReconcileWorkspacesButton hostId={host.id} descriptionId={descriptionId} />}
+      />
+      <WorkspaceReconciliationNote
+        id={descriptionId}
+        autoDelete={settings.data?.auto_delete_after_merge ?? null}
       />
       <WorkspaceBulkBar rows={rows} selection={selection} onSelectionChange={setSelection} />
       <QueryBoundary

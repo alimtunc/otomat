@@ -10,12 +10,6 @@ function header(container: HTMLElement): HTMLElement {
   return element;
 }
 
-function columns(container: HTMLElement): string[] {
-  const template = /grid-cols-\[([^\]]+)]/.exec(header(container).className)?.[1];
-  if (template === undefined) throw new Error("PageBar declares no column template");
-  return template.split("_");
-}
-
 async function renderBar(): Promise<HTMLElement> {
   return await render(
     <PageBar
@@ -39,12 +33,6 @@ describe("PageBar", () => {
       "Conversation",
       "Activity",
     ]);
-  });
-
-  it("keeps the leading column the only flexible track, floored at zero", async () => {
-    const [leadingColumn, ...rightOfLeading] = columns(await renderBar());
-    expect(leadingColumn).toBe("minmax(0,1fr)");
-    expect(rightOfLeading).toEqual(["auto", "auto"]);
   });
 
   it("gives the leading zone the clip its truncation needs", async () => {

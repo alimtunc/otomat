@@ -1,14 +1,29 @@
-import { isRunSettled } from "@otomat/domain";
-import { useQuery } from "@tanstack/react-query";
+import { isRunSettled, runSummarySchema } from "@otomat/domain";
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
+import { readCatalog } from "@web/api/catalog-read";
 import { daemon } from "@web/api/client";
 import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useProjectRuns(projectId: string | undefined) {
   const keys = useQueryKeys();
+  const client = useQueryClient();
   return useQuery({
-    queryKey: keys.runsList(projectId),
-    queryFn: () => daemon.listRuns({ projectId }),
-    enabled: projectId !== undefined,
+    queryKey: keys.runCatalog(projectId),
+    queryFn:
+      projectId === undefined
+        ? skipToken
+        : () =>
+            readCatalog(
+              () => daemon.listRunSummaries(projectId),
+              async () => {
+                const runs = await client.fetchQuery({
+                  queryKey: keys.runsList(projectId),
+                  queryFn: () => daemon.listRuns({ projectId }),
+                  staleTime: 30_000,
+                });
+                return runs.map((run) => runSummarySchema.parse(run));
+              },
+            ),
   });
 }
 

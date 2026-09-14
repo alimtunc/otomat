@@ -6,11 +6,18 @@ import { INBOX_GROUP_COPY } from "@web/lib/pull-request/inbox/groups";
 export interface ReviewInboxGroupProps {
   group: PullRequestInboxGroup;
   entries: PullRequestInboxEntry[];
+  viewerLogin?: string | null;
   collapsed: boolean;
   onToggle: (group: PullRequestInboxGroup) => void;
 }
 
-export function ReviewInboxGroup({ group, entries, collapsed, onToggle }: ReviewInboxGroupProps) {
+export function ReviewInboxGroup({
+  group,
+  entries,
+  viewerLogin,
+  collapsed,
+  onToggle,
+}: ReviewInboxGroupProps) {
   return (
     <InboxGroup
       label={INBOX_GROUP_COPY[group].label}
@@ -20,7 +27,7 @@ export function ReviewInboxGroup({ group, entries, collapsed, onToggle }: Review
     >
       {entries.map((entry) => (
         <li key={entry.id}>
-          <ReviewInboxRow entry={entry} />
+          <ReviewInboxRow entry={entry} viewerLogin={viewerLogin} />
         </li>
       ))}
     </InboxGroup>

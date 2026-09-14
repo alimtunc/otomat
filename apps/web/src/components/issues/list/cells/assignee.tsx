@@ -1,9 +1,9 @@
-import type { IssueContract } from "@otomat/domain";
+import type { IssueSummary } from "@otomat/domain";
 import { Avatar } from "@otomat/ui";
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import type { TableCellProps } from "@web/lib/table";
 
-export function IssueAssigneeCell({ getValue }: TableCellProps<IssueContract, string | null>) {
+export function IssueAssigneeCell({ getValue }: TableCellProps<IssueSummary, string | null>) {
   const name = getValue();
   if (name === null) return <Unknown />;
   return (

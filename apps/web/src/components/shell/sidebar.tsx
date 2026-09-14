@@ -2,7 +2,6 @@ import {
   AppSidebar,
   NavSection,
   ProjectSwitcher,
-  SidebarDaemonStatus,
   SidebarNavItem,
   useSidebarCollapsed,
   type ProjectSummary,
@@ -15,13 +14,11 @@ import {
   type ShellSection,
 } from "@web/components/shell/nav-items";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 interface SidebarProps {
   active: ShellSection;
-  online: boolean;
-  daemonVersion?: string;
-  hostAlias?: string;
+  projectTriggerRef?: Ref<HTMLButtonElement>;
   projects: ProjectSummary[];
   currentProjectId?: string;
   onProjectSelect: (id: string) => void;
@@ -53,9 +50,7 @@ function navRender(to: string) {
 
 export function Sidebar({
   active,
-  online,
-  daemonVersion,
-  hostAlias,
+  projectTriggerRef,
   projects,
   currentProjectId,
   onProjectSelect,
@@ -70,6 +65,7 @@ export function Sidebar({
   const projectSwitcher = (
     <ProjectSwitcher
       projects={projects}
+      triggerRef={projectTriggerRef}
       currentId={currentProjectId}
       onSelect={onProjectSelect}
       collapsed={collapsed}
@@ -84,12 +80,6 @@ export function Sidebar({
         label={SETTINGS_NAV.label}
         active={active === SETTINGS_NAV.section}
         render={navRender(SETTINGS_NAV.to)}
-        collapsed={collapsed}
-      />
-      <SidebarDaemonStatus
-        daemonId={hostAlias}
-        online={online}
-        version={daemonVersion && `v${daemonVersion}`}
         collapsed={collapsed}
       />
     </>

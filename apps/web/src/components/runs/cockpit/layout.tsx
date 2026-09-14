@@ -1,5 +1,5 @@
-import type { BreadcrumbItem } from "@otomat/ui";
-import { Outlet, useParams } from "@tanstack/react-router";
+import { Icon, IconButton, type BreadcrumbItem } from "@otomat/ui";
+import { Outlet, useParams, useRouterState, useSearch } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunPullRequest } from "@web/api/prs/queries";
 import { useRunDetail } from "@web/api/runs/queries";
@@ -13,16 +13,22 @@ import { runIssueLabel, UNLINKED_RUN_LABEL } from "@web/lib/run/issue-label";
 
 export function RunCockpitLayout() {
   const { runId } = useParams({ from: "/runs/$runId" });
+  const { step } = useSearch({ from: "/runs/$runId" });
   const detail = useRunDetail(runId);
   const pullRequest = useRunPullRequest(runId);
   const issueId = detail.data?.run.issue_id ?? null;
   const issue = useIssue(issueId);
   const back = useBackNavigation(issueId);
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const published = pullRequest.data?.pull_request;
+  const githubLabel = `Open PR #${published?.number} on GitHub`;
 
   const issueCrumb = (): BreadcrumbItem => {
     if (detail.data === undefined) return { label: "Loading issue…" };
     if (issueId === null) return { label: UNLINKED_RUN_LABEL };
-    const href = `/issues/${issueId}`;
+    const search = new URLSearchParams({ run: runId });
+    if (step !== undefined) search.set("step", step);
+    const href = `/issues/${issueId}?${search}`;
     if (issue.data !== undefined) return { label: runIssueLabel(issue.data), href };
     return { label: issue.isError ? "Issue unavailable" : "Loading issue…", href };
   };
@@ -39,8 +45,23 @@ export function RunCockpitLayout() {
         ]}
         breadcrumbExtra={<RunIdentity runId={runId} status={detail.data?.run.status} />}
         tabs={<CockpitTabs runId={runId} />}
+        actions={
+          published?.url ? (
+            <IconButton
+              label={githubLabel}
+              icon={<Icon name="external-link" aria-hidden />}
+              nativeButton={false}
+              role="link"
+              render={
+                <a href={published.url} target="_blank" rel="noreferrer" aria-label={githubLabel} />
+              }
+            />
+          ) : null
+        }
         banner={
-          detail.data === undefined ? null : (
+          detail.data === undefined ||
+          pathname.endsWith("/diff") ||
+          (pathname === `/runs/${runId}` && detail.data.run.status === "running") ? null : (
             <NextActionStrip detail={detail.data} pullRequest={pullRequest.data} />
           )
         }

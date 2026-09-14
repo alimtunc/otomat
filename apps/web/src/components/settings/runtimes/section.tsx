@@ -13,7 +13,7 @@ export function RuntimesSection() {
     <div>
       <SectionHeading
         title="Runtimes"
-        description={`What ${hostLabel} reports about each installed provider adapter: its identity and the capabilities it actually offers. These are detected, not configured — your own agents live under Global · Agents.`}
+        description={`Runtimes and capabilities reported by ${hostLabel}.`}
       />
       <div className="rounded-lg border border-border-subtle bg-card">
         <QueryList

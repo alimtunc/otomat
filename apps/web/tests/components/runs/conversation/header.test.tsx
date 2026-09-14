@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import type { ResolvedAgentConfig, RunDetail, RuntimeDescriptor } from "@otomat/domain";
 import { ConversationHeader } from "@web/components/runs/conversation/header";
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { mount } from "#support/mount";
@@ -151,11 +152,18 @@ it("shows the last launched turn's reported model separately from the pending mo
   const view = await mount(<ConversationHeader detail={DETAIL} stepRunId="step-1" />);
 
   expect(view.container.textContent).toContain("claude-sonnet-provider · high");
-  expect(view.container.textContent).toContain(
+  expect(view.container.textContent).toContain("Model differs from request");
+  expect(view.container.textContent).toContain("Next turn: claude-opus");
+  expect(view.container.textContent).not.toContain("Change claude-opus");
+  await act(async () => {
+    [...view.container.querySelectorAll("button")]
+      .find((button) => button.getAttribute("aria-label") === "Session details")
+      ?.click();
+  });
+  expect(document.body.textContent).toContain(
     "Requested: claude-sonnet · Reported: claude-sonnet-provider",
   );
-  expect(view.container.textContent).toContain("Next turn: claude-opus");
-  expect(view.container.textContent).toContain("Change claude-opus");
+  expect(document.body.textContent).toContain("Change claude-opus");
   await view.cleanup();
 });
 
@@ -163,10 +171,14 @@ it("shows the installed runtime's refusal and the follow-up-step fallback", asyn
   capability = { status: "unsupported", reason: "This version cannot resume with a model." };
   const view = await mount(<ConversationHeader detail={DETAIL} stepRunId="step-1" />);
 
-  expect(view.container.textContent).toContain("Model change unavailable · Add follow-up step");
-  expect(
-    view.container.querySelector('[title="This version cannot resume with a model."]'),
-  ).not.toBeNull();
+  expect(view.container.textContent).not.toContain("Model change unavailable");
+  await act(async () => {
+    [...view.container.querySelectorAll("button")]
+      .find((button) => button.getAttribute("aria-label") === "Session details")
+      ?.click();
+  });
+  expect(document.body.textContent).toContain("Model change unavailable · Add follow-up step");
+  expect(document.body.textContent).toContain("This version cannot resume with a model.");
   await view.cleanup();
 });
 

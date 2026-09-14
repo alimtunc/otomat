@@ -1,5 +1,5 @@
 import type { RuntimeDescriptor } from "@otomat/domain";
-import { Badge, Chip, ProviderMark } from "@otomat/ui";
+import { Chip, ProviderMark } from "@otomat/ui";
 import { capabilityEntries } from "@web/lib/capability-labels";
 import { runtimeAvailabilityLabel } from "@web/lib/runtime-availability";
 import {
@@ -24,20 +24,26 @@ export function RuntimeRow({
         {mark ? <ProviderMark name={mark} className="size-5" /> : null}
         <span className="text-sm font-medium text-foreground">{runtime.display_name}</span>
         <span className="text-micro text-text-tertiary">{runtime.id}</span>
-        <Chip tone={available ? "success" : "warning"}>
-          {runtimeAvailabilityLabel(runtime, hostLabel)}
-        </Chip>
+        {available ? null : (
+          <Chip tone="warning">{runtimeAvailabilityLabel(runtime, hostLabel)}</Chip>
+        )}
       </div>
       {isRealRuntime(runtime) ? null : (
         <p className="text-xs text-text-secondary">{SIMULATED_RUNTIME_NOTE}</p>
       )}
-      <div className="flex flex-wrap gap-1.5">
+      <ul className="grid gap-x-5 gap-y-1 text-xs text-text-secondary sm:grid-cols-2">
         {capabilityEntries(runtime.capabilities).map(({ key, label, supported }) => (
-          <Badge key={key} variant={supported ? "iris" : "default"}>
-            {supported ? label : `No ${label.toLowerCase()}`}
-          </Badge>
+          <li key={key} className="flex items-center gap-2">
+            <span
+              aria-label={supported ? "Supported" : "Not supported"}
+              className="w-3 text-text-tertiary"
+            >
+              {supported ? "✓" : "—"}
+            </span>
+            {label}
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

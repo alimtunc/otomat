@@ -2,7 +2,7 @@ import {
   ISSUE_BOARD_COLUMNS,
   projectIssuePrimaryState,
   type IssueBoardColumn,
-  type IssueContract,
+  type IssueSummary,
 } from "@otomat/domain";
 import { resolveStatus } from "@otomat/ui";
 import { shortId } from "@web/lib/ids";
@@ -27,7 +27,7 @@ export interface IssueGroup {
   /** Status groups keep their column so a header can show the board's chip. */
   status: IssueBoardColumn | null;
   color: string | null;
-  issues: IssueContract[];
+  issues: IssueSummary[];
 }
 
 interface GroupSeed {
@@ -36,8 +36,8 @@ interface GroupSeed {
   color: string | null;
 }
 
-function statusGroups(issues: IssueContract[]): IssueGroup[] {
-  const byStatus = new Map<IssueBoardColumn, IssueContract[]>();
+function statusGroups(issues: IssueSummary[]): IssueGroup[] {
+  const byStatus = new Map<IssueBoardColumn, IssueSummary[]>();
   for (const issue of issues) {
     const status = projectIssuePrimaryState(issue).state;
     const grouped = byStatus.get(status);
@@ -59,12 +59,12 @@ function statusGroups(issues: IssueContract[]): IssueGroup[] {
 
 /** An issue with several labels joins each of their groups; `fallback` is for axes that do not seed every issue. */
 function collect(
-  issues: IssueContract[],
-  seedsFor: (issue: IssueContract) => GroupSeed[],
+  issues: IssueSummary[],
+  seedsFor: (issue: IssueSummary) => GroupSeed[],
   fallback?: GroupSeed,
 ): IssueGroup[] {
   const groups = new Map<string, IssueGroup>();
-  const unseeded: IssueContract[] = [];
+  const unseeded: IssueSummary[] = [];
   for (const issue of issues) {
     const seeds = seedsFor(issue);
     if (seeds.length === 0) unseeded.push(issue);
@@ -84,12 +84,12 @@ const FALLBACK_SEEDS = {
   label: { key: "label:none", label: "No label", color: null },
 } satisfies Record<string, GroupSeed>;
 
-function assigneeSeeds(issue: IssueContract): GroupSeed[] {
+function assigneeSeeds(issue: IssueSummary): GroupSeed[] {
   const name = issue.source_assignee_name;
   return name === null ? [] : [{ key: `assignee:${name}`, label: name, color: null }];
 }
 
-function labelSeeds(issue: IssueContract): GroupSeed[] {
+function labelSeeds(issue: IssueSummary): GroupSeed[] {
   return (issue.source_labels ?? []).map((label) => ({
     key: `label:${label.name}`,
     label: label.name,
@@ -97,7 +97,7 @@ function labelSeeds(issue: IssueContract): GroupSeed[] {
   }));
 }
 
-function projectSeeds(issue: IssueContract, names: ReadonlyMap<string, string>): GroupSeed[] {
+function projectSeeds(issue: IssueSummary, names: ReadonlyMap<string, string>): GroupSeed[] {
   return [
     {
       key: `project:${issue.project_id}`,
@@ -108,7 +108,7 @@ function projectSeeds(issue: IssueContract, names: ReadonlyMap<string, string>):
 }
 
 export function groupIssues(
-  issues: IssueContract[],
+  issues: IssueSummary[],
   grouping: IssueGrouping,
   projectNames: ReadonlyMap<string, string>,
 ): IssueGroup[] {

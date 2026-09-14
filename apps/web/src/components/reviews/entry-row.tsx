@@ -8,26 +8,39 @@ import {
   PULL_REQUEST_PROVENANCE_TONE,
 } from "@web/lib/pull-request/provenance";
 
-function entryReason(entry: PullRequestInboxEntry): string {
-  const author = entry.author_login === null ? "author unknown" : `@${entry.author_login}`;
+function entryReason(entry: PullRequestInboxEntry, viewerLogin: string | null): string {
+  let author = entry.author_login === null ? "author unknown" : `@${entry.author_login}`;
+  if (entry.author_login !== null && entry.author_login === viewerLogin) author = "";
   if (entry.issue === null) return author;
   const identifier = entry.issue.identifier === null ? "" : `${entry.issue.identifier} · `;
   const evidence = entry.issue.evidence === "reference" ? " (named, not attached)" : "";
-  return `${author} · ${identifier}${entry.issue.title}${evidence}`;
+  return `${author === "" ? "" : `${author} · `}${identifier}${entry.issue.title}${evidence}`;
 }
 
-export function ReviewInboxRow({ entry }: { entry: PullRequestInboxEntry }) {
+export function ReviewInboxRow({
+  entry,
+  viewerLogin = null,
+}: {
+  entry: PullRequestInboxEntry;
+  viewerLogin?: string | null;
+}) {
   const review =
     entry.review_decision === null ? null : REVIEW_DECISION_SIGNAL[entry.review_decision];
   const checks = CHECKS_SIGNAL[entry.checks_state];
 
   return (
     <InboxRow
-      link={{ to: "/pull-requests/$pullRequestId/diff", params: { pullRequestId: entry.id } }}
+      link={{
+        to:
+          entry.group === "needs_your_review" || entry.group === "needs_team_review"
+            ? "/pull-requests/$pullRequestId/diff"
+            : "/pull-requests/$pullRequestId/overview",
+        params: { pullRequestId: entry.id },
+      }}
       leading={<PRStatusBadge status={entry.status} />}
       identifier={`${entry.repository}#${entry.number}`}
       title={entry.title}
-      reason={entryReason(entry)}
+      reason={entryReason(entry, viewerLogin)}
       chips={
         <>
           {review === null ? null : <Chip tone={review.tone}>{review.label}</Chip>}

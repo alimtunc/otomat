@@ -5,14 +5,15 @@ import { readStoredJson, writeStored, type ScopedStorage } from "@web/lib/storag
 const SNAPSHOT_KEY = "otomat.query-snapshot";
 const MAX_AGE_MS = 86_400_000;
 const WRITE_DELAY_MS = 30_000;
+const MAX_SNAPSHOT_CHARACTERS = 4_000_000;
 
 const SNAPSHOT_ROOTS = new Set(["activity", "inbox", "issues", "projects", "reviews", "runs"]);
 
-/** The shell's catalog keys are the only host-less entries kept. */
 function isSnapshotEntry(queryKey: readonly unknown[]): boolean {
-  const [first, second] = queryKey;
-  // The live host status stays out: a restored one would name the wrong active host until the IPC read answers.
+  const [first, second, third] = queryKey;
   if (first === "execution-host") return second === "projects" || second === "repositories";
+  if (second === "issues") return third !== "project" && third !== "search";
+  if (second === "runs") return third === "catalog";
   return SNAPSHOT_ROOTS.has(String(second));
 }
 
@@ -22,7 +23,21 @@ export function saveQuerySnapshot(client: QueryClient, storage?: ScopedStorage |
       query.state.status === "success" && isSnapshotEntry(query.queryKey),
     shouldDehydrateMutation: () => false,
   });
-  writeStored(SNAPSHOT_KEY, JSON.stringify({ saved_at: Date.now(), state }), storage);
+  let remaining = MAX_SNAPSHOT_CHARACTERS;
+  const queries: string[] = [];
+  for (const query of state.queries.toSorted(
+    (a, b) => b.state.dataUpdatedAt - a.state.dataUpdatedAt,
+  )) {
+    const serialized = JSON.stringify(query);
+    if (serialized.length > remaining) continue;
+    queries.push(serialized);
+    remaining -= serialized.length + 1;
+  }
+  writeStored(
+    SNAPSHOT_KEY,
+    `{"saved_at":${Date.now()},"state":{"mutations":[],"queries":[${queries.join(",")}]}}`,
+    storage,
+  );
 }
 
 export function restoreQuerySnapshot(client: QueryClient, storage?: ScopedStorage | null): void {
@@ -31,7 +46,13 @@ export function restoreQuerySnapshot(client: QueryClient, storage?: ScopedStorag
   const savedAt = asNumber(stored["saved_at"]);
   const state = asRecord(stored["state"]);
   if (savedAt === null || state === null || Date.now() - savedAt > MAX_AGE_MS) return;
-  hydrate(client, state);
+  const queries = Array.isArray(state["queries"])
+    ? state["queries"].filter((query: unknown) => {
+        const key = asRecord(query)?.["queryKey"];
+        return Array.isArray(key) && isSnapshotEntry(key);
+      })
+    : [];
+  hydrate(client, { mutations: [], queries });
   // A restored `dataUpdatedAt` can satisfy `staleTime`, so invalidate to force a revalidation.
   void client.invalidateQueries({ predicate: (query) => isSnapshotEntry(query.queryKey) });
 }
@@ -39,11 +60,19 @@ export function restoreQuerySnapshot(client: QueryClient, storage?: ScopedStorag
 export function attachQuerySnapshot(client: QueryClient): void {
   restoreQuerySnapshot(client);
 
-  const save = (): void => saveQuerySnapshot(client);
-  // A crash fires no lifecycle event, so a periodic write bounds what an abnormal exit can lose.
+  let dirty = false;
+  const save = (): void => {
+    if (!dirty) return;
+    dirty = false;
+    saveQuerySnapshot(client);
+  };
   let pending: ReturnType<typeof setTimeout> | null = null;
   client.getQueryCache().subscribe((event) => {
-    if (pending !== null || !isSnapshotEntry(event.query.queryKey)) return;
+    if (!isSnapshotEntry(event.query.queryKey)) return;
+    if (event.type !== "removed" && !(event.type === "updated" && event.action.type === "success"))
+      return;
+    dirty = true;
+    if (pending !== null) return;
     pending = setTimeout(() => {
       pending = null;
       save();

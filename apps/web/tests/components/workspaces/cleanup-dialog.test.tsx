@@ -56,11 +56,10 @@ it("summarises every target before asking for the confirmation", async () => {
     row("b"),
   ]);
 
-  expect(document.body.textContent).toContain("otomat/run/a");
-  expect(document.body.textContent).toContain("otomat/run/b");
+  expect(document.body.textContent).toContain("Deletes the selected worktrees");
   expect(document.body.textContent).toContain("3 commits only this branch holds");
   expect(document.body.textContent).toContain("#7 merged");
-  expect(findButton("Delete 2 workspaces")).toBeDefined();
+  expect(findButton("Delete 2 clean workspaces")).toBeDefined();
   expect(cleanupWorkspace).not.toHaveBeenCalled();
 });
 
@@ -73,7 +72,7 @@ it("reports every outcome by row and totals them without pretending success", as
   await renderDialog([row("a"), row("b"), row("c")]);
 
   await act(async () => {
-    findButton("Delete 3 workspaces")?.click();
+    findButton("Delete 3 clean workspaces")?.click();
   });
 
   expect(cleanupWorkspace.mock.calls.map((call) => call[0])).toEqual(["a", "b", "c"]);
@@ -88,11 +87,11 @@ it("forces nothing until the operator confirms the exact work it discards", asyn
     row("dirty", { blocker: "worktree_dirty", uncommitted_files: 4, unpushed_commits: 2 }),
   ]);
 
-  const armed = findButton("Force delete 1 workspace");
+  const armed = findButton("Delete 0 workspaces");
   expect(armed).toBeDefined();
   expect(armed?.getAttribute("disabled")).not.toBeNull();
   expect(document.body.textContent).toContain(
-    "Discard 4 uncommitted files and 2 commits nothing else holds in 1 worktree",
+    "Discard 4 uncommitted files and 2 commits nothing else holds in this worktree",
   );
 
   await act(async () => {
@@ -118,14 +117,7 @@ it("keeps the protective deletion on offer while a dirty target waits for its co
     row("dirty", { blocker: "worktree_dirty", uncommitted_files: 1 }),
   ]);
 
-  expect(findButton("Delete 1 workspace")?.getAttribute("disabled")).toBeNull();
-
-  await act(async () => {
-    findButton("Force the 1 git refuses…")?.click();
-  });
-
-  const armed = findButton("Force delete 2 workspaces");
-  expect(armed?.getAttribute("disabled")).not.toBeNull();
+  expect(findButton("Delete 1 clean workspace")?.getAttribute("disabled")).toBeNull();
 
   await act(async () => {
     document.body.querySelector<HTMLElement>("[role='checkbox']")?.click();
@@ -135,7 +127,7 @@ it("keeps the protective deletion on offer while a dirty target waits for its co
   });
 
   expect(cleanupWorkspace.mock.calls).toEqual([
-    ["clean", true],
+    ["clean", false],
     ["dirty", true],
   ]);
 });
@@ -154,7 +146,7 @@ it("leaves out what no confirmation may delete, and says so", async () => {
   expect(document.body.textContent).toContain("1 workspace cannot be deleted here, forced or not");
 
   await act(async () => {
-    findButton("Delete 1 workspace")?.click();
+    findButton("Delete 1 clean workspace")?.click();
   });
 
   expect(cleanupWorkspace).toHaveBeenCalledTimes(1);
@@ -169,7 +161,7 @@ it("carries on to the next target after the first host call is rejected", async 
   await renderDialog([row("a"), row("b")]);
 
   await act(async () => {
-    findButton("Delete 2 workspaces")?.click();
+    findButton("Delete 2 clean workspaces")?.click();
   });
 
   expect(cleanupWorkspace.mock.calls.map(([workspaceId]) => workspaceId)).toEqual(["a", "b"]);
@@ -195,4 +187,27 @@ it("sends a target another host holds through the bridge, force decision include
 
   expect(viaBridge).toHaveBeenCalledWith("remote", "a", true);
   expect(cleanupWorkspace).not.toHaveBeenCalled();
+});
+
+it("forces only the explicitly selected dirty row, leaving clean rows protected", async () => {
+  cleanupWorkspace.mockResolvedValue(result("cleaned", "Removed."));
+  await renderDialog([
+    row("clean"),
+    row("first", { blocker: "worktree_dirty", uncommitted_files: 1 }),
+    row("second", { blocker: "worktree_dirty", uncommitted_files: 2 }),
+  ]);
+  const force = document.body.querySelector<HTMLElement>(
+    '[aria-label="Force delete otomat/run/first"]',
+  );
+  expect(force).not.toBeNull();
+  await act(async () => {
+    force?.click();
+  });
+  await act(async () => {
+    findButton("Force delete 2 workspaces")?.click();
+  });
+  expect(cleanupWorkspace.mock.calls).toEqual([
+    ["clean", false],
+    ["first", true],
+  ]);
 });

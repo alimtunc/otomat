@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+
 import { ThreadItem } from "@web/components/runs/conversation/thread-item";
 import { LogList } from "@web/components/runs/logs/list";
 import type { ConversationItem } from "@web/lib/conversation";
@@ -6,7 +7,9 @@ import { describe, expect, it } from "vitest";
 
 import { envelope } from "#support/envelope";
 import { eventHistory } from "#support/event-stream";
+import { mockListViewport } from "#support/list-viewport";
 import { mount } from "#support/mount";
+import { mountRouted } from "#support/router";
 
 const QUERY_FREE_ITEMS: ConversationItem[] = [
   { kind: "step", key: "step-1", name: "Implement" },
@@ -22,7 +25,7 @@ const QUERY_FREE_ITEMS: ConversationItem[] = [
 
 describe("run event list semantics", () => {
   it("renders log rows as direct children of an explicit list container", async () => {
-    const { container, cleanup } = await mount(
+    const { container, cleanup } = await mountRouted(
       <LogList
         events={[envelope({ type: "runtime.log" })]}
         filter="all"
@@ -52,3 +55,5 @@ describe("run event list semantics", () => {
     await cleanup();
   });
 });
+
+mockListViewport();

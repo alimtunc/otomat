@@ -95,7 +95,7 @@ it("reads only its own connection's hosts", async () => {
     "c-otomat",
   );
 
-  expect(container.textContent).toContain("Local");
+  expect(container.textContent).toBe("");
   expect(container.textContent).not.toContain("otomat-vps");
 });
 

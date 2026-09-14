@@ -1,6 +1,11 @@
 import { isWorkspaceForceCleanable } from "@otomat/domain";
 import {
+  CopyButton,
   DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuGroup,
+  DropdownMenuSeparator,
   DropdownMenuContent,
   DropdownMenuTrigger,
   Icon,
@@ -11,42 +16,54 @@ import { WorkspaceOpenMenuItems } from "@web/components/workspaces/open-menu-ite
 import { desktopBridge } from "@web/lib/desktop-bridge";
 import type { TableCellProps } from "@web/lib/table";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export function WorkspaceActionsCell({ row }: TableCellProps<WorkspaceRow, unknown>) {
+  const trigger = useRef<HTMLButtonElement>(null);
   const [cleaning, setCleaning] = useState(false);
   const workspace = row.original;
   const cleanable = isWorkspaceForceCleanable(workspace);
   const openable = desktopBridge() !== null;
-  if (!cleanable && !openable) return null;
   return (
-    <span className="inline-flex opacity-0 transition-opacity focus-within:opacity-100 group-hover/row:opacity-100">
-      {openable ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <IconButton
-                label="Open this workspace"
-                size="sm"
-                icon={<Icon name="folder-open" aria-hidden />}
-              />
-            }
-          />
-          <DropdownMenuContent align="end">
-            <WorkspaceOpenMenuItems entry={workspace} host={workspace.host} />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+    <span className="inline-flex items-center">
+      <CopyButton value={workspace.path} label="Copy Worktree path" />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          ref={trigger}
+          render={
+            <IconButton
+              label="Workspace actions"
+              size="sm"
+              icon={<Icon name="more-horizontal" aria-hidden />}
+            />
+          }
+        />
+        <DropdownMenuContent align="end" className="max-w-sm">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="whitespace-normal break-all font-mono">
+              {workspace.path}
+              <span className="block" />
+              {workspace.branch ?? "detached"}
+            </DropdownMenuLabel>
+            {openable ? <WorkspaceOpenMenuItems entry={workspace} host={workspace.host} /> : null}
+            {cleanable ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setCleaning(true)}>
+                  Delete this workspace…
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
       {cleanable ? (
-        <>
-          <IconButton
-            label="Delete this workspace…"
-            size="sm"
-            icon={<Icon name="trash-2" aria-hidden />}
-            onClick={() => setCleaning(true)}
-          />
-          <WorkspaceCleanupDialog rows={[workspace]} open={cleaning} onOpenChange={setCleaning} />
-        </>
+        <WorkspaceCleanupDialog
+          finalFocus={trigger}
+          rows={[workspace]}
+          open={cleaning}
+          onOpenChange={setCleaning}
+        />
       ) : null}
     </span>
   );

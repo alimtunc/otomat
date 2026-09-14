@@ -28,11 +28,11 @@ export function ReviewsView() {
     <RouteShell
       active="reviews"
       titleIcon="git-pull-request"
-      titleNote="Every open pull request of this project, grouped by what it needs."
       breadcrumbs={[{ label: "Reviews", current: true }]}
       actions={
         <div className="flex items-center gap-2">
           <ReviewInboxFilters
+            sync={sync}
             filters={view.config.filters}
             options={inboxFilterOptions(inbox.data?.entries ?? [])}
             onChange={view.setFilters}
@@ -81,6 +81,7 @@ export function ReviewsView() {
                         key={section.group}
                         group={section.group}
                         entries={section.entries}
+                        viewerLogin={data.viewer.login}
                         collapsed={view.config.collapsedGroups.includes(section.group)}
                         onToggle={view.toggleGroup}
                       />

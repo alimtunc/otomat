@@ -55,6 +55,17 @@ export const issueContractSchema = z.discriminatedUnion("source", [
 ]);
 export type IssueContract = z.infer<typeof issueContractSchema>;
 
+export const issueSummarySchema = z.discriminatedUnion("source", [
+  issueContractSchema.options[0].omit({ body: true }),
+  issueContractSchema.options[1].omit({ body: true }),
+]);
+export type IssueSummary = z.infer<typeof issueSummarySchema>;
+
+export const issueSearchResponseSchema = z.object({
+  issues: z.array(issueSummarySchema),
+  total: z.number().int().nonnegative(),
+});
+
 const issueSourceContractBaseSchema = z.object({
   id: z.string(),
   project_id: z.string(),

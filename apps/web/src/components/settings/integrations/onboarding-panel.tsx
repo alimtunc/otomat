@@ -5,13 +5,14 @@ import { useIssueSources, useLinearConnections } from "@web/api/linear/queries";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { selectableProjects } from "@web/components/shell/project-selection/selection";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export function LinearOnboardingPanel() {
   const connections = useLinearConnections();
   const projects = useProjects();
   const sources = useIssueSources();
   const switcher = useProjectSwitcher();
+  const addProjectTrigger = useRef<HTMLButtonElement>(null);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
 
   if (!connections.isSuccess || !projects.isSuccess || !sources.isSuccess) return null;
@@ -30,7 +31,12 @@ export function LinearOnboardingPanel() {
             a connection and map a Linear team onto it.
           </p>
           <div>
-            <Button variant="primary" size="sm" onClick={() => setAddProjectOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              render={<button ref={addProjectTrigger} />}
+              onClick={() => setAddProjectOpen(true)}
+            >
               Add project
             </Button>
           </div>
@@ -55,6 +61,7 @@ export function LinearOnboardingPanel() {
       )}
       <AddProjectDialog
         open={addProjectOpen}
+        finalFocus={addProjectTrigger}
         onOpenChange={setAddProjectOpen}
         hosts={switcher.hostOptions}
         onSelect={switcher.selectProject}

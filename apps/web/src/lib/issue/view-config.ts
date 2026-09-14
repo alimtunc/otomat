@@ -1,4 +1,4 @@
-import { asMember, asRecord, normalizedSelection } from "@web/lib/coerce";
+import { asMember, asRecord, normalizedMembers, normalizedSelection } from "@web/lib/coerce";
 import {
   NO_ADVANCED_FILTERS,
   parseAdvancedFilters,
@@ -7,7 +7,11 @@ import {
 import { ISSUE_GROUPINGS, type IssueGrouping } from "@web/lib/issue/grouping";
 import { ISSUE_SORTS, type IssueSort } from "@web/lib/issue/sort";
 
+export const ISSUE_OPTIONAL_COLUMNS = ["source", "assignee"] as const;
+export type IssueOptionalColumn = (typeof ISSUE_OPTIONAL_COLUMNS)[number];
+
 export interface IssuesViewConfig {
+  columns?: IssueOptionalColumn[];
   grouping: IssueGrouping;
   sort: IssueSort;
   advanced: AdvancedIssueFilters;
@@ -15,6 +19,7 @@ export interface IssuesViewConfig {
 }
 
 export const DEFAULT_ISSUES_VIEW_CONFIG: IssuesViewConfig = {
+  columns: [],
   grouping: "status",
   sort: "priority",
   advanced: NO_ADVANCED_FILTERS,
@@ -25,6 +30,7 @@ export function parseIssuesViewConfig(value: unknown): IssuesViewConfig {
   const entry = asRecord(value);
   if (entry === null) return DEFAULT_ISSUES_VIEW_CONFIG;
   return {
+    columns: normalizedMembers(entry.columns, ISSUE_OPTIONAL_COLUMNS),
     grouping: asMember(entry.grouping, ISSUE_GROUPINGS) ?? DEFAULT_ISSUES_VIEW_CONFIG.grouping,
     sort: asMember(entry.sort, ISSUE_SORTS) ?? DEFAULT_ISSUES_VIEW_CONFIG.sort,
     advanced: parseAdvancedFilters(entry.advanced),

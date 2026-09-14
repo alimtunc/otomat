@@ -2,7 +2,7 @@ import {
   ISSUE_BOARD_COLUMNS,
   projectIssuePrimaryState,
   type IssueBoardColumn,
-  type IssueContract,
+  type IssueSummary,
   type IssueSource,
 } from "@otomat/domain";
 import { asRecord, asString, normalizedMembers, normalizedSelection } from "@web/lib/coerce";
@@ -43,24 +43,21 @@ export function activeAdvancedFilterCount(filters: AdvancedIssueFilters): number
   );
 }
 
-function matchesAssignee(
-  issue: IssueContract,
-  assignee: AdvancedIssueFilters["assignee"],
-): boolean {
+function matchesAssignee(issue: IssueSummary, assignee: AdvancedIssueFilters["assignee"]): boolean {
   if (assignee === "all") return true;
   if (assignee === "unassigned") return issue.source_assignee_name === null;
   return issue.source_assignee_name === assignee;
 }
 
-function matchesLabels(issue: IssueContract, labels: ReadonlySet<string>): boolean {
+function matchesLabels(issue: IssueSummary, labels: ReadonlySet<string>): boolean {
   if (labels.size === 0) return true;
   return (issue.source_labels ?? []).some((label) => labels.has(label.name));
 }
 
 export function applyAdvancedFilters(
-  issues: IssueContract[],
+  issues: IssueSummary[],
   filters: AdvancedIssueFilters,
-): IssueContract[] {
+): IssueSummary[] {
   const sources = new Set(filters.sources);
   const statuses = new Set(filters.statuses);
   const linearStates = new Set(filters.linearStates);

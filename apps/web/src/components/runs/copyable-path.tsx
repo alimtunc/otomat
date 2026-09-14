@@ -3,9 +3,10 @@ import { CopyButton, FOCUS_RING, cn } from "@otomat/ui";
 export interface CopyablePathProps {
   value: string;
   label: string;
+  displayValue?: string;
 }
 
-export function CopyablePath({ value, label }: CopyablePathProps) {
+export function CopyablePath({ value, label, displayValue = value }: CopyablePathProps) {
   return (
     <span className="flex min-w-0 items-center gap-1.5">
       <span
@@ -20,7 +21,7 @@ export function CopyablePath({ value, label }: CopyablePathProps) {
           "focus-visible:rounded-sm",
         )}
       >
-        <bdi>{value}</bdi>
+        <bdi>{displayValue}</bdi>
       </span>
       <CopyButton value={value} label={`Copy ${label}`} copiedLabel={`${label} copied`} />
     </span>

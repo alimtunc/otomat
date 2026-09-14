@@ -1,14 +1,4 @@
-import {
-  Icon,
-  IconButton,
-  Kbd,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@otomat/ui";
+import { Icon, IconButton, Kbd, Popover, PopoverContent, PopoverTrigger } from "@otomat/ui";
 
 const SHORTCUTS = [
   { keys: ["j", "k"], label: "Previous / next file" },
@@ -22,22 +12,15 @@ const SHORTCUTS = [
 export function DiffShortcutsPopover() {
   return (
     <Popover>
-      <Tooltip>
-        <PopoverTrigger
-          render={
-            <TooltipTrigger
-              render={
-                <IconButton
-                  size="sm"
-                  label="Keyboard shortcuts"
-                  icon={<Icon name="info" aria-hidden />}
-                />
-              }
-            />
-          }
-        />
-        <TooltipContent>Keyboard shortcuts</TooltipContent>
-      </Tooltip>
+      <PopoverTrigger
+        render={
+          <IconButton
+            size="sm"
+            label="Keyboard shortcuts"
+            icon={<Icon name="info" aria-hidden />}
+          />
+        }
+      />
       <PopoverContent align="end" className="w-64 p-3">
         <p className="mb-2 text-xs font-medium text-foreground">Keyboard shortcuts</p>
         <dl className="flex flex-col gap-2">

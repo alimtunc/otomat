@@ -132,3 +132,15 @@ it("blocks on the error report only when no run detail was ever loaded", async (
   expect(container.querySelector('[data-testid="conversation"]')).toBeNull();
   await cleanup();
 });
+
+it("does not call a finished step live just because updates remain connected", async () => {
+  detailQuery = {
+    isPending: false,
+    isError: false,
+    data: { ...detail, steps: [{ ...detail.steps[0]!, status: "succeeded" }] },
+  };
+  const { container, cleanup } = await mount(<RunConversationView />);
+  expect(container.textContent).toContain("following updates");
+  expect(container.textContent).not.toMatch(/Implementlive/);
+  await cleanup();
+});

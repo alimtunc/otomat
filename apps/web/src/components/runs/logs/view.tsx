@@ -7,7 +7,7 @@ import { LogList } from "@web/components/runs/logs/list";
 import { countMatching, LOG_FILTERS, type LogFilter } from "@web/components/runs/logs/log-filters";
 import { SessionsPanel } from "@web/components/runs/logs/sessions-panel";
 import { PaneHeader } from "@web/components/runs/pane-header";
-import { STREAM_LABEL } from "@web/lib/run/stream";
+import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { useState } from "react";
 
 export function RunLogsView() {
@@ -16,22 +16,12 @@ export function RunLogsView() {
   const stream = useRunEventStream();
   const [filter, setFilter] = useState<LogFilter>("all");
 
-  if (detail.isPending || stream.history.status === "pending") {
+  if (stream.history.status === "pending") {
     return (
       <div className="flex flex-col gap-2 p-6">
         <Skeleton height={20} width="40%" />
         <Skeleton height={14} width="64%" />
       </div>
-    );
-  }
-
-  if (detail.isError) {
-    return (
-      <ErrorReport
-        error={detail.error}
-        context="Couldn’t load this run"
-        onRetry={() => void detail.refetch()}
-      />
     );
   }
 
@@ -46,44 +36,57 @@ export function RunLogsView() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <SessionsPanel detail={detail.data} />
-      <PaneHeader>
-        Logs
-        <span className="ml-auto font-normal normal-case text-text-tertiary">
-          from the persisted ledger · {STREAM_LABEL[stream.state]}
-        </span>
-      </PaneHeader>
-      <div className="flex flex-none flex-wrap items-center gap-2 border-b border-border-subtle px-3.5 py-2">
-        <PillTabs
-          type="single"
-          value={filter}
-          onValueChange={(value) => {
-            if (value !== "") {
-              // SAFETY: the filter toggle renders only LogFilter values.
-              setFilter(value as LogFilter);
-            }
-          }}
-          aria-label="Filter log events"
-          className="flex-wrap"
-        >
-          {LOG_FILTERS.map((entry) => {
-            const count = countMatching(stream.events, entry.value);
-            return (
-              <Pill key={entry.value} value={entry.value} badge={count > 0 ? count : null}>
-                {entry.label}
-              </Pill>
-            );
-          })}
-        </PillTabs>
-      </div>
-      <LogList
-        events={stream.events}
-        filter={filter}
-        state={stream.state}
-        degraded={stream.degraded}
-        history={stream.history}
-      />
-    </div>
+    <QueryBoundary
+      query={detail}
+      pending={<Skeleton height={20} />}
+      error={
+        <ErrorReport
+          error={detail.error}
+          context="Couldn’t load this run"
+          onRetry={() => void detail.refetch()}
+        />
+      }
+    >
+      {(data) => (
+        <div className="flex h-full min-h-0 flex-col">
+          <SessionsPanel detail={data} />
+          <PaneHeader>
+            Logs
+            <span className="ml-auto font-normal normal-case text-text-tertiary">
+              {stream.state === "open" ? "following updates" : stream.state}
+            </span>
+          </PaneHeader>
+          <div className="flex flex-none flex-wrap items-center gap-2 border-b border-border-subtle px-3.5 py-2">
+            <PillTabs
+              type="single"
+              value={filter}
+              onValueChange={(value) => {
+                const entry = LOG_FILTERS.find((candidate) => candidate.value === value);
+                if (entry) setFilter(entry.value);
+              }}
+              aria-label="Filter log events"
+              className="flex-wrap"
+            >
+              {LOG_FILTERS.map((entry) => {
+                const count = countMatching(stream.events, entry.value);
+                if (count === 0 && entry.value !== "all" && entry.value !== filter) return null;
+                return (
+                  <Pill key={entry.value} value={entry.value} badge={count > 0 ? count : null}>
+                    {entry.label}
+                  </Pill>
+                );
+              })}
+            </PillTabs>
+          </div>
+          <LogList
+            events={stream.events}
+            filter={filter}
+            state={stream.state}
+            degraded={stream.degraded}
+            history={stream.history}
+          />
+        </div>
+      )}
+    </QueryBoundary>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 import { readPanelCollapsed, writePanelCollapsed } from "../lib/panel-collapsed-storage";
 import { SidePanelContext } from "../lib/side-panel-context";
@@ -19,6 +19,7 @@ export interface SidePanelProps {
   minSize: number | string;
   maxSize: number | string;
   collapsedSize?: number;
+  defaultCollapsed?: boolean;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   /**
@@ -42,23 +43,36 @@ export function SidePanel({
   minSize,
   maxSize,
   collapsedSize = RAIL_SIZE,
+  defaultCollapsed = false,
   collapsed: collapsedProp,
   onCollapsedChange,
   rail,
   children,
 }: SidePanelProps) {
   const panelRef = usePanelRef();
-  const [storedCollapsed, setStoredCollapsed] = useState(() => readPanelCollapsed(id) ?? false);
-  const collapsed = collapsedProp ?? storedCollapsed;
+  const restoreFocus = useRef(false);
+  const [storedCollapsed, setStoredCollapsed] = useState(() => readPanelCollapsed(id));
+  const collapsed = collapsedProp ?? storedCollapsed ?? defaultCollapsed;
 
-  function requestCollapsed(next: boolean) {
+  const requestCollapsed = (next: boolean) => {
     if (next === collapsed) return;
+    restoreFocus.current = document.getElementById(id)?.contains(document.activeElement) ?? false;
     if (collapsedProp === undefined) {
       writePanelCollapsed(id, next);
       setStoredCollapsed(next);
     }
     onCollapsedChange?.(next);
-  }
+  };
+
+  // otomat-allow-effect: replacing the panel body removes its focused control before the new toggle mounts.
+  useLayoutEffect(() => {
+    if (!restoreFocus.current) return;
+    restoreFocus.current = false;
+    document
+      .getElementById(id)
+      ?.querySelector<HTMLButtonElement>(`button[aria-controls="${CSS.escape(id)}"]`)
+      ?.focus();
+  }, [collapsed, id]);
 
   // otomat-allow-effect: only the library's imperative panel API can change collapsed state.
   useEffect(() => {

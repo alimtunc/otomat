@@ -16,20 +16,6 @@ export const generationOutputSchema = z.object({
 });
 export type GenerationOutput = z.infer<typeof generationOutputSchema>;
 
-/** Git-safe kebab slug of the model's proposal; null when nothing usable survives. */
-export function sanitizeBranchName(raw: string): string | null {
-  const slug = raw
-    .toLowerCase()
-    .replace(/[^a-z0-9/_-]+/g, "-")
-    .replace(/-{2,}/g, "-")
-    .replace(/\/{2,}/g, "/")
-    .replace(/(^[-/.]+)|([-/.]+$)/g, "")
-    .slice(0, 60)
-    .replace(/(^[-/.]+)|([-/.]+$)/g, "");
-  if (slug === "" || slug.startsWith("otomat/run")) return null;
-  return slug;
-}
-
 /** The marked block first; a CLI that reformats its own output still leaves the braces to fall back on. */
 function jsonBlock(stdout: string): string {
   const opened = stdout.lastIndexOf(JSON_OPEN_MARKER);

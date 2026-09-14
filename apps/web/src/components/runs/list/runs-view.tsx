@@ -1,5 +1,5 @@
 import { EmptyState } from "@otomat/ui";
-import { useProjectIssues } from "@web/api/issues/queries";
+import { useProjectIssueSummaries } from "@web/api/issues/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { RunsTable } from "@web/components/runs/list/table";
@@ -12,13 +12,16 @@ import { useSelectedProject } from "@web/components/shell/project-selection/use-
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { StaleNotice } from "@web/components/shell/stale-notice";
+import { useActiveHostId } from "@web/lib/active-host";
 import { groupRunsByIssue, visibleRunGroups } from "@web/lib/run/grouping";
 
 export function RunsView() {
   const selectedProject = useSelectedProject();
+  const host = useActiveHostId();
   const runs = useProjectRuns(selectedProject.projectId);
-  const issues = useProjectIssues(selectedProject.projectId);
+  const issues = useProjectIssueSummaries(selectedProject.projectId);
   const view = useRunsView(selectedProject.projectId);
+  const scrollId = `runs:${host}:${selectedProject.projectId}:${JSON.stringify(view.config)}`;
   const visible = visibleRunGroups(
     groupRunsByIssue(runs.data ?? [], issues.data ?? []),
     view.config,
@@ -73,7 +76,7 @@ export function RunsView() {
                     No runs match these filters.
                   </p>
                 ) : (
-                  <RunsTable groups={visible.groups} />
+                  <RunsTable key={scrollId} groups={visible.groups} scrollId={scrollId} />
                 )
               }
             </QueryList>

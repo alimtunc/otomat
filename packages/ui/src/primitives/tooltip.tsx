@@ -31,7 +31,7 @@ export function TooltipContent({
         <TooltipPrimitive.Popup
           ref={ref}
           className={cn(
-            "whitespace-nowrap rounded-sm border border-border bg-surface-3 px-2 py-1 text-xs text-foreground",
+            "max-w-[min(24rem,calc(100vw-1rem))] break-words rounded-sm border border-border bg-surface-3 px-2 py-1 text-xs text-foreground",
             POPUP_MOTION_CLASS,
             className,
           )}

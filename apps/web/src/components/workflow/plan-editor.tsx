@@ -1,5 +1,13 @@
 import { RUN_PLAN_MAX_STEPS } from "@otomat/domain";
-import { Button, Icon } from "@otomat/ui";
+import {
+  Button,
+  Icon,
+  IconButton,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@otomat/ui";
 import { WorkflowCompeteCard } from "@web/components/workflow/compete-card";
 import type { WorkflowPlanExecution } from "@web/components/workflow/plan-execution";
 import { WorkflowStepCard } from "@web/components/workflow/step-card";
@@ -49,16 +57,22 @@ export function WorkflowPlanEditor({ plan, execution, projectId, error }: Workfl
           <Icon name="plus" aria-hidden />
           Add step
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={executables > RUN_PLAN_MAX_STEPS - 2}
-          onClick={plan.addCompeteGroup}
-        >
-          <Icon name="workflow" aria-hidden />
-          Add compete group
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <IconButton size="sm" label="More step types" icon={<Icon name="chevron-down" />} />
+            }
+          />
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              disabled={executables > RUN_PLAN_MAX_STEPS - 2}
+              onClick={plan.addCompeteGroup}
+            >
+              <Icon name="workflow" aria-hidden />
+              Add compete group
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       {error === null ? null : (
         <p role="alert" className="text-xs text-danger">

@@ -20,7 +20,9 @@ export function CockpitTabs({ runId }: { runId: string }) {
           value={tab.value}
           icon={<Icon name={tab.icon} className="max-lg:hidden" />}
           nativeButton={false}
-          render={<Link to={tab.to} params={{ runId }} />}
+          render={
+            <Link to={tab.to} params={{ runId }} search={(previous) => ({ step: previous.step })} />
+          }
         >
           {tab.label}
         </SegmentedItem>

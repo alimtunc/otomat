@@ -7,12 +7,12 @@ export function DiffSummary({ diff }: { diff: ReviewDiffContract }) {
   const filesLabel = fileCount === 1 ? "1 file" : `${fileCount} files`;
   return (
     <span
-      className="flex items-center gap-2 font-mono text-xs text-text-tertiary"
+      className="flex shrink-0 items-center gap-1.5 whitespace-nowrap font-mono text-xs text-text-tertiary"
       title={`base ${shortSha(diff.base)} → head ${shortSha(diff.head)} · diff ${diff.sha}`}
     >
       <span>{filesLabel}</span>
       <DiffStat additions={diff.additions} deletions={diff.deletions} />
-      <CopyButton value={diff.sha} label="Copy diff sha" />
+      <CopyButton value={diff.sha} label="Copy diff snapshot ID" />
     </span>
   );
 }

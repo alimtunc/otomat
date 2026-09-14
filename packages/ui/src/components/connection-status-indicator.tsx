@@ -6,6 +6,7 @@ import type { ConnectionState } from "../lib/connection-state";
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
 import { Popover, PopoverContent, PopoverTrigger } from "../primitives/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 import { STATE_META } from "./connection-status-meta";
 import { LiveDot } from "./live-dot";
 
@@ -37,27 +38,36 @@ export function ConnectionStatusIndicator({
 
   return (
     <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            aria-live="polite"
-            aria-label={`Connection: ${meta.label}`}
-            className={cn(
-              "h-auto gap-1.5 px-1.75 py-1 text-xs font-normal",
-              "transition-colors hover:bg-surface-2",
-              meta.triggerTextClass,
-              className,
-            )}
-            style={{ transition: "background var(--motion-fast) var(--ease)" }}
-          >
-            <LiveDot live={meta.live} style={{ background: meta.dotColorVar }} />
-            {variant === "dot+label" ? <span>{meta.label}</span> : null}
-          </Button>
-        }
-      />
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <PopoverTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  aria-live="polite"
+                  aria-label={`Connection: ${meta.label}`}
+                  className={cn(
+                    "h-auto gap-1.5 px-1.75 py-1 text-xs font-normal",
+                    "transition-colors hover:bg-surface-2",
+                    meta.triggerTextClass,
+                    className,
+                  )}
+                  style={{ transition: "background var(--motion-fast) var(--ease)" }}
+                >
+                  <LiveDot live={meta.live} style={{ background: meta.dotColorVar }} />
+                  {variant === "dot+label" ? (
+                    <span className="max-sm:sr-only">{meta.label}</span>
+                  ) : null}
+                </Button>
+              }
+            />
+          }
+        />
+        <TooltipContent>Connection: {meta.label}</TooltipContent>
+      </Tooltip>
       <PopoverContent align="end" className="w-64 p-3 text-sm text-foreground">
         <div className={cn("flex items-center gap-1.5 font-medium", meta.textClass)}>
           <Icon className="h-3.5 w-3.5" aria-hidden={true} />

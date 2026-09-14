@@ -21,7 +21,11 @@ export function UsageMetricValue({
 }: UsageMetricValueProps) {
   const state = usageMetricState(metric, turns);
   if (metric.value === null || state === "unavailable") {
-    return <span className={cn("text-xs text-text-tertiary", className)}>Not reported</span>;
+    return (
+      <span aria-label="Not reported" className={cn("text-xs text-text-tertiary", className)}>
+        —
+      </span>
+    );
   }
   return (
     <span className={cn("inline-flex items-baseline gap-1", className)}>

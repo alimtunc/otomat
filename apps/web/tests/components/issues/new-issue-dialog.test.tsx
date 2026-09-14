@@ -1,11 +1,13 @@
 // @vitest-environment happy-dom
 import type { CreateIssueRequest, RunContract, RuntimeDescriptor } from "@otomat/domain";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
+import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
+import { findMenuItem } from "#support/dom-queries";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { referencedIssue } from "#support/issue";
 import {
@@ -28,7 +30,8 @@ const pickerProps = vi.fn();
 
 interface ExecutionPickerProbeProps {
   level: string;
-  value: { agent: string | null };
+  value: ExecutionSelection;
+  onChange: (execution: ExecutionSelection) => void;
   label: string;
   compact?: boolean;
 }
@@ -80,7 +83,18 @@ vi.mock("@web/api/issues/queries", () => ({
 vi.mock("@web/components/execution/execution-config-picker", () => ({
   ExecutionConfigPicker: (props: ExecutionPickerProbeProps) => {
     pickerProps(props);
-    return <div data-testid="execution-picker" data-level={props.level} data-label={props.label} />;
+    return (
+      <div data-testid="execution-picker" data-level={props.level} data-label={props.label}>
+        <button
+          type="button"
+          onClick={() => props.onChange({ agent: "runtime:codex", options: {} })}
+        >{`pick codex for ${props.label}`}</button>
+        <button
+          type="button"
+          onClick={() => props.onChange({ ...props.value, model: { kind: "model", id: "opus" } })}
+        >{`pick opus for ${props.label}`}</button>
+      </div>
+    );
   },
 }));
 
@@ -133,19 +147,22 @@ async function renderDialog(
   const container = document.createElement("div");
   document.body.append(container);
   const root: Root = createRoot(container);
-  await act(async () => {
-    root.render(
-      <NewIssueDialog
-        open
-        onOpenChange={onOpenChange}
-        projectId={projectId}
-        projectName="otomat"
-      />,
+  const render = async (open: boolean) =>
+    act(async () =>
+      root.render(
+        <NewIssueDialog
+          open={open}
+          onOpenChange={onOpenChange}
+          projectId={projectId}
+          projectName="otomat"
+        />,
+      ),
     );
-  });
+  await render(true);
   cleanups.push(async () => {
     await act(async () => root.unmount());
   });
+  return { render };
 }
 
 function buttonByText(text: string): HTMLButtonElement {
@@ -177,6 +194,126 @@ function setTextareaValue(input: HTMLTextAreaElement, value: string): void {
 }
 
 describe("NewIssueDialog", () => {
+  it("keeps mode drafts, touched validation and shared execution while switching", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    await renderDialog();
+    const prompt = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Issue prompt']",
+    );
+    if (!prompt) throw new Error("Prompt missing");
+    await act(async () => {
+      setTextareaValue(prompt, "Keep agent draft");
+    });
+    await act(async () => {
+      buttonByText("Manual").click();
+    });
+    const title = document.querySelector<HTMLInputElement>("input[aria-label='Issue title']");
+    if (!title) throw new Error("Title missing");
+    await act(async () => {
+      setInputValue(title, "Draft title");
+    });
+    await act(async () => {
+      setInputValue(title, "");
+      title.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    await act(async () => {
+      buttonByText("Workflow").click();
+    });
+    expect(document.querySelector("textarea[aria-label='Issue prompt']")).toBe(prompt);
+    expect(prompt.value).toBe("Keep agent draft");
+    expect(buttonByText("With agent").querySelector('[aria-label="Draft kept"]')).not.toBeNull();
+    await act(async () => {
+      buttonByText("Manual").click();
+    });
+    expect(document.querySelector("input[aria-label='Issue title']")).toBe(title);
+    expect(title.getAttribute("aria-invalid")).toBe("true");
+    expect(document.body.textContent).toContain("Give the issue a title.");
+    expect(launch).not.toHaveBeenCalled();
+  });
+
+  it("preserves workflow edits across modes, then clears every draft after an effective close", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    const onOpenChange = vi.fn();
+    const dialog = await renderDialog(onOpenChange);
+    await act(async () => buttonByText("Workflow").click());
+    const goal = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Workflow goal']",
+    );
+    const name = document.querySelector<HTMLInputElement>("input[aria-label='Step 1 name']");
+    if (!goal || !name) throw new Error("Workflow fields missing");
+    await act(async () => {
+      setTextareaValue(goal, "Preserve this workflow");
+      setInputValue(name, "Implement");
+    });
+    await act(async () => buttonByText("With agent").click());
+    expect(buttonByText("Workflow").querySelector('[aria-label="Draft kept"]')).not.toBeNull();
+    await act(async () => buttonByText("Workflow").click());
+    expect(document.querySelector("textarea[aria-label='Workflow goal']")).toBe(goal);
+    expect(goal.value).toBe("Preserve this workflow");
+    expect(name.value).toBe("Implement");
+    const activeCancel = [...document.querySelectorAll<HTMLButtonElement>("button")].find(
+      (button) => button.textContent === "Cancel" && !button.closest("[hidden]"),
+    );
+    await act(async () => activeCancel?.click());
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await dialog.render(false);
+    await dialog.render(true);
+    expect(
+      document.querySelector<HTMLTextAreaElement>("textarea[aria-label='Workflow goal']")?.value,
+    ).toBe("");
+    expect(document.querySelector<HTMLInputElement>("input[aria-label='Step 1 name']")?.value).toBe(
+      "",
+    );
+    expect(document.querySelector('[aria-label="Draft kept"]')).toBeNull();
+  });
+
+  it("rescopes hidden workflow overrides when the shared agent changes from Agent mode", async () => {
+    runtimesData = [
+      runtimeDescriptor("claude", "real", true),
+      runtimeDescriptor("codex", "real", true),
+    ];
+    await renderDialog();
+    await act(async () => buttonByText("Workflow").click());
+    await act(async () => buttonByLabel("Override Step 1 execution").click());
+    await act(async () => buttonByText("pick opus for Step 1").click());
+    await act(async () => buttonByText("With agent").click());
+    await act(async () => buttonByText("pick codex for Ad-hoc run").click());
+    await act(async () => buttonByText("Workflow").click());
+    const calls = pickerProps.mock.calls.map(([props]: [ExecutionPickerProbeProps]) => props);
+    expect(calls.filter((props) => props.label === "Workflow").at(-1)?.value.agent).toBe(
+      "runtime:codex",
+    );
+    expect(calls.filter((props) => props.label === "Step 1").at(-1)?.value).toEqual({
+      agent: null,
+      options: {},
+    });
+  });
+
+  it("keeps step instructions behind one disclosure and returns focus there on Escape", async () => {
+    runtimesData = [runtimeDescriptor("claude", "real", true)];
+    const onOpenChange = vi.fn();
+    await renderDialog(onOpenChange);
+    await act(async () => buttonByText("Workflow").click());
+    const trigger = buttonByLabel("Step 1 context and instructions");
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => trigger.click());
+    const note = document.querySelector<HTMLTextAreaElement>(
+      "textarea[aria-label='Step 1 instructions']",
+    );
+    if (!note) throw new Error("Instructions missing");
+    await act(async () => {
+      note.focus();
+      setTextareaValue(note, "Preserve review context");
+    });
+    await act(async () =>
+      note.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
+    );
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(trigger);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    await act(async () => trigger.click());
+    expect(note.value).toBe("Preserve review context");
+  });
   it("offers both the Manual and With agent modes", async () => {
     runtimesData = [runtimeDescriptor("claude", "real", true)];
     await renderDialog();
@@ -233,7 +370,11 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     expect(document.body.textContent).toContain("No agent runtime available");
     expect(buttonByLabel("Create & launch").disabled).toBe(true);
-    expect(document.querySelector("[data-testid='execution-picker']")).toBeNull();
+    expect(
+      [...document.querySelectorAll("[data-testid='execution-picker']")].filter(
+        (picker) => !picker.closest("[hidden]"),
+      ),
+    ).toHaveLength(0);
   });
 
   it("creates a manual issue for the current project and closes", async () => {
@@ -290,7 +431,8 @@ describe("NewIssueDialog", () => {
     await renderDialog();
 
     await act(async () => buttonByText("Workflow").click());
-    await act(async () => buttonByText("Add compete group").click());
+    await act(async () => buttonByLabel("More step types").click());
+    await act(async () => findMenuItem("Add compete group")?.click());
     const removeInitial = document.querySelector<HTMLButtonElement>(
       "button[aria-label='Remove step 1']",
     );
@@ -315,6 +457,11 @@ describe("NewIssueDialog", () => {
     ];
     expect(candidateNames).toHaveLength(2);
     expect(candidateNotes).toHaveLength(2);
+    expect(
+      document.querySelector("[data-testid='execution-picker'][data-label='Candidate A']"),
+    ).toBeNull();
+    await act(async () => buttonByLabel("Override Candidate A execution").click());
+    await act(async () => buttonByLabel("Override Candidate B execution").click());
     expect(
       document.querySelector("[data-testid='execution-picker'][data-label='Candidate A']"),
     ).not.toBeNull();
@@ -374,6 +521,10 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     await act(async () => buttonByText("Workflow").click());
 
+    expect(
+      document.querySelector("[data-testid='execution-picker'][data-label='Step 1']"),
+    ).toBeNull();
+    await act(async () => buttonByLabel("Override Step 1 execution").click());
     const calls = pickerProps.mock.calls.map(([props]: [ExecutionPickerProbeProps]) => props);
     expect(calls.find((props) => props.label === "Workflow")?.compact).not.toBe(true);
     expect(calls.find((props) => props.label === "Step 1")?.compact).toBe(true);
@@ -409,8 +560,9 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     await act(async () => buttonByText("Workflow").click());
 
-    const addCompeteGroup = buttonByText("Add compete group");
-    expect(addCompeteGroup.querySelector(".lucide-workflow")).not.toBeNull();
+    await act(async () => buttonByLabel("More step types").click());
+    const addCompeteGroup = findMenuItem("Add compete group");
+    expect(addCompeteGroup?.querySelector(".lucide-workflow")).not.toBeNull();
   });
 
   it("uses an informational notice for compete groups", async () => {
@@ -418,7 +570,8 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     await act(async () => buttonByText("Workflow").click());
 
-    await act(async () => buttonByText("Add compete group").click());
+    await act(async () => buttonByLabel("More step types").click());
+    await act(async () => findMenuItem("Add compete group")?.click());
     const notice = [...document.querySelectorAll("p")].find((element) =>
       element.textContent?.startsWith("Steps that depend on this group"),
     );
@@ -465,7 +618,8 @@ describe("NewIssueDialog", () => {
     const action = buttonByLabel("Create & launch");
 
     expect(add.textContent).toBe("");
-    expect(add.getAttribute("title")).toBe("Add context");
+    await act(async () => add.focus());
+    expect(document.body.textContent).toContain("Add context");
     expect(action.textContent).toBe("");
     expect(action.getAttribute("aria-label")).toBe("Create & launch — write a prompt first");
     expect(action.getAttribute("title")).toContain("⌘↵");
@@ -549,7 +703,7 @@ describe("NewIssueDialog", () => {
     await renderDialog(() => undefined, { withProject: false });
 
     expect(document.body.textContent).toContain("No project selected");
-    expect(document.querySelector("textarea")).toBeNull();
+    expect(document.querySelector("textarea[aria-label='Issue prompt']")).toBeNull();
     expect(launch).not.toHaveBeenCalled();
   });
 });

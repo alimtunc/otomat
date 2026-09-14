@@ -6,7 +6,7 @@ import type { TableCellProps } from "@web/lib/table";
 export function UsageTokensCell({ row }: TableCellProps<UsageRunRow>) {
   const { figures } = row.original;
   return (
-    <span className="flex items-baseline justify-end gap-2 text-xs">
+    <span className="flex items-baseline justify-end gap-2 whitespace-nowrap text-xs">
       <UsageMetricValue
         metric={figures.input_tokens}
         turns={figures.turns}

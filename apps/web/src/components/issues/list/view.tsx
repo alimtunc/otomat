@@ -1,5 +1,5 @@
 import { Icon, SegmentedControl, SegmentedItem } from "@otomat/ui";
-import { useProjectIssues } from "@web/api/issues/queries";
+import { useProjectIssueSummaries } from "@web/api/issues/queries";
 import { useProjectLinearSync } from "@web/api/linear/use-project-sync";
 import { IssuesContent } from "@web/components/issues/list/content";
 import { IssuesToolbar } from "@web/components/issues/list/toolbar";
@@ -9,6 +9,7 @@ import { IssueViewControls } from "@web/components/issues/views/controls";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { useActiveHostId } from "@web/lib/active-host";
 import { asMember } from "@web/lib/coerce";
 import { ISSUES_LAYOUTS } from "@web/lib/issue/layout";
 import { visibleIssueGroups } from "@web/lib/issue/visible-groups";
@@ -16,11 +17,14 @@ import { useEffect } from "react";
 
 export function IssuesView() {
   const selectedProject = useSelectedProject();
-  const issues = useProjectIssues(selectedProject.projectId);
+  const host = useActiveHostId();
+  const issues = useProjectIssueSummaries(selectedProject.projectId);
   const sync = useProjectLinearSync(selectedProject.projectId);
   const view = useIssuesView(selectedProject.projectId);
   const { layout, select: selectLayout } = useIssuesLayout(selectedProject.projectId);
   const { config } = view;
+  const { collapsedGroups, ...scrollConfig } = config;
+  const scrollId = `issues:${host}:${selectedProject.projectId}:${JSON.stringify(scrollConfig)}`;
   const projectNames = new Map(
     (selectedProject.projects.data ?? []).map((project) => [project.id, project.name]),
   );
@@ -78,11 +82,14 @@ export function IssuesView() {
     >
       <ProjectQueryBoundary query={selectedProject.projects}>
         <IssuesContent
+          key={scrollId}
+          scrollId={scrollId}
           query={issues}
           groups={(items) => visibleIssueGroups(items, config, projectNames)}
           layout={layout}
           showGroupHeadings={config.grouping !== "none"}
-          collapsed={config.collapsedGroups}
+          collapsed={collapsedGroups}
+          optionalColumns={config.columns}
           onToggleGroup={view.toggleGroup}
         />
       </ProjectQueryBoundary>

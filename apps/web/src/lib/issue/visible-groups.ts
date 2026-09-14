@@ -1,11 +1,11 @@
-import type { IssueContract } from "@otomat/domain";
+import type { IssueSummary } from "@otomat/domain";
 import { applyAdvancedFilters } from "@web/lib/issue/filters";
 import { groupIssues, type IssueGroup } from "@web/lib/issue/grouping";
 import { sortIssues } from "@web/lib/issue/sort";
 import type { IssuesViewConfig } from "@web/lib/issue/view-config";
 
 export function visibleIssueGroups(
-  issues: IssueContract[],
+  issues: IssueSummary[],
   config: IssuesViewConfig,
   projectNames: ReadonlyMap<string, string>,
 ): IssueGroup[] {

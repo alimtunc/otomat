@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import type { IssueContract, IssueExecution } from "@otomat/domain";
+import { IssueMetadata } from "@web/components/issues/issue/metadata";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
 import { afterEach, expect, it } from "vitest";
 
@@ -18,7 +19,14 @@ afterEach(async () => {
 });
 
 async function render(issue: IssueContract): Promise<HTMLElement> {
-  const rendered = await mountRouted(withQueryClient(<WorkspaceRail issue={issue} run={null} />));
+  const rendered = await mountRouted(
+    withQueryClient(
+      <>
+        <IssueMetadata issue={issue} />
+        <WorkspaceRail issue={issue} run={null} />
+      </>,
+    ),
+  );
   mounted.push(rendered);
   return rendered.container;
 }
@@ -30,7 +38,7 @@ function rowValue(container: HTMLElement, label: string): string {
   return term.nextElementSibling?.textContent?.trim() ?? "";
 }
 
-it("names both axes and reads them apart while the cycle is open", async () => {
+it("names execution in the header and keeps the issue control in the rail", async () => {
   const container = await render(
     issueContract({
       status: "backlog",
@@ -40,14 +48,19 @@ it("names both axes and reads them apart while the cycle is open", async () => {
   );
 
   expect(rowValue(container, "Issue status")).toBe("Backlog");
-  expect(rowValue(container, "Execution")).toBe("Reviewing");
+  expect(container.querySelector('[aria-label="Execution: reviewing"]')?.textContent).toBe(
+    "Reviewing",
+  );
+  expect(
+    [...container.querySelectorAll("dt")].some((term) => term.textContent === "Execution"),
+  ).toBe(false);
 });
 
 it("stops naming an execution once the cycle is closed", async () => {
   const container = await render(issueContract({ status: "ready", execution: REVIEWING }));
 
   expect(rowValue(container, "Issue status")).toBe("Ready");
-  expect(rowValue(container, "Execution")).toBe("No open workspace");
+  expect(container.querySelector('[aria-label^="Execution:"]')).toBeNull();
 });
 
 it("keeps the stopped cycle of a done issue readable in the rail", async () => {
@@ -64,6 +77,6 @@ it("keeps the stopped cycle of a done issue readable in the rail", async () => {
   );
 
   expect(rowValue(container, "Issue status")).toBe("Done");
-  expect(rowValue(container, "Execution")).toBe("Failed");
+  expect(container.querySelector('[aria-label="Execution: failed"]')?.textContent).toBe("Failed");
   expect(container.textContent).toContain("Failed at Reviewer");
 });

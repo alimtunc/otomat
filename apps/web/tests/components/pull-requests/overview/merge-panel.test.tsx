@@ -5,18 +5,29 @@ import type {
   PullRequestOverview,
 } from "@otomat/domain";
 import { PullRequestMergePanel } from "@web/components/pull-requests/overview/merge-panel";
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { expect, it, vi } from "vitest";
 
 import { findButton } from "#support/dom-queries";
 import { mountWithQuery } from "#support/mount";
 import { pullRequestOverview } from "#support/pull-request-overview";
+import { reviewDetail } from "#support/review-detail";
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children }: { children?: ReactNode }) => <a>{children}</a>,
+}));
 
 const merges: MergePullRequestRequest[] = [];
 let settle: (() => void) | null = null;
 
 vi.mock("@web/api/client", () => ({
   daemon: {
+    getReviewDetail: () =>
+      Promise.resolve(
+        reviewDetail([], {
+          submission: { events: ["comment"], reason: "This pull request is open for review." },
+        }),
+      ),
     mergePullRequest: (_id: string, request: MergePullRequestRequest) => {
       merges.push(request);
       return new Promise((resolve) => {
@@ -121,5 +132,16 @@ it("refuses a second merge while the first is still in flight, dialog closed or 
   await act(async () => {
     settle?.();
   });
+  await mounted.cleanup();
+});
+
+it("does not infer approval requirements from an unreported review decision", async () => {
+  const mounted = await panel({
+    methods: [],
+    blocker: "unknown",
+    reason: "GitHub has not finished evaluating this head.",
+  });
+  expect(mounted.container.textContent).toContain("Review decision not reported");
+  expect(mounted.container.textContent).not.toContain("No approval required");
   await mounted.cleanup();
 });

@@ -7,6 +7,7 @@ import {
   type PullRequestProposal,
 } from "@otomat/domain";
 
+import { sanitizeBranchName } from "#git";
 import { RuntimeUnavailableError } from "#runtime";
 
 import { commandSucceeded } from "../cli/commands.js";
@@ -15,7 +16,7 @@ import { GitHubPublicationError } from "../errors.js";
 import type { CommandRunner, PullRequestGenerator } from "../types.js";
 import type { GenerationAgent } from "./agent.js";
 import type { GenerationInput } from "./input.js";
-import { parseGenerationOutput, sanitizeBranchName, type GenerationOutput } from "./parse.js";
+import { parseGenerationOutput, type GenerationOutput } from "./parse.js";
 import { correctionPrompt, generationPrompt } from "./prompt.js";
 
 const GENERATION_TIMEOUT_MS = 180_000;

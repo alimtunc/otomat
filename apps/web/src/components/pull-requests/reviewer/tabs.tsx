@@ -1,16 +1,14 @@
-import { Icon, SegmentedControl, SegmentedItem } from "@otomat/ui";
+import { SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
 
 const REVIEWER_TABS = [
   {
     value: "overview",
-    icon: "list-todo",
     to: "/pull-requests/$pullRequestId/overview",
     label: "Overview",
   },
   {
     value: "diff",
-    icon: "git-compare",
     to: "/pull-requests/$pullRequestId/diff",
     label: "Diff",
   },
@@ -25,7 +23,6 @@ export function PullRequestReviewerTabs({ pullRequestId }: { pullRequestId: stri
         <SegmentedItem
           key={tab.value}
           value={tab.value}
-          icon={<Icon name={tab.icon} className="max-lg:hidden" />}
           nativeButton={false}
           render={<Link to={tab.to} params={{ pullRequestId }} />}
         >

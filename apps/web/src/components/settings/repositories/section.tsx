@@ -5,11 +5,12 @@ import { SectionHeading } from "@web/components/settings/section-heading";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export function RepositoriesSection() {
   const hosts = useHostRepositories();
   const switcher = useProjectSwitcher();
+  const addProjectTrigger = useRef<HTMLButtonElement>(null);
   const [adding, setAdding] = useState(false);
 
   return (
@@ -20,8 +21,13 @@ export function RepositoriesSection() {
       />
       <div className="flex flex-col gap-5">
         <div>
-          <Button variant="primary" size="sm" onClick={() => setAdding(true)}>
-            Add repository
+          <Button
+            variant="primary"
+            size="sm"
+            render={<button ref={addProjectTrigger} />}
+            onClick={() => setAdding(true)}
+          >
+            Add project
           </Button>
         </div>
         <QueryBoundary
@@ -42,6 +48,7 @@ export function RepositoriesSection() {
       </div>
       <AddProjectDialog
         open={adding}
+        finalFocus={addProjectTrigger}
         onOpenChange={setAdding}
         hosts={switcher.hostOptions}
         onSelect={switcher.selectProject}

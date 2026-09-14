@@ -1,4 +1,4 @@
-import { projectOpenCycleExecution, type IssueContract } from "@otomat/domain";
+import { projectOpenCycleExecution, type IssueSummary } from "@otomat/domain";
 import { createColumnHelper } from "@tanstack/react-table";
 import { IssueAssigneeCell } from "@web/components/issues/list/cells/assignee";
 import { IssueExecutionCell } from "@web/components/issues/list/cells/execution";
@@ -9,13 +9,16 @@ import { IssueUpdatedCell } from "@web/components/issues/list/cells/updated";
 import { issueShortId } from "@web/lib/ids";
 import { TABLE_FEATURES } from "@web/lib/table";
 
-const helper = createColumnHelper<typeof TABLE_FEATURES, IssueContract>();
+const helper = createColumnHelper<typeof TABLE_FEATURES, IssueSummary>();
 
 export const ISSUE_COLUMNS = helper.columns([
   helper.accessor(issueShortId, {
     id: "id",
     header: "ID",
-    meta: { headClassName: "w-22.5", cellClassName: "font-mono text-text-tertiary" },
+    meta: {
+      headClassName: "w-22.5",
+      cellClassName: "whitespace-nowrap font-mono text-text-tertiary",
+    },
   }),
   helper.accessor("title", {
     header: "Title",
@@ -23,6 +26,7 @@ export const ISSUE_COLUMNS = helper.columns([
     cell: IssueTitleCell,
   }),
   helper.accessor("status", {
+    id: "status",
     header: "Status",
     meta: { headClassName: "w-27.5" },
     cell: IssueStatusCell,
@@ -34,11 +38,13 @@ export const ISSUE_COLUMNS = helper.columns([
     cell: IssueExecutionCell,
   }),
   helper.accessor("source", {
+    id: "source",
     header: "Source",
     meta: { headClassName: "w-22.5", cellClassName: "text-text-secondary" },
     cell: IssueSourceCell,
   }),
   helper.accessor("source_assignee_name", {
+    id: "assignee",
     header: "Assignee",
     meta: { headClassName: "w-35" },
     cell: IssueAssigneeCell,

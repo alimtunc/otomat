@@ -28,7 +28,7 @@ export function ProjectSkillsSection() {
     <div>
       <SectionHeading
         title="Project · Skills"
-        description="Skills this repository ships, discovered in .agents/skills and .claude/skills. Only this project's agents may activate them, and only on a host where the repository exists."
+        description="Skills discovered on this host. Each entry keeps its source file."
       />
       <ProjectQueryBoundary query={projects}>{content}</ProjectQueryBoundary>
     </div>

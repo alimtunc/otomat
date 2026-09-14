@@ -61,6 +61,9 @@ export function hostKeys(host: ExecutionHostId) {
       [host, "workflow-presets", "project", projectId ?? null] as const,
     issues: [host, "issues"] as const,
     issuesList: (projectId?: string) => [host, "issues", "project", projectId ?? null] as const,
+    issueCatalog: (projectId?: string) => [host, "issues", "catalog", projectId ?? null] as const,
+    issueSearch: (projectId: string | undefined, query: string) =>
+      [host, "issues", "search", projectId ?? null, query] as const,
     issue: (id: string) => [host, "issues", id] as const,
     linearWriteback: (issueId: string) => [host, "linear", "writeback", issueId] as const,
     linearEditor: (issueId: string) => [host, "linear", "editor", issueId] as const,
@@ -69,6 +72,7 @@ export function hostKeys(host: ExecutionHostId) {
     usageDashboard: (filters: UsageFilters) => [host, "usage", filters] as const,
     runs: [host, "runs"] as const,
     runsList: (projectId?: string) => [host, "runs", "project", projectId ?? null] as const,
+    runCatalog: (projectId?: string) => [host, "runs", "catalog", projectId ?? null] as const,
     runsForIssue: (issueId: string) => [host, "runs", { issueId }] as const,
     run: (id: string) => [host, "run", id] as const,
     runEventWindow: (id: string) => [host, "run-events", id] as const,

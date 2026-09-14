@@ -1,4 +1,5 @@
 import type { CompletionEvidence } from "@otomat/domain";
+import { FOCUS_RING, Icon } from "@otomat/ui";
 
 import { evidenceHref } from "./evidence-href";
 
@@ -20,9 +21,9 @@ export function EvidenceLink({
       target={external ? "_blank" : undefined}
       rel={external ? "noreferrer" : undefined}
       aria-label={`Open ${evidence.source.replace("_", " ")} evidence`}
-      className="inline-flex h-5 items-center rounded-sm border border-border px-1.5 font-mono text-micro font-medium uppercase tracking-[0.04em] text-text-tertiary hover:border-border-strong hover:text-text-secondary"
+      className={`inline-flex h-6 items-center rounded-sm px-1 text-xs text-text-tertiary hover:bg-hover hover:text-text-secondary ${FOCUS_RING}`}
     >
-      {label ?? "Evidence"}
+      {label ?? <Icon name="file-text" size="xs" aria-hidden />}
     </a>
   );
 }

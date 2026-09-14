@@ -1,7 +1,23 @@
 import type { ExecutionHostId, RepositoryContract } from "@otomat/domain";
-import { Button, Chip, toast } from "@otomat/ui";
+import {
+  Button,
+  Chip,
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Icon,
+  IconButton,
+  toast,
+} from "@otomat/ui";
 import { useRemoveRepository } from "@web/components/settings/repositories/use-remove-repository";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export interface RepositoryRowProps {
   hostId: ExecutionHostId;
@@ -9,6 +25,7 @@ export interface RepositoryRowProps {
 }
 
 export function RepositoryRow({ hostId, repository }: RepositoryRowProps) {
+  const trigger = useRef<HTMLButtonElement>(null);
   const remove = useRemoveRepository();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,14 +42,47 @@ export function RepositoryRow({ hostId, repository }: RepositoryRowProps) {
         <span className="shrink-0 font-mono text-xs text-text-tertiary">
           {repository.default_branch}
         </span>
-        <Chip tone={repository.available ? "success" : "danger"}>
-          {repository.available ? "Available" : "Path unavailable"}
-        </Chip>
-        {confirming ? (
-          <div className="flex shrink-0 items-center gap-1">
+        {repository.available ? null : <Chip tone="danger">Path unavailable</Chip>}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            ref={trigger}
+            render={
+              <IconButton
+                size="sm"
+                label={`Actions for ${repository.name}`}
+                icon={<Icon name="more-horizontal" />}
+              />
+            }
+          />
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                setError(null);
+                setConfirming(true);
+              }}
+            >
+              Remove
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <Dialog open={confirming} onOpenChange={setConfirming}>
+        <DialogContent aria-label={`Remove ${repository.name}`} finalFocus={trigger}>
+          <DialogHeader>
+            <DialogTitle>Remove {repository.name}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <p className="text-sm text-text-secondary">
+              Deletes this repository’s Otomat record and runs on its host.
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
             <Button
               variant="destructive"
-              size="xs"
+              size="sm"
               loading={remove.isPending}
               onClick={() =>
                 remove.mutate(
@@ -49,23 +99,9 @@ export function RepositoryRow({ hostId, repository }: RepositoryRowProps) {
             >
               Delete repository and runs
             </Button>
-            <Button autoFocus variant="ghost" size="xs" onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={() => {
-              setError(null);
-              setConfirming(true);
-            }}
-          >
-            Remove
-          </Button>
-        )}
-      </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {error === null ? null : (
         <p role="alert" className="text-xs text-danger">
           {error}

@@ -30,13 +30,12 @@ export function RunFacts({ detail }: { detail: RunDetail }) {
         {detail.worktree_path === null ? (
           <span className="text-xs text-text-tertiary">Not recorded</span>
         ) : (
-          <CopyablePath value={detail.worktree_path} label="worktree path" />
+          <CopyablePath
+            value={detail.worktree_path}
+            displayValue={detail.worktree_path.split("/").at(-1)}
+            label="worktree path"
+          />
         )}
-      </Fact>
-      <Fact label="sessions">
-        <span className="font-mono text-xs tabular-nums text-text-secondary">
-          {detail.sessions.length}
-        </span>
       </Fact>
       <Fact label="tokens">
         {usage.data !== undefined ? (

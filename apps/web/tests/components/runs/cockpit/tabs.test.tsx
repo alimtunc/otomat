@@ -7,6 +7,7 @@ import { mount } from "#support/mount";
 
 interface LinkMockProps extends ComponentPropsWithoutRef<"a"> {
   to: string;
+  search?: (previous: { step?: string }) => { step?: string };
   params?: Record<string, string>;
   children?: ReactNode;
 }
@@ -19,8 +20,8 @@ vi.mock("@tanstack/react-router", () => ({
     queriedRoutes.push(opts.to);
     return opts.to === currentRoute;
   },
-  Link: ({ to, params: _params, children, ...rest }: LinkMockProps) => (
-    <a href={to} {...rest}>
+  Link: ({ to, params: _params, search, children, ...rest }: LinkMockProps) => (
+    <a href={to} data-step={search?.({ step: "review-step" }).step} {...rest}>
       {children}
     </a>
   ),
@@ -50,6 +51,7 @@ describe("CockpitTabs", () => {
     expect(container.querySelectorAll("button")).toHaveLength(0);
     for (const anchor of anchors) {
       expect(anchor.hasAttribute("type")).toBe(false);
+      expect(anchor.getAttribute("data-step")).toBe("review-step");
     }
 
     await cleanup();

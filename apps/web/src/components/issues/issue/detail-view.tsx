@@ -1,5 +1,8 @@
 import type { RunContract } from "@otomat/domain";
 import {
+  Icon,
+  IconButton,
+  cn,
   EmptyState,
   ErrorState,
   ResizablePanel,
@@ -10,12 +13,12 @@ import {
   usePanelGroupLayout,
   WIDE_VIEWPORT_MEDIA_QUERY,
 } from "@otomat/ui";
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { IssueHeader } from "@web/components/issues/issue/header";
-import { IssuePrimaryStateBadge } from "@web/components/issues/issue/primary-state-badge";
+import { CycleSummary } from "@web/components/issues/workspace/cycle-summary";
 import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
 import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
@@ -130,20 +133,39 @@ export function IssueDetailView() {
   const cycleRunId = issue.data?.workspace.run_id ?? followedRun?.id ?? null;
 
   const main = (
-    <div className="min-h-0 min-w-0 flex-1 overflow-auto px-8 py-6.5">
-      <div className="flex max-w-180 flex-col gap-6">
-        <IssueHeader query={issue} />
-        {issue.data?.source === "linear" ? (
-          <LinearCommentsSection issueId={issueId} runId={followedRun?.id ?? null} />
-        ) : null}
-        <RunsArea
-          query={runs}
-          launchAction={launchAction}
-          followedRun={followedRun}
-          onFollow={follow}
-          selectedStepId={selectedStepId ?? null}
-          onSelectStep={selectStep}
-        />
+    <div className={cn("min-w-0 px-4 py-6.5 sm:px-8", wide && "h-full overflow-auto")}>
+      <div className="flex max-w-180 flex-col gap-4">
+        <IssueHeader
+          query={issue}
+          hasRun={followedRun !== null}
+          comments={
+            issue.data?.source === "linear" ? (
+              <LinearCommentsSection
+                key={issueId}
+                issueId={issueId}
+                runId={followedRun?.id ?? null}
+              />
+            ) : null
+          }
+        >
+          {followedRun ? (
+            <CycleSummary run={followedRun} selectedStepId={selectedStepId ?? null} />
+          ) : null}
+        </IssueHeader>
+        <section
+          id="issue-conversations"
+          tabIndex={-1}
+          className={cn("flex min-w-0 flex-col", followedRun && "h-[max(40rem,75svh)] shrink-0")}
+        >
+          <RunsArea
+            query={runs}
+            launchAction={launchAction}
+            followedRun={followedRun}
+            onFollow={follow}
+            selectedStepId={selectedStepId ?? null}
+            onSelectStep={selectStep}
+          />
+        </section>
       </div>
     </div>
   );
@@ -166,7 +188,7 @@ export function IssueDetailView() {
       </SidePanel>
     </ResizablePanelGroup>
   ) : (
-    <div>
+    <div className="h-full">
       {main}
       {rail}
     </div>
@@ -180,9 +202,23 @@ export function IssueDetailView() {
         { label: "Issues", href: "/issues" },
         { label: idLabel, current: true },
       ]}
-      breadcrumbExtra={issue.data ? <IssuePrimaryStateBadge issue={issue.data} /> : null}
       actions={
         <>
+          {followedRun ? (
+            <IconButton
+              label="Open cockpit"
+              icon={<Icon name="monitor" aria-hidden />}
+              nativeButton={false}
+              role="link"
+              render={
+                <Link
+                  to="/runs/$runId"
+                  params={{ runId: followedRun.id }}
+                  search={{ step: selectedStepId }}
+                />
+              }
+            />
+          ) : null}
           {launchAction}
           {cycleRunId ? <RunActionsMenu runId={cycleRunId} /> : null}
         </>

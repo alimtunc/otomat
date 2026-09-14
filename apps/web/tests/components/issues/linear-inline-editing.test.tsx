@@ -1,6 +1,10 @@
 // @vitest-environment happy-dom
 import { DaemonRequestError } from "@otomat/client";
-import type { IssueContract, LinearIssueSnapshot } from "@otomat/domain";
+import {
+  CLOSED_ISSUE_WORKSPACE,
+  type IssueContract,
+  type LinearIssueSnapshot,
+} from "@otomat/domain";
 import { LinearIssueHeader } from "@web/components/issues/workspace/linear/header";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -32,6 +36,7 @@ const ISSUE: IssueContract = {
   body: "Body",
   status: "ready",
   execution: { state: "none", run_id: null },
+  workspace: CLOSED_ISSUE_WORKSPACE,
   source: "linear",
   source_external_id: "ext-1",
   source_identifier: "OTO-99",

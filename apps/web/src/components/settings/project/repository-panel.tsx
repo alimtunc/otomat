@@ -49,9 +49,7 @@ export function ProjectRepositoryPanel({ projectId }: { projectId: string }) {
                 <span className="shrink-0 font-mono text-xs text-text-tertiary">
                   {rows[0].default_branch}
                 </span>
-                <Chip tone={rows[0].available ? "success" : "danger"}>
-                  {rows[0].available ? "Available" : "Path unavailable"}
-                </Chip>
+                {rows[0].available ? null : <Chip tone="danger">Path unavailable</Chip>}
               </div>
               {rows[0].available ? null : (
                 <div className="flex flex-col gap-2">

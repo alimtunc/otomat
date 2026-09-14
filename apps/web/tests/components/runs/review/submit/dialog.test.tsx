@@ -189,7 +189,13 @@ it("takes a summary of whitespace alone for an empty one", async () => {
 
 it("refuses an empty submission from the first paint, not after a dead click", async () => {
   const mounted = await openDialog(APPROVABLE_DETAIL);
+  const error = document.getElementById(summary().getAttribute("aria-describedby") ?? "");
+  expect(error?.textContent).toContain("Write a summary or leave a comment");
 
   expect(findButton("Submit to GitHub")?.disabled).toBe(true);
+  await act(async () => summary().focus());
+  await act(async () => summary().blur());
+  expect(findButton("Submit to GitHub")?.disabled).toBe(true);
+  expect(document.body.textContent).toContain("Write a summary or leave a comment");
   await mounted.cleanup();
 });

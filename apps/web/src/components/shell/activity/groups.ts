@@ -42,5 +42,7 @@ export function groupActivities(activities: ActivityContract[]): ActivityGroup[]
 }
 
 export function countPendingActivities(activities: ActivityContract[]): number {
-  return activities.filter((activity) => activity.bucket !== "recent").length;
+  return activities.filter(
+    (activity) => activity.bucket === "running" || activity.bucket === "queued",
+  ).length;
 }

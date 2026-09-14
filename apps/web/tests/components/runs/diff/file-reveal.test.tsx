@@ -79,6 +79,7 @@ async function mountReviewer(children?: ReactNode, reviewedFiles: ReviewedFileCo
       <ReviewWorkbench
         target={{ kind: "pull_request", id: "pr-1" }}
         workspace={{ open: false, issueId: null }}
+        answered={{ kind: "pull_request", number: 1 }}
         diff={DIFF}
         review={reviewDetail(reviewedFiles)}
         notice={children ?? null}

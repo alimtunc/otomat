@@ -125,7 +125,7 @@ describe("RunConversationView responsive composition", () => {
   it("keeps the three-pane rails on wide viewports", async () => {
     wide = true;
     const { container, cleanup } = await renderView();
-    expect(container.textContent).toContain("Steps & sessions");
+    expect(container.textContent).toContain("Steps");
     expect(container.textContent).toContain("Run context");
     expect(container.querySelector('[class*="group/steps"]')).toBeNull();
     await cleanup();

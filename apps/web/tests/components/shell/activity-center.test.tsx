@@ -154,7 +154,8 @@ describe("ActivityCenter", () => {
 
     await openCenter();
 
-    expect(headings()).toEqual(["Running", "Needs attention"]);
+    expect(headings()).toEqual(["Running"]);
+    expect(document.body.textContent).toContain("1 need you → Inbox");
   });
 
   it("links a run to its cockpit and a publication to the pull-request panel", async () => {
@@ -178,56 +179,26 @@ describe("ActivityCenter", () => {
     expect(document.body.textContent?.match(/otomat-vps/g)).toHaveLength(1);
   });
 
-  it("shows the failure the daemon recorded on a stopped publication", async () => {
+  it("routes stopped publications to Inbox without duplicating their history", async () => {
     listActivity.mockResolvedValue(
       snapshot([publicationActivity({ bucket: "attention", operation: STOPPED_PUBLICATION })]),
     );
 
     await openCenter();
 
-    expect(document.body.textContent).toContain("The branch was rejected.");
-  });
-
-  it("gathers an issue's alerts under one entry, each action still its own row", async () => {
-    listActivity.mockResolvedValue(
-      snapshot([
-        runActivity({ bucket: "attention", status: "awaiting_human", phase: "Implement" }),
-        publicationActivity({ bucket: "attention", operation: STOPPED_PUBLICATION }),
-        runActivity({
-          bucket: "attention",
-          status: "failed",
-          run_id: "run-2",
-          id: "run:run-2",
-          issue: { id: "i2", identifier: "ABC-2", title: "Ship more" },
-        }),
-      ]),
-    );
-
-    await openCenter();
-
-    expect(
-      [...document.body.querySelectorAll("section > ul > li")].map(
-        (entry) => entry.querySelectorAll("a").length,
-      ),
-    ).toEqual([2, 1]);
-    expect(
-      [...document.body.querySelectorAll("a")].map((link) => link.getAttribute("href")),
-    ).toEqual(["/runs/run-1", "/runs/run-1/pr", "/runs/run-2"]);
-    expect(trigger().getAttribute("aria-label")).toBe("Activity — 3 in progress");
+    expect(document.querySelector('a[href="/inbox"]')?.textContent).toBe("1 need you → Inbox");
+    expect(document.body.textContent).not.toContain("Recently completed");
   });
 
   it("names its issue on every link, since the entry writes it only once", async () => {
-    listActivity.mockResolvedValue(
-      snapshot([
-        runActivity({ bucket: "attention", status: "awaiting_human", phase: "Implement" }),
-        publicationActivity({ bucket: "attention", operation: STOPPED_PUBLICATION }),
-      ]),
-    );
+    listActivity.mockResolvedValue(snapshot([runActivity(), publicationActivity()]));
 
     await openCenter();
 
     expect(
-      [...document.body.querySelectorAll("a")].map((link) => link.textContent?.includes("ABC-1")),
+      [...document.body.querySelectorAll('a[href^="/runs/"]')].map((link) =>
+        link.textContent?.includes("ABC-1"),
+      ),
     ).toEqual([true, true]);
   });
 

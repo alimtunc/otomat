@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
-import { act } from "react";
+import { act, useRef, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { fakeDesktopBridge } from "#support/desktop-bridge";
@@ -146,4 +146,46 @@ it("refuses an empty path before calling any host", async () => {
 
   expect(registerProject).not.toHaveBeenCalled();
   expect(document.body.textContent).toContain("Enter the repository's absolute path");
+});
+
+function AddProjectFocusProbe() {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <button ref={trigger} onClick={() => setOpen(true)}>
+        Open project form
+      </button>
+      <AddProjectDialog
+        open={open}
+        onOpenChange={setOpen}
+        hosts={TWO_HOSTS}
+        onSelect={() => undefined}
+        finalFocus={trigger}
+      />
+    </>
+  );
+}
+
+it.each(["Cancel", "Escape"])("restores the Add project trigger after %s", async (action) => {
+  window.otomat = fakeDesktopBridge();
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const mounted = await mount(
+    <QueryClientProvider client={client}>
+      <AddProjectFocusProbe />
+    </QueryClientProvider>,
+  );
+  cleanups.push(mounted.cleanup);
+  const trigger = findButton("Open project form");
+  await act(async () => {
+    trigger?.focus();
+    trigger?.click();
+  });
+  expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  await act(async () => {
+    if (action === "Cancel") findButton("Cancel")?.click();
+    else document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
+  expect(document.activeElement).toBe(trigger);
 });

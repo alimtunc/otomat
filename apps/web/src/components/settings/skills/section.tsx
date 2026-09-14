@@ -8,7 +8,7 @@ export function SkillsSection() {
     <div>
       <SectionHeading
         title="Skills"
-        description="Your own skills, discovered in ~/.claude/skills; never executed by Otomat. Every agent may activate them. A repository's own skills live under Project · Skills."
+        description="Skills discovered on this host. Each entry keeps its source file."
       />
       <SkillCatalogPanel
         owner={null}

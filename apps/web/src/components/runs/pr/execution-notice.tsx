@@ -1,3 +1,4 @@
+import { Button, Collapsible, CollapsiblePanel, CollapsibleTrigger } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useRunCompletionReport } from "@web/api/runs/queries";
 import { executionFailure } from "@web/lib/run/execution-failure";
@@ -9,7 +10,7 @@ const OUTCOME_LABELS = {
 } as const;
 
 const UNREADABLE_OUTCOME =
-  "The run's execution outcome could not be read, so this page cannot vouch for it. Publishing stays available.";
+  "The run’s execution outcome could not be read. Open the logs to inspect the recorded activity.";
 
 export function PullRequestExecutionNotice({ runId }: { runId: string }) {
   const report = useRunCompletionReport(runId);
@@ -25,23 +26,25 @@ export function PullRequestExecutionNotice({ runId }: { runId: string }) {
         ].filter((line) => line !== "");
 
   return (
-    <section
-      role="status"
-      className="flex flex-col gap-1.5 rounded-lg border border-warning/40 bg-warning-bg p-3 text-sm"
-    >
-      <p className="font-medium">
-        {failure === null
-          ? UNREADABLE_OUTCOME
-          : `${OUTCOME_LABELS[failure.outcome]} You can still publish what its workspace holds.`}
-      </p>
-      {details.map((line) => (
-        <p key={line} className="text-text-secondary">
-          {line}
+    <Collapsible>
+      <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
+        Run diagnostics · {failure?.outcome ?? "unavailable"}
+        {report.data ? ` · ${report.data.report.errors.length} recorded errors` : ""}
+      </CollapsibleTrigger>
+      <CollapsiblePanel className="flex flex-col gap-1.5 rounded-lg border border-warning/40 bg-warning-bg p-3 text-sm">
+        <p className="font-medium">
+          {failure === null ? UNREADABLE_OUTCOME : OUTCOME_LABELS[failure.outcome]}
         </p>
-      ))}
-      <Link to="/runs/$runId/logs" params={{ runId }} className="self-start text-xs underline">
-        Open the run logs
-      </Link>
-    </section>
+        {details.map((line) => (
+          <p key={line} className="text-text-secondary">
+            {line}
+          </p>
+        ))}
+        <Link to="/runs/$runId/logs" params={{ runId }} className="self-start text-xs underline">
+          Open the run logs
+        </Link>
+      </CollapsiblePanel>
+      {unreadable ? <p className="text-xs text-warning">{UNREADABLE_OUTCOME}</p> : null}
+    </Collapsible>
   );
 }

@@ -120,8 +120,8 @@ describe("PullRequestForm", () => {
   it("keeps the advanced inputs out of the compact form", () => {
     const { view } = render();
 
-    expect(view.querySelector("textarea")).toBeNull();
-    expect(view.querySelector("input")).toBeNull();
+    expect(view.querySelector("textarea")?.closest("[hidden]")).not.toBeNull();
+    expect(view.querySelector("input")?.closest("[hidden]")).not.toBeNull();
     expect(view.textContent).toContain("Customize PR");
     expect(view.textContent).toContain("Create PR with AI");
   });

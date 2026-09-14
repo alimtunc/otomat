@@ -14,3 +14,4 @@ export * from "./usage-dashboard.js";
 export * from "./usage-figures.js";
 export * from "./usage.js";
 export * from "./workspace-inventory.js";
+export * from "./search.js";

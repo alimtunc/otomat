@@ -18,7 +18,7 @@ export function CardsSection() {
                 value: (
                   <span className="inline-flex items-center gap-1.25 font-mono text-sm">
                     {CARD_RUN.branch}
-                    <CopyButton value={CARD_RUN.branch} />
+                    <CopyButton value={CARD_RUN.branch} label="Copy branch name" />
                   </span>
                 ),
               },

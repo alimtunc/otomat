@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { IssueContract, ProjectContract } from "@otomat/domain";
+import { searchIssues, type IssueContract, type ProjectContract } from "@otomat/domain";
 import { ThemeProvider } from "@otomat/ui";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
@@ -25,9 +25,16 @@ vi.mock("@web/components/shell/project-selection/use-selected", () => ({
 }));
 
 vi.mock("@web/api/issues/queries", () => ({
-  useProjectIssues: (id: string | undefined) => {
+  useIssueSearch: (id: string | undefined, query: string) => {
     seenProjectIds.push(id);
-    return issues;
+    const matches = searchIssues(issues.data ?? [], query);
+    return {
+      ...issues,
+      data:
+        issues.data === undefined
+          ? undefined
+          : { issues: matches.slice(0, 20), total: matches.length },
+    };
   },
 }));
 
@@ -62,8 +69,8 @@ function issuesQuery(state: Partial<IssuesQuery>): IssuesQuery {
 
 const RETRY = issue("OTO-42", "Retry queue drain", "The webhook receiver drops retries.");
 
-function PaletteProbe({ search }: { search: string }) {
-  const groups = usePaletteGroups({ search, onNewIssue: () => undefined });
+function PaletteProbe({ search, open = true }: { search: string; open?: boolean }) {
+  const groups = usePaletteGroups({ search, open, onNewIssue: () => undefined });
   return (
     <div>
       {groups.map((group) => (
@@ -113,6 +120,20 @@ it("finds a loaded issue by its identifier, whatever the case typed", async () =
   expect(document.body.textContent).not.toContain("Rotate tokens");
 });
 
+it("does not request the project’s issue list while the palette is closed", async () => {
+  rendered = await mount(
+    <ThemeProvider>
+      <PaletteProbe search="" open={false} />
+    </ThemeProvider>,
+  );
+
+  expect(seenProjectIds.length).toBeGreaterThan(0);
+  expect(seenProjectIds.every((id) => id === undefined)).toBe(true);
+
+  await renderPalette("");
+  expect(seenProjectIds.at(-1)).toBe("p-otomat");
+});
+
 it("finds a loaded issue by a term of its title and of its description", async () => {
   issues = issuesQuery({ data: [RETRY] });
 
@@ -128,7 +149,7 @@ it("says a term is missing from the loaded issues rather than that none exist", 
 
   await renderPalette("kubernetes");
 
-  expect(document.body.textContent).toContain("No loaded issue in otomat matches “kubernetes”.");
+  expect(document.body.textContent).toContain("No issue in otomat matches “kubernetes”.");
 });
 
 it("keeps cached results and flags them as stale when the refresh fails", async () => {

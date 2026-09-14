@@ -39,8 +39,8 @@ it("states the figures a run reported and the ones it did not", async () => {
 
   expect(view.container.textContent).toContain("1.2k in");
   expect(view.container.textContent).toContain("codex · Model not reported");
-  expect(view.container.textContent).toContain("Not measured");
-  expect(view.container.textContent).toContain("Not reported");
+  expect(view.container.querySelector('[aria-label="Not measured"]')?.textContent).toBe("—");
+  expect(view.container.querySelector('[aria-label="Not reported"]')?.textContent).toBe("—");
 });
 
 it("says how many runs the page left out instead of implying it holds them all", async () => {

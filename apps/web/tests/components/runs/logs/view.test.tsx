@@ -18,6 +18,7 @@ let streamEvents: EventEnvelope[] = [];
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ runId: "run-1" }),
+  useRouterState: () => "",
 }));
 
 const detail: RunDetail = {
@@ -74,7 +75,7 @@ describe("RunLogsView", () => {
     streamEvents = [];
     const { container, cleanup } = await renderView();
     expect(container.textContent).toContain("claude");
-    expect(container.textContent).toContain("prov-123");
+    expect(container.querySelector('button[aria-label="Copy provider session id"]')).not.toBeNull();
     expect(container.textContent).toContain("Waiting to start");
     await cleanup();
   });
@@ -96,7 +97,15 @@ describe("RunLogsView", () => {
     expect(list).not.toBeNull();
     expect(list?.textContent).toContain("hello");
     expect(list?.textContent).toContain("tool · Bash");
-    expect(list?.textContent).toContain("seq 3");
+    expect(list?.textContent).toContain("#3");
+    expect(container.querySelector('button[value="permission"]')).toBeNull();
+    const row = container.querySelector<HTMLElement>("#event-2 button");
+    expect(row?.getAttribute("aria-expanded")).toBe("false");
+    await act(async () => {
+      row?.click();
+    });
+    expect(row?.getAttribute("aria-expanded")).toBe("true");
+    expect(container.querySelector("#event-2")?.textContent).toContain("payload");
 
     const errorPill = [...container.querySelectorAll("button")].find((button) =>
       button.textContent?.startsWith("Errors"),
@@ -145,10 +154,14 @@ it("separates requested Codex permissions from unreported effective permissions"
   const { container, cleanup } = await mount(
     <SessionRow session={session} stepName="Implement" worktreePath="/work" />,
   );
-  expect(container.textContent).toContain(
-    "Requested permissions: sandbox danger-full-access · approval never",
-  );
-  expect(container.textContent).toContain("Effective permissions: not reported");
+  expect(container.textContent).toContain("Effective permissions unreported");
+  await act(async () => {
+    [...container.querySelectorAll("button")]
+      .find((button) => button.textContent === "Permission details")
+      ?.click();
+  });
+  expect(document.body.textContent).toContain("danger-full-access");
+  expect(document.body.textContent).toContain("never");
   expect(container.textContent).toContain("External resume loads its own configuration");
   expect(container.querySelector('button[aria-label="Copy Codex resume command"]')).not.toBeNull();
   await cleanup();

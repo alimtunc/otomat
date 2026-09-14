@@ -1,22 +1,20 @@
 import type { RunDetail } from "@otomat/domain";
-import { Badge, Button, Icon } from "@otomat/ui";
+import {
+  Badge,
+  Button,
+  Icon,
+  IconButton,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  StepStatusChip,
+} from "@otomat/ui";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { useStopRunStep } from "@web/api/runs/step-mutations";
 import { CodexPermissions } from "@web/components/runs/conversation/codex-permissions";
 import { NextTurnModelDialog } from "@web/components/runs/conversation/next-turn/dialog";
 import { agentLabel, modelLabel } from "@web/lib/execution/labels";
 import { stepParticipant } from "@web/lib/run/participant";
-
-function participantState(status: RunDetail["steps"][number]["status"]): string {
-  if (status === "starting" || status === "running" || status === "awaiting_permission") {
-    return "active";
-  }
-  if (status === "queued" || status === "waiting_for_provider" || status === "awaiting_human") {
-    return "waiting";
-  }
-  if (status === "succeeded") return "finished";
-  return "not resumable";
-}
 
 export function ConversationHeader({
   detail,
@@ -59,8 +57,8 @@ export function ConversationHeader({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-4 py-2">
-      <Badge variant="default">{participantState(step.status)}</Badge>
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-subtle px-4 py-2 [overflow-wrap:anywhere]">
+      <StepStatusChip status={step.status} />
       <span className="text-xs font-medium text-foreground">
         {agentLabel(current)} · {runtime?.display_name ?? current.runtime}
       </span>
@@ -73,7 +71,7 @@ export function ConversationHeader({
       </span>
       {diverged ? (
         <span className="text-xs text-warning" title="The provider reported a different model.">
-          Requested: {requestedModel} · Reported: {reportedModel}
+          Model differs from request
         </span>
       ) : null}
       {pending === null ? null : (
@@ -93,23 +91,43 @@ export function ConversationHeader({
           Stop step
         </Button>
       ) : null}
-      {capability?.status === "supported" && session?.provider_session_id ? (
-        <NextTurnModelDialog
-          className={live ? undefined : "ml-auto"}
-          key={pending?.config_hash ?? current.config_hash}
-          runId={detail.run.id}
-          stepId={stepRunId}
-          sessionId={session.id}
-          config={pending ?? session.config ?? current}
+      <Popover>
+        <PopoverTrigger
+          render={
+            <IconButton
+              label="Session details"
+              icon={<Icon name="info" aria-hidden />}
+              className={live ? undefined : "ml-auto"}
+            />
+          }
         />
-      ) : (
-        <span
-          className={live ? "text-xs text-text-tertiary" : "ml-auto text-xs text-text-tertiary"}
-          title={fallback.title}
+        <PopoverContent
+          align="end"
+          className="flex max-w-96 flex-col gap-3 p-3 text-xs text-text-secondary"
         >
-          {fallback.label}
-        </span>
-      )}
+          <p>
+            Requested: {requestedModel} · Reported: {reportedModel ?? "not reported"}
+          </p>
+          <p>
+            Requested by {current.sources?.model ?? "step"}
+            {effort ? ` · effort ${effort}` : ""}
+          </p>
+          {capability?.status === "supported" && session?.provider_session_id ? (
+            <NextTurnModelDialog
+              key={pending?.config_hash ?? current.config_hash}
+              runId={detail.run.id}
+              stepId={stepRunId}
+              sessionId={session.id}
+              config={pending ?? session.config ?? current}
+            />
+          ) : (
+            <div>
+              <p>{fallback.label}</p>
+              <p className="mt-1 text-text-tertiary">{fallback.title}</p>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
       {current.runtime === "codex" ? (
         <div className="basis-full">
           <CodexPermissions options={current.options} />

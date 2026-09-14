@@ -1,9 +1,9 @@
-import type { RunContract } from "@otomat/domain";
+import type { RunSummary } from "@otomat/domain";
 import { FOCUS_RING_INSET } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import type { TableCellProps } from "@web/lib/table";
 
-export function RunIdCell({ row, getValue }: TableCellProps<RunContract, string>) {
+export function RunIdCell({ row, getValue }: TableCellProps<RunSummary, string>) {
   return (
     <Link
       to="/runs/$runId"

@@ -10,8 +10,8 @@ export interface PullRequestModeFieldProps {
 
 export function PullRequestModeField({ value, disabled, onChange }: PullRequestModeFieldProps) {
   return (
-    <Field hint="Ready opens the pull request for review. Otomat never merges it, and the repository's branch protections still apply.">
-      <FieldLabel>Publication</FieldLabel>
+    <Field>
+      <FieldLabel>Mode</FieldLabel>
       <SegmentedControl
         type="single"
         value={value}

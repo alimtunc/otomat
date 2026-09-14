@@ -6,6 +6,7 @@ import {
   DropdownMenuSeparator,
   Icon,
 } from "@otomat/ui";
+import { MultiSelect } from "@web/components/config-menu/multi-select";
 import { Select } from "@web/components/config-menu/select";
 import { IssueFilterSubmenus } from "@web/components/issues/view-options/filter-submenus";
 import { IssueLinearFilters } from "@web/components/issues/view-options/linear-filters";
@@ -65,6 +66,16 @@ export function IssueViewOptionsMenu({
           items={ISSUE_SORT_OPTIONS}
           value={config.sort}
           onChange={(sort) => onChange({ sort })}
+        />
+        <MultiSelect
+          label="Optional columns"
+          emptyLabel="Hidden"
+          items={[
+            { value: "source", label: "Source" },
+            { value: "assignee", label: "Assignee" },
+          ]}
+          selected={config.columns ?? []}
+          onChange={(columns) => onChange({ columns })}
         />
         <DropdownMenuSeparator />
         <IssueFilterSubmenus

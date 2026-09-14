@@ -1,38 +1,28 @@
 import type { ExecutionHostId } from "@otomat/domain";
-import { Button, Icon, Tooltip, TooltipContent, TooltipTrigger } from "@otomat/ui";
+import { Button, Icon } from "@otomat/ui";
 import { useReconcileWorkspaces } from "@web/api/workspaces/mutations";
-import { useId } from "react";
-
-const EFFECT =
-  "Reads only: it re-reads this host's pull requests and git worktree list, refreshes every workspace state, and drops git registrations whose directory is gone. Nothing on disk is deleted, except a clean worktree whose pull request is merged while automatic deletion is on.";
-
-export function ReconcileWorkspacesButton({ hostId }: { hostId: ExecutionHostId }) {
+export function ReconcileWorkspacesButton({
+  hostId,
+  descriptionId,
+}: {
+  hostId: ExecutionHostId;
+  descriptionId: string;
+}) {
   const reconcile = useReconcileWorkspaces();
-  const effectId = useId();
   const report = reconcile.data;
   return (
     <div className="relative flex min-w-0 flex-col items-end gap-1">
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant="outline"
-              size="sm"
-              aria-describedby={effectId}
-              loading={reconcile.isPending}
-              disabled={reconcile.isPending}
-              onClick={() => reconcile.mutate(hostId)}
-            >
-              <Icon name="refresh-cw" aria-hidden />
-              Reconcile worktrees
-            </Button>
-          }
-        />
-        <TooltipContent className="max-w-80 whitespace-normal">{EFFECT}</TooltipContent>
-      </Tooltip>
-      <span id={effectId} className="sr-only">
-        {EFFECT}
-      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-describedby={descriptionId}
+        loading={reconcile.isPending}
+        disabled={reconcile.isPending}
+        onClick={() => reconcile.mutate(hostId)}
+      >
+        <Icon name="refresh-cw" aria-hidden />
+        Reconcile worktrees
+      </Button>
       {reconcile.isError ? (
         <span role="alert" className="text-xs text-danger">
           Reconciliation failed — is this host's daemon running?

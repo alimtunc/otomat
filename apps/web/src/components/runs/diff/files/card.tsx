@@ -104,7 +104,6 @@ export function DiffFileCard({
         onCollapsedChange={onCollapsedChange}
         fullFile={fullFile}
         onFullFileChange={expandable ? changeFullFile : null}
-        onCommentFile={commentOnFile}
       />
       {blobs.error === null ? null : (
         <p className={cn(NOTICE_CLASS, "text-danger")}>
@@ -127,6 +126,11 @@ export function DiffFileCard({
             <ReviewCommentCard key={comment.id} target={target} comment={comment} />
           ))}
         </div>
+      )}
+      {expandable ? null : (
+        <Button size="xs" variant="ghost" onClick={commentOnFile}>
+          Comment on file
+        </Button>
       )}
       {composing ? (
         <ReviewCommentComposer
