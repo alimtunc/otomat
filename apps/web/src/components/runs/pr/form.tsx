@@ -1,4 +1,4 @@
-import { COMMIT_SUBJECT_MAX_LENGTH, formatCommitSubject } from "@otomat/domain";
+import { COMMIT_SUBJECT_MAX_LENGTH } from "@otomat/domain";
 import type {
   OperationContract,
   PublishPullRequestRequest,
@@ -25,6 +25,7 @@ import { PullRequestSubjectFields } from "@web/components/runs/pr/subject-fields
 import { PullRequestSummary } from "@web/components/runs/pr/summary";
 import { usePullRequestForm } from "@web/components/runs/pr/use-form";
 
+import { firstDraftError, metadataDirty, subjectLength } from "./draft-state";
 import { generationBlocked, isPublished, publicationModel } from "./publication-model";
 
 export interface PullRequestFormProps {
@@ -96,22 +97,7 @@ export function PullRequestForm({
       >
         {([canSubmit, isDirty, values, errors, fieldMeta]) => {
           const { mode, summary } = values;
-          const metadataDirty =
-            fieldMeta.type?.isDirty ||
-            fieldMeta.scope?.isDirty ||
-            fieldMeta.summary?.isDirty ||
-            fieldMeta.body?.isDirty ||
-            fieldMeta.branch?.isDirty;
-          const draftError =
-            Object.values(fieldMeta)
-              .flatMap((meta) => meta?.errors ?? [])
-              .find((error) => typeof error === "string") ??
-            errors.find((error) => typeof error === "string");
-          const subjectLength = formatCommitSubject({
-            type: values.type,
-            scope: values.scope.trim() || null,
-            summary,
-          }).length;
+          const draftError = firstDraftError(fieldMeta, errors);
           const blocked = generationBlocked(publishability);
           const model = publicationModel({
             pullRequest,
@@ -126,7 +112,10 @@ export function PullRequestForm({
           const showDetails = customize || refusal !== null;
           // Metadata already written is republished as it stands: a retry never pays the generator twice.
           const composeWithAi =
-            !branchLocked && !showDetails && !metadataDirty && pullRequest?.commit_subject == null;
+            !branchLocked &&
+            !showDetails &&
+            !metadataDirty(fieldMeta) &&
+            pullRequest?.commit_subject == null;
           return (
             <>
               <PullRequestSummary
@@ -176,8 +165,8 @@ export function PullRequestForm({
                       {showDetails ? "Hide PR details" : "Customize PR"}
                       {draftError ? (
                         <Chip tone="warning">
-                          {subjectLength > COMMIT_SUBJECT_MAX_LENGTH
-                            ? `Subject ${subjectLength} / ${COMMIT_SUBJECT_MAX_LENGTH} — shorten`
+                          {subjectLength(values) > COMMIT_SUBJECT_MAX_LENGTH
+                            ? `Subject ${subjectLength(values)} / ${COMMIT_SUBJECT_MAX_LENGTH} — shorten`
                             : draftError}
                         </Chip>
                       ) : null}

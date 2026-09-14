@@ -3,6 +3,7 @@ import {
   Collapsible,
   CollapsiblePanel,
   CollapsibleTrigger,
+  EventTime,
   FOCUS_RING_INSET,
   Icon,
 } from "@otomat/ui";
@@ -21,12 +22,7 @@ export function LogRow({ event }: { event: EventEnvelope }) {
       <CollapsibleTrigger
         className={`flex w-full min-w-0 items-center gap-2 px-3.5 py-1.5 text-left text-xs hover:bg-hover ${FOCUS_RING_INSET}`}
       >
-        <time
-          dateTime={event.occurred_at}
-          className="shrink-0 font-mono tabular-nums text-text-tertiary"
-        >
-          {new Date(event.occurred_at).toLocaleTimeString(undefined, { hour12: false })}
-        </time>
+        <EventTime at={event.occurred_at} className="shrink-0 pt-0 text-xs" />
         <Icon
           name={error ? "alert-triangle" : "chevron-right"}
           size="xs"

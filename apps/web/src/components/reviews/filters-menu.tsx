@@ -6,7 +6,6 @@ import {
   DropdownMenuSeparator,
   Icon,
 } from "@otomat/ui";
-import type { PullRequestInboxSyncState } from "@web/api/reviews/use-inbox-sync";
 import { MultiSelect } from "@web/components/config-menu/multi-select";
 import { Select } from "@web/components/config-menu/select";
 import {
@@ -21,13 +20,12 @@ import type { InboxFilterOptions } from "@web/lib/pull-request/inbox/options";
 const MENU_LABEL = "Filters";
 
 export interface ReviewInboxFiltersProps {
-  sync: PullRequestInboxSyncState;
   filters: InboxFilters;
   options: InboxFilterOptions;
   onChange: (filters: InboxFilters) => void;
 }
 
-export function ReviewInboxFilters({ filters, options, onChange, sync }: ReviewInboxFiltersProps) {
+export function ReviewInboxFilters({ filters, options, onChange }: ReviewInboxFiltersProps) {
   const active = activeInboxFilterCount(filters);
 
   return (
@@ -38,13 +36,6 @@ export function ReviewInboxFilters({ filters, options, onChange, sync }: ReviewI
         leading={<Icon name="sliders-horizontal" aria-hidden className="shrink-0" />}
       />
       <ConfigMenuContent aria-label={MENU_LABEL}>
-        <DropdownMenuItem
-          disabled={sync.running || sync.repositories === 0 || sync.repositories === null}
-          onClick={sync.refresh}
-        >
-          {sync.running ? "Syncing…" : "Sync now"}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
         <MultiSelect
           label="Repository"
           emptyLabel="All"

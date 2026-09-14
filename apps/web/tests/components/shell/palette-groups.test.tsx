@@ -18,7 +18,11 @@ let projects: ProjectContract[];
 let issues: IssuesQuery;
 const seenProjectIds: (string | undefined)[] = [];
 
-vi.mock("@tanstack/react-router", () => ({ useNavigate: () => () => undefined }));
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => () => undefined,
+  useParams: () => ({}),
+  useSearch: () => ({}),
+}));
 
 vi.mock("@web/components/shell/project-selection/use-selected", () => ({
   useSelectedProject: () => ({ projectId, projects: { data: projects } }),

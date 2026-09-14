@@ -1,25 +1,10 @@
 import type { EventSource, EventType } from "@otomat/domain/types";
-import { format } from "date-fns";
 import type { ComponentPropsWithoutRef, KeyboardEvent, ReactNode } from "react";
 
-import { toDate } from "../lib/date";
 import { EVENT_GLYPH, PROVENANCE_LABEL, PROVENANCE_VAR } from "../lib/provenance";
 import { TONE_BG, TONE_TEXT } from "../lib/tone";
 import { cn } from "../lib/utils";
-
-function EventTime({ at }: { at: Date | string | number }) {
-  const resolved = toDate(at);
-  const valid = !Number.isNaN(resolved.getTime());
-  return (
-    <time
-      dateTime={valid ? resolved.toISOString() : undefined}
-      title={valid ? format(resolved, "PPpp") : undefined}
-      className="cursor-default pt-0.5 font-mono text-micro tabular-nums text-text-tertiary"
-    >
-      {valid ? format(resolved, "HH:mm:ss") : "—"}
-    </time>
-  );
-}
+import { EventTime } from "./event-time";
 
 export interface TimelineEventRowProps {
   id?: string;

@@ -32,7 +32,6 @@ export function ReviewsView() {
       actions={
         <div className="flex items-center gap-2">
           <ReviewInboxFilters
-            sync={sync}
             filters={view.config.filters}
             options={inboxFilterOptions(inbox.data?.entries ?? [])}
             onChange={view.setFilters}

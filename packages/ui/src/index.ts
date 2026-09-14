@@ -271,6 +271,7 @@ export {
   type PresetStatusChipProps,
 } from "./components/status-chips";
 
+export { EventTime, type EventTimeProps } from "./components/event-time";
 export { TimelineEventRow, type TimelineEventRowProps } from "./components/timeline-event-row";
 
 export { Toaster, type ToasterProps } from "./components/toaster";

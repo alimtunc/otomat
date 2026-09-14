@@ -1,13 +1,8 @@
 import { useTheme, type CommandPaletteCommand, type CommandPaletteGroup } from "@otomat/ui";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { INBOX_NAV, SETTINGS_NAV, WORKSPACE_NAV } from "@web/components/shell/nav-items";
-import {
-  readPaletteVisits,
-  recordPaletteVisit,
-  type PaletteVisit,
-} from "@web/components/shell/palette/history";
+import { readPaletteVisits } from "@web/components/shell/palette/history";
 import { usePaletteIssueGroup } from "@web/components/shell/palette/use-issue-group";
-import { useEffect } from "react";
 
 const NAVIGATE = [...WORKSPACE_NAV, INBOX_NAV, SETTINGS_NAV];
 
@@ -21,7 +16,7 @@ function matching(commands: CommandPaletteCommand[], search: string): CommandPal
 export interface UsePaletteGroupsOptions {
   search: string;
   open: boolean;
-  context?: PaletteVisit & { scope: string };
+  scope?: string;
   onNewIssue: () => void;
 }
 
@@ -29,23 +24,13 @@ export function usePaletteGroups({
   search,
   open,
   onNewIssue,
-  context,
+  scope,
 }: UsePaletteGroupsOptions): CommandPaletteGroup[] {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const issuesGroup = usePaletteIssueGroup(search, open);
-  const scope = context?.scope;
-  const href = context?.href;
-  const label = context?.label;
-  // otomat-allow-effect: record visited routes for the palette after navigation commits.
-  useEffect(() => {
-    if (scope !== undefined && href !== undefined && label !== undefined)
-      recordPaletteVisit(scope, { href, label });
-  }, [scope, href, label]);
-  const run = href?.match(/^\/runs\/([^/?#]+)/);
-  const runId = run?.[1];
-  const step =
-    href === undefined ? null : new URL(href, "http://otomat.local").searchParams.get("step");
+  const { runId } = useParams({ strict: false });
+  const { step } = useSearch({ strict: false });
   const contextCommands: CommandPaletteCommand[] =
     runId === undefined
       ? []
@@ -55,22 +40,14 @@ export function usePaletteGroups({
             label: "Follow selected step",
             icon: "message-square",
             onSelect: () =>
-              void navigate({
-                to: "/runs/$runId",
-                params: { runId },
-                search: { step: step ?? undefined },
-              }),
+              void navigate({ to: "/runs/$runId", params: { runId }, search: { step } }),
           },
           {
             id: "context-diff",
             label: "Open this run’s diff",
             icon: "git-compare",
             onSelect: () =>
-              void navigate({
-                to: "/runs/$runId/diff",
-                params: { runId },
-                search: { step: step ?? undefined },
-              }),
+              void navigate({ to: "/runs/$runId/diff", params: { runId }, search: { step } }),
           },
         ];
   const recent: CommandPaletteGroup = {
