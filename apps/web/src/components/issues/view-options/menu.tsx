@@ -15,7 +15,7 @@ import type { IssueFilterOptions } from "@web/lib/issue/filter-options";
 import { activeAdvancedFilterCount, NO_ADVANCED_FILTERS } from "@web/lib/issue/filters";
 import { ISSUE_GROUPING_OPTIONS } from "@web/lib/issue/grouping";
 import { ISSUE_SORT_OPTIONS } from "@web/lib/issue/sort";
-import type { IssuesViewConfig } from "@web/lib/issue/view-config";
+import { ISSUE_OPTIONAL_COLUMN_OPTIONS, type IssuesViewConfig } from "@web/lib/issue/view-config";
 
 const MENU_LABEL = "View options";
 
@@ -70,10 +70,7 @@ export function IssueViewOptionsMenu({
         <MultiSelect
           label="Optional columns"
           emptyLabel="Hidden"
-          items={[
-            { value: "source", label: "Source" },
-            { value: "assignee", label: "Assignee" },
-          ]}
+          items={ISSUE_OPTIONAL_COLUMN_OPTIONS}
           selected={config.columns ?? []}
           onChange={(columns) => onChange({ columns })}
         />

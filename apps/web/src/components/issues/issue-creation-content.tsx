@@ -6,7 +6,7 @@ import { ManualIssueForm } from "@web/components/issues/manual-issue-form";
 import { WorkflowLaunchForm } from "@web/components/issues/workflow/form";
 import { LaunchTargetGate } from "@web/components/runs/launch/launch-target-gate";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 export interface IssueCreationContentProps {
   onOpenChange: (open: boolean) => void;
@@ -23,6 +23,14 @@ type NewIssueMode = (typeof NEW_ISSUE_MODES)[number]["value"];
 
 function isNewIssueMode(value: string): value is NewIssueMode {
   return NEW_ISSUE_MODES.some((mode) => mode.value === value);
+}
+
+function ModePanel({ active, children }: { active: boolean; children: ReactNode }) {
+  return (
+    <div hidden={!active} inert={!active} className="flex min-h-0 flex-1 flex-col">
+      {children}
+    </div>
+  );
 }
 
 export function IssueCreationContent({
@@ -80,19 +88,11 @@ export function IssueCreationContent({
           </SegmentedControl>
         </div>
       </DialogHeader>
-      <div
-        hidden={mode === "manual"}
-        inert={mode === "manual"}
-        className={mode === "manual" ? "hidden" : "flex min-h-0 flex-1 flex-col"}
-      >
+      <ModePanel active={mode !== "manual"}>
         <LaunchTargetGate projectId={projectId}>
           {(target) => (
             <>
-              <div
-                hidden={mode !== "agent"}
-                inert={mode !== "agent"}
-                className={mode === "agent" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
-              >
+              <ModePanel active={mode === "agent"}>
                 <AgentIssueForm
                   target={target}
                   execution={execution}
@@ -101,12 +101,8 @@ export function IssueCreationContent({
                   onCancel={close}
                   onDraftChange={(agent) => setDrafts((current) => ({ ...current, agent }))}
                 />
-              </div>
-              <div
-                hidden={mode !== "workflow"}
-                inert={mode !== "workflow"}
-                className={mode === "workflow" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
-              >
+              </ModePanel>
+              <ModePanel active={mode === "workflow"}>
                 <WorkflowLaunchForm
                   target={{ kind: "project", projectId: target.repository.project_id }}
                   worktreeTarget={target}
@@ -117,24 +113,19 @@ export function IssueCreationContent({
                   autoFocus={false}
                   onDraftChange={(workflow) => setDrafts((current) => ({ ...current, workflow }))}
                 />
-              </div>
+              </ModePanel>
             </>
           )}
         </LaunchTargetGate>
-      </div>
-      <div
-        hidden={mode !== "manual"}
-        inert={mode !== "manual"}
-        className={mode === "manual" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
-      >
+      </ModePanel>
+      <ModePanel active={mode === "manual"}>
         <ManualIssueForm
           projectId={projectId}
           onCreated={close}
           onCancel={close}
-          autoFocus={false}
           onDraftChange={(manual) => setDrafts((current) => ({ ...current, manual }))}
         />
-      </div>
+      </ModePanel>
     </>
   );
 }

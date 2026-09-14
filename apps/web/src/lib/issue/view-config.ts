@@ -7,8 +7,13 @@ import {
 import { ISSUE_GROUPINGS, type IssueGrouping } from "@web/lib/issue/grouping";
 import { ISSUE_SORTS, type IssueSort } from "@web/lib/issue/sort";
 
-export const ISSUE_OPTIONAL_COLUMNS = ["source", "assignee"] as const;
-export type IssueOptionalColumn = (typeof ISSUE_OPTIONAL_COLUMNS)[number];
+export const ISSUE_OPTIONAL_COLUMN_OPTIONS = [
+  { value: "source", label: "Source" },
+  { value: "assignee", label: "Assignee" },
+] as const;
+export type IssueOptionalColumn = (typeof ISSUE_OPTIONAL_COLUMN_OPTIONS)[number]["value"];
+export const ISSUE_OPTIONAL_COLUMNS: readonly IssueOptionalColumn[] =
+  ISSUE_OPTIONAL_COLUMN_OPTIONS.map((option) => option.value);
 
 export interface IssuesViewConfig {
   columns?: IssueOptionalColumn[];

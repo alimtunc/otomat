@@ -155,7 +155,7 @@ describe("ActivityCenter", () => {
     await openCenter();
 
     expect(headings()).toEqual(["Running"]);
-    expect(document.body.textContent).toContain("1 need you → Inbox");
+    expect(document.body.textContent).toContain("1 needs you → Inbox");
   });
 
   it("links a run to its cockpit and a publication to the pull-request panel", async () => {
@@ -186,7 +186,7 @@ describe("ActivityCenter", () => {
 
     await openCenter();
 
-    expect(document.querySelector('a[href="/inbox"]')?.textContent).toBe("1 need you → Inbox");
+    expect(document.querySelector('a[href="/inbox"]')?.textContent).toBe("1 needs you → Inbox");
     expect(document.body.textContent).not.toContain("Recently completed");
   });
 

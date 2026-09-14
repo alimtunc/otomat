@@ -2,7 +2,6 @@ import { Button, Collapsible, CollapsiblePanel, CollapsibleTrigger, Icon } from 
 import { ContextComposer } from "@web/components/context/context-composer";
 import { ContextNoteField } from "@web/components/context/note-field";
 import type { ContextDraft } from "@web/lib/context/draft";
-import { useState } from "react";
 
 export interface WorkflowNodeContextProps {
   /** The project this node can attach from; null on a preset, which attaches nothing. */
@@ -19,7 +18,6 @@ export function WorkflowNodeContext({
   onChange,
   label,
 }: WorkflowNodeContextProps) {
-  const [open, setOpen] = useState(false);
   const content =
     projectId === null ? (
       <ContextNoteField
@@ -39,12 +37,14 @@ export function WorkflowNodeContext({
       />
     );
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
+    <Collapsible>
       <CollapsibleTrigger
-        render={<Button size="xs" variant="ghost" className="justify-start" />}
+        render={<Button size="xs" variant="ghost" className="group justify-start" />}
         aria-label={`${label} context and instructions`}
       >
-        <Icon name={open ? "chevron-down" : "plus"} aria-hidden /> Context & instructions
+        <Icon name="plus" aria-hidden className="group-data-[panel-open]:hidden" />
+        <Icon name="chevron-down" aria-hidden className="hidden group-data-[panel-open]:block" />
+        Context & instructions
         {value.note.trim().length > 0 || value.references.length > 0 ? (
           <span aria-label="Context added" className="size-1.25 rounded-full bg-warning" />
         ) : null}

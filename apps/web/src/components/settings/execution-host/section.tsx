@@ -100,12 +100,9 @@ export function ExecutionHostSection() {
                       action={
                         entry.kind === "ssh" ? (
                           <RemoteHostActions
-                            error={host.actionError}
                             pending={host.pending !== null}
                             onRemove={async () => {
-                              const removed = await host.removeRemote();
-                              if (removed) form.reset({ alias: "" });
-                              return removed;
+                              if (await host.removeRemote()) form.reset({ alias: "" });
                             }}
                           />
                         ) : undefined

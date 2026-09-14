@@ -25,7 +25,7 @@ vi.mock("@tanstack/react-router", () => ({
   Outlet: () => <div>outlet</div>,
   useParams: () => ({ runId: "run-1" }),
   useSearch: () => ({ step: "step-2" }),
-  useRouterState: () => "/runs/run-1",
+  useMatchRoute: () => (options: { to: string }) => (options.to === "/runs/$runId" ? {} : false),
 }));
 
 vi.mock("@web/api/runs/queries", () => ({

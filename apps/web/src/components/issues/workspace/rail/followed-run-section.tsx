@@ -1,4 +1,4 @@
-import type { RunContract } from "@otomat/domain";
+import { shortId, type RunContract } from "@otomat/domain";
 import { Button, Icon, RunStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useReviewDetail, useReviewDiff } from "@web/api/reviews/queries";
@@ -10,7 +10,6 @@ import {
 } from "@web/components/issues/workspace/rail/rail-primitives";
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 import { CopyablePath } from "@web/components/runs/copyable-path";
-import { shortId } from "@web/lib/ids";
 
 export function FollowedRunSection({ run }: { run: RunContract }) {
   const detail = useRunDetail(run.id);

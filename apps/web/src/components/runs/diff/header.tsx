@@ -6,12 +6,28 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  type IconName,
 } from "@otomat/ui";
 import { DiffPrefsPopover } from "@web/components/runs/diff/prefs/popover";
-import type { DiffPrefs } from "@web/components/runs/diff/prefs/prefs";
+import {
+  DIFF_VIEW_MODES,
+  type DiffPrefs,
+  type DiffViewMode,
+} from "@web/components/runs/diff/prefs/prefs";
 import { DiffShortcutsPopover } from "@web/components/runs/diff/shortcuts-popover";
 import { DiffSummary } from "@web/components/runs/diff/summary";
+import { asMember } from "@web/lib/coerce";
 import type { ReactNode } from "react";
+
+const DIFF_MODES = [
+  { value: "unified", label: "Unified", tooltip: "Unified diff", icon: "rows-3" },
+  { value: "split", label: "Split", tooltip: "Split diff", icon: "columns-3" },
+] as const satisfies readonly {
+  value: DiffViewMode;
+  label: string;
+  tooltip: string;
+  icon: IconName;
+}[];
 
 export interface RunDiffHeaderProps {
   diff: ReviewDiffContract | null;
@@ -51,28 +67,24 @@ export function RunDiffHeader({
           type="single"
           value={prefs.mode}
           onValueChange={(value) => {
-            if (value === "unified" || value === "split") onPrefsChange({ mode: value });
+            const mode = asMember(value, DIFF_VIEW_MODES);
+            if (mode) onPrefsChange({ mode });
           }}
           aria-label="Diff view mode"
         >
-          <Tooltip>
-            <TooltipTrigger
-              delay={300}
-              render={<SegmentedItem value="unified" aria-label="Unified" className="px-1.5" />}
-            >
-              <Icon name="rows-3" aria-hidden />
-            </TooltipTrigger>
-            <TooltipContent>Unified diff</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger
-              delay={300}
-              render={<SegmentedItem value="split" aria-label="Split" className="px-1.5" />}
-            >
-              <Icon name="columns-3" aria-hidden />
-            </TooltipTrigger>
-            <TooltipContent>Split diff</TooltipContent>
-          </Tooltip>
+          {DIFF_MODES.map((mode) => (
+            <Tooltip key={mode.value}>
+              <TooltipTrigger
+                delay={300}
+                render={
+                  <SegmentedItem value={mode.value} aria-label={mode.label} className="px-1.5" />
+                }
+              >
+                <Icon name={mode.icon} aria-hidden />
+              </TooltipTrigger>
+              <TooltipContent>{mode.tooltip}</TooltipContent>
+            </Tooltip>
+          ))}
         </SegmentedControl>
         <DiffPrefsPopover prefs={prefs} onChange={onPrefsChange} browsable={browsable} />
         {actions}

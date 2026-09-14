@@ -1,14 +1,11 @@
 import type { PullRequestOverview } from "@otomat/domain";
 import { Chip, PRStatusBadge, RelativeTime } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { REVIEW_DECISION_SIGNAL } from "@web/lib/pull-request/inbox/signals";
+import { reviewDecisionSignal } from "@web/lib/pull-request/inbox/signals";
 
 export function PullRequestOverviewSummary({ overview }: { overview: PullRequestOverview }) {
   const { pull_request: pullRequest, issue } = overview;
-  const decision =
-    pullRequest.review_decision === null
-      ? null
-      : REVIEW_DECISION_SIGNAL[pullRequest.review_decision];
+  const decision = reviewDecisionSignal(pullRequest.review_decision);
   return (
     <section className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">

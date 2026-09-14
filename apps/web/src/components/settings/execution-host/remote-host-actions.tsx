@@ -17,11 +17,10 @@ import { useRef, useState } from "react";
 
 export interface RemoteHostActionsProps {
   pending: boolean;
-  error: string | null;
-  onRemove: () => Promise<boolean>;
+  onRemove: () => Promise<void>;
 }
 
-export function RemoteHostActions({ pending, error, onRemove }: RemoteHostActionsProps) {
+export function RemoteHostActions({ pending, onRemove }: RemoteHostActionsProps) {
   const trigger = useRef<HTMLButtonElement>(null);
   const [confirming, setConfirming] = useState(false);
   return (
@@ -45,11 +44,6 @@ export function RemoteHostActions({ pending, error, onRemove }: RemoteHostAction
               Removing the host closes the tunnel and forgets the SSH alias. Its projects leave the
               switcher. Nothing is deleted on the server; adding the alias again brings them back.
             </p>
-            {error === null ? null : (
-              <p role="alert" className="text-xs text-danger">
-                {error}
-              </p>
-            )}
           </DialogBody>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setConfirming(false)}>
@@ -59,11 +53,7 @@ export function RemoteHostActions({ pending, error, onRemove }: RemoteHostAction
               variant="destructive"
               loading={pending}
               disabled={pending}
-              onClick={() =>
-                void onRemove().then((removed) => {
-                  if (removed) setConfirming(false);
-                })
-              }
+              onClick={() => void onRemove().then(() => setConfirming(false))}
             >
               Remove host
             </Button>

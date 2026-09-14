@@ -8,6 +8,7 @@ import type { Density } from "../lib/theme";
 import { useMediaQuery } from "../lib/use-media-query";
 import { usePanelGroupLayout } from "../lib/use-panel-group-layout";
 import { cn } from "../lib/utils";
+import { ROOMY_VIEWPORT_MEDIA_QUERY } from "../lib/viewport";
 import { ResizablePanel, ResizablePanelGroup } from "../primitives/resizable";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
@@ -53,7 +54,7 @@ export function AppShell({
   className,
 }: AppShellProps) {
   const controlled = collapsedProp != null;
-  const wide = useMediaQuery("(min-width: 80rem)");
+  const wide = useMediaQuery(ROOMY_VIEWPORT_MEDIA_QUERY);
   const [internalCollapsed, setInternalCollapsed] = useState<boolean | null>(() =>
     readPanelCollapsed(SIDEBAR_PANEL_ID),
   );

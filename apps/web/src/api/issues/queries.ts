@@ -1,8 +1,16 @@
 import { issueSummarySchema, searchIssues } from "@otomat/domain";
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { readCatalog } from "@web/api/catalog-read";
 import { daemon } from "@web/api/client";
+import type { HostQueryKeys } from "@web/api/query-keys";
 import { useQueryKeys } from "@web/api/use-query-keys";
+
+function issuesListOptions(keys: HostQueryKeys, projectId: string | undefined) {
+  return queryOptions({
+    queryKey: keys.issuesList(projectId),
+    queryFn: () => daemon.listIssues({ projectId }),
+  });
+}
 
 export function useProjectIssueSummaries(projectId: string | undefined) {
   const keys = useQueryKeys();
@@ -17,8 +25,7 @@ export function useProjectIssueSummaries(projectId: string | undefined) {
               () => daemon.listIssueSummaries(projectId),
               async () => {
                 const issues = await client.fetchQuery({
-                  queryKey: keys.issuesList(projectId),
-                  queryFn: () => daemon.listIssues({ projectId }),
+                  ...issuesListOptions(keys, projectId),
                   staleTime: 30_000,
                 });
                 return issues.map((issue) => issueSummarySchema.parse(issue));
@@ -40,8 +47,7 @@ export function useIssueSearch(projectId: string | undefined, query: string) {
               () => daemon.searchIssues(projectId, query),
               async () => {
                 const issues = await client.fetchQuery({
-                  queryKey: keys.issuesList(projectId),
-                  queryFn: () => daemon.listIssues({ projectId }),
+                  ...issuesListOptions(keys, projectId),
                   staleTime: 30_000,
                 });
                 const matches = searchIssues(issues, query);
@@ -57,11 +63,7 @@ export function useIssueSearch(projectId: string | undefined, query: string) {
 
 export function useProjectIssues(projectId: string | undefined) {
   const keys = useQueryKeys();
-  return useQuery({
-    queryKey: keys.issuesList(projectId),
-    queryFn: () => daemon.listIssues({ projectId }),
-    enabled: projectId !== undefined,
-  });
+  return useQuery({ ...issuesListOptions(keys, projectId), enabled: projectId !== undefined });
 }
 
 export function useIssue(issueId: string | null) {

@@ -4,14 +4,13 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { useCreateIssueAndNavigate } from "@web/api/issues/mutations";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { useDraftPresence } from "@web/components/issues/use-draft-presence";
-import { fieldErrorProps } from "@web/lib/form";
+import { fieldErrorProps, hasText } from "@web/lib/form";
 
 export interface ManualIssueFormProps {
   projectId: string | undefined;
   onCreated: () => void;
   onCancel: () => void;
-  onDraftChange?: (hasDraft: boolean) => void;
-  autoFocus?: boolean;
+  onDraftChange: (hasDraft: boolean) => void;
 }
 
 export function ManualIssueForm({
@@ -19,7 +18,6 @@ export function ManualIssueForm({
   onCreated,
   onCancel,
   onDraftChange,
-  autoFocus = true,
 }: ManualIssueFormProps) {
   const { create, isPending } = useCreateIssueAndNavigate();
   const form = useForm({
@@ -39,7 +37,7 @@ export function ManualIssueForm({
 
   const hasDraft = useStore(
     form.store,
-    (state) => state.values.title.trim().length > 0 || state.values.body.trim().length > 0,
+    (state) => hasText(state.values.title) || hasText(state.values.body),
   );
   useDraftPresence(hasDraft, onDraftChange);
 
@@ -64,7 +62,6 @@ export function ManualIssueForm({
               <FieldLabel>Title</FieldLabel>
               <FieldControl>
                 <Input
-                  autoFocus={autoFocus}
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(event) => field.handleChange(event.target.value)}

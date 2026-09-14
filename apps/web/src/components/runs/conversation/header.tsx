@@ -45,6 +45,7 @@ export function ConversationHeader({
   const requestedModel = modelLabel(current.model);
   const reportedModel = launched?.reported_model ?? null;
   const effectiveModel = reportedModel ?? requestedModel;
+  const requestedBy = `Requested by ${current.sources?.model ?? "step"}${effort ? ` · effort ${effort}` : ""}`;
   const diverged =
     current.model !== null && reportedModel !== null && reportedModel !== current.model.id;
   let fallback = { label: "Model change unavailable · Add follow-up step", title: "" };
@@ -62,10 +63,7 @@ export function ConversationHeader({
       <span className="text-xs font-medium text-foreground">
         {agentLabel(current)} · {runtime?.display_name ?? current.runtime}
       </span>
-      <span
-        className="text-xs text-text-secondary"
-        title={`Requested by ${current.sources?.model ?? "step"}${effort ? ` · effort ${effort}` : ""}`}
-      >
+      <span className="text-xs text-text-secondary" title={requestedBy}>
         {effectiveModel}
         {effort ? ` · ${effort}` : ""}
       </span>
@@ -108,10 +106,7 @@ export function ConversationHeader({
           <p>
             Requested: {requestedModel} · Reported: {reportedModel ?? "not reported"}
           </p>
-          <p>
-            Requested by {current.sources?.model ?? "step"}
-            {effort ? ` · effort ${effort}` : ""}
-          </p>
+          <p>{requestedBy}</p>
           {capability?.status === "supported" && session?.provider_session_id ? (
             <NextTurnModelDialog
               key={pending?.config_hash ?? current.config_hash}

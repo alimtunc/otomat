@@ -22,9 +22,9 @@ export function RepositoriesSection() {
       <div className="flex flex-col gap-5">
         <div>
           <Button
+            ref={addProjectTrigger}
             variant="primary"
             size="sm"
-            render={<button ref={addProjectTrigger} />}
             onClick={() => setAdding(true)}
           >
             Add project

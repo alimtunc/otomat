@@ -1,4 +1,4 @@
-import { Button, Icon, IconButton, Input, cn } from "@otomat/ui";
+import { Icon, IconButton, Input, cn } from "@otomat/ui";
 import type { DiffSearch } from "@web/components/runs/diff/search/use-diff-search";
 import { useFindShortcut } from "@web/components/runs/diff/search/use-find-shortcut";
 import { useRef, useState } from "react";
@@ -10,22 +10,20 @@ export interface DiffSearchFieldProps {
 export function DiffSearchField({ search }: DiffSearchFieldProps) {
   const field = useFindShortcut();
   const [open, setOpen] = useState(false);
-  const trigger = useRef<HTMLSpanElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
   const total = search.matches.length;
 
   return (
     <span className="flex shrink-0 items-center gap-0.5">
-      <span ref={trigger} className={open ? "sr-only" : "shrink-0"}>
-        <Button
-          variant="ghost"
+      <span className={open ? "sr-only" : "shrink-0"}>
+        <IconButton
+          ref={trigger}
           size="sm"
-          aria-label="Find in diff"
-          className="px-1.5"
+          label="Find in diff"
+          icon={<Icon name="search" aria-hidden />}
           tabIndex={open ? -1 : 0}
           onClick={() => field.current?.focus()}
-        >
-          <Icon name="search" />
-        </Button>
+        />
       </span>
       <span
         aria-hidden={!open}
@@ -51,7 +49,7 @@ export function DiffSearchField({ search }: DiffSearchFieldProps) {
                   event.preventDefault();
                   search.setQuery("");
                   setOpen(false);
-                  trigger.current?.querySelector("button")?.focus();
+                  trigger.current?.focus();
                 }}
                 placeholder="Find in diff"
                 aria-label="Find in the diff"

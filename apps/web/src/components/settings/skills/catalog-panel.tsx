@@ -4,6 +4,7 @@ import { useScanSkills } from "@web/api/skills/mutations";
 import { useSkills } from "@web/api/skills/queries";
 import { SkillRow } from "@web/components/settings/skills/row";
 import { QueryList } from "@web/components/shell/query-list";
+import { filterSkills } from "@web/lib/skill-source";
 
 export function SkillCatalogPanel({
   owner,
@@ -17,7 +18,7 @@ export function SkillCatalogPanel({
   const skills = useSkills();
   const scan = useScanSkills();
   const form = useForm({ defaultValues: { search: "" } });
-  const search = useStore(form.store, (state) => state.values.search.trim().toLowerCase());
+  const search = useStore(form.store, (state) => state.values.search);
 
   const rescan = (
     <Button variant="outline" size="sm" loading={scan.isPending} onClick={() => scan.mutate()}>
@@ -68,11 +69,7 @@ export function SkillCatalogPanel({
           {(items) => {
             const owned = items.filter((skill) => skill.project_id === owner);
             if (owned.length === 0) return empty;
-            const matching = owned.filter((skill) =>
-              [skill.name, skill.description ?? "", skill.canonical_path].some((value) =>
-                value.toLowerCase().includes(search),
-              ),
-            );
+            const matching = filterSkills(owned, search);
             if (matching.length === 0)
               return <p className="p-4 text-xs text-text-tertiary">No skills match this search.</p>;
             return (

@@ -1806,7 +1806,7 @@ things the reload used to conflate:
   so no view paints one host's data under another's tab), and the tabs' badges
   come from the per-host Inbox polls described above.
 
-## Saved Issue Views
+## Issue And Run Catalogs
 
 Issues and Runs use project-scoped catalogs (`/api/issues/catalog` and
 `/api/runs/catalog`) without issue bodies or frozen run plans. Detail reads keep
@@ -1827,6 +1827,8 @@ session's live query data. A successful Linear sync with no imported or updated
 issues leaves the catalog fresh; a failed partial sync still invalidates it.
 Reviews waits for its inbox freshness and running state before starting an
 automatic sync.
+
+## Saved Issue Views
 
 An operator's issue views are named configurations — layout, grouping, sort,
 filters, folded groups — kept per project on the machine that made them

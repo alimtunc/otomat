@@ -1,12 +1,12 @@
 import {
   ISSUE_BOARD_COLUMNS,
   LINEAR_PRIORITIES,
+  shortId,
   type IssueSummary,
   type IssueSource,
 } from "@otomat/domain";
 import { resolveStatus } from "@otomat/ui";
 import { asNumber } from "@web/lib/coerce";
-import { shortId } from "@web/lib/ids";
 
 export interface IssueFilterOption {
   value: string;

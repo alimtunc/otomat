@@ -1,4 +1,4 @@
-import { projectOpenCycleExecution, type IssueSummary } from "@otomat/domain";
+import { issueShortId, projectOpenCycleExecution, type IssueSummary } from "@otomat/domain";
 import { createColumnHelper } from "@tanstack/react-table";
 import { IssueAssigneeCell } from "@web/components/issues/list/cells/assignee";
 import { IssueExecutionCell } from "@web/components/issues/list/cells/execution";
@@ -6,7 +6,6 @@ import { IssueSourceCell } from "@web/components/issues/list/cells/source";
 import { IssueStatusCell } from "@web/components/issues/list/cells/status";
 import { IssueTitleCell } from "@web/components/issues/list/cells/title";
 import { IssueUpdatedCell } from "@web/components/issues/list/cells/updated";
-import { issueShortId } from "@web/lib/ids";
 import { TABLE_FEATURES } from "@web/lib/table";
 
 const helper = createColumnHelper<typeof TABLE_FEATURES, IssueSummary>();

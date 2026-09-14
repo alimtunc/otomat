@@ -51,9 +51,8 @@ export function UsageSummary({ totals }: { totals: UsageTotals }) {
                   }
                 />
                 <PopoverContent className="w-72 text-xs">
-                  What the providers reported for this host’s runs — nothing is estimated. Partial
-                  values include only the turns that reported that figure. Execution time covers
-                  measured runs.
+                  What the providers reported for this host’s runs — nothing is estimated. Execution
+                  time covers measured runs.
                 </PopoverContent>
               </Popover>
             </span>

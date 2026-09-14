@@ -1,10 +1,10 @@
+import { issueShortId } from "@otomat/domain";
 import type { CommandPaletteGroup } from "@otomat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import { useIssueSearch } from "@web/api/issues/queries";
 import { PaletteIssueNotice } from "@web/components/shell/palette/issue-notice";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { useRemoteHostAlias } from "@web/lib/active-host";
-import { issueShortId } from "@web/lib/ids";
 import { useDeferredValue } from "react";
 
 const ISSUE_RESULT_LIMIT = 8;

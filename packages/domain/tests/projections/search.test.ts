@@ -1,11 +1,34 @@
-import type { IssueContract } from "@otomat/domain";
-import { searchIssues } from "@web/lib/issue/search";
 import { describe, expect, it } from "vitest";
 
-import { issueContract } from "#support/issue";
+import { CLOSED_ISSUE_WORKSPACE } from "#domain/contracts/entities/issue-workspace";
+import type { IssueContract } from "#domain/contracts/entities/issues";
+import { searchIssues } from "#domain/projections/search";
+
+function issue(overrides: Partial<IssueContract>): IssueContract {
+  return {
+    id: "issue-1",
+    project_id: "project-1",
+    title: "Issue",
+    body: null,
+    status: "backlog",
+    execution: { state: "none", run_id: null },
+    workspace: CLOSED_ISSUE_WORKSPACE,
+    source: "local",
+    source_external_id: null,
+    source_identifier: null,
+    source_url: null,
+    synced_at: null,
+    source_assignee_name: null,
+    source_priority: null,
+    source_labels: null,
+    source_state_name: null,
+    source_state_color: null,
+    ...overrides,
+  };
+}
 
 function linearIssue(identifier: string, title: string, body: string | null): IssueContract {
-  return issueContract({
+  return issue({
     id: `id-${identifier}`,
     title,
     body,
@@ -14,10 +37,6 @@ function linearIssue(identifier: string, title: string, body: string | null): Is
     source_identifier: identifier,
     synced_at: "2026-08-12T10:00:00.000Z",
   });
-}
-
-function localIssue(id: string, title: string): IssueContract {
-  return issueContract({ id, title });
 }
 
 const RETRY = linearIssue("OTO-42", "Retry queue drain", "The webhook receiver drops retries.");
@@ -35,7 +54,7 @@ describe("searchIssues", () => {
     expect(searchIssues(ALL, "QUEUE")).toEqual([RETRY]);
   });
 
-  it("matches a term from the description already loaded", () => {
+  it("matches a term from the description", () => {
     expect(searchIssues(ALL, "webhook receiver")).toEqual([RETRY]);
   });
 
@@ -45,11 +64,14 @@ describe("searchIssues", () => {
   });
 
   it("matches a local issue by the short id the list displays", () => {
-    const local = localIssue("7f3ac9d1-0000-4000-8000-000000000000", "Draft the migration");
+    const local = issue({
+      id: "7f3ac9d1-0000-4000-8000-000000000000",
+      title: "Draft the migration",
+    });
     expect(searchIssues([local, RETRY], "7F3AC9D1")).toEqual([local]);
   });
 
-  it("returns nothing for a term absent from every loaded field", () => {
+  it("returns nothing for a term absent from every field", () => {
     expect(searchIssues(ALL, "kubernetes")).toEqual([]);
   });
 

@@ -25,7 +25,7 @@ import { PullRequestSubjectFields } from "@web/components/runs/pr/subject-fields
 import { PullRequestSummary } from "@web/components/runs/pr/summary";
 import { usePullRequestForm } from "@web/components/runs/pr/use-form";
 
-import { publicationModel } from "./publication-model";
+import { generationBlocked, isPublished, publicationModel } from "./publication-model";
 
 export interface PullRequestFormProps {
   pullRequest: PullRequestContract | null;
@@ -66,7 +66,7 @@ export function PullRequestForm({
 }: PullRequestFormProps) {
   const form = usePullRequestForm({ pullRequest, chosenMode, onSubmit });
 
-  const branchLocked = pullRequest?.number !== null && pullRequest?.number !== undefined;
+  const branchLocked = isPublished(pullRequest);
 
   const fillFrom = (proposal: PullRequestProposal): void => {
     form.setFieldValue("type", proposal.subject.type);
@@ -112,11 +112,7 @@ export function PullRequestForm({
             scope: values.scope.trim() || null,
             summary,
           }).length;
-          const generationBlocked =
-            publishability.blocker?.code === "worktree_missing" ||
-            publishability.blocker?.code === "remote_missing" ||
-            publishability.changed_files === 0;
-
+          const blocked = generationBlocked(publishability);
           const model = publicationModel({
             pullRequest,
             operation,
@@ -126,8 +122,6 @@ export function PullRequestForm({
             mode,
           });
           const busy = model.actionPending || isPending || isGenerating;
-          let publicationStatus = branchLocked ? "Published" : "Not published";
-          if (model.actionPending) publicationStatus = "Publishing";
           const refusal = summary.trim() === "" ? generationRefusal : null;
           const showDetails = customize || refusal !== null;
           // Metadata already written is republished as it stands: a retry never pays the generator twice.
@@ -137,7 +131,7 @@ export function PullRequestForm({
             <>
               <PullRequestSummary
                 publishability={publishability}
-                status={publicationStatus}
+                status={model.status}
                 stateLabel={model.stateLabel}
                 connectionLabel={connectionLabel}
                 mode={
@@ -166,10 +160,10 @@ export function PullRequestForm({
                 primaryLoading={composeWithAi ? busy : isPending || model.actionPending}
                 onCompose={composeWithAi ? () => void onSubmit({ mode }) : null}
                 onGenerate={() => void generateOnly()}
-                generateDisabled={busy || generationBlocked}
+                generateDisabled={busy || blocked}
                 isGenerating={isGenerating}
               />
-              {generationBlocked ? (
+              {blocked ? (
                 <p className="text-xs text-text-tertiary">
                   Generation needs an available workspace, its GitHub remote and changes to
                   describe.

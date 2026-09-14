@@ -48,7 +48,9 @@ export function ActivityPanel({ snapshot, hostLabel, onNavigate }: ActivityPanel
       </div>
       <div className="border-t border-border-subtle p-2">
         <Button variant="ghost" size="sm" render={<Link to="/inbox" onClick={onNavigate} />}>
-          {attention > 0 ? `${attention} need you → Inbox` : "Open Inbox"}
+          {attention > 0
+            ? `${attention} ${attention === 1 ? "needs" : "need"} you → Inbox`
+            : "Open Inbox"}
         </Button>
       </div>
     </div>

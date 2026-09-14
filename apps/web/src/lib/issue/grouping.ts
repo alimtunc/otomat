@@ -1,11 +1,11 @@
 import {
   ISSUE_BOARD_COLUMNS,
   projectIssuePrimaryState,
+  shortId,
   type IssueBoardColumn,
   type IssueSummary,
 } from "@otomat/domain";
 import { resolveStatus } from "@otomat/ui";
-import { shortId } from "@web/lib/ids";
 
 export const ISSUE_GROUPING_OPTIONS = [
   { value: "status", label: "Status" },

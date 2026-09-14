@@ -1,7 +1,6 @@
-import type { RunContract } from "@otomat/domain";
+import { issueShortId, shortId, type RunContract } from "@otomat/domain";
 import {
   Icon,
-  IconButton,
   cn,
   EmptyState,
   ErrorState,
@@ -13,7 +12,7 @@ import {
   usePanelGroupLayout,
   WIDE_VIEWPORT_MEDIA_QUERY,
 } from "@otomat/ui";
-import { Link, useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
@@ -24,10 +23,10 @@ import { LinearCommentsSection } from "@web/components/issues/workspace/linear/c
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
 import { RunConversations } from "@web/components/issues/workspace/run-conversations";
 import { RunActionsMenu } from "@web/components/runs/actions/run-actions-menu";
+import { IconLink } from "@web/components/shell/icon-link";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { useBackNavigation } from "@web/components/shell/use-back-navigation";
-import { issueShortId, shortId } from "@web/lib/ids";
 import { resolveFollowedRun } from "@web/lib/run/activity";
 import type { ReactNode } from "react";
 
@@ -205,18 +204,12 @@ export function IssueDetailView() {
       actions={
         <>
           {followedRun ? (
-            <IconButton
+            <IconLink
               label="Open cockpit"
               icon={<Icon name="monitor" aria-hidden />}
-              nativeButton={false}
-              role="link"
-              render={
-                <Link
-                  to="/runs/$runId"
-                  params={{ runId: followedRun.id }}
-                  search={{ step: selectedStepId }}
-                />
-              }
+              to="/runs/$runId"
+              params={{ runId: followedRun.id }}
+              search={{ step: selectedStepId }}
             />
           ) : null}
           {launchAction}

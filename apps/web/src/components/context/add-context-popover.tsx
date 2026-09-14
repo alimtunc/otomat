@@ -1,9 +1,8 @@
-import { contextReferenceKey, type ContextReference } from "@otomat/domain";
+import { contextReferenceKey, searchIssues, type ContextReference } from "@otomat/domain";
 import { Icon, IconButton, Input, Popover, PopoverContent, PopoverTrigger } from "@otomat/ui";
 import { useRepositoryFiles } from "@web/api/daemon/queries";
 import { useProjectIssues } from "@web/api/issues/queries";
 import { ContextSearchResults } from "@web/components/context/context-search-results";
-import { searchIssues } from "@web/lib/issue/search";
 import { useState } from "react";
 
 const MAX_ISSUE_RESULTS = 8;

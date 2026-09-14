@@ -33,7 +33,7 @@ export interface AgentIssueFormProps {
   onExecutionChange: (execution: ExecutionSelection) => void;
   onLaunched: (run: RunContract) => void;
   onCancel: () => void;
-  onDraftChange?: (hasDraft: boolean) => void;
+  onDraftChange: (hasDraft: boolean) => void;
 }
 
 export function AgentIssueForm({

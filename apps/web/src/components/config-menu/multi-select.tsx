@@ -24,7 +24,7 @@ export function MultiSelect<T extends string, TItem extends MultiSelectItem<T>>(
 }: {
   label: string;
   emptyLabel: string;
-  items: TItem[];
+  items: readonly TItem[];
   selected: T[];
   renderLeading?: (item: TItem) => ReactNode;
   onChange: (selected: T[]) => void;

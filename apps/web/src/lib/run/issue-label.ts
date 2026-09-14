@@ -1,5 +1,4 @@
-import type { IssueContract } from "@otomat/domain";
-import { issueShortId } from "@web/lib/ids";
+import { issueShortId, type IssueContract } from "@otomat/domain";
 
 /** Said out loud rather than falling back to a run id, which answers a different question. */
 export const UNLINKED_RUN_LABEL = "Unlinked";

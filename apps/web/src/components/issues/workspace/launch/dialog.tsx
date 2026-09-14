@@ -1,4 +1,4 @@
-import type { IssueContract, RunContract } from "@otomat/domain";
+import { issueShortId, type IssueContract, type RunContract } from "@otomat/domain";
 import {
   Button,
   Dialog,
@@ -14,7 +14,6 @@ import { SingleRunLaunchForm } from "@web/components/issues/workspace/launch/sin
 import { LaunchTargetGate } from "@web/components/runs/launch/launch-target-gate";
 import { AppendStepForm } from "@web/components/runs/steps/append-step-form";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
-import { issueShortId } from "@web/lib/ids";
 import { useState, type ComponentPropsWithoutRef } from "react";
 
 const LAUNCH_MODES = ["single", "workflow"] as const;

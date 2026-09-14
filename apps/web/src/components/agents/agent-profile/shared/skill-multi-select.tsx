@@ -2,7 +2,7 @@ import type { SkillContract } from "@otomat/domain";
 import { Checkbox, Chip, cn, Icon, Input } from "@otomat/ui";
 import { useForm, useStore } from "@tanstack/react-form";
 import { SkillDetails } from "@web/components/agents/agent-profile/shared/skill-details";
-import { skillSourceRoot } from "@web/lib/skill-source";
+import { filterSkills, skillSourceRoot } from "@web/lib/skill-source";
 import type { ReactNode } from "react";
 
 export interface SkillMultiSelectProps {
@@ -28,12 +28,8 @@ export function SkillMultiSelect({
 }: SkillMultiSelectProps) {
   const selected = new Set(selectedIds);
   const form = useForm({ defaultValues: { search: "" } });
-  const search = useStore(form.store, (state) => state.values.search.trim().toLowerCase());
-  const matching = skills.filter((skill) =>
-    [skill.name, skill.description ?? "", skill.canonical_path].some((value) =>
-      value.toLowerCase().includes(search),
-    ),
-  );
+  const search = useStore(form.store, (state) => state.values.search);
+  const matching = filterSkills(skills, search);
   if (skills.length === 0) {
     return (
       <p className="text-xs text-text-tertiary">

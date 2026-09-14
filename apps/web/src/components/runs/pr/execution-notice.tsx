@@ -32,9 +32,7 @@ export function PullRequestExecutionNotice({ runId }: { runId: string }) {
         {report.data ? ` · ${report.data.report.errors.length} recorded errors` : ""}
       </CollapsibleTrigger>
       <CollapsiblePanel className="flex flex-col gap-1.5 rounded-lg border border-warning/40 bg-warning-bg p-3 text-sm">
-        <p className="font-medium">
-          {failure === null ? UNREADABLE_OUTCOME : OUTCOME_LABELS[failure.outcome]}
-        </p>
+        {failure === null ? null : <p className="font-medium">{OUTCOME_LABELS[failure.outcome]}</p>}
         {details.map((line) => (
           <p key={line} className="text-text-secondary">
             {line}

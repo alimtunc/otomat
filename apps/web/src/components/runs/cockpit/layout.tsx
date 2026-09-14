@@ -1,5 +1,5 @@
-import { Icon, IconButton, type BreadcrumbItem } from "@otomat/ui";
-import { Outlet, useParams, useRouterState, useSearch } from "@tanstack/react-router";
+import { ExternalLinkIconButton, type BreadcrumbItem } from "@otomat/ui";
+import { Outlet, useMatchRoute, useParams, useSearch } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunPullRequest } from "@web/api/prs/queries";
 import { useRunDetail } from "@web/api/runs/queries";
@@ -19,9 +19,10 @@ export function RunCockpitLayout() {
   const issueId = detail.data?.run.issue_id ?? null;
   const issue = useIssue(issueId);
   const back = useBackNavigation(issueId);
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const matchRoute = useMatchRoute();
+  const inDiff = Boolean(matchRoute({ to: "/runs/$runId/diff" }));
+  const inConversation = Boolean(matchRoute({ to: "/runs/$runId" }));
   const published = pullRequest.data?.pull_request;
-  const githubLabel = `Open PR #${published?.number} on GitHub`;
 
   const issueCrumb = (): BreadcrumbItem => {
     if (detail.data === undefined) return { label: "Loading issue…" };
@@ -47,21 +48,16 @@ export function RunCockpitLayout() {
         tabs={<CockpitTabs runId={runId} />}
         actions={
           published?.url ? (
-            <IconButton
-              label={githubLabel}
-              icon={<Icon name="external-link" aria-hidden />}
-              nativeButton={false}
-              role="link"
-              render={
-                <a href={published.url} target="_blank" rel="noreferrer" aria-label={githubLabel} />
-              }
+            <ExternalLinkIconButton
+              href={published.url}
+              label={`Open PR #${published.number} on GitHub`}
             />
           ) : null
         }
         banner={
           detail.data === undefined ||
-          pathname.endsWith("/diff") ||
-          (pathname === `/runs/${runId}` && detail.data.run.status === "running") ? null : (
+          inDiff ||
+          (inConversation && detail.data.run.status === "running") ? null : (
             <NextActionStrip detail={detail.data} pullRequest={pullRequest.data} />
           )
         }

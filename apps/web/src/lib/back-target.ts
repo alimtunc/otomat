@@ -1,4 +1,4 @@
-import { shortId } from "@web/lib/ids";
+import { shortId } from "@otomat/domain";
 
 interface BackTarget {
   href: string;

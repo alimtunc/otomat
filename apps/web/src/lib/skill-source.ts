@@ -9,3 +9,14 @@ export function skillSourceRoot(skill: Pick<SkillContract, "canonical_path" | "s
   }
   return skill.canonical_path.replace(/\/[^/]+\/SKILL\.md$/, "");
 }
+
+export function filterSkills<
+  T extends Pick<SkillContract, "name" | "description" | "canonical_path">,
+>(skills: T[], search: string): T[] {
+  const needle = search.trim().toLowerCase();
+  return skills.filter((skill) =>
+    [skill.name, skill.description ?? "", skill.canonical_path].some((value) =>
+      value.toLowerCase().includes(needle),
+    ),
+  );
+}

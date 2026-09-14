@@ -14,6 +14,7 @@ import { useBulkCleanup } from "@web/components/workspaces/use-bulk-cleanup";
 import { plural } from "@web/lib/plural";
 import { describeCleanupLoss, splitCleanupTargets } from "@web/lib/workspace/cleanup";
 import type { WorkspaceRow } from "@web/lib/workspace/row";
+import { workspaceGitState } from "@web/lib/workspace/state";
 import type { RefObject } from "react";
 
 export interface WorkspaceCleanupDialogProps {
@@ -42,7 +43,9 @@ export function WorkspaceCleanupDialog({
   const arming = selected.some((target) => forcedIds.includes(target.id));
   const clean =
     selected.length > 0 &&
-    selected.every((target) => target.present && target.uncommitted_files === 0);
+    selected.every(
+      (target) => workspaceGitState(target.present, target.uncommitted_files).word === "clean",
+    );
   const protectedLoss = describeCleanupLoss(ready);
 
   const handleOpenChange = (next: boolean): void => {

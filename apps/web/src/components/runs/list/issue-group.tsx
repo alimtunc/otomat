@@ -1,8 +1,8 @@
+import { issueShortId, shortId } from "@otomat/domain";
 import { FOCUS_RING } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { CountBadge } from "@web/components/issues/count-badge";
 import { IssueLabel } from "@web/components/issues/issue-label";
-import { issueShortId, shortId } from "@web/lib/ids";
 import type { RunIssueGroup } from "@web/lib/run/grouping";
 
 export function RunIssueGroupSection({ group }: { group: RunIssueGroup }) {

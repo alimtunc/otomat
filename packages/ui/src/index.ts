@@ -14,7 +14,7 @@ export { SETTLE_IN_CLASS } from "./lib/motion";
 export { useMediaQuery } from "./lib/use-media-query";
 export { usePanelGroupLayout, type PanelGroupLayout } from "./lib/use-panel-group-layout";
 export { useSidePanel, type SidePanelState } from "./lib/side-panel-context";
-export { WIDE_VIEWPORT_MEDIA_QUERY } from "./lib/viewport";
+export { ROOMY_VIEWPORT_MEDIA_QUERY, WIDE_VIEWPORT_MEDIA_QUERY } from "./lib/viewport";
 export type { ConnectionState } from "./lib/connection-state";
 export type { ProjectSummary } from "./lib/project-summary";
 
@@ -141,11 +141,6 @@ export { useSidebarCollapsed } from "./lib/sidebar-collapsed";
 
 export { AppSidebar, type AppSidebarProps } from "./components/app-sidebar";
 
-export {
-  SidebarDaemonStatus,
-  type SidebarDaemonStatusProps,
-} from "./components/sidebar-daemon-status";
-
 export { Avatar, type AvatarProps, type AvatarShape, type AvatarSize } from "./components/avatar";
 
 export { IssueSourceGlyph, type IssueSourceGlyphProps } from "./components/issue-source-glyph";
@@ -214,6 +209,10 @@ export { HostTag } from "./components/host-tag";
 export { Icon, type IconName, type IconProps, type IconSize } from "./components/icon";
 
 export { IconButton, type IconButtonProps } from "./components/icon-button";
+export {
+  ExternalLinkIconButton,
+  type ExternalLinkIconButtonProps,
+} from "./components/external-link-icon-button";
 
 export { Kbd, type KbdProps } from "./components/kbd";
 

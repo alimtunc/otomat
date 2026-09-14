@@ -1,6 +1,7 @@
 import { useElementScrollRestoration, useRouter } from "@tanstack/react-router";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
 import { focusRange } from "@web/components/virtual-list/focus-range";
+import { keyboardTarget, virtualIndexOf } from "@web/components/virtual-list/keyboard";
 import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { flushSync } from "react-dom";
 
@@ -56,33 +57,17 @@ export function useVirtualList({
     [id, virtualizer],
   );
 
-  const focusedIndex = (target: EventTarget): number | null => {
-    if (!(target instanceof HTMLElement)) return null;
-    let item = target.closest<HTMLElement>("[data-virtual-index]");
-    while (item && item.parentElement?.closest("[data-virtual-list]") !== ref.current) {
-      item = item.parentElement?.closest<HTMLElement>("[data-virtual-index]") ?? null;
-    }
-    const index = Number(item?.dataset.virtualIndex);
-    return Number.isInteger(index) && index >= 0 && index < count ? index : null;
-  };
-
   const onFocusCapture = (event: FocusEvent<HTMLDivElement>): void => {
-    setFocused(focusedIndex(event.target));
+    setFocused(virtualIndexOf(event.target, ref.current, count));
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (!(event.target instanceof HTMLElement)) return;
     if (event.target.closest("[data-virtual-list]") !== ref.current) return;
-    const index = focusedIndex(event.target);
+    const index = virtualIndexOf(event.target, ref.current, count);
     if (index === null) return;
-    const previous = horizontal ? "ArrowLeft" : "ArrowUp";
-    const next = horizontal ? "ArrowRight" : "ArrowDown";
-    let target: number | null = null;
-    if (event.key === "Home") target = 0;
-    if (event.key === "End") target = count - 1;
-    if (event.key === previous) target = index - 1;
-    if (event.key === next) target = index + 1;
-    if (target === null || target < 0 || target >= count) return;
+    const target = keyboardTarget(event.key, index, count, horizontal);
+    if (target === null) return;
     event.preventDefault();
     flushSync(() => setFocused(target));
     virtualizer.scrollToIndex(target, { align: "auto" });

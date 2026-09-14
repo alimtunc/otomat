@@ -1,4 +1,4 @@
-import type { RunContract } from "@otomat/domain";
+import { shortId, type RunContract } from "@otomat/domain";
 import { Button } from "@otomat/ui";
 import { useRunDetail, useRunUsage } from "@web/api/runs/queries";
 import { useWorkspacesForRun } from "@web/api/workspaces/queries";
@@ -8,7 +8,6 @@ import { FollowedRunSection } from "@web/components/issues/workspace/rail/follow
 import { RailSection } from "@web/components/issues/workspace/rail/rail-primitives";
 import { UsageSection } from "@web/components/issues/workspace/rail/usage-section";
 import { WorkspaceSection } from "@web/components/issues/workspace/rail/workspace/section";
-import { shortId } from "@web/lib/ids";
 import { frozenRunExecutions } from "@web/lib/run/frozen-execution";
 import { WORKSPACE_STATE } from "@web/lib/workspace/state";
 
@@ -26,11 +25,6 @@ export function CycleDetails({ runId, run }: { runId: string; run: RunContract |
       >
         <WorkspaceSection runId={runId} />
       </RailDisclosure>
-      {workspaces.isError ? (
-        <Button variant="ghost" size="xs" onClick={() => void workspaces.refetch()}>
-          Couldn’t refresh workspace — retry
-        </Button>
-      ) : null}
       {run ? (
         <>
           <RailDisclosure
@@ -59,11 +53,6 @@ export function CycleDetails({ runId, run }: { runId: string; run: RunContract |
           >
             <UsageSection runId={run.id} />
           </RailDisclosure>
-          {usage.isError ? (
-            <Button variant="ghost" size="xs" onClick={() => void usage.refetch()}>
-              Couldn’t refresh usage — retry
-            </Button>
-          ) : null}
         </>
       ) : null}
     </RailSection>

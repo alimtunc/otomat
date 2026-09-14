@@ -1,13 +1,4 @@
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  ErrorState,
-  Icon,
-  IconButton,
-  Skeleton,
-} from "@otomat/ui";
+import { ErrorState, Icon, IconButton, Skeleton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunCompletionReport } from "@web/api/runs/queries";
 import { CenteredState } from "@web/components/shell/centered-state";
@@ -47,29 +38,19 @@ export function RunCompletionReportView() {
                   source for each fact.
                 </p>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <IconButton
-                      label="Report actions"
-                      icon={<Icon name="more-horizontal" aria-hidden />}
-                    />
-                  }
-                />
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    render={
-                      <a
-                        href={`data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`}
-                        download={`run-${report.run.id}-completion.md`}
-                        aria-label="Export Markdown"
-                      />
-                    }
-                  >
-                    Export Markdown
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <IconButton
+                label="Export Markdown"
+                icon={<Icon name="download" aria-hidden />}
+                nativeButton={false}
+                role="link"
+                render={
+                  <a
+                    href={`data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`}
+                    download={`run-${report.run.id}-completion.md`}
+                    aria-label="Export Markdown"
+                  />
+                }
+              />
             </header>
             <ReportSummary report={report} />
             <div data-report-grid className="grid grid-cols-1 gap-4 xl:grid-cols-2">

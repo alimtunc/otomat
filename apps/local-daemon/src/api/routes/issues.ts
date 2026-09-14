@@ -42,7 +42,9 @@ export function createIssueRoutes(deps: ApiDeps): Hono {
 
   routes.get("/search", (c) => {
     const parsed = issueSearchQuerySchema.safeParse(c.req.query());
-    if (!parsed.success) return c.json({ error: "invalid_search" }, 400);
+    if (!parsed.success) {
+      return c.json({ error: "invalid_request", issues: parsed.error.issues }, 400);
+    }
     const { projectId, query } = parsed.data;
     const matches = searchIssues(readIssues(deps.db, projectId), query);
     return c.json({

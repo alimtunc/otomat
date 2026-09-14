@@ -1,5 +1,5 @@
 import { countActionablePullRequestInboxEntries, countUnreadInboxEntries } from "@otomat/domain";
-import { useDaemonStatus, useHealth } from "@web/api/daemon/queries";
+import { useDaemonStatus } from "@web/api/daemon/queries";
 import { useInbox } from "@web/api/inbox/queries";
 import { usePullRequestInbox } from "@web/api/reviews/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
@@ -10,7 +10,6 @@ import { isRunning } from "@web/lib/run/filters";
 
 export function useShellData() {
   const { connectionState, lastSyncAt, retry } = useDaemonStatus();
-  const health = useHealth();
   const switcher = useProjectSwitcher();
   const runs = useProjectRuns(switcher.currentProjectId);
   const reviewInbox = usePullRequestInbox(switcher.currentProjectId);
@@ -26,7 +25,6 @@ export function useShellData() {
         : undefined,
     lastSyncAt,
     retry,
-    daemonVersion: health.data?.version,
     ...switcher,
     hasLiveRun: (runs.data ?? []).some(isRunning),
     reviewCount: countActionablePullRequestInboxEntries(reviewInbox.data?.entries ?? []),

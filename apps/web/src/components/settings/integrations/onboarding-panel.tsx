@@ -32,9 +32,9 @@ export function LinearOnboardingPanel() {
           </p>
           <div>
             <Button
+              ref={addProjectTrigger}
               variant="outline"
               size="sm"
-              render={<button ref={addProjectTrigger} />}
               onClick={() => setAddProjectOpen(true)}
             >
               Add project

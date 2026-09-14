@@ -1,9 +1,9 @@
-import { ErrorState, Icon, IconButton, Pill, PillTabs, Skeleton } from "@otomat/ui";
-import { Link } from "@tanstack/react-router";
+import { ErrorState, Icon, Pill, PillTabs, Skeleton } from "@otomat/ui";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-event-stream";
 import { ConversationHeader } from "@web/components/runs/conversation/header";
 import { StepConversationThread } from "@web/components/runs/conversation/step-thread";
+import { IconLink } from "@web/components/shell/icon-link";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { selectedStepRunId } from "@web/lib/run/plan";
 
@@ -56,12 +56,12 @@ export function ConversationSection({
                     ))}
                 </PillTabs>
               </div>
-              <IconButton
+              <IconLink
                 label={`Open cockpit · ${step?.name ?? "Conversation"}`}
                 icon={<Icon name="monitor" aria-hidden />}
-                nativeButton={false}
-                role="link"
-                render={<Link to="/runs/$runId" params={{ runId }} search={{ step: selected }} />}
+                to="/runs/$runId"
+                params={{ runId }}
+                search={{ step: selected }}
               />
             </div>
             <ConversationHeader detail={data} stepRunId={selected} />

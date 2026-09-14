@@ -1,15 +1,17 @@
-import type { PullRequestMergeMethod, PullRequestOverview } from "@otomat/domain";
+import type { PullRequestCheck, PullRequestMergeMethod, PullRequestOverview } from "@otomat/domain";
 import { Button, Chip, Icon } from "@otomat/ui";
 import { useIsMutating } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useReviewDetail } from "@web/api/reviews/queries";
 import { useQueryKeys } from "@web/api/use-query-keys";
 import { PullRequestMergeDialog } from "@web/components/pull-requests/overview/merge-dialog";
-import { SubmitReviewButton } from "@web/components/runs/review/submit/button";
-import { SubmitReviewDialog } from "@web/components/runs/review/submit/dialog";
-import { REVIEW_DECISION_SIGNAL } from "@web/lib/pull-request/inbox/signals";
+import { SubmitPullRequestReview } from "@web/components/pull-requests/submit-review";
+import { reviewDecisionSignal } from "@web/lib/pull-request/inbox/signals";
 import { MERGE_METHOD_LABEL } from "@web/lib/pull-request/merge-method-label";
 import { useState } from "react";
+
+function countChecks(checks: PullRequestCheck[], state: PullRequestCheck["state"]): number {
+  return checks.filter((check) => check.state === state).length;
+}
 
 export function PullRequestMergePanel({ overview }: { overview: PullRequestOverview }) {
   const [method, setMethod] = useState<PullRequestMergeMethod | null>(null);
@@ -17,12 +19,9 @@ export function PullRequestMergePanel({ overview }: { overview: PullRequestOverv
   // Read from the mutation cache, not an observer: the dialog that started the merge may be closed.
   const merging =
     useIsMutating({ mutationKey: keys.pullRequestMerge(overview.pull_request.id) }) > 0;
-  const { merge, pull_request: pullRequest } = overview;
-  const detail = useReviewDetail({ kind: "pull_request", id: pullRequest.id });
+  const { merge, pull_request: pullRequest, checks } = overview;
   const decision =
-    pullRequest.review_decision === null
-      ? "Review decision not reported"
-      : REVIEW_DECISION_SIGNAL[pullRequest.review_decision].label;
+    reviewDecisionSignal(pullRequest.review_decision)?.label ?? "Review decision not reported";
 
   return (
     <section
@@ -39,9 +38,8 @@ export function PullRequestMergePanel({ overview }: { overview: PullRequestOverv
         <div>
           <dt className="mb-1 text-text-tertiary">Checks</dt>
           <dd>
-            {overview.checks.filter((check) => check.state === "pending").length} running ·{" "}
-            {overview.checks.filter((check) => check.state === "passing").length} passing ·{" "}
-            {overview.checks.filter((check) => check.state === "failing").length} failing
+            {countChecks(checks, "pending")} running · {countChecks(checks, "passing")} passing ·{" "}
+            {countChecks(checks, "failing")} failing
           </dd>
         </div>
         <div>
@@ -75,21 +73,7 @@ export function PullRequestMergePanel({ overview }: { overview: PullRequestOverv
           <Icon name="git-compare" />
           Review diff
         </Button>
-        {detail.data === undefined ? (
-          <SubmitReviewButton
-            disabled
-            title={
-              detail.isError
-                ? "Otomat could not read this review from the daemon."
-                : "Reading this review…"
-            }
-          />
-        ) : (
-          <SubmitReviewDialog
-            target={{ kind: "pull_request", id: pullRequest.id }}
-            detail={detail.data}
-          />
-        )}
+        <SubmitPullRequestReview pullRequestId={pullRequest.id} />
         {merge.blocker === null ? (
           <div className="ml-auto flex flex-wrap gap-2">
             {merge.methods.map((option) => (

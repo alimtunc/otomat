@@ -101,7 +101,6 @@ export function useProjectSwitcher() {
   };
 
   return {
-    hostAlias,
     activeHostLabel,
     hostOptions,
     projects: switcherProjects,

@@ -2,7 +2,7 @@ import type { PullRequestInboxEntry } from "@otomat/domain";
 import { Chip, PRStatusBadge } from "@otomat/ui";
 import { InboxRow } from "@web/components/inbox/row";
 import { INBOX_GROUP_COPY } from "@web/lib/pull-request/inbox/groups";
-import { CHECKS_SIGNAL, REVIEW_DECISION_SIGNAL } from "@web/lib/pull-request/inbox/signals";
+import { CHECKS_SIGNAL, reviewDecisionSignal } from "@web/lib/pull-request/inbox/signals";
 import {
   PULL_REQUEST_PROVENANCE_LABEL,
   PULL_REQUEST_PROVENANCE_TONE,
@@ -24,8 +24,7 @@ export function ReviewInboxRow({
   entry: PullRequestInboxEntry;
   viewerLogin?: string | null;
 }) {
-  const review =
-    entry.review_decision === null ? null : REVIEW_DECISION_SIGNAL[entry.review_decision];
+  const review = reviewDecisionSignal(entry.review_decision);
   const checks = CHECKS_SIGNAL[entry.checks_state];
 
   return (

@@ -1,23 +1,28 @@
-import { FOCUS_RING_INSET, Icon } from "@otomat/ui";
+import { Icon } from "@otomat/ui";
 import { CountBadge } from "@web/components/issues/count-badge";
 import { IssueGroupHeading } from "@web/components/issues/list/group-heading";
 import type { IssueGroup } from "@web/lib/issue/grouping";
 
-export function IssueGroupSection({
+export function IssueGroupToggle({
   group,
   collapsed,
   onToggle,
+  className,
+  controls,
 }: {
   group: IssueGroup;
   collapsed: boolean;
   onToggle: (key: string) => void;
+  className: string;
+  controls?: string;
 }) {
   return (
     <button
       type="button"
       aria-expanded={!collapsed}
+      aria-controls={controls}
       onClick={() => onToggle(group.key)}
-      className={`flex h-8 w-full items-center gap-2 px-3 text-sm font-medium text-foreground ${FOCUS_RING_INSET}`}
+      className={`flex items-center gap-2 text-sm font-medium text-foreground ${className}`}
     >
       <Icon
         name="chevron-down"

@@ -1,4 +1,5 @@
 import {
+  issueShortId,
   projectIssuePrimaryState,
   projectOpenCycleExecution,
   type IssueSummary,
@@ -8,7 +9,6 @@ import { Link } from "@tanstack/react-router";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
 import { CardChips } from "@web/components/issues/list/card-chips";
-import { issueShortId } from "@web/lib/ids";
 import { divergentSourceStatus } from "@web/lib/issue/divergent-status";
 import { failureSummary } from "@web/lib/issue/execution-failure";
 import type { ComponentProps } from "react";

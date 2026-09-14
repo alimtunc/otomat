@@ -8,6 +8,7 @@ import { countMatching, LOG_FILTERS, type LogFilter } from "@web/components/runs
 import { SessionsPanel } from "@web/components/runs/logs/sessions-panel";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { STREAM_LABEL } from "@web/lib/run/stream";
 import { useState } from "react";
 
 export function RunLogsView() {
@@ -53,7 +54,7 @@ export function RunLogsView() {
           <PaneHeader>
             Logs
             <span className="ml-auto font-normal normal-case text-text-tertiary">
-              {stream.state === "open" ? "following updates" : stream.state}
+              {STREAM_LABEL[stream.state]}
             </span>
           </PaneHeader>
           <div className="flex flex-none flex-wrap items-center gap-2 border-b border-border-subtle px-3.5 py-2">

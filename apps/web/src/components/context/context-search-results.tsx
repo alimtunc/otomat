@@ -1,6 +1,5 @@
-import type { ContextReference, IssueContract } from "@otomat/domain";
+import { issueShortId, type ContextReference, type IssueContract } from "@otomat/domain";
 import { Icon, type IconName } from "@otomat/ui";
-import { issueShortId } from "@web/lib/ids";
 import type { ReactNode } from "react";
 
 function ResultRow({

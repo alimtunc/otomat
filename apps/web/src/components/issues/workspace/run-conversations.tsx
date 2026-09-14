@@ -1,17 +1,15 @@
-import type { RunContract } from "@otomat/domain";
+import { shortId, type RunContract } from "@otomat/domain";
 import {
   Button,
   Popover,
   PopoverContent,
   PopoverTrigger,
   Icon,
-  IconButton,
   RelativeTime,
   RunStatusChip,
 } from "@otomat/ui";
-import { Link } from "@tanstack/react-router";
 import { ConversationSection } from "@web/components/issues/workspace/conversation-section";
-import { shortId } from "@web/lib/ids";
+import { IconLink } from "@web/components/shell/icon-link";
 import { useState } from "react";
 
 function SectionHeader({ run, onSelect }: { run: RunContract; onSelect: () => void }) {
@@ -31,12 +29,11 @@ function SectionHeader({ run, onSelect }: { run: RunContract; onSelect: () => vo
         </span>
         <RelativeTime date={run.updated_at} className="text-xs" />
       </Button>
-      <IconButton
+      <IconLink
         label={`Open run cockpit for ${shortId(run.id)}`}
         icon={<Icon name="monitor" aria-hidden />}
-        nativeButton={false}
-        role="link"
-        render={<Link to="/runs/$runId" params={{ runId: run.id }} />}
+        to="/runs/$runId"
+        params={{ runId: run.id }}
       />
     </div>
   );

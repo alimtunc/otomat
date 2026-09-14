@@ -180,12 +180,7 @@ it("exports the exact Markdown locally", async () => {
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   const { cleanup } = await mount(<RunCompletionReportView />);
 
-  await act(async () => {
-    document.querySelector<HTMLButtonElement>('button[aria-label="Report actions"]')?.click();
-  });
-  const anchor = [...document.querySelectorAll("a")].find(
-    (candidate) => candidate.textContent === "Export Markdown",
-  );
+  const anchor = document.querySelector<HTMLAnchorElement>('a[aria-label="Export Markdown"]');
   if (!anchor) throw new Error("export link missing");
   await act(async () => anchor.click());
 

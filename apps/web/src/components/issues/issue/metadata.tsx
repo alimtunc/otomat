@@ -1,8 +1,7 @@
-import { projectOpenCycleExecution, type IssueContract } from "@otomat/domain";
+import { issueShortId, projectOpenCycleExecution, type IssueContract } from "@otomat/domain";
 import { Chip, IssueSourceGlyph, IssueStatusChip } from "@otomat/ui";
 import { ColorDot } from "@web/components/issues/color-dot";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
-import { issueShortId } from "@web/lib/ids";
 
 export function IssueMetadata({
   issue,

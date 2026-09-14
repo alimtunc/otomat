@@ -1,9 +1,9 @@
 import type { RunContract } from "@otomat/domain";
-import { Button, ErrorState, Icon, IconButton, Skeleton } from "@otomat/ui";
-import { Link } from "@tanstack/react-router";
+import { Button, ErrorState, ExternalLinkIconButton, Icon, Skeleton } from "@otomat/ui";
 import { useRunPullRequest } from "@web/api/prs/queries";
 import { useRunDetail } from "@web/api/runs/queries";
 import { NextActionCtaButton } from "@web/components/runs/next-action/cta";
+import { IconLink } from "@web/components/shell/icon-link";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { runNextAction } from "@web/lib/run/next-action";
 
@@ -31,7 +31,6 @@ export function CycleSummary({
       {(data) => {
         const action = runNextAction(data, pr.data);
         const pullRequest = pr.data?.pull_request;
-        const githubLabel = `Open PR #${pullRequest?.number} on GitHub`;
         return (
           <section aria-label="Cycle summary" className="flex flex-wrap items-center gap-2">
             {action.cta ? (
@@ -40,34 +39,18 @@ export function CycleSummary({
               <p className="text-xs text-text-secondary">{action.description}</p>
             )}
             {action.cta?.target.type === "diff" ? null : (
-              <IconButton
+              <IconLink
                 label="Review the run diff"
                 icon={<Icon name="git-compare" aria-hidden />}
-                nativeButton={false}
-                role="link"
-                render={
-                  <Link
-                    to="/runs/$runId/diff"
-                    params={{ runId: run.id }}
-                    search={{ step: selectedStepId ?? undefined }}
-                  />
-                }
+                to="/runs/$runId/diff"
+                params={{ runId: run.id }}
+                search={{ step: selectedStepId ?? undefined }}
               />
             )}
             {pullRequest?.url && action.cta?.target.type !== "external" ? (
-              <IconButton
-                label={githubLabel}
-                icon={<Icon name="external-link" aria-hidden />}
-                nativeButton={false}
-                role="link"
-                render={
-                  <a
-                    href={pullRequest.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={githubLabel}
-                  />
-                }
+              <ExternalLinkIconButton
+                href={pullRequest.url}
+                label={`Open PR #${pullRequest.number} on GitHub`}
               />
             ) : null}
             {pr.isError ? (

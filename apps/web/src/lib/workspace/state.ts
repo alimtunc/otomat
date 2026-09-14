@@ -26,7 +26,7 @@ export const WORKSPACE_COUNTED_STATES = [
 ] as const satisfies readonly WorkspaceState[];
 
 export interface WorkspaceGitStateDescriptor {
-  word: string;
+  word: "gone" | "unreadable" | "dirty" | "clean";
   tone: StatusTone;
   detail: string;
 }

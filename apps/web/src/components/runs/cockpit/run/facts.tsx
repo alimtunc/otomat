@@ -2,6 +2,7 @@ import type { RunDetail } from "@otomat/domain";
 import { RunStatusChip } from "@otomat/ui";
 import { useRunUsage } from "@web/api/runs/queries";
 import { CopyablePath } from "@web/components/runs/copyable-path";
+import { baseName } from "@web/components/runs/diff/files/path";
 import { UsageTokens } from "@web/components/runs/usage/tokens";
 import type { ReactNode } from "react";
 
@@ -32,7 +33,7 @@ export function RunFacts({ detail }: { detail: RunDetail }) {
         ) : (
           <CopyablePath
             value={detail.worktree_path}
-            displayValue={detail.worktree_path.split("/").at(-1)}
+            displayValue={baseName(detail.worktree_path)}
             label="worktree path"
           />
         )}

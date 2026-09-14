@@ -2,7 +2,8 @@ import { REVIEW_COMMENT_DESTINATIONS, type ReviewCommentDestination } from "@oto
 import { asBoolean, asMember, asRecord } from "@web/lib/coerce";
 import { readStoredJson, writeStored } from "@web/lib/storage";
 
-export type DiffViewMode = "unified" | "split";
+export const DIFF_VIEW_MODES = ["unified", "split"] as const;
+export type DiffViewMode = (typeof DIFF_VIEW_MODES)[number];
 export type DiffBrowserMode = "files" | "tree";
 export type DiffSortMode = "path" | "changes";
 export type DiffGroupingMode = "none" | "type";
@@ -35,7 +36,7 @@ export function readDiffPrefs(storage?: Pick<Storage, "getItem"> | null): DiffPr
   const stored = readStoredJson(PREFS_KEY, asRecord, storage);
   if (stored === null) return DEFAULT_DIFF_PREFS;
   return {
-    mode: asMember(stored.mode, ["unified", "split"] as const) ?? DEFAULT_DIFF_PREFS.mode,
+    mode: asMember(stored.mode, DIFF_VIEW_MODES) ?? DEFAULT_DIFF_PREFS.mode,
     browser: asMember(stored.browser, ["files", "tree"] as const) ?? DEFAULT_DIFF_PREFS.browser,
     sort: asMember(stored.sort, ["path", "changes"] as const) ?? DEFAULT_DIFF_PREFS.sort,
     grouping: asMember(stored.grouping, ["none", "type"] as const) ?? DEFAULT_DIFF_PREFS.grouping,

@@ -1,6 +1,7 @@
+import { FOCUS_RING_INSET } from "@otomat/ui";
 import { useTable } from "@tanstack/react-table";
 import { ISSUE_COLUMNS } from "@web/components/issues/list/columns";
-import { IssueGroupSection } from "@web/components/issues/list/group-section";
+import { IssueGroupToggle } from "@web/components/issues/list/group-toggle";
 import { VirtualTable } from "@web/components/table/virtual-table";
 import type { IssueGroup } from "@web/lib/issue/grouping";
 import type { IssueOptionalColumn } from "@web/lib/issue/view-config";
@@ -57,10 +58,11 @@ export function IssuesTable({
       groups={groups.map((group, index) => ({
         key: group.key,
         header: showGroupHeadings ? (
-          <IssueGroupSection
+          <IssueGroupToggle
             group={group}
             collapsed={collapsed.includes(group.key)}
             onToggle={onToggleGroup}
+            className={`h-8 w-full px-3 ${FOCUS_RING_INSET}`}
           />
         ) : null,
         rows: showGroupHeadings && collapsed.includes(group.key) ? [] : sections[index],

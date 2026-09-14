@@ -19,8 +19,8 @@ export interface DisconnectLinearDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   isPending: boolean;
-  finalFocus?: RefObject<HTMLButtonElement | null>;
-  error?: string | null;
+  finalFocus: RefObject<HTMLButtonElement | null>;
+  error: string | null;
 }
 
 export function DisconnectLinearDialog({
@@ -60,11 +60,11 @@ export function DisconnectLinearDialog({
               </ul>
             </>
           )}
-          {error ? (
+          {error === null ? null : (
             <p role="alert" className="text-xs text-danger">
               {error}
             </p>
-          ) : null}
+          )}
         </DialogBody>
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
