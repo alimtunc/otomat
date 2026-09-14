@@ -54,7 +54,7 @@ jobs:
         run: |
           if [ -n "$PREVIEW_DAEMON_ENABLED" ]; then
             pnpm --filter "@otomat/web..." --filter "@otomat/local-daemon..." run build
-            pnpm --filter @otomat/local-daemon deploy --prod --legacy "$RUNNER_TEMP/daemon"
+            pnpm --filter @otomat/local-daemon deploy --prod --legacy --config.allow-unused-patches=true "$RUNNER_TEMP/daemon"
             tar -C "$RUNNER_TEMP" -czf "$RUNNER_TEMP/daemon.tar.gz" daemon
           else
             pnpm --filter "@otomat/web..." run build

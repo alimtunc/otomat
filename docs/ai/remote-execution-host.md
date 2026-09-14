@@ -94,7 +94,7 @@ same-arch Linux):
 ```bash
 pnpm install && pnpm build
 rm -rf ~/.otomat/daemon
-pnpm --filter @otomat/local-daemon deploy --prod --legacy ~/.otomat/daemon
+pnpm --filter @otomat/local-daemon deploy --prod --legacy --config.allow-unused-patches=true ~/.otomat/daemon
 find ~/.otomat/daemon -type f -links +1 \
   -exec sh -c 'cp -p "$1" "$1.t" && mv "$1.t" "$1"' _ {} \;
 ```
