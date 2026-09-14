@@ -23,7 +23,7 @@
     "@otomat/client": "workspace:*",
     "@otomat/domain": "workspace:*",
     "@types/node": "^26.4.1",
-    "electron": "^44.1.1",
+    "electron": "^44.3.0",
     "electron-builder": "^26.15.3",
     "electron-updater": "^6.8.9",
     "tsdown": "^0.23.0",
