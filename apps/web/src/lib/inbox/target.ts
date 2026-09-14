@@ -7,7 +7,10 @@ export type InboxRoute =
       params: { pullRequestId: string };
     };
 
-export function inboxRoute({ target, kind }: Pick<InboxEntry, "target" | "kind">): InboxRoute {
+export function inboxRoute({
+  target,
+  kind,
+}: Pick<InboxEntry, "target"> & Partial<Pick<InboxEntry, "kind">>): InboxRoute {
   if (target.kind === "pull_request") {
     return {
       to: "/pull-requests/$pullRequestId/diff",

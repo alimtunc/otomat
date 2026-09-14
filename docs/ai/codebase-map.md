@@ -1595,6 +1595,49 @@ Linear sync and the daemon upgrade are absent: their domains report a boolean
 `running` with no durable phase, and a header that showed them would be showing
 an estimate.
 
+### Desktop notifications
+
+`GET /api/activity/notifications` composes the existing Inbox projection and
+completed run evidence without Activity's display limit or time window. The
+domain notification projection owns intent classification and identity. The API
+loads its evidence and returns only category and navigation identifiers.
+Pending interactions retain their durable request UUID and step; competition
+choices retain their group ID. Run notices use the last execution boundary;
+user-answer waits also include the session start to distinguish interrupted
+resumes. Both ignore replayed settlement markers, and PR notices use the provider's version
+instead of the local refresh timestamp. No new business table or desktop
+projection is involved, and reading or clicking a notification changes no Inbox
+mark or run state.
+
+The main process polls connected hosts once per second, including while the
+cockpit has no window. It persists consumed notification identities in
+`notifications.json` before delivery and silently consumes the first snapshot
+from each host after startup. A visible, focused, non-minimized cockpit receives
+an internal notice; a hidden, unfocused or locked cockpit receives a native
+macOS notification. The renderer's older Activity toasts are disabled in desktop
+mode. A native click stays pending until the renderer selects the owning host
+and project and navigates to the request's step, run diff or PR surface.
+
+Every notice reads its headline and tone from the notification category, never
+from the Activity bucket: the internal notice and the native body share
+`NOTIFICATION_HEADLINES`, the browser fallback classifies a run through
+`RUN_NOTIFICATION_CATEGORY` from its canonical status, and
+`shell/notifications/category-toast.ts` maps a category to one toast tone. A
+`review_ready` run is therefore a neutral "Ready for review", a wait is an orange
+"Action required", and only `failed`, blocked or stopped work is red.
+
+Settings → Notifications controls native categories and generic/category-only
+copy. Neither level includes project names, issue titles, prompts, code, paths
+or responses, including on the lock screen. Persisting preferences or replay
+history can fail explicitly; delivery does not acknowledge a failed write.
+Native delivery failures remain exposed in settings until a native notification
+is shown; saving preferences or history cannot clear them. Host availability
+tracks the current configured sources, including disconnected tunnels. Settings
+links to macOS notification settings. Electron's public API does not expose the OS
+authorization status: the UI reports it as system-managed, never as granted or
+denied. Exact denied-state detection requires a native macOS bridge. Signed
+macOS validation is required for actual notification delivery and click events.
+
 ## Session Capacity and the Launch Queue
 
 A launch answers as soon as the run and its frozen plan are durable. Claiming a

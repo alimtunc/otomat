@@ -28,24 +28,21 @@ export function WorkspaceOpenMenuItems({ entry, host }: WorkspaceOpenMenuItemsPr
     entry !== null && entry.present && alias !== null
       ? remoteShellCommand(alias, entry.path)
       : null;
-  const launch = (target: WorkspaceOpenTarget): void => {
+  const launch = async (target: WorkspaceOpenTarget): Promise<void> => {
     if (entry === null) return;
-    open.mutate(
-      { hostId: host.id, path: entry.path, target },
-      {
-        onSuccess: (result) => {
-          if (!result.ok) toast.error(describeOperationFailure(result));
-        },
-        onError: (error) => toast.error(error.message),
-      },
-    );
+    try {
+      const result = await open.mutateAsync({ hostId: host.id, path: entry.path, target });
+      if (!result.ok) toast.error(describeOperationFailure(result));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not open the workspace.");
+    }
   };
   return (
     <>
       <DropdownMenuItem
         disabled={!vscode.available || open.isPending}
         title={vscode.reason ?? undefined}
-        onClick={() => launch("vscode")}
+        onClick={() => void launch("vscode")}
       >
         <Icon name="code" aria-hidden />
         Open in VS Code
@@ -53,7 +50,7 @@ export function WorkspaceOpenMenuItems({ entry, host }: WorkspaceOpenMenuItemsPr
       <DropdownMenuItem
         disabled={!terminal.available || open.isPending}
         title={terminal.reason ?? undefined}
-        onClick={() => launch("terminal")}
+        onClick={() => void launch("terminal")}
       >
         <Icon name="terminal" aria-hidden />
         Open in terminal

@@ -9,6 +9,8 @@ function fakeWindow() {
       listeners.set(event, listener);
     }),
     isMinimized: vi.fn(() => false),
+    isVisible: vi.fn(() => true),
+    isFocused: vi.fn(() => true),
     restore: vi.fn(),
     show: vi.fn(),
     focus: vi.fn(),
@@ -81,4 +83,22 @@ it("drops a message to a renderer that is already gone", () => {
   cockpit.send("channel", "payload");
 
   expect(fake.window.webContents.send).not.toHaveBeenCalled();
+});
+
+it("requires a visible, focused, non-minimized window for internal delivery", () => {
+  const fake = fakeWindow();
+  const cockpit = new CockpitWindow({ create: () => fake.window, onClose: () => false });
+  expect(cockpit.isForeground).toBe(false);
+  cockpit.open();
+  expect(cockpit.isForeground).toBe(true);
+  fake.window.isFocused.mockReturnValue(false);
+  expect(cockpit.isForeground).toBe(false);
+  fake.window.isFocused.mockReturnValue(true);
+  fake.window.isVisible.mockReturnValue(false);
+  expect(cockpit.isForeground).toBe(false);
+  fake.window.isVisible.mockReturnValue(true);
+  fake.window.isMinimized.mockReturnValue(true);
+  expect(cockpit.isForeground).toBe(false);
+  fake.close();
+  expect(cockpit.isForeground).toBe(false);
 });

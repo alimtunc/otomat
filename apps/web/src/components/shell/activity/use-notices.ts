@@ -1,22 +1,34 @@
-import type { ActivityBucket, ActivityContract } from "@otomat/domain";
-import { toast } from "@otomat/ui";
+import {
+  NOTIFICATION_HEADLINES,
+  RUN_NOTIFICATION_CATEGORY,
+  type ActivityBucket,
+  type ActivityContract,
+} from "@otomat/domain";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useActivity } from "@web/api/activity/queries";
 import { activityTarget } from "@web/components/shell/activity/target";
+import {
+  CATEGORY_TOAST,
+  type NotificationToast,
+} from "@web/components/shell/notifications/category-toast";
+import { desktopBridge } from "@web/lib/desktop-bridge";
 import { useEffect, useRef } from "react";
 
 const ANNOUNCED: ReadonlySet<ActivityBucket> = new Set<ActivityBucket>(["attention", "recent"]);
 
-function headline(activity: ActivityContract): string {
+function notice(activity: ActivityContract): { message: string; notify: NotificationToast } | null {
   const subject = activity.issue.identifier ?? activity.issue.title;
-  if (activity.kind === "run") {
+  if (activity.kind !== "run") {
     return activity.bucket === "recent"
-      ? `Run finished — ${subject}`
-      : `Run needs you — ${subject}`;
+      ? { message: `Pull request published — ${subject}`, notify: CATEGORY_TOAST.completed }
+      : { message: `Publication stopped — ${subject}`, notify: CATEGORY_TOAST.blocked };
   }
-  return activity.bucket === "recent"
-    ? `Pull request published — ${subject}`
-    : `Publication stopped — ${subject}`;
+  const category = RUN_NOTIFICATION_CATEGORY[activity.status];
+  if (category === null) return null;
+  return {
+    message: `${NOTIFICATION_HEADLINES[category]} — ${subject}`,
+    notify: CATEGORY_TOAST[category],
+  };
 }
 
 export function useActivityNotices(): void {
@@ -27,6 +39,7 @@ export function useActivityNotices(): void {
 
   // otomat-allow-effect: the daemon settling work off-screen is an external transition, not a render result.
   useEffect(() => {
+    if (desktopBridge() !== null) return;
     const previous = seen.current;
     seen.current = new Map(activities.map((activity) => [activity.id, activity.bucket]));
     if (previous === null) return;
@@ -36,9 +49,10 @@ export function useActivityNotices(): void {
       if (!ANNOUNCED.has(activity.bucket)) continue;
       const target = activityTarget(activity);
       if (pathname === target.pathname || pathname.startsWith(`${target.pathname}/`)) continue;
+      const announced = notice(activity);
+      if (announced === null) continue;
       const open = () => void navigate({ to: target.to, params: target.params });
-      const notify = activity.bucket === "recent" ? toast.success : toast.error;
-      notify(headline(activity), { action: { label: "Open", onClick: open } });
+      announced.notify(announced.message, { action: { label: "Open", onClick: open } });
     }
   }, [activities, pathname, navigate]);
 }

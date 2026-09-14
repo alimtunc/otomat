@@ -1,5 +1,9 @@
 // @vitest-environment happy-dom
-import type { ExecutionHostDescriptor, WorkspaceEntry } from "@otomat/domain";
+import type {
+  ExecutionHostDescriptor,
+  ExecutionHostOperationResult,
+  WorkspaceEntry,
+} from "@otomat/domain";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, IconButton } from "@otomat/ui";
 import { WorkspaceOpenMenuItems } from "@web/components/workspaces/open-menu-items";
 import { act } from "react";
@@ -90,24 +94,30 @@ it("offers a copyable ssh command instead of a remote terminal", async () => {
   );
 });
 
-it("surfaces the main process's refusal as a toast", async () => {
-  const bridge = fakeDesktopBridge();
-  window.otomat = {
-    ...bridge,
-    executionHost: {
-      ...bridge.executionHost,
-      openWorkspace: () =>
-        Promise.resolve({ ok: false as const, message: "VS Code is not installed." }),
-    },
-  };
-  await renderMenu(workspaceEntry({ id: "a" }), LOCAL);
+it.each(["refusal", "rejection"] as const)(
+  "surfaces a %s after the menu closes",
+  async (failure) => {
+    const bridge = fakeDesktopBridge();
+    const result = Promise.withResolvers<ExecutionHostOperationResult>();
+    window.otomat = {
+      ...bridge,
+      executionHost: {
+        ...bridge.executionHost,
+        openWorkspace: () => result.promise,
+      },
+    };
+    await renderMenu(workspaceEntry({ id: "a" }), LOCAL);
 
-  await act(async () => {
-    findMenuItem("Open in VS Code")?.click();
-  });
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
+    await act(async () => {
+      findMenuItem("Open in VS Code")?.click();
+    });
+    await cleanups.splice(0)[0]();
+    await act(async () => {
+      if (failure === "refusal")
+        result.resolve({ ok: false, message: "VS Code is not installed." });
+      else result.reject(new Error("VS Code is not installed."));
+    });
 
-  expect(toastError).toHaveBeenCalledWith("VS Code is not installed.");
-});
+    expect(toastError).toHaveBeenCalledWith("VS Code is not installed.");
+  },
+);

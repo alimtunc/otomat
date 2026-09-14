@@ -9,6 +9,8 @@ import { mount, type Mounted } from "#support/mount";
 
 const success = vi.fn();
 const error = vi.fn();
+const warning = vi.fn();
+const info = vi.fn();
 const navigate = vi.fn();
 let pathname = "/issues";
 let frame: ActivityContract[] = [];
@@ -17,6 +19,8 @@ vi.mock("@otomat/ui", () => ({
   toast: {
     success: (...args: unknown[]) => success(...args),
     error: (...args: unknown[]) => error(...args),
+    warning: (...args: unknown[]) => warning(...args),
+    info: (...args: unknown[]) => info(...args),
   },
 }));
 
@@ -48,6 +52,8 @@ async function observe(...frames: ActivityContract[][]): Promise<void> {
 beforeEach(() => {
   success.mockReset();
   error.mockReset();
+  warning.mockReset();
+  info.mockReset();
   navigate.mockReset();
   pathname = "/issues";
   frame = [];
@@ -69,7 +75,7 @@ it("announces a run that finished while the operator was elsewhere", async () =>
   await observe([runActivity()], [runActivity({ bucket: "recent", status: "completed" })]);
 
   expect(success).toHaveBeenCalledTimes(1);
-  expect(success.mock.calls[0]?.[0]).toBe("Run finished — ABC-1");
+  expect(success.mock.calls[0]?.[0]).toBe("Run completed — ABC-1");
 });
 
 it("opens the activity's own surface from the notice", async () => {
@@ -82,12 +88,25 @@ it("opens the activity's own surface from the notice", async () => {
   expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId: "run-1" } });
 });
 
-it("reports work that stopped as a failure, not a success", async () => {
-  await observe([runActivity()], [runActivity({ bucket: "attention", status: "failed" })]);
+it.each([
+  ["review_ready", "attention", info, "Ready for review — ABC-1"],
+  ["completed", "recent", success, "Run completed — ABC-1"],
+  ["awaiting_permission", "attention", warning, "Action required — ABC-1"],
+  ["awaiting_human", "attention", warning, "Action required — ABC-1"],
+  ["awaiting_selection", "attention", warning, "Action required — ABC-1"],
+  ["failed", "attention", error, "Run failed or is blocked — ABC-1"],
+] as const)(
+  "tones a run that reached %s by its status, not its bucket",
+  async (status, bucket, tone, message) => {
+    await observe([runActivity()], [runActivity({ bucket, status })]);
 
-  expect(error).toHaveBeenCalledTimes(1);
-  expect(success).not.toHaveBeenCalled();
-});
+    expect(tone).toHaveBeenCalledTimes(1);
+    expect(tone.mock.calls[0]?.[0]).toBe(message);
+    for (const other of [success, error, warning, info]) {
+      if (other !== tone) expect(other).not.toHaveBeenCalled();
+    }
+  },
+);
 
 it("stays quiet while the operator is already looking at that surface", async () => {
   pathname = "/runs/run-1";
