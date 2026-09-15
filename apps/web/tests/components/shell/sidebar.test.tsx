@@ -81,7 +81,15 @@ describe("Sidebar", () => {
     const container = await renderSidebar();
 
     const targets = [...container.querySelectorAll("a")].map((link) => link.getAttribute("href"));
-    expect(targets).toEqual(["/inbox", "/issues", "/runs", "/reviews", "/usage", "/settings"]);
+    expect(targets).toEqual([
+      "/inbox",
+      "/issues",
+      "/files",
+      "/runs",
+      "/reviews",
+      "/usage",
+      "/settings",
+    ]);
     expect(container.textContent).not.toContain("Runtimes");
     expect(container.textContent).not.toContain("Skills");
     expect(container.textContent).not.toContain("Design system");

@@ -2,6 +2,7 @@ import { sqliteToIso } from "@otomat/db";
 import {
   projectPullRequestPublicationOperation,
   publishPullRequestRequestSchema,
+  publishRepositoryPullRequestSchema,
   pushPullRequestRequestSchema,
   type PullRequestDetail,
   type PullRequestPublishability,
@@ -52,6 +53,24 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
 
   routes.get("/github/connection", async (c) => c.json(await deps.github.connection()));
   routes.post("/github/connect", (c) => c.json(deps.github.connect(), 202));
+
+  routes.post(
+    "/repositories/:id/pr",
+    validateJson(publishRepositoryPullRequestSchema),
+    async (c) => {
+      try {
+        return c.json(
+          toPullRequest(
+            await deps.github.publishRepository(c.req.param("id"), c.req.valid("json")),
+          ),
+        );
+      } catch (error) {
+        const refused = refusal(error);
+        if (refused) return c.json(refused, 409);
+        throw error;
+      }
+    },
+  );
 
   routes.get("/runs/:id/pr", runGuard(deps.db), async (c) => {
     const runId = c.get("run").id;

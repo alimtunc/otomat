@@ -1,19 +1,20 @@
+import type { CheckoutTarget } from "@otomat/domain";
 import { ErrorState, Spinner } from "@otomat/ui";
-import { useRunFile } from "@web/api/runs/file-queries";
+import { useFile } from "@web/api/files/queries";
+import { FileEditor } from "@web/components/files/editor";
 import { MediaBlob } from "@web/components/runs/diff/files/media-blob";
-import { WorktreeFileEditor } from "@web/components/runs/files/editor";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { worktreeFileMessage } from "@web/lib/run/file-refusal";
 
-export interface WorktreeFilePanelProps {
-  runId: string;
+export interface FilePanelProps {
+  target: CheckoutTarget;
   path: string;
   editable: boolean;
 }
 
-export function WorktreeFilePanel({ runId, path, editable }: WorktreeFilePanelProps) {
-  const file = useRunFile(runId, path);
+export function FilePanel({ target, path, editable }: FilePanelProps) {
+  const file = useFile(target, path);
   return (
     <div className="flex h-full min-h-0 flex-col">
       <QueryBoundary
@@ -45,9 +46,9 @@ export function WorktreeFilePanel({ runId, path, editable }: WorktreeFilePanelPr
               />
             </figure>
           ) : (
-            <WorktreeFileEditor
+            <FileEditor
               key={path}
-              runId={runId}
+              target={target}
               content={content}
               editable={editable}
               refreshing={file.isFetching}

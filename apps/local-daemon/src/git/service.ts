@@ -9,6 +9,7 @@ import { toRecord } from "./record.js";
 import { commitsSince, deleteBranch, fastForward, headSha, isAncestor, revParse } from "./repo.js";
 import { boundarySnapshot, captureWorktreeState, commitScope } from "./scopes.js";
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
+import { commitCheckoutFiles } from "./source-control/commit.js";
 import { listTreeFiles, readTreeBlob, readTreeFile } from "./tree-file.js";
 import { pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import { isDirty, snapshotSubject, snapshotWorktree } from "./worktree-snapshot.js";
@@ -121,6 +122,14 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       const head = headSha(row.path);
       updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
       return toRecord({ ...row, head_sha: head });
+    },
+
+    commitStaged(owner, request) {
+      const row = findActiveByOwner(db, owner);
+      if (!row) throw new WorktreeNotFoundError(owner);
+      const result = commitCheckoutFiles(row.path, request);
+      updateWorktreeStatus(db, row.id, { status: "active", head_sha: result.sha });
+      return result;
     },
 
     promote(sourceOwner, canonicalOwner, expectedBaseSha) {

@@ -4,6 +4,7 @@ import type {
   GitHubConnectionContract,
   LinearLifecycleSync,
   PublishPullRequestRequest,
+  PublishRepositoryPullRequest,
   PullRequestCandidate,
   PullRequestDetection,
   PullRequestInbox,
@@ -92,6 +93,10 @@ export interface GitHubService {
   publishability(runId: string): Promise<PullRequestPublishability>;
   /** Accepts the publication and answers its initial state; it never pushes to a pull request that already exists. */
   publish(run: RunRow, request: PublishPullRequestRequest): Promise<PullRequestView>;
+  publishRepository(
+    repositoryId: string,
+    request: PublishRepositoryPullRequest,
+  ): Promise<PullRequestRow>;
   /** Stamps every publication a stopped process left mid-phase as interrupted; answers how many. */
   reconcileInterruptedPublications(): number;
   settlePublications(): Promise<void>;

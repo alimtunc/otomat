@@ -1,5 +1,7 @@
-import { Button, Icon } from "@otomat/ui";
+import type { ChangeStatus } from "@otomat/domain";
+import { Button, Icon, cn } from "@otomat/ui";
 import { INDENT_REM, ROW_PADDING_REM } from "@web/components/runs/diff/files/row.utils";
+import { STATUS_LETTER } from "@web/components/runs/diff/files/status";
 
 export interface FolderRowProps {
   path: string;
@@ -7,9 +9,11 @@ export interface FolderRowProps {
   depth: number;
   expanded: boolean;
   onToggle: (path: string) => void;
+  status?: ChangeStatus;
 }
 
-export function FolderRow({ path, label, depth, expanded, onToggle }: FolderRowProps) {
+export function FolderRow({ path, label, depth, expanded, onToggle, status }: FolderRowProps) {
+  const color = status === undefined ? undefined : STATUS_LETTER[status].className;
   return (
     <Button
       type="button"
@@ -25,7 +29,20 @@ export function FolderRow({ path, label, depth, expanded, onToggle }: FolderRowP
         name={expanded ? "chevron-down" : "chevron-right"}
         className="h-3 w-3 shrink-0 text-text-tertiary"
       />
-      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      <Icon
+        name={expanded ? "folder-open" : "folder"}
+        className="size-3.5 shrink-0 text-text-tertiary"
+        aria-hidden
+      />
+      <span className={cn("min-w-0 flex-1 truncate text-left", color)}>{label}</span>
+      {status === undefined ? null : (
+        <span
+          role="img"
+          aria-label="Contains changes"
+          title="Contains changes"
+          className={cn("size-1.5 shrink-0 rounded-full bg-current", color)}
+        />
+      )}
     </Button>
   );
 }

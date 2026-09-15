@@ -7,6 +7,8 @@ import type {
   WorktreeFileContent,
   WorktreeFileSaved,
   WorktreeFilesResponse,
+  RepositoryTreeResponse,
+  SourceControlResponse,
 } from "@otomat/domain";
 import type { Hono } from "hono";
 import { afterEach, beforeEach, expect, it } from "vitest";
@@ -14,7 +16,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { createGitWorktreeService, type GitWorktreeService } from "#git";
 import { createReviewService } from "#review";
 
-import { json, makeApiApp, put, request } from "../support/api.js";
+import { json, makeApiApp, post, put, request } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { setupTestRepo, stubRepositoryResolver, type TestRepo } from "../support/git.js";
 import { seedRun } from "../support/seed.js";
@@ -156,4 +158,85 @@ it("keeps an archived branch readable but never writable", async () => {
   });
   expect(res.status).toBe(409);
   expect(await res.json()).toMatchObject({ error: "workspace_read_only" });
+});
+
+it("browses the project checkout on its current branch without changing its staging area", async () => {
+  repo.git("switch", "-c", "feat/current-project");
+  repo.write("project-only.json", '{"project":true}\n');
+  const index = repo.git("diff", "--cached");
+  const listing = await json<RepositoryTreeResponse>(
+    await request(app, "/api/repositories/repo-1/tree"),
+  );
+  expect(listing.branch).toBe("feat/current-project");
+  expect(listing.entries.map((entry) => entry.path)).toContain("project-only.json");
+  const content = await request(
+    app,
+    "/api/repositories/repo-1/tree/content?path=project-only.json",
+  );
+  expect(await content.json()).toMatchObject({ kind: "text", text: '{"project":true}\n' });
+  expect(repo.git("diff", "--cached")).toBe(index);
+  const opened = await json<WorktreeFileContent>(
+    await request(app, "/api/repositories/repo-1/tree/content?path=project-only.json"),
+  );
+  const saved = await put(app, "/api/repositories/repo-1/tree/content", {
+    path: "project-only.json",
+    revision: opened.revision,
+    text: "edited",
+  });
+  expect(saved.status).toBe(200);
+  expect(repo.git("diff", "--cached")).toBe(index);
+  expect((await openText("src/app.ts")).text).toBe("export const a = 1;\n");
+  const stale = await put(app, "/api/repositories/repo-1/tree/content", {
+    path: "project-only.json",
+    revision: opened.revision,
+    text: "stale",
+  });
+  expect(stale.status).toBe(409);
+});
+
+it("stages only the selected worktree, returns stale refusals, and rejects an archived target", async () => {
+  const path = `/api/source-control/run/${RUN_ID}`;
+  writeFileSync(join(worktree, "src/app.ts"), "worktree\n");
+  const before = await json<SourceControlResponse>(await request(app, path));
+  expect(before.unstaged.map((entry) => entry.path)).toEqual(["src/app.ts"]);
+  const staged = await post(app, path, {
+    action: "stage",
+    path: "src/app.ts",
+    revision: before.revision,
+  });
+  expect(staged.status).toBe(200);
+  expect(repo.git("diff", "--cached")).toBe("");
+  const after = await json<SourceControlResponse>(await request(app, path));
+  expect(after.staged.map((entry) => entry.path)).toEqual(["src/app.ts"]);
+  const stale = await post(app, path, {
+    action: "unstage",
+    path: "src/app.ts",
+    revision: before.revision,
+  });
+  expect(stale.status).toBe(409);
+  expect(await stale.json()).toMatchObject({ error: "checkout_stale" });
+  service.archive(RUN_ID);
+  expect((await request(app, path)).status).toBe(409);
+});
+
+it("commits the selected worktree's staged files and records its new tip", async () => {
+  const path = `/api/source-control/run/${RUN_ID}`;
+  const original = repo.git("rev-parse", "HEAD");
+  writeFileSync(join(worktree, "src/app.ts"), "staged\n");
+  const before = await json<SourceControlResponse>(await request(app, path));
+  expect(
+    (await post(app, path, { action: "stage", all: true, revision: before.revision })).status,
+  ).toBe(200);
+  writeFileSync(join(worktree, "src/app.ts"), "unstaged\n");
+  const staged = await json<SourceControlResponse>(await request(app, path));
+  const committed = await post(app, `${path}/commit`, {
+    revision: staged.revision,
+    message: "feat: edit the worktree",
+  });
+  expect(committed.status).toBe(200);
+  expect(await committed.json()).toMatchObject({ sha: service.get(RUN_ID)?.headSha });
+  expect(repo.git("rev-parse", "HEAD")).toBe(original);
+  const after = await json<SourceControlResponse>(await request(app, path));
+  expect(after.staged).toEqual([]);
+  expect(after.unstaged[0]?.patch).toContain("-staged\n+unstaged");
 });

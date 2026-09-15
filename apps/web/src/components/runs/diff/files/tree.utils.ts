@@ -37,16 +37,13 @@ function draft<T extends FileTreeLeaf>(path: string): Draft<T> {
   return { path, directories: new Map(), files: [] };
 }
 
-/** Git orders a tree by entry name with directories sorted as if they ended in `/`. */
-function sortKey<T extends FileTreeLeaf>(node: FileTreeNode<T>): string {
-  return node.kind === "directory" ? `${node.label}/` : baseName(node.file.path);
-}
+const FILE_COLLATOR = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
 function byTreeOrder<T extends FileTreeLeaf>(a: FileTreeNode<T>, b: FileTreeNode<T>): number {
-  const left = sortKey(a);
-  const right = sortKey(b);
-  if (left < right) return -1;
-  return left > right ? 1 : 0;
+  if (a.kind !== b.kind) return a.kind === "directory" ? -1 : 1;
+  const left = a.kind === "directory" ? a.label : baseName(a.file.path);
+  const right = b.kind === "directory" ? b.label : baseName(b.file.path);
+  return FILE_COLLATOR.compare(left, right) || left.localeCompare(right, "en");
 }
 
 function compact<T extends FileTreeLeaf>(directory: FileTreeDirectory<T>): FileTreeDirectory<T> {

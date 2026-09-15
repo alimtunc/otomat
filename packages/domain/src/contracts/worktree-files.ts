@@ -21,6 +21,13 @@ export const worktreeFilesResponseSchema = z.object({
 });
 export type WorktreeFilesResponse = z.infer<typeof worktreeFilesResponseSchema>;
 
+export const repositoryTreeResponseSchema = z.object({
+  repository_id: z.string(),
+  branch: z.string(),
+  entries: z.array(worktreeFileEntrySchema),
+});
+export type RepositoryTreeResponse = z.infer<typeof repositoryTreeResponseSchema>;
+
 /** `revision` is the blob id the content was read at; a save must present it back. */
 export const worktreeFileContentSchema = z.discriminatedUnion("kind", [
   z.object({

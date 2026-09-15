@@ -1,37 +1,31 @@
-import type { WorktreeFileContent } from "@otomat/domain";
+import type { CheckoutTarget, WorktreeFileContent } from "@otomat/domain";
 import { Button, Kbd, Spinner } from "@otomat/ui";
 import { useBlocker } from "@tanstack/react-router";
-import { useSaveRunFile } from "@web/api/runs/file-mutations";
+import { useSaveFile } from "@web/api/files/mutations";
+import type { CodeEditorHandle } from "@web/components/files/code-editor";
 import { CopyablePath } from "@web/components/runs/copyable-path";
-import type { CodeEditorHandle } from "@web/components/runs/files/code-editor";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { worktreeFileRefusal } from "@web/lib/run/file-refusal";
 import { lazy, Suspense, useRef, useState } from "react";
 
 const CodeEditor = lazy(() =>
-  import("@web/components/runs/files/code-editor").then((m) => ({ default: m.CodeEditor })),
+  import("@web/components/files/code-editor").then((m) => ({ default: m.CodeEditor })),
 );
 
 const DISCARD_PROMPT = "This file has unsaved changes. Leave and discard them?";
 
 type TextContent = Extract<WorktreeFileContent, { kind: "text" }>;
 
-export interface WorktreeFileEditorProps {
-  runId: string;
+export interface FileEditorProps {
+  target: CheckoutTarget;
   content: TextContent;
   editable: boolean;
   refreshing: boolean;
   onReload: () => void;
 }
 
-export function WorktreeFileEditor({
-  runId,
-  content,
-  editable,
-  refreshing,
-  onReload,
-}: WorktreeFileEditorProps) {
-  const save = useSaveRunFile(runId);
+export function FileEditor({ target, content, editable, refreshing, onReload }: FileEditorProps) {
+  const save = useSaveFile(target);
   const editor = useRef<CodeEditorHandle>(null);
   const [dirty, setDirty] = useState(false);
   const [opened, setOpened] = useState(content.revision);
@@ -94,8 +88,8 @@ export function WorktreeFileEditor({
       {conflict ? (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle bg-warning-bg px-3 py-1.5 text-xs text-foreground">
           <p>
-            This file changed in the worktree since it was opened. Saving would overwrite that
-            change; reload to see it and discard your edits.
+            This file changed on disk since it was opened. Saving would overwrite that change;
+            reload to see it and discard your edits.
           </p>
           <Button type="button" size="xs" variant="outline" loading={refreshing} onClick={reload}>
             Reload

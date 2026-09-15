@@ -28,8 +28,12 @@ export function PullRequestSyncPanel({ runId, headRef, sync }: PullRequestSyncPa
               variant="ghost"
               size="sm"
               render={
-                <Link to="/runs/$runId" params={{ runId }}>
-                  Open run to commit
+                <Link
+                  to="/runs/$runId/files"
+                  params={{ runId }}
+                  search={{ changes: true, file: undefined, fileScope: undefined }}
+                >
+                  Open changes to commit
                 </Link>
               }
             />

@@ -3,6 +3,10 @@ import * as monaco from "monaco-editor/editor/editor.api";
 import EditorWorker from "monaco-editor/editor/editor.worker.js?worker";
 import "monaco-editor/features/bracketMatching/register.js";
 import "monaco-editor/features/clipboard/register.js";
+import "monaco-editor/features/comment/register.js";
+import "monaco-editor/features/contextmenu/register.js";
+import "monaco-editor/features/quickCommand/register.js";
+import "monaco-editor/features/suggest/register.js";
 import "monaco-editor/features/codicon/register.js";
 import "monaco-editor/features/cursorUndo/register.js";
 import "monaco-editor/features/find/register.js";
@@ -29,6 +33,15 @@ import "monaco-editor/languages/definitions/sql/register.js";
 import "monaco-editor/languages/definitions/typescript/register.js";
 import "monaco-editor/languages/definitions/xml/register.js";
 import "monaco-editor/languages/definitions/yaml/register.js";
+import { createTokenizationSupport } from "monaco-editor/languages/features/json/tokenization.js";
+
+monaco.languages.register({
+  id: "json",
+  extensions: [".json", ".jsonc", ".bowerrc", ".babelrc", ".eslintrc"],
+  aliases: ["JSON", "json"],
+  mimetypes: ["application/json"],
+});
+monaco.languages.setTokensProvider("json", createTokenizationSupport(true));
 
 /** Bundled locally and given its own worker: the default loader would fetch Monaco from a CDN, which an offline cockpit never has. */
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };

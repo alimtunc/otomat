@@ -1,4 +1,4 @@
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { retryTransportOnly } from "@web/api/query-client";
 import { useQueryKeys } from "@web/api/use-query-keys";
@@ -8,15 +8,6 @@ export function useRunFiles(runId: string) {
   return useQuery({
     queryKey: keys.runFiles(runId),
     queryFn: () => daemon.getRunFiles(runId),
-    retry: retryTransportOnly,
-  });
-}
-
-export function useRunFile(runId: string, path: string | null) {
-  const keys = useQueryKeys();
-  return useQuery({
-    queryKey: keys.runFile(runId, path),
-    queryFn: path === null ? skipToken : () => daemon.getRunFile(runId, path),
     retry: retryTransportOnly,
   });
 }

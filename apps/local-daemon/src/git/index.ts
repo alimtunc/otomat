@@ -11,7 +11,7 @@ export * from "./types.js";
 export * from "./errors.js";
 export * from "./diff.js";
 export { worktreeGitView, type WorktreeGitView } from "./diff-inputs.js";
-export { scrubGitEnv } from "./git-cli.js";
+export { runGit, scrubGitEnv } from "./git-cli.js";
 export { availableBranchName, sanitizeBranchName } from "./branch-name.js";
 export {
   branchExists,
@@ -33,6 +33,8 @@ export { probeRemoteBranch, resolveBaseSha, type RemoteBranchProbe } from "./rem
 export * from "./repository-path.js";
 export * from "./tree-file.js";
 export * from "./file-write.js";
+export { checkoutTree } from "./checkout-tree.js";
+export * from "./source-control/index.js";
 export * from "./probe.js";
 export * from "./resolver.js";
 export * from "./service-contract.js";

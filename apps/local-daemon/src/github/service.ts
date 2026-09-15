@@ -10,6 +10,7 @@ import { mergePullRequest } from "./merge.js";
 import { readPullRequestOverview } from "./overview.js";
 import { createPullRequestPublisher } from "./publication/index.js";
 import { refreshTrackedPullRequests } from "./refresh.js";
+import { publishRepositoryPullRequest } from "./repository-publication.js";
 import { submitPullRequestReview } from "./review-submission.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
 import { readViewedFiles, syncViewedFile } from "./viewed-files.js";
@@ -20,6 +21,7 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
   const publisher = createPullRequestPublisher(normalizedConfig, config.generator);
   const imports = createPullRequestImportService(normalizedConfig);
   const inbox = createPullRequestInboxService(normalizedConfig);
+  const repositoryPublications = new Map<string, Promise<unknown>>();
   return {
     ...connection,
     pullRequestInbox: (projectId) => inbox.read(projectId),
@@ -42,6 +44,16 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     getPullRequest: (runId) => publisher.get(runId),
     publishability: (runId) => publisher.publishability(runId),
     publish: (run, request) => publisher.publish(run, request),
+    publishRepository: (repositoryId, request) => {
+      const operation = () => publishRepositoryPullRequest(normalizedConfig, repositoryId, request);
+      const active = repositoryPublications.get(repositoryId);
+      const started = (active ? active.then(operation, operation) : operation()).finally(() => {
+        if (repositoryPublications.get(repositoryId) === started)
+          repositoryPublications.delete(repositoryId);
+      });
+      repositoryPublications.set(repositoryId, started);
+      return started;
+    },
     reconcileInterruptedPublications: () => publisher.reconcileInterrupted(),
     settlePublications: () => publisher.settle(),
     pushCommits: (runId, request) => publisher.pushCommits(runId, request),

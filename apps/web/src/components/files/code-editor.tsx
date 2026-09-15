@@ -1,6 +1,6 @@
 import { Editor, type OnMount } from "@monaco-editor/react";
 import { Spinner, useTheme } from "@otomat/ui";
-import { EDITOR_OPTIONS, editorTheme } from "@web/components/runs/files/monaco-setup";
+import { EDITOR_OPTIONS, editorTheme } from "@web/components/files/monaco-setup";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { KeyCode, KeyMod } from "monaco-editor/editor/editor.api";
 import { useEffect, useEffectEvent, useImperativeHandle, useMemo, useState, type Ref } from "react";
@@ -15,8 +15,8 @@ export interface CodeEditorProps {
   /** Changing it replaces the document with `doc` and marks the editor clean. */
   docKey: string;
   readOnly: boolean;
-  onDirtyChange: (dirty: boolean) => void;
-  onSave: (text: string) => void;
+  onDirtyChange?: (dirty: boolean) => void;
+  onSave?: (text: string) => void;
   ref?: Ref<CodeEditorHandle>;
 }
 
@@ -38,13 +38,13 @@ export function CodeEditor({
 
   const markSaved = useEffectEvent((current: MonacoEditor) => {
     setSavedVersion(current.getModel()?.getAlternativeVersionId() ?? null);
-    onDirtyChange(false);
+    onDirtyChange?.(false);
   });
   const reportDirty = useEffectEvent((current: MonacoEditor) => {
     const version = current.getModel()?.getAlternativeVersionId() ?? null;
-    onDirtyChange(version !== savedVersion);
+    onDirtyChange?.(version !== savedVersion);
   });
-  const save = useEffectEvent((current: MonacoEditor) => onSave(current.getValue()));
+  const save = useEffectEvent((current: MonacoEditor) => onSave?.(current.getValue()));
 
   useImperativeHandle(ref, () => ({ read: () => editor?.getValue() ?? doc }), [editor, doc]);
 
@@ -54,6 +54,9 @@ export function CodeEditor({
     markSaved(editor);
     const listener = editor.onDidChangeModelContent(() => reportDirty(editor));
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => save(editor));
+    editor.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyP, () =>
+      editor.trigger("keyboard", "editor.action.quickCommand", null),
+    );
     return () => listener.dispose();
   }, [editor]);
 

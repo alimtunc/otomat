@@ -18,7 +18,10 @@ import type {
   PublicationRequest,
 } from "./types.js";
 
-function metadataMatches(provider: GitHubPullRequest, request: PublicationRequest): boolean {
+function metadataMatches(
+  provider: GitHubPullRequest,
+  request: Pick<PublicationRequest, "title" | "normalizedBody">,
+): boolean {
   return (
     provider.title === request.title &&
     normalizePullRequestBody(provider.body) === request.normalizedBody
@@ -137,7 +140,7 @@ export async function updateDetails(
   cli: GitHubCli,
   provider: GitHubPullRequest,
   target: GitHubRepositoryTarget,
-  request: PublicationRequest,
+  request: Pick<PublicationRequest, "title" | "body" | "normalizedBody" | "mode">,
 ): Promise<GitHubPullRequest> {
   let refreshed = provider;
   if (!metadataMatches(provider, request)) {

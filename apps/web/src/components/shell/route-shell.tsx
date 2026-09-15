@@ -13,6 +13,7 @@ import {
   useTheme,
 } from "@otomat/ui";
 import { Link, useRouterState } from "@tanstack/react-router";
+import { QuickOpen } from "@web/components/files/quick-open";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { ActivityCenter } from "@web/components/shell/activity/center";
 import type { ShellSection } from "@web/components/shell/nav-items";
@@ -39,6 +40,7 @@ export interface RouteShellProps {
   /** Fixed row between the page header and the scrollable content. */
   banner?: ReactNode;
   rightPanel?: ReactNode;
+  issueRunId?: string;
   children: ReactNode;
 }
 
@@ -53,6 +55,7 @@ export function RouteShell({
   actions,
   banner,
   rightPanel,
+  issueRunId,
   children,
 }: RouteShellProps) {
   const { density } = useTheme();
@@ -183,6 +186,7 @@ export function RouteShell({
         onSearchChange={palette.setSearch}
         groups={paletteGroups}
       />
+      <QuickOpen projectId={shell.currentProjectId} issueRunId={issueRunId} />
       <NewIssueDialog
         open={newIssueOpen}
         onOpenChange={setNewIssueOpen}

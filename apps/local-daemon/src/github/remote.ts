@@ -85,10 +85,17 @@ export async function push(
   cwd: string,
   remote: string,
   branch: string,
+  sha?: string,
 ): Promise<void> {
   const result = await run({
     command: "git",
-    args: ["push", "--no-verify", "--set-upstream", remote, `HEAD:refs/heads/${branch}`],
+    args: [
+      "push",
+      "--no-verify",
+      ...(sha === undefined ? ["--set-upstream"] : []),
+      remote,
+      `${sha ?? "HEAD"}:refs/heads/${branch}`,
+    ],
     cwd,
   });
   if (commandSucceeded(result)) return;
