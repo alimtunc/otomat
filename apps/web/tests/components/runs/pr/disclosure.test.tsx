@@ -58,11 +58,22 @@ it("keeps an invalid subject and its validation through closing and reopening Cu
   await view.cleanup();
 });
 
-it("offers Draft before Customize while preserving AI creation", async () => {
-  const view = await mount(<Publication pullRequest={null} />);
+it("offers Draft before Customize and creates from the stored metadata", async () => {
+  const view = await mount(<Publication />);
   await click(view.container, "Draft");
-  await click(view.container, "Create draft PR with AI");
-  expect(submit).toHaveBeenCalledWith({ mode: "draft" });
+  await click(view.container, "Create PR");
+  expect(submit).toHaveBeenCalledWith(
+    expect.objectContaining({
+      mode: "draft",
+      details: expect.objectContaining({
+        subject: {
+          type: "feat",
+          scope: "shell",
+          summary: "open projects in tabs with attention badges",
+        },
+      }),
+    }),
+  );
   await view.cleanup();
 });
 

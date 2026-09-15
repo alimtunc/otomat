@@ -194,20 +194,15 @@ describe("publicationModel", () => {
       publishability: PUBLISHABLE,
       connected: true,
       hasDraftChanges: false,
-      mode: "ready",
       ...overrides,
     });
 
   it("offers creation on a workspace with a publishable diff, whatever its run did", () => {
     expect(model()).toMatchObject({
-      actionLabel: "Create PR ready for review",
+      actionLabel: "Create PR",
       actionDisabled: false,
       stateLabel: "Ready to publish",
     });
-  });
-
-  it("names the draft publication when the operator chose it", () => {
-    expect(model({ mode: "draft" })).toMatchObject({ actionLabel: "Create draft PR" });
   });
 
   it("blocks on the technical reason rather than on the run's state", () => {
@@ -234,11 +229,29 @@ describe("publicationModel", () => {
     ["committing", "Committing the workspace"],
     ["pushing", "Pushing the branch"],
     ["creating", "Creating the pull request"],
-  ] as const)("names the phase the daemon is in for %s", (status, label) => {
-    expect(model(published(pullRequest({ publication_status: status })))).toMatchObject({
-      actionLabel: `${label}…`,
+  ] as const)(
+    "names the phase the daemon is in for %s under a stable action label",
+    (status, label) => {
+      expect(model(published(pullRequest({ publication_status: status })))).toMatchObject({
+        actionLabel: "Create PR",
+        actionPending: true,
+        stateLabel: label,
+      });
+    },
+  );
+
+  it("keeps the update label while a published pull request republishes", () => {
+    const row = pullRequest({
+      number: 42,
+      url: "https://github.com/acme/otomat/pull/42",
+      status: "open",
+      publication_status: "pushing",
+    });
+
+    expect(model(published(row))).toMatchObject({
+      actionLabel: "Update PR details",
       actionPending: true,
-      stateLabel: label,
+      stateLabel: "Pushing the branch",
     });
   });
 

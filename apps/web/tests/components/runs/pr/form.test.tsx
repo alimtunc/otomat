@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
-import type {
-  PublishPullRequestRequest,
-  PullRequestContract,
-  PullRequestProposal,
-  PullRequestPublishability,
+import {
+  projectPullRequestPublicationOperation,
+  type PublishPullRequestRequest,
+  type PullRequestContract,
+  type PullRequestProposal,
+  type PullRequestPublishability,
 } from "@otomat/domain";
 import { PullRequestForm } from "@web/components/runs/pr/form";
 import { act } from "react";
@@ -11,6 +12,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
+import { findButton } from "#support/dom-queries";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -69,12 +71,9 @@ function render(overrides: Partial<Parameters<typeof PullRequestForm>[0]> = {}) 
   return { view, onSubmit, onGenerate, onModeChange, onCustomizeChange };
 }
 
-function click(view: HTMLElement, label: string): void {
-  const button = [...view.querySelectorAll("button")].find((candidate) =>
-    candidate.textContent?.includes(label),
-  );
-  if (!button) throw new Error(`no button labelled ${label}`);
-  act(() => button.click());
+function click(label: string): void {
+  const target = button(label);
+  act(() => target.click());
 }
 
 afterEach(() => {
@@ -89,6 +88,12 @@ function summaryInput(view: HTMLElement): HTMLInputElement {
     (input) => input.placeholder === "unify run and workflow composers",
   );
   if (!found) throw new Error("no summary input");
+  return found;
+}
+
+function button(label: string): HTMLButtonElement {
+  const found = findButton(label);
+  if (!found) throw new Error(`no button labelled ${label}`);
   return found;
 }
 
@@ -117,13 +122,15 @@ function pullRequest(overrides: Partial<PullRequestContract> = {}): PullRequestC
 }
 
 describe("PullRequestForm", () => {
-  it("keeps the advanced inputs out of the compact form", () => {
+  it("keeps the advanced inputs and the generator out of the compact form", () => {
     const { view } = render();
 
     expect(view.querySelector("textarea")?.closest("[hidden]")).not.toBeNull();
     expect(view.querySelector("input")?.closest("[hidden]")).not.toBeNull();
+    expect(button("Generate title & description with AI").closest("[hidden]")).not.toBeNull();
     expect(view.textContent).toContain("Customize PR");
-    expect(view.textContent).toContain("Create PR with AI");
+    expect(button("Create PR").closest("[hidden]")).toBeNull();
+    expect(view.textContent).not.toContain("PR with AI");
   });
 
   it("reveals the advanced inputs with the stored subject read back into its fields", () => {
@@ -136,24 +143,13 @@ describe("PullRequestForm", () => {
     expect(view.querySelector("textarea")?.value).toBe("Details");
   });
 
-  it("hands the whole publication to the daemon, metadata included, in one action", async () => {
-    const { view, onGenerate, onSubmit } = render();
+  it("creates the pull request from the present metadata without generating", async () => {
+    const { onGenerate, onSubmit } = render({ pullRequest: pullRequest() });
 
-    click(view, "Create PR with AI");
+    click("Create PR");
     await act(async () => {});
 
     expect(onGenerate).not.toHaveBeenCalled();
-    expect(onSubmit).toHaveBeenCalledWith({ mode: "ready" });
-  });
-
-  it("republishes stored metadata rather than paying the generator twice", async () => {
-    const { view, onSubmit } = render({
-      pullRequest: pullRequest({ publication_status: "failed", error_code: "github_push_failed" }),
-    });
-
-    click(view, "Create draft PR");
-    await act(async () => {});
-
     expect(onSubmit).toHaveBeenCalledWith({
       mode: "draft",
       details: {
@@ -164,22 +160,82 @@ describe("PullRequestForm", () => {
     });
   });
 
+  it("republishes stored metadata rather than paying the generator twice", async () => {
+    const row = pullRequest({ publication_status: "failed", error_code: "github_push_failed" });
+    const { view, onGenerate, onSubmit } = render({
+      pullRequest: row,
+      operation: projectPullRequestPublicationOperation(row.id, {
+        publication_status: row.publication_status,
+        failed_phase: "pushing",
+        error_code: row.error_code,
+        error_message: row.error_message,
+        updated_at: "2026-09-14T09:00:00.000Z",
+      }),
+    });
+
+    expect(view.textContent).toContain("Creation failed");
+    click("Create PR");
+    await act(async () => {});
+
+    expect(onGenerate).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        details: expect.objectContaining({
+          subject: { type: "feat", scope: "pr", summary: "ship it" },
+        }),
+      }),
+    );
+  });
+
   it("fills the subject fields from a generation that publishes nothing", async () => {
     const { view, onSubmit } = render({ customize: true });
 
-    click(view, "Generate title & description with AI");
+    click("Generate title & description with AI");
     await act(async () => {});
 
     expect(onSubmit).not.toHaveBeenCalled();
     const inputs = [...view.querySelectorAll("input")].map((input) => input.value);
     expect(inputs).toContain(PROPOSAL.subject.scope);
     expect(inputs).toContain(PROPOSAL.subject.summary);
+    expect(view.querySelector("textarea")?.value).toBe(PROPOSAL.body);
+  });
+
+  it("publishes the generated metadata only once the operator has edited and confirmed it", async () => {
+    const { view, onSubmit } = render({ customize: true });
+
+    click("Generate title & description with AI");
+    await act(async () => {});
+    act(() => {
+      setInputValue(summaryInput(view), "publish after a human edit");
+    });
+    click("Create PR");
+    await act(async () => {});
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith({
+      mode: "ready",
+      details: {
+        subject: { type: "feat", scope: "pr", summary: "publish after a human edit" },
+        body: PROPOSAL.body,
+        head_ref: PROPOSAL.branch,
+      },
+    });
+  });
+
+  it("keeps the label readable under the creation spinner", () => {
+    render({ pullRequest: pullRequest(), isPending: true });
+
+    const create = button("Create PR");
+    expect(create.disabled).toBe(true);
+    expect(create.getAttribute("aria-busy")).toBe("true");
+    expect(create.dataset.loading).toBeUndefined();
+    expect(create.querySelector('[data-slot="spinner"]')).not.toBeNull();
   });
 
   it("refuses to publish a subject nobody filled in", async () => {
     const { view, onSubmit } = render({ customize: true });
 
-    click(view, "Create PR ready for review");
+    click("Create PR");
     await act(async () => {});
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -194,7 +250,7 @@ describe("PullRequestForm", () => {
     act(() => {
       setInputValue(summary, "x".repeat(80));
     });
-    click(view, "Create draft PR");
+    click("Create PR");
     await act(async () => {});
 
     expect(onSubmit).not.toHaveBeenCalled();
@@ -209,7 +265,7 @@ describe("PullRequestForm", () => {
     act(() => {
       setInputValue(summary, "validate the publication subject");
     });
-    click(view, "Create draft PR");
+    click("Create PR");
     await act(async () => {});
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -222,13 +278,13 @@ describe("PullRequestForm", () => {
   });
 
   it("publishes the operator's explicit draft choice from the advanced form", async () => {
-    const { view, onSubmit } = render({
+    const { onSubmit } = render({
       customize: true,
       chosenMode: "draft",
       pullRequest: pullRequest(),
     });
 
-    click(view, "Create draft PR");
+    click("Create PR");
     await act(async () => {});
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ mode: "draft" }));
@@ -260,18 +316,16 @@ describe("PullRequestForm", () => {
 
     expect(view.textContent).toContain(refusal);
     expect(summaryInput(view).disabled).toBe(false);
-    expect(view.textContent).toContain("Create draft PR");
-    expect(view.textContent).not.toContain("Create draft PR with AI");
+    expect(view.textContent).toContain("Create PR");
   });
 
-  it("offers no AI creation while a refusal stands", () => {
+  it("opens the details on a refusal even while Customize is closed", () => {
     const { view } = render({
       customize: false,
       generationRefusal: "The subject is 79 characters; remove 7 to stay within 72.",
     });
 
-    expect(view.textContent).toContain("Create PR ready for review");
-    expect(view.textContent).not.toContain("Create PR with AI");
+    expect(summaryInput(view).closest("[hidden]")).toBeNull();
   });
 
   it("clears the refusal once the operator writes a summary of their own", () => {
@@ -302,9 +356,6 @@ describe("PullRequestForm", () => {
     });
 
     expect(view.textContent).toContain("Cannot publish");
-    const create = [...view.querySelectorAll("button")].find((button) =>
-      button.textContent?.includes("Create PR with AI"),
-    );
-    expect(create?.disabled).toBe(true);
+    expect(button("Create PR").disabled).toBe(true);
   });
 });

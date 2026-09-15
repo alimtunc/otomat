@@ -18,11 +18,13 @@ export function PullRequestProgress({ operation }: PullRequestProgressProps) {
           className={phase.state === "pending" ? "text-text-tertiary" : "text-text-secondary"}
         >
           <span className="inline-flex items-center gap-1.5">
-            {phase.state === "active" ? (
-              <Spinner size={10} label={phase.label} />
-            ) : (
-              STATE_MARKS[phase.state]
-            )}
+            <span className="inline-flex w-3 shrink-0 justify-center">
+              {phase.state === "active" ? (
+                <Spinner size={10} label={phase.label} />
+              ) : (
+                STATE_MARKS[phase.state]
+              )}
+            </span>
             {phase.label}
           </span>
         </li>
