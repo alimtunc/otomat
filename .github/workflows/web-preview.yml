@@ -80,7 +80,7 @@ jobs:
           PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
         run: |
           set -euo pipefail
-          pnpm dlx wrangler@4 pages deploy dist \
+          pnpm dlx --allow-build=esbuild --allow-build=workerd wrangler@4 pages deploy dist \
             --project-name "$PAGES_PROJECT" \
             --branch "pr-$PR_NUMBER" \
             --commit-hash "$HEAD_SHA" \

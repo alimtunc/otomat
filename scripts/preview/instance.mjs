@@ -27,7 +27,7 @@ import {
 } from "./workers.mjs";
 
 const HOST_DIR = fileURLToPath(new URL("./host/", import.meta.url));
-const WRANGLER = ["dlx", "wrangler@4"];
+const WRANGLER = ["dlx", "--allow-build=esbuild", "--allow-build=workerd", "wrangler@4"];
 const API = "https://api.cloudflare.com/client/v4";
 const MAX_PAGES = 1_000;
 const WARM_ATTEMPTS = 18;
