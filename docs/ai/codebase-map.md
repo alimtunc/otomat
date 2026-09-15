@@ -1477,9 +1477,11 @@ drives. `POST /api/runs/:id/pr` resolves the row, the generation agent and the
 first phase, then answers `202` with the publication's initial state; the work
 itself is queued on the run's in-memory chain and outlives the request, the route
 change and the disconnection that follow. A command whose `details` are absent
-asks the daemon to write the metadata as the operation's first phase, which is
-why **Create PR with AI** is one command rather than a generation the component
-chains into a publication — a navigation used to lose the second half of it.
+asks the daemon to write the metadata as the operation's first phase; the
+cockpit always sends `details` — **Create PR** publishes the metadata the form
+holds, and **Generate title & description with AI** inside Customize PR is a
+separate `POST /api/runs/:id/pr/generate` that only fills the fields, so the
+operator edits what the generator proposed before anything is published.
 
 `publication_status` is that operation's whole record: `generating`,
 `committing`, `pushing`, `creating`, then `created`, each transition journaled as

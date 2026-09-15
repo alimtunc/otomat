@@ -16,16 +16,16 @@ import {
   Field,
   FieldControl,
   FieldLabel,
+  Spinner,
   Textarea,
 } from "@otomat/ui";
-import { PullRequestActions } from "@web/components/runs/pr/actions";
 import { PullRequestBranchField } from "@web/components/runs/pr/branch-field";
 import { PullRequestModeField } from "@web/components/runs/pr/mode-field";
 import { PullRequestSubjectFields } from "@web/components/runs/pr/subject-fields";
 import { PullRequestSummary } from "@web/components/runs/pr/summary";
 import { usePullRequestForm } from "@web/components/runs/pr/use-form";
 
-import { firstDraftError, metadataDirty, subjectLength } from "./draft-state";
+import { firstDraftError, subjectLength } from "./draft-state";
 import { generationBlocked, isPublished, publicationModel } from "./publication-model";
 
 export interface PullRequestFormProps {
@@ -43,10 +43,6 @@ export interface PullRequestFormProps {
   generationRefusal: string | null;
   isPending: boolean;
   isGenerating: boolean;
-}
-
-function aiActionLabel(mode: PullRequestPublicationMode): string {
-  return mode === "draft" ? "Create draft PR with AI" : "Create PR with AI";
 }
 
 export function PullRequestForm({
@@ -96,7 +92,7 @@ export function PullRequestForm({
         }
       >
         {([canSubmit, isDirty, values, errors, fieldMeta]) => {
-          const { mode, summary } = values;
+          const { summary } = values;
           const draftError = firstDraftError(fieldMeta, errors);
           const blocked = generationBlocked(publishability);
           const model = publicationModel({
@@ -105,17 +101,11 @@ export function PullRequestForm({
             publishability,
             connected,
             hasDraftChanges: isDirty,
-            mode,
           });
-          const busy = model.actionPending || isPending || isGenerating;
+          const publishing = isPending || model.actionPending;
+          const busy = publishing || isGenerating;
           const refusal = summary.trim() === "" ? generationRefusal : null;
           const showDetails = customize || refusal !== null;
-          // Metadata already written is republished as it stands: a retry never pays the generator twice.
-          const composeWithAi =
-            !branchLocked &&
-            !showDetails &&
-            !metadataDirty(fieldMeta) &&
-            pullRequest?.commit_subject == null;
           return (
             <>
               <PullRequestSummary
@@ -140,23 +130,6 @@ export function PullRequestForm({
               />
               {publishability.blocker ? (
                 <p className="text-xs text-text-tertiary">Mode kept for a later publication.</p>
-              ) : null}
-              <PullRequestActions
-                primaryLabel={composeWithAi ? aiActionLabel(mode) : model.actionLabel}
-                primaryDisabled={
-                  (!composeWithAi && !canSubmit) || model.actionDisabled || isGenerating
-                }
-                primaryLoading={composeWithAi ? busy : isPending || model.actionPending}
-                onCompose={composeWithAi ? () => void onSubmit({ mode }) : null}
-                onGenerate={() => void generateOnly()}
-                generateDisabled={busy || blocked}
-                isGenerating={isGenerating}
-              />
-              {blocked ? (
-                <p className="text-xs text-text-tertiary">
-                  Generation needs an available workspace, its GitHub remote and changes to
-                  describe.
-                </p>
               ) : null}
               <Collapsible open={showDetails} onOpenChange={onCustomizeChange}>
                 <CollapsibleTrigger
@@ -202,8 +175,38 @@ export function PullRequestForm({
                     branchLocked={branchLocked}
                     headRef={publishability.head_ref}
                   />
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {blocked ? (
+                      <p className="text-xs text-text-tertiary">
+                        Generation needs an available workspace, its GitHub remote and changes to
+                        describe.
+                      </p>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void generateOnly()}
+                      loading={isGenerating}
+                      disabled={busy || blocked}
+                    >
+                      Generate title &amp; description with AI
+                    </Button>
+                  </div>
                 </CollapsiblePanel>
               </Collapsible>
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  disabled={!canSubmit || model.actionDisabled || busy}
+                  aria-busy={publishing || undefined}
+                >
+                  {publishing ? <Spinner size={12} aria-hidden /> : null}
+                  {model.actionLabel}
+                </Button>
+              </div>
             </>
           );
         }}

@@ -1,14 +1,6 @@
 import { formatCommitSubject, type CommitType } from "@otomat/domain";
 import type { AnyFieldMeta } from "@tanstack/react-form";
 
-const METADATA_FIELDS = ["type", "scope", "summary", "body", "branch"] as const;
-
-export function metadataDirty(
-  fieldMeta: Partial<Record<(typeof METADATA_FIELDS)[number], AnyFieldMeta>>,
-): boolean {
-  return METADATA_FIELDS.some((field) => fieldMeta[field]?.isDirty === true);
-}
-
 const isText = (error: unknown): error is string => typeof error === "string";
 
 export function firstDraftError(

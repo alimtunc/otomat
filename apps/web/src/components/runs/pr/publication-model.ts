@@ -1,7 +1,6 @@
 import type {
   OperationContract,
   PullRequestContract,
-  PullRequestPublicationMode,
   PullRequestPublishability,
 } from "@otomat/domain";
 
@@ -21,9 +20,9 @@ export interface PublicationModelInput {
   publishability: PullRequestPublishability;
   connected: boolean;
   hasDraftChanges: boolean;
-  mode: PullRequestPublicationMode;
 }
 
+const CREATE_LABEL = "Create PR";
 const UPDATE_LABEL = "Update PR details";
 const RETRY_LABEL = "Retry publication";
 
@@ -48,32 +47,31 @@ export function generationBlocked(publishability: PullRequestPublishability): bo
   );
 }
 
-function createLabel(mode: PullRequestPublicationMode): string {
-  return mode === "draft" ? "Create draft PR" : "Create PR ready for review";
-}
-
 function creationModel(input: PublicationModelInput): PublicationAction {
-  const { publishability, connected, mode } = input;
+  const { publishability, connected } = input;
   if (publishability.blocker !== null) {
     return {
-      actionLabel: createLabel(mode),
+      actionLabel: CREATE_LABEL,
       actionDisabled: true,
       actionPending: false,
       stateLabel: "Cannot publish",
     };
   }
   return {
-    actionLabel: createLabel(mode),
+    actionLabel: CREATE_LABEL,
     actionDisabled: !connected,
     actionPending: false,
     stateLabel: connected ? "Ready to publish" : "Not connected",
   };
 }
 
-function runningModel(operation: OperationContract): PublicationAction {
+function runningModel(
+  operation: OperationContract,
+  pullRequest: PullRequestContract,
+): PublicationAction {
   const label = operation.phases.find((phase) => phase.state === "active")?.label ?? "Publishing";
   return {
-    actionLabel: `${label}…`,
+    actionLabel: isPublished(pullRequest) ? UPDATE_LABEL : CREATE_LABEL,
     actionDisabled: true,
     actionPending: true,
     stateLabel: label,
@@ -95,7 +93,7 @@ function stoppedModel(
   }
   return {
     ...creationModel(input),
-    actionLabel: interrupted ? RETRY_LABEL : createLabel(input.mode),
+    actionLabel: interrupted ? RETRY_LABEL : CREATE_LABEL,
     stateLabel: interrupted ? "Publication interrupted" : "Creation failed",
   };
 }
@@ -103,7 +101,7 @@ function stoppedModel(
 function publicationAction(input: PublicationModelInput): PublicationAction {
   const { pullRequest, operation } = input;
   if (pullRequest === null || operation === null) return creationModel(input);
-  if (operation.state === "running") return runningModel(operation);
+  if (operation.state === "running") return runningModel(operation, pullRequest);
   if (operation.state === "succeeded") return createdModel(input.hasDraftChanges, input.connected);
   return stoppedModel(input, pullRequest, operation.state === "interrupted");
 }
