@@ -56,13 +56,15 @@ export function useConnectGitHub() {
   });
 }
 
-/** The proposal is persisted daemon-side, so the publication draft it becomes is refetched, never mirrored here. */
+/** The proposal is persisted daemon-side, so the publication draft it becomes is refetched, never mirrored here; the refetch is not awaited, or the generation would look pending until the workspace is described again. */
 export function useGeneratePullRequestMetadata(runId: string) {
   const client = useQueryClient();
   const keys = useQueryKeys();
   return useMutation({
     mutationFn: () => daemon.generatePullRequestMetadata(runId),
-    onSuccess: () => client.invalidateQueries({ queryKey: keys.runPullRequest(runId) }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: keys.runPullRequest(runId) });
+    },
     onError: (error) =>
       toast.error(
         daemonErrorMessage(error, "Could not write the pull request — is the daemon running?"),

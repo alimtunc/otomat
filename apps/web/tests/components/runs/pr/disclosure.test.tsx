@@ -79,6 +79,7 @@ it("offers Draft before Customize and creates from the stored metadata", async (
 
 it("keeps generation independent of sign-in but refuses an absent workspace", async () => {
   const view = await mount(<Publication connected={false} />);
+  await click(view.container, "Customize PR");
   const generate = [...view.container.querySelectorAll("button")].find((entry) =>
     entry.textContent?.includes("Generate title"),
   );
@@ -92,6 +93,7 @@ it("keeps generation independent of sign-in but refuses an absent workspace", as
       }}
     />,
   );
+  await click(blocked.container, "Customize PR");
   const unavailable = [...blocked.container.querySelectorAll("button")].find((entry) =>
     entry.textContent?.includes("Generate title"),
   );

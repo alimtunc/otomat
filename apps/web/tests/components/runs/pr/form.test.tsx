@@ -127,10 +127,64 @@ describe("PullRequestForm", () => {
 
     expect(view.querySelector("textarea")?.closest("[hidden]")).not.toBeNull();
     expect(view.querySelector("input")?.closest("[hidden]")).not.toBeNull();
-    expect(button("Generate title & description with AI").closest("[hidden]")).not.toBeNull();
+    expect(findButton("Generate title & description with AI")).toBeUndefined();
     expect(view.textContent).toContain("Customize PR");
-    expect(button("Create PR").closest("[hidden]")).toBeNull();
+    expect(button("Generate PR").closest("[hidden]")).toBeNull();
     expect(view.textContent).not.toContain("PR with AI");
+  });
+
+  it("hands the whole publication to the daemon, metadata included, without opening the form", async () => {
+    const { view, onGenerate, onSubmit } = render();
+
+    click("Generate PR");
+    await act(async () => {});
+
+    expect(onGenerate).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledExactlyOnceWith({ mode: "ready" });
+    expect(view.textContent).not.toContain("A summary is required.");
+    expect(view.querySelector("input")?.closest("[hidden]")).not.toBeNull();
+  });
+
+  it("generates in the chosen mode and blocks a second send while the daemon works", () => {
+    const { view } = render({ chosenMode: "draft", isPending: true });
+
+    const generate = button("Generate PR");
+    expect(generate.disabled).toBe(true);
+    expect(generate.getAttribute("aria-busy")).toBe("true");
+    expect(view.textContent).not.toContain("Create PR");
+  });
+
+  it("offers Create PR once a summary is present without opening the form", () => {
+    render({ pullRequest: pullRequest() });
+
+    expect(findButton("Generate PR")).toBeUndefined();
+    expect(button("Create PR").closest("[hidden]")).toBeNull();
+  });
+
+  it("keeps the failed generation editable under Create PR and opens no PR", async () => {
+    const { view, onSubmit } = render({
+      generationRefusal: "The subject is 79 characters; remove 7 to stay within 72.",
+      pullRequest: pullRequest({ commit_subject: null, publication_status: "failed" }),
+    });
+
+    expect(findButton("Generate PR")).toBeUndefined();
+    expect(summaryInput(view).closest("[hidden]")).toBeNull();
+    click("Create PR");
+    await act(async () => {});
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(view.textContent).toContain("A summary is required.");
+  });
+
+  it("places the generator immediately left of Create PR on one action row", () => {
+    render({ customize: true });
+
+    const generate = button("Generate title & description with AI");
+    const create = button("Create PR");
+    expect(generate.parentElement).toBe(create.parentElement);
+    expect(generate.nextElementSibling).toBe(create);
+    expect(generate.parentElement?.className).toContain("flex-wrap");
+    expect(generate.parentElement?.className).toContain("justify-end");
   });
 
   it("reveals the advanced inputs with the stored subject read back into its fields", () => {
@@ -356,6 +410,6 @@ describe("PullRequestForm", () => {
     });
 
     expect(view.textContent).toContain("Cannot publish");
-    expect(button("Create PR").disabled).toBe(true);
+    expect(button("Generate PR").disabled).toBe(true);
   });
 });
