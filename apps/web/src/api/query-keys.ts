@@ -50,6 +50,8 @@ export function hostKeys(host: ExecutionHostId) {
     repositoryTree: (id: string | null) => [host, "repositories", id, "tree"] as const,
     sourceControl: (target: CheckoutTarget) =>
       [host, "source-control", target.kind, target.id] as const,
+    repositoryPullRequestPreview: (repositoryId: string, baseRef: string, revision: string) =>
+      [host, "source-control", "repository", repositoryId, "pr", baseRef, revision] as const,
     repositoryFile: (id: string, path: string | null) =>
       [host, "repositories", id, "tree", "content", path] as const,
     runtimes: [host, "runtimes"] as const,

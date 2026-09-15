@@ -50,7 +50,7 @@ function compose(
   }
   return {
     subject,
-    body: pullRequestBody(output.body, input.issue.sourceIdentifier, output.delivery),
+    body: pullRequestBody(output.body, input.issue?.sourceIdentifier ?? null, output.delivery),
     branch,
     commit_body: output.commit_body ?? null,
     generator: agent.audit,

@@ -43,14 +43,17 @@ afterEach(() => fix.cleanup());
 
 function request(
   overrides: Partial<PublishRepositoryPullRequest> = {},
+  headRef = "feat/manual-pr",
 ): PublishRepositoryPullRequest {
   return {
     revision: sourceControlSnapshot(fix.repo.root).response.revision,
-    head_ref: "feat/manual-pr",
     base_ref: "main",
-    title: "feat: manual changes",
-    body: "Reviewed changes",
-    draft: true,
+    mode: "draft",
+    details: {
+      subject: { type: "feat", scope: null, summary: "manual changes" },
+      body: "Reviewed changes",
+      head_ref: headRef,
+    },
     ...overrides,
   };
 }
@@ -86,7 +89,7 @@ it("publishes a dedicated branch from main, preserves uncommitted work and creat
 it("refuses default/base branches, stale revisions and uncommitted staged changes before pushing", async () => {
   for (const head_ref of ["main", "master", "HEAD", "-bad", "bad..branch"])
     await expect(
-      github.publishRepository(fix.repositoryId, request({ head_ref })),
+      github.publishRepository(fix.repositoryId, request({}, head_ref)),
     ).rejects.toThrow();
   const stale = request();
   fix.repo.write("new.txt", "new\n");
@@ -119,11 +122,11 @@ it("does not overwrite an existing branch or publish an empty diff", async () =>
   );
   cli.remoteHeads.set("feat/taken", "a".repeat(40));
   await expect(
-    github.publishRepository(fix.repositoryId, request({ head_ref: "feat/taken" })),
+    github.publishRepository(fix.repositoryId, request({}, "feat/taken")),
   ).rejects.toThrow("remote branch already exists");
   fix.repo.git("push", "origin", "main");
   await expect(
-    github.publishRepository(fix.repositoryId, request({ head_ref: "feat/empty" })),
+    github.publishRepository(fix.repositoryId, request({}, "feat/empty")),
   ).rejects.toThrow("No committed changes");
   expect(cli.push).not.toHaveBeenCalled();
 });

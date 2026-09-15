@@ -32,7 +32,7 @@ export function PullRequestBranchField({
           hint={
             branchLocked
               ? "The published PR keeps its branch."
-              : "Remote branch the PR ships as; empty keeps the run branch."
+              : "Remote branch the PR ships as; empty keeps the current branch. Choose a dedicated branch when publishing from main."
           }
         >
           <FieldLabel>Branch</FieldLabel>

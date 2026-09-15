@@ -5,6 +5,8 @@ import type {
   LinearLifecycleSync,
   PublishPullRequestRequest,
   PublishRepositoryPullRequest,
+  RepositoryPullRequestInput,
+  RepositoryPullRequestPreview,
   PullRequestCandidate,
   PullRequestDetection,
   PullRequestInbox,
@@ -97,6 +99,14 @@ export interface GitHubService {
     repositoryId: string,
     request: PublishRepositoryPullRequest,
   ): Promise<PullRequestRow>;
+  previewRepositoryPullRequest(
+    repositoryId: string,
+    baseRef: string,
+  ): Promise<RepositoryPullRequestPreview>;
+  generateRepositoryPullRequest(
+    repositoryId: string,
+    request: RepositoryPullRequestInput,
+  ): Promise<PullRequestProposal>;
   /** Stamps every publication a stopped process left mid-phase as interrupted; answers how many. */
   reconcileInterruptedPublications(): number;
   settlePublications(): Promise<void>;

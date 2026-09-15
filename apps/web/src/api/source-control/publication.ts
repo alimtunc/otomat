@@ -1,4 +1,4 @@
-import type { PublishRepositoryPullRequest } from "@otomat/domain";
+import type { PublishRepositoryPullRequest, RepositoryPullRequestInput } from "@otomat/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { invalidateCheckout } from "@web/api/files/invalidate";
@@ -19,5 +19,12 @@ export function usePublishRepositoryPullRequest(repositoryId: string) {
       void client.invalidateQueries({ queryKey: keys.inbox });
     },
     onSettled: () => invalidateCheckout(client, keys, { kind: "repository", id: repositoryId }),
+  });
+}
+
+export function useGenerateRepositoryPullRequest(repositoryId: string) {
+  return useMutation({
+    mutationFn: (request: RepositoryPullRequestInput) =>
+      daemon.generateRepositoryPullRequest(repositoryId, request),
   });
 }

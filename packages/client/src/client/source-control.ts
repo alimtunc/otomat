@@ -2,6 +2,9 @@ import {
   sourceControlResponseSchema,
   pullRequestContractSchema,
   type PublishRepositoryPullRequest,
+  type RepositoryPullRequestInput,
+  repositoryPullRequestPreviewSchema,
+  pullRequestProposalSchema,
   commitFilesResponseSchema,
   type CommitFilesRequest,
   type ChangeFilesRequest,
@@ -17,6 +20,23 @@ function checkoutPath(target: CheckoutTarget): string {
 
 export function createSourceControlClient(config: DaemonClientConfig) {
   return {
+    async previewRepositoryPullRequest(repositoryId: string, baseRef: string) {
+      return repositoryPullRequestPreviewSchema.parse(
+        await getJson(
+          config,
+          `/api/repositories/${encodeURIComponent(repositoryId)}/pr?base_ref=${encodeURIComponent(baseRef)}`,
+        ),
+      );
+    },
+    async generateRepositoryPullRequest(repositoryId: string, request: RepositoryPullRequestInput) {
+      return pullRequestProposalSchema.parse(
+        await postJson(
+          config,
+          `/api/repositories/${encodeURIComponent(repositoryId)}/pr/generate`,
+          request,
+        ),
+      );
+    },
     async publishRepositoryPullRequest(
       repositoryId: string,
       request: PublishRepositoryPullRequest,

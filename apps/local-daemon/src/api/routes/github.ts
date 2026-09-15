@@ -3,6 +3,7 @@ import {
   projectPullRequestPublicationOperation,
   publishPullRequestRequestSchema,
   publishRepositoryPullRequestSchema,
+  repositoryPullRequestInputSchema,
   pushPullRequestRequestSchema,
   type PullRequestDetail,
   type PullRequestPublishability,
@@ -53,6 +54,34 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
 
   routes.get("/github/connection", async (c) => c.json(await deps.github.connection()));
   routes.post("/github/connect", (c) => c.json(deps.github.connect(), 202));
+
+  routes.get("/repositories/:id/pr", async (c) => {
+    const base = repositoryPullRequestInputSchema.shape.base_ref.safeParse(c.req.query("base_ref"));
+    if (!base.success) return c.json({ error: "invalid_request", issues: base.error.issues }, 400);
+    try {
+      return c.json(await deps.github.previewRepositoryPullRequest(c.req.param("id"), base.data));
+    } catch (error) {
+      const refused = refusal(error);
+      if (refused) return c.json(refused, 409);
+      throw error;
+    }
+  });
+
+  routes.post(
+    "/repositories/:id/pr/generate",
+    validateJson(repositoryPullRequestInputSchema),
+    async (c) => {
+      try {
+        return c.json(
+          await deps.github.generateRepositoryPullRequest(c.req.param("id"), c.req.valid("json")),
+        );
+      } catch (error) {
+        const refused = refusal(error);
+        if (refused) return c.json(refused, 409);
+        throw error;
+      }
+    },
+  );
 
   routes.post(
     "/repositories/:id/pr",

@@ -13,3 +13,17 @@ export function useSourceControl(target: CheckoutTarget, enabled = true) {
     retry: retryTransportOnly,
   });
 }
+
+export function useRepositoryPullRequestPreview(
+  repositoryId: string,
+  baseRef: string,
+  revision: string,
+) {
+  const keys = useQueryKeys();
+  return useQuery({
+    enabled: baseRef.trim() !== "",
+    queryKey: keys.repositoryPullRequestPreview(repositoryId, baseRef, revision),
+    queryFn: () => daemon.previewRepositoryPullRequest(repositoryId, baseRef),
+    retry: retryTransportOnly,
+  });
+}

@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { diffFileContractSchema, diffSideSchema } from "./diff.js";
+import {
+  publishPullRequestRequestSchema,
+  pullRequestPublishabilitySchema,
+} from "./pull-request/detail.js";
 
 export const checkoutTargetSchema = z.object({
   kind: z.enum(["repository", "run"]),
@@ -57,12 +61,19 @@ export type CommitFilesRequest = z.infer<typeof commitFilesRequestSchema>;
 export const commitFilesResponseSchema = z.object({ sha: z.string().min(1) });
 export type CommitFilesResponse = z.infer<typeof commitFilesResponseSchema>;
 
-export const publishRepositoryPullRequestSchema = z.object({
+export const repositoryPullRequestInputSchema = z.strictObject({
   revision: z.string().min(1),
-  head_ref: z.string().trim().min(1).max(120),
   base_ref: z.string().trim().min(1).max(120),
-  title: z.string().trim().min(1).max(256),
-  body: z.string().max(65000),
-  draft: z.boolean(),
 });
+export type RepositoryPullRequestInput = z.infer<typeof repositoryPullRequestInputSchema>;
+
+export const repositoryPullRequestPreviewSchema = z.object({
+  revision: z.string(),
+  publishability: pullRequestPublishabilitySchema,
+});
+export type RepositoryPullRequestPreview = z.infer<typeof repositoryPullRequestPreviewSchema>;
+
+export const publishRepositoryPullRequestSchema = publishPullRequestRequestSchema.extend(
+  repositoryPullRequestInputSchema.shape,
+);
 export type PublishRepositoryPullRequest = z.infer<typeof publishRepositoryPullRequestSchema>;

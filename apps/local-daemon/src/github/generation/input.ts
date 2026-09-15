@@ -12,7 +12,7 @@ export interface GenerationIssue {
 
 export interface GenerationInput {
   cwd: string;
-  issue: GenerationIssue;
+  issue: GenerationIssue | null;
   diffStat: string[];
   patch: string;
 }

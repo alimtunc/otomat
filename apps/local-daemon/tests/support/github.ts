@@ -187,6 +187,13 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     },
     getPullRequest: async () => null,
     publishability: async () => PUBLISHABLE_WORKSPACE,
+    previewRepositoryPullRequest: async () => ({
+      revision: "revision",
+      publishability: PUBLISHABLE_WORKSPACE,
+    }),
+    generateRepositoryPullRequest: async () => {
+      throw new Error("repository generation stub not configured");
+    },
     publishRepository: async () => {
       throw new Error("publishRepository stub not configured");
     },

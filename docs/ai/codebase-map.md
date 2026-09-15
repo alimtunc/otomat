@@ -1794,13 +1794,25 @@ refused. Run commits record the new worktree tip and appear in its normal histor
 and diff, without creating an agent turn or changing run lifecycle state.
 
 A run's PR action opens its existing publication/sync view. Project publication
-uses `POST /api/repositories/:id/pr` through `GitHubService`: the user supplies the
-source branch, base, title, body and draft mode. Staged changes must be committed
-first; unstaged changes stay local. Publication creates a named branch when it
+reuses its `PullRequestForm`: Generate PR delegates metadata and publication to
+the daemon, while Customize PR exposes the same structured subject, description,
+branch, Draft/Ready choice and metadata-only generation. The target branch stays
+editable until an operation starts. `GET /api/repositories/:id/pr?base_ref=...`
+previews the committed diff from local refs without fetching or publishing.
+`POST /api/repositories/:id/pr` accepts the shared publication request plus the
+base and checkout revision; absent details invoke the configured PR generator.
+`POST /api/repositories/:id/pr/generate` returns an editable proposal without
+creating a branch, commit, issue, run or PR. Both paths use the existing generator,
+subject validation and GitHub metadata updater. A project has no run runtime to
+inherit, so generation requires an explicit PR generator in Settings. Its prompt
+uses one captured committed diff and no fabricated issue context; unstaged content
+is excluded. Staged changes must be committed first; unstaged changes stay local.
+Publication creates a named branch when it
 differs from the checkout, refuses default/base/protected branches and existing
 branch collisions, fetches the base, checks for a committed diff and rechecks the
 checkout revision. It pushes the captured commit by SHA, never force-pushes, and
-reuses an existing PR when retried. Requests are serialized per repository.
+reuses an existing PR when retried. Generation and publication commands are
+serialized per repository and reject a checkout that changed during generation.
 Confirmed provider data is mirrored through the existing PR import store without
 inventing an issue or run. A failed push leaves the local branch available for
 retry; a failed create leaves pushed commits available for retry.

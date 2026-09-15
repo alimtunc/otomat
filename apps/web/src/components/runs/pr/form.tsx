@@ -37,7 +37,7 @@ export interface PullRequestFormProps {
   customize: boolean;
   onCustomizeChange: (customize: boolean) => void;
   chosenMode: PullRequestPublicationMode | undefined;
-  onModeChange: (mode: PullRequestPublicationMode) => void;
+  onModeChange?: (mode: PullRequestPublicationMode) => void;
   onSubmit: (request: PublishPullRequestRequest) => Promise<boolean>;
   onGenerate: () => Promise<PullRequestProposal | null>;
   generationRefusal: string | null;
@@ -123,7 +123,7 @@ export function PullRequestForm({
                         disabled={busy}
                         onChange={(next) => {
                           field.handleChange(next);
-                          onModeChange(next);
+                          onModeChange?.(next);
                         }}
                       />
                     )}

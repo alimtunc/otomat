@@ -28,7 +28,7 @@ export interface PullRequestSubjectFieldsProps {
 const TYPE_ITEMS = COMMIT_TYPES.map((type) => ({ value: type, label: type }));
 
 function summaryHint(budget: number): string {
-  return `Otomat commits \`type(scope): summary\` — that subject is limited to ${String(COMMIT_SUBJECT_MAX_LENGTH)} characters, leaving ${String(budget)} for the summary. The PR title adds the issue reference.`;
+  return `The subject \`type(scope): summary\` is limited to ${String(COMMIT_SUBJECT_MAX_LENGTH)} characters, leaving ${String(budget)} for the summary. An attached issue adds its reference to the PR title.`;
 }
 
 export function PullRequestSubjectFields({
