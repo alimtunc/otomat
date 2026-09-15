@@ -23,13 +23,13 @@ function passOwner(db: Db, runId: string, stepRunId: string | null): string {
   return competeGroupId === null ? runId : stepRunId;
 }
 
-export interface BoundaryCapture {
+interface BoundaryCapture {
   capture: SessionBoundaryCapture | null;
   error: string | null;
 }
 
 // A boundary is evidence, never a precondition: an unreadable repository costs the pass its delta, not its turn.
-export function captureBoundary(
+function captureBoundary(
   state: SupervisorState,
   runId: string,
   stepRunId: string | null,

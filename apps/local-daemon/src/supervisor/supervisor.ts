@@ -15,7 +15,6 @@ import {
   retryRunContribution,
 } from "./contribution/index.js";
 import { overrideStepDelivery } from "./delivery/override.js";
-import { createWorktreeDeltaProbe } from "./delivery/worktree.js";
 import { answerRunInteraction } from "./interaction/index.js";
 import { setLaunchHold } from "./launch-hold.js";
 import { setNextTurnModel } from "./next-turn-model.js";
@@ -83,7 +82,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       const now = new Date().toISOString();
       reconcileContributionClaims(state.db, state.dataDir, now);
       const recovered = recoverCompeteSelections(state);
-      const report = reconcileRuns(state.db, state.dataDir, now, createWorktreeDeltaProbe(state));
+      const report = reconcileRuns(state.db, state.dataDir, now);
       const reconciled = [...recovered, ...report.reconciled];
       for (const outcome of reconciled) finishSettle(state, outcome);
       return { reconciled };

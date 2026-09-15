@@ -1,16 +1,13 @@
-import type { DeliveryEvidence, DeliveryExpectation } from "@otomat/domain";
-
 import { buildRuntimeEvent, type RuntimeEvent } from "#runtime";
 
 import type { SessionRef } from "../markers.js";
 import { SUPERVISOR_ADAPTER } from "../types.js";
 
-/** Journals the whole snapshot, not just its verdict, so why a step stopped stays auditable after the worktree moves on. */
+/** Journals the count with the reason, so why a step stopped stays auditable after the asks themselves are canceled. */
 export function buildDeliveryBlockedEvent(
   ref: SessionRef,
-  expectation: DeliveryExpectation,
   reason: string,
-  evidence: DeliveryEvidence,
+  pendingInteractions: number,
   occurredAt: string,
 ): RuntimeEvent {
   return buildRuntimeEvent({
@@ -20,7 +17,7 @@ export function buildDeliveryBlockedEvent(
     source: "otomat",
     adapter: SUPERVISOR_ADAPTER,
     occurredAt,
-    payload: { expectation, reason, evidence },
+    payload: { reason, pending_interactions: pendingInteractions },
   });
 }
 

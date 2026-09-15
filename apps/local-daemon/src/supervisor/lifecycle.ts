@@ -17,7 +17,6 @@ import {
   resolveCarriedContributions,
 } from "./contribution/carry.js";
 import { withCarriedContributions } from "./contribution/prompt.js";
-import { createWorktreeDeltaProbe } from "./delivery/worktree.js";
 import { failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
@@ -64,7 +63,6 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
     const settle: SettleOptions = {
       mode: "live",
       turn: { agentSessionId: ctx.agentSessionId },
-      worktreeDelta: createWorktreeDeltaProbe(state),
       now: new Date().toISOString(),
     };
     if (exit) settle.observedExit = exit;

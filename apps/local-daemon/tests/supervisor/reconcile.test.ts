@@ -5,7 +5,7 @@ import { getRun, listAgentSessionsForRun, listStepRunsForRun, schema } from "@ot
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents, runEventsPath, sessionDir } from "#events";
-import { isProcessAlive, reconcileRuns, type WorktreeDeltaProbe } from "#supervisor";
+import { isProcessAlive, reconcileRuns } from "#supervisor";
 import {
   readProcessStartTime,
   WORKER_IDENTITY_FILE,
@@ -25,13 +25,6 @@ import { seedRun } from "../support/seed.js";
 import { deadPid, spawnOrphan } from "../support/spawn.js";
 
 const NOW = "2026-06-24T12:00:00.000Z";
-const NO_DELTA: WorktreeDeltaProbe = () => ({
-  changed_files: 0,
-  committed: false,
-  end_tree_sha: null,
-  end_head_sha: null,
-  evidence_error: "boot reconciliation in this test reads no workspace",
-});
 
 let fix: DaemonTestDb;
 
@@ -57,7 +50,7 @@ it("classifies a run with a terminal marker as completed → review_ready", asyn
     completedMarker(seed, "ps-r1"),
   ]);
 
-  const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+  const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
   expect(report.reconciled).toHaveLength(1);
   expect(report.reconciled[0]?.classification).toBe("completed");
@@ -80,7 +73,7 @@ it("classifies a cut ledger with a provider session as interrupted → awaiting_
   });
   writeRunEvents(fix.dataDir, "r2", [providerSessionEvent(seed, "ps-r2"), logEvent(seed, "x")]);
 
-  const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+  const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
   expect(report.reconciled[0]?.classification).toBe("interrupted");
   expect(getRun(fix.db, "r2")?.status).toBe("awaiting_human");
@@ -100,7 +93,7 @@ it("classifies a dead process with no evidence as failed → stale", async () =>
   });
   writeRunEvents(fix.dataDir, "r3", []);
 
-  const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+  const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
   expect(report.reconciled[0]?.classification).toBe("failed");
   expect(getRun(fix.db, "r3")?.status).toBe("failed");
@@ -128,7 +121,7 @@ it("terminates a still-alive orphan group whose identity is proven, and marks it
     );
     writeRunEvents(fix.dataDir, "r4", [providerSessionEvent(seed, "ps-r4")]);
 
-    const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+    const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
     expect(report.reconciled[0]?.orphanTerminated).toBe(true);
     expect(report.reconciled[0]?.classification).toBe("interrupted");
@@ -153,7 +146,7 @@ it("does not signal an alive pid with no recorded identity; settles it from the 
     // No worker.json written → identity unprovable → the group must be left untouched.
     writeRunEvents(fix.dataDir, "r4b", [providerSessionEvent(seed, "ps-r4b")]);
 
-    const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+    const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
     expect(report.reconciled[0]?.orphanTerminated).toBe(false);
     expect(report.reconciled[0]?.classification).toBe("interrupted");
@@ -188,7 +181,7 @@ it("does not signal an alive pid the OS reused (identity start-time mismatch)", 
       JSON.stringify({ pid: orphan.pid, pgid: orphan.pgid, start_time: `stale ${stale}` }),
     );
 
-    const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+    const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
     expect(report.reconciled[0]?.orphanTerminated).toBe(false);
     expect(report.reconciled[0]?.classification).toBe("interrupted");
@@ -226,12 +219,12 @@ it("leaves resting states alone and is idempotent (no double-emit, no double-spa
     sessionStatus: "awaiting_input",
   });
 
-  expect(reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA).reconciled).toHaveLength(1);
+  expect(reconcileRuns(fix.db, fix.dataDir, NOW).reconciled).toHaveLength(1);
   const afterFirst = readRunEvents(fix.db, "r5").filter((e) => e.type === "system.reconciled");
   expect(afterFirst).toHaveLength(1);
 
   // Second pass: r5 is now review_ready (resting) → excluded; resting runs untouched.
-  expect(reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA).reconciled).toHaveLength(0);
+  expect(reconcileRuns(fix.db, fix.dataDir, NOW).reconciled).toHaveLength(0);
   expect(readRunEvents(fix.db, "r5").filter((e) => e.type === "system.reconciled")).toHaveLength(1);
   expect(getRun(fix.db, "resting-rr")?.status).toBe("review_ready");
   expect(getRun(fix.db, "resting-ah")?.status).toBe("awaiting_human");
@@ -249,7 +242,7 @@ it("skips a truncated final line and still ingests the complete prefix", async (
   // A kill mid-write: an unparseable JSON fragment with no trailing newline.
   appendFileSync(runEventsPath(fix.dataDir, "r6"), '{"id":"torn","run_id":"r6","ty');
 
-  const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+  const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
   expect(report.reconciled[0]?.classification).toBe("interrupted");
   const events = readRunEvents(fix.db, "r6");
@@ -269,7 +262,7 @@ it("settles a queued run left in flight by a crash (semaphore window)", async ()
     sessionStatus: "created",
   });
 
-  const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+  const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
   expect(report.reconciled.map((o) => o.runId)).toContain("rq");
   expect(getRun(fix.db, "rq")?.status).toBe("failed");
@@ -283,7 +276,7 @@ it("settles a corrupt plan_json run as failed instead of hiding it", () => {
     .run();
   writeRunEvents(fix.dataDir, "rx", []);
 
-  const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+  const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
   expect(report.reconciled.map((o) => o.runId)).toContain("rx");
   const row = fix.db
@@ -304,7 +297,7 @@ it("normalizes an awaiting_permission run through running to its outcome", async
   });
   writeRunEvents(fix.dataDir, "r7", [providerSessionEvent(seed, "ps-r7")]);
 
-  const report = reconcileRuns(fix.db, fix.dataDir, NOW, NO_DELTA);
+  const report = reconcileRuns(fix.db, fix.dataDir, NOW);
 
   expect(report.reconciled[0]?.classification).toBe("interrupted");
   expect(getRun(fix.db, "r7")?.status).toBe("awaiting_human");

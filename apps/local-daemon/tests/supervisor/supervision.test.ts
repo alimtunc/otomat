@@ -94,7 +94,7 @@ it("rests the run when the supervisor turn itself dies, releasing nothing", asyn
 
 it("sends needs_changes instructions to a new turn of the same step, then re-judges it", async () => {
   const { run, spawn, steps } = await launch({
-    behaviors: ["complete", "supervise-changes", "write", "supervise-pass"],
+    behaviors: ["complete", "supervise-changes", "complete", "supervise-pass"],
   });
 
   // Implement, its judgement, the remediation turn it asked for, its second judgement, then Goal review and its own.

@@ -5,7 +5,6 @@ import type {
   ContextReference,
   ContextReviewComment,
   ContextSelection,
-  DeliveryExpectation,
   ExecutionOverrides,
   LaunchHold,
   LinearLifecycleSync,
@@ -37,7 +36,6 @@ export interface AppendStepInput {
   reviewComments?: readonly ContextReviewComment[];
   /** The agent the user picked for this step; never inherited from the last session. */
   selector: AgentConfigSelector;
-  delivery: DeliveryExpectation;
   overrides: ExecutionOverrides;
   dependsOn: readonly string[];
   replaces: string | null;
@@ -193,7 +191,7 @@ export interface Supervisor {
 
 export type ReconcileClassification =
   | "completed"
-  /** The process ended cleanly but the snapshot did not meet the node's declared delivery expectation. */
+  /** The process ended cleanly with a question it asked still unanswered. */
   | "undelivered"
   /** Delivered, and held until the run's own supervisor judges it. */
   | "awaiting_supervision"

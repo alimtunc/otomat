@@ -1,12 +1,5 @@
 // Pure Node with no workspace imports so the spawned child survives independent of the test process; behavior via FAKE_WORKER_BEHAVIOR.
-import {
-  appendFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  writeFileSync,
-} from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const job = JSON.parse(process.env.OTOMAT_WORKER_JOB);
@@ -96,11 +89,6 @@ function decide(decision, extra = "") {
 if (behavior === "complete") {
   marker("completed");
   process.exit(0);
-} else if (behavior === "write") {
-  // A turn that actually leaves work behind: the delivery guard reads this tree, not the exit code.
-  writeFileSync(join(job.worktreePath, `${job.agentSessionId}.txt`), "work\n");
-  marker("completed");
-  process.exit(0);
 } else if (behavior === "ask-complete") {
   emit("runtime.interaction_requested", "otomat", {
     fidelity: "parsed",
@@ -112,28 +100,6 @@ if (behavior === "complete") {
     tool: "Write",
     questions: [],
     reason: "only you can approve it.",
-  });
-  marker("completed");
-  process.exit(0);
-} else if (behavior === "failed-command") {
-  writeFileSync(join(job.worktreePath, `${job.agentSessionId}.txt`), "work\n");
-  emit("runtime.tool_call", "otomat", {
-    fidelity: "parsed",
-    adapter: "fake",
-    test_adapter: true,
-    phase: "call",
-    tool: "bash",
-    tool_use_id: "cmd-1",
-    args: { command: "pnpm test" },
-  });
-  emit("runtime.tool_call", "otomat", {
-    fidelity: "parsed",
-    adapter: "fake",
-    test_adapter: true,
-    phase: "result",
-    tool_use_id: "cmd-1",
-    is_error: true,
-    result: { exit_code: 1, output: "1 failing" },
   });
   marker("completed");
   process.exit(0);

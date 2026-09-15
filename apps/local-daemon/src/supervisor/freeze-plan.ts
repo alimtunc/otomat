@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import type { Db } from "@otomat/db";
 import {
-  DEFAULT_DELIVERY_EXPECTATION,
   FAKE_RUNTIME_ID,
   isRunPlanCompeteGroup,
   overrideLevel,
@@ -170,7 +169,6 @@ function freezeNode(
           agent: config.runtime,
           prompt: null,
           context: freezeContext(competitor.context ?? [], competitor.note ?? null),
-          delivery: competitor.delivery ?? DEFAULT_DELIVERY_EXPECTATION,
           config,
         };
       }),
@@ -183,7 +181,6 @@ function freezeNode(
     agent: config.runtime,
     prompt: null,
     context: freezeContext(node.context ?? [], node.note ?? null),
-    delivery: node.delivery ?? DEFAULT_DELIVERY_EXPECTATION,
     depends_on: dependencies,
     config,
   };
@@ -211,7 +208,6 @@ export function freezePlan(
           agent: defaultConfig.runtime,
           prompt: null,
           context: freezeContext(request.context ?? [], request.note ?? null),
-          delivery: DEFAULT_DELIVERY_EXPECTATION,
           depends_on: [],
           config: defaultConfig,
         },

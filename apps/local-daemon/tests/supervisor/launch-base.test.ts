@@ -29,7 +29,6 @@ const FOLLOW_UP: AppendStepInput = {
   note: "fix the comments",
   references: [],
   selector: { kind: "runtime", runtimeId: "fake" },
-  delivery: "standard",
   overrides: {},
   dependsOn: [],
   replaces: null,
