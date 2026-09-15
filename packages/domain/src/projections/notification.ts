@@ -1,9 +1,13 @@
 import type { RunInteractionContract } from "../contracts/entities/runs.js";
-import type { InboxEntry, InboxEntryKind } from "../contracts/inbox.js";
+import {
+  INBOX_KIND_COPY,
+  type InboxEntry,
+  type InboxEntryKind,
+  type InboxKindCopy,
+} from "../contracts/inbox.js";
 import type {
   DesktopNotification,
   NotificationCategory,
-  NotificationPreferences,
   NotificationIntent,
 } from "../contracts/notifications.js";
 import type { RunState } from "../state-machines/run.js";
@@ -21,6 +25,26 @@ const INBOX_NOTIFICATION_CATEGORY = {
   pull_request_blocked: "blocked",
 } satisfies Record<InboxEntryKind, NotificationCategory>;
 
+const QUESTION_COPY: InboxKindCopy = { label: "Question asked", action: "Answer the question" };
+const COMPLETED_COPY: InboxKindCopy = {
+  label: "Run completed",
+  action: "Completion report ready, nothing to do",
+};
+
+function notificationCopy(
+  subject: InboxEntry["subject"],
+  copy: InboxKindCopy,
+  detail: string | null,
+): Pick<NotificationIntent, "title" | "body"> {
+  const name =
+    subject.title.trim() === "" ? (subject.identifier ?? "Untitled issue") : subject.title;
+  const subjectLine = detail === null ? name : `${name} · ${detail}`;
+  return {
+    title: subject.identifier === null ? copy.label : `${subject.identifier} · ${copy.label}`,
+    body: `${subjectLine}\n${copy.action}`,
+  };
+}
+
 export interface InboxNotificationEvidence {
   entry: InboxEntry;
   revision: string;
@@ -34,6 +58,8 @@ export function projectInboxNotifications({
   requests,
   selections,
 }: InboxNotificationEvidence): NotificationIntent[] {
+  // A publication detail quotes git output, which can name remotes and paths.
+  const detail = entry.kind === "publication_stopped" ? null : entry.detail;
   const base: NotificationIntent = {
     id: `${entry.id}:${entry.kind}:${revision}`,
     category: INBOX_NOTIFICATION_CATEGORY[entry.kind],
@@ -41,16 +67,22 @@ export function projectInboxNotifications({
     target: entry.target,
     step_run_id: null,
     interaction_id: null,
+    ...notificationCopy(entry.subject, INBOX_KIND_COPY[entry.kind], detail),
   };
   if (entry.kind === "permission_request") {
-    return requests.map((request) => ({
-      ...base,
-      id: `interaction:${request.id}`,
-      category:
-        request.kind === "permission" || request.kind === "choice" ? "permission" : "question",
-      step_run_id: request.step_run_id,
-      interaction_id: request.id,
-    }));
+    return requests.map((request) => {
+      const category =
+        request.kind === "permission" || request.kind === "choice" ? "permission" : "question";
+      const copy = category === "question" ? QUESTION_COPY : INBOX_KIND_COPY.permission_request;
+      return {
+        ...base,
+        id: `interaction:${request.id}`,
+        category,
+        step_run_id: request.step_run_id,
+        interaction_id: request.id,
+        ...notificationCopy(entry.subject, copy, detail),
+      };
+    });
   }
   if (entry.kind === "run_awaiting_selection") {
     return selections.map((id) => ({ ...base, id: `selection:${id}` }));
@@ -69,6 +101,11 @@ export function projectCompletedNotifications(rows: ActivityEvidence[]): Notific
             target: { kind: "run", run_id: row.run_id },
             step_run_id: null,
             interaction_id: null,
+            ...notificationCopy(
+              { identifier: row.issue_identifier, title: row.issue_title },
+              COMPLETED_COPY,
+              null,
+            ),
           },
         ]
       : [],
@@ -96,13 +133,6 @@ export const RUN_NOTIFICATION_CATEGORY = {
   failed: "blocked",
   canceled: null,
 } satisfies Record<RunState, NotificationCategory | null>;
-
-export function notificationBody(
-  category: NotificationCategory,
-  detail: NotificationPreferences["detail"],
-): string {
-  return detail === "generic" ? "Open Otomat to view an update." : NOTIFICATION_HEADLINES[category];
-}
 
 export function notificationIdentity(notification: DesktopNotification): string {
   return JSON.stringify([notification.host_id, notification.host_alias, notification.id]);

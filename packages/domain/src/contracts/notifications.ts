@@ -20,6 +20,8 @@ const notificationIntentSchema = z.object({
   target: inboxTargetSchema,
   step_run_id: z.string().nullable(),
   interaction_id: z.string().nullable(),
+  title: z.string().min(1),
+  body: z.string().min(1),
 });
 export type NotificationIntent = z.infer<typeof notificationIntentSchema>;
 export const notificationSnapshotSchema = z.object({
@@ -27,24 +29,19 @@ export const notificationSnapshotSchema = z.object({
 });
 export type NotificationSnapshot = z.infer<typeof notificationSnapshotSchema>;
 
-export const notificationPreferencesSchema = z
-  .object({
-    categories: z
-      .object({
-        permission: z.boolean(),
-        question: z.boolean(),
-        review: z.boolean(),
-        completed: z.boolean(),
-        blocked: z.boolean(),
-      })
-      .strict(),
-    detail: z.enum(["generic", "category"]),
-  })
-  .strict();
+// Not strict: the persisted preferences file outlives every shape this schema has had.
+export const notificationPreferencesSchema = z.object({
+  categories: z.object({
+    permission: z.boolean(),
+    question: z.boolean(),
+    review: z.boolean(),
+    completed: z.boolean(),
+    blocked: z.boolean(),
+  }),
+});
 export type NotificationPreferences = z.infer<typeof notificationPreferencesSchema>;
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   categories: { permission: true, question: true, review: true, completed: true, blocked: true },
-  detail: "generic",
 };
 
 export const desktopNotificationSchema = notificationIntentSchema.extend({

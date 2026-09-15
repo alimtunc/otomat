@@ -20,8 +20,8 @@ export function startNotifications(runtime: DesktopRuntime, cockpit: CockpitWind
   const delivery = new NotificationDelivery({
     read: () => readNotificationState(runtime.dataDirectory.root),
     write: (state) => writeNotificationState(runtime.dataDirectory.root, state),
-    foreground: () =>
-      !locked && (process.platform !== "darwin" || !app.isHidden()) && cockpit.isForeground,
+    foreground: () => (process.platform !== "darwin" || !app.isHidden()) && cockpit.isForeground,
+    locked: () => locked,
     supported: () => process.platform === "darwin" && Notification.isSupported(),
     internal: (notification) => cockpit.send(NOTIFICATION_CHANNELS.notice, notification),
     open: (notification) => {
@@ -29,8 +29,8 @@ export function startNotifications(runtime: DesktopRuntime, cockpit: CockpitWind
       cockpit.open();
       cockpit.send(NOTIFICATION_CHANNELS.open, notification);
     },
-    native: (body, click, failed, shown) => {
-      const notification = new Notification({ title: "Otomat", body, silent: false });
+    native: (copy, click, failed, shown) => {
+      const notification = new Notification({ ...copy, silent: false });
       held.add(notification);
       notification.on("click", click);
       notification.on("show", shown);

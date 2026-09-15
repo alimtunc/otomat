@@ -8,21 +8,19 @@ import { inboxRoute } from "@web/lib/inbox/target";
 
 export function notificationRoute(notification: DesktopNotification) {
   const target = notification.target;
-  if (target.kind === "run" && notification.category === "review") {
-    return { to: "/runs/$runId/diff" as const, params: { runId: target.run_id } };
-  }
-  if (target.kind === "run") {
-    return {
-      to: "/runs/$runId" as const,
-      params: { runId: target.run_id },
-      search: { step: notification.step_run_id ?? undefined },
-      hash:
-        notification.interaction_id === null
-          ? undefined
-          : `interaction-${notification.interaction_id}`,
-    };
-  }
-  return inboxRoute({ target });
+  if (target.kind !== "run") return inboxRoute({ target });
+  const params = { runId: target.run_id };
+  if (notification.category === "review") return { to: "/runs/$runId/diff" as const, params };
+  if (notification.category === "completed") return { to: "/runs/$runId/report" as const, params };
+  return {
+    to: "/runs/$runId" as const,
+    params,
+    search: { step: notification.step_run_id ?? undefined },
+    hash:
+      notification.interaction_id === null
+        ? undefined
+        : `interaction-${notification.interaction_id}`,
+  };
 }
 
 export async function selectNotificationProject(

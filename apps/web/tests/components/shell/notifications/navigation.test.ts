@@ -19,13 +19,15 @@ const NOTICE: DesktopNotification = {
   target: { kind: "run", run_id: "run" },
   step_run_id: "step",
   interaction_id: "request",
+  title: "OTO-1 · Permission requested",
+  body: "Ship it\nGrant or refuse the permission",
 };
 
 afterEach(() => {
   activeHostStore.actions.activate({ id: "local", daemonUrl: "" });
 });
 
-it("targets the request's step and anchor, the run diff and each PR surface", () => {
+it("targets the request's step and anchor, the run diff, the completion report and each PR surface", () => {
   expect(notificationRoute(NOTICE)).toEqual({
     to: "/runs/$runId",
     params: { runId: "run" },
@@ -35,6 +37,16 @@ it("targets the request's step and anchor, the run diff and each PR surface", ()
   expect(notificationRoute({ ...NOTICE, category: "review" })).toEqual({
     to: "/runs/$runId/diff",
     params: { runId: "run" },
+  });
+  expect(notificationRoute({ ...NOTICE, category: "completed" })).toEqual({
+    to: "/runs/$runId/report",
+    params: { runId: "run" },
+  });
+  expect(notificationRoute({ ...NOTICE, category: "blocked", interaction_id: null })).toEqual({
+    to: "/runs/$runId",
+    params: { runId: "run" },
+    search: { step: "step" },
+    hash: undefined,
   });
   expect(
     notificationRoute({ ...NOTICE, target: { kind: "run_pull_request", run_id: "run" } }),
