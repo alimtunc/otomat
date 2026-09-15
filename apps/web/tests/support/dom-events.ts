@@ -1,5 +1,7 @@
 import { act } from "react";
 
+import { findButton } from "#support/dom-queries";
+
 export async function pressKey(key: string): Promise<void> {
   await act(async () => {
     window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
@@ -16,4 +18,10 @@ export function setTextareaValue(textarea: HTMLTextAreaElement, value: string): 
   const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
   setter?.call(textarea, value);
   textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+export function click(text: string): Promise<void> {
+  const button = findButton(text);
+  if (!button) throw new Error(`button "${text}" not found`);
+  return act(async () => button.click());
 }

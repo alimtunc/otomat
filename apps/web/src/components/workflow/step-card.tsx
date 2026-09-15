@@ -1,8 +1,8 @@
 import { Icon, IconButton } from "@otomat/ui";
+import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 import { DependencyToggles } from "@web/components/workflow/dependency-toggles";
 import { WorkflowNameField } from "@web/components/workflow/name-field";
 import { WorkflowNodeContext } from "@web/components/workflow/node-context";
-import { WorkflowNodeExecution } from "@web/components/workflow/node-execution";
 import type { WorkflowPlanExecution } from "@web/components/workflow/plan-execution";
 import type { PlanDraft } from "@web/components/workflow/use-plan-draft";
 import { requiredTrimmed } from "@web/lib/form";
@@ -80,10 +80,15 @@ export function WorkflowStepCard({ plan, index, execution, projectId }: Workflow
           dependsOn={step.dependsOn}
           onToggle={(key) => setSteps((value) => toggleWorkflowDependency(value, index, key))}
         />
-        <WorkflowNodeExecution
+        <ExecutionConfigPicker
+          compact
+          level="step"
           value={step.execution}
           onChange={(next) => setSteps((value) => setWorkflowStepExecution(value, index, next))}
-          execution={execution}
+          inherited={execution.inherited}
+          profiles={execution.agents.profiles}
+          descriptors={execution.agents.descriptors}
+          skills={execution.agents.skills}
           label={label}
         />
       </div>

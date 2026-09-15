@@ -3,7 +3,7 @@ import type { ExecutionSelection } from "@web/lib/execution/selection";
 
 /** The agent catalog every node's picker reads, plus what a node selecting nothing inherits. */
 export interface WorkflowPlanExecution {
-  agents: LaunchAgentChoice;
+  agents: Pick<LaunchAgentChoice, "descriptors" | "profiles" | "skills">;
   /** Empty where no level sits above the plan, as in a preset composed away from any launch. */
   inherited: ExecutionSelection;
 }

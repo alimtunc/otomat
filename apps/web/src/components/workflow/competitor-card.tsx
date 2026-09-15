@@ -1,7 +1,7 @@
 import { Icon, IconButton } from "@otomat/ui";
+import { ExecutionConfigPicker } from "@web/components/execution/execution-config-picker";
 import { WorkflowNameField } from "@web/components/workflow/name-field";
 import { WorkflowNodeContext } from "@web/components/workflow/node-context";
-import { WorkflowNodeExecution } from "@web/components/workflow/node-execution";
 import type { WorkflowPlanExecution } from "@web/components/workflow/plan-execution";
 import type { PlanDraft } from "@web/components/workflow/use-plan-draft";
 import { requiredTrimmed } from "@web/lib/form";
@@ -48,14 +48,19 @@ export function WorkflowCompetitorCard({
             <WorkflowNameField field={field} label={`${label} name`} placeholder="Approach name" />
           )}
         </form.Field>
-        <WorkflowNodeExecution
+        <ExecutionConfigPicker
+          compact
+          level="step"
           value={competitor.execution}
           onChange={(next) =>
             setSteps((value) =>
               setWorkflowCompetitorExecution(value, groupIndex, competitorIndex, next),
             )
           }
-          execution={execution}
+          inherited={execution.inherited}
+          profiles={execution.agents.profiles}
+          descriptors={execution.agents.descriptors}
+          skills={execution.agents.skills}
           label={label}
         />
         <IconButton

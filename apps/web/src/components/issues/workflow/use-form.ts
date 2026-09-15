@@ -4,13 +4,8 @@ import { useLaunchRun } from "@web/api/runs/use-launch-run";
 import type { LaunchBaseFields } from "@web/components/runs/launch/base/request";
 import { usePlanDraft } from "@web/components/workflow/use-plan-draft";
 import type { ExecutionRequestFields } from "@web/lib/execution/request";
-import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { newWorkflowStep, type WorkflowNodeDraft } from "@web/lib/workflow-draft";
 import { buildRunPlanInput } from "@web/lib/workflow/plan-input";
-import {
-  EMPTY_SUPERVISION_LIMITS,
-  supervisionRequest,
-} from "@web/lib/workflow/supervision-request";
 import { useState } from "react";
 
 import { targetRequest, type WorkflowLaunchTarget } from "./launch-target";
@@ -39,14 +34,9 @@ export function useWorkflowForm({
   const { launch, isPending, baseRefusal } = useLaunchRun();
   const plan = usePlanDraft(() => [newWorkflowStep(1)]);
   const [rejected, setRejected] = useState<RejectedPlan | null>(null);
-  const [supervisor, setSupervisor] = useState<ExecutionSelection>(EMPTY_EXECUTION_SELECTION);
 
   const form = useForm({
-    defaultValues: {
-      goal: "",
-      supervisionMaxLoops: EMPTY_SUPERVISION_LIMITS.maxLoops,
-      supervisionBudget: EMPTY_SUPERVISION_LIMITS.budgetUsd,
-    },
+    defaultValues: { goal: "" },
     onSubmit: async ({ value }) => {
       if (!canLaunch) return;
       const parsed = runPlanInputSchema.safeParse(buildRunPlanInput(plan.steps));
@@ -61,16 +51,9 @@ export function useWorkflowForm({
         plan: parsed.data,
         ...execution,
       };
-      const supervision = supervisionRequest({
-        execution: supervisor,
-        maxLoops: value.supervisionMaxLoops,
-        budgetUsd: value.supervisionBudget,
-      });
-      if (supervision !== null) request.supervision = supervision;
       const run = await launch(request);
       if (!run) return;
       form.reset();
-      setSupervisor(EMPTY_EXECUTION_SELECTION);
       plan.setSteps([newWorkflowStep(1)]);
       onLaunched(run);
     },
@@ -80,8 +63,6 @@ export function useWorkflowForm({
     form,
     plan,
     planError: rejected?.steps === plan.steps ? rejected.message : null,
-    supervisor,
-    setSupervisor,
     isPending,
     baseRefusal,
   };
