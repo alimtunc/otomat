@@ -199,6 +199,7 @@ pnpm desktop:package  # build the unsigned macOS .app/.dmg
 pnpm desktop:preflight # check the release inputs without building anything
 pnpm desktop:release  # build the signed, notarized macOS release (needs Apple credentials)
 pnpm desktop:smoke    # install/launch/shutdown smoke on the packaged artifact
+pnpm release          # guided release cut: bump, check, tag, push; CI builds and publishes
 ```
 
 After a schema change, regenerate migrations with

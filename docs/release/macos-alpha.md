@@ -176,6 +176,29 @@ into a throwaway keychain from `CSC_LINK` / `CSC_KEY_PASSWORD`.
 
 ## Cutting a release
 
+`pnpm release`, from the repository root, is the normal path. It needs `git`, `gh` (authenticated)
+and `gum` (`brew install gum`); no Apple credential — those exist only in GitHub Actions. It refuses
+to start from anything but a clean `main` in sync with `origin/main`, then:
+
+1. reads the current version from `apps/desktop/package.json` and offers its SemVer increments —
+   the next prerelease first (`0.1.0-alpha.1 → 0.1.0-alpha.2`), then its stable release (the next
+   patch, from a stable version), the next minor and the next major — or a version you type;
+   `pnpm release <version>` skips that prompt. The candidate must be SemVer and above the current
+   version, and neither the `v<version>` tag nor a GitHub release of it may exist;
+2. shows the plan — version, starting commit, tag, commits since the previous `v*` tag, the
+   workflow it triggers, and whether the suffix makes it a prerelease — and asks once;
+3. writes the version, runs `pnpm check`, commits `chore(release): cut v<version>`, creates the
+   annotated tag and pushes `main` and the tag in one atomic push;
+4. prints the `release-macos.yml` run and the release URL, and offers `gh run watch`.
+
+Nothing is written before the confirmation. A failure before or during the push — a red check, a
+rejected push — restores `main` to its starting commit and deletes the local tag, so nothing
+reaches `origin`. Once the tag is on `origin` the workflow is running and the script never deletes
+a remote reference: it reports the state and leaves the checkout as is — as it does when `origin`
+cannot even be probed after the push, printing the `git ls-remote` check to run by hand.
+
+Manual fallback, when the script cannot run:
+
 1. Bump `version` in `apps/desktop/package.json`.
 2. Merge that to `main`.
 3. Tag it: `git tag v<version> && git push origin v<version>`. The tag and the packaged version must
