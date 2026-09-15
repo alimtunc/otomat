@@ -151,6 +151,7 @@ export const DIFF_MEDIA_TYPES = [
   "video/webm",
 ] as const;
 export const diffMediaTypeSchema = z.enum(DIFF_MEDIA_TYPES);
+export const MEDIA_BLOB_MAX_BYTES = 25 * 1024 * 1024;
 export type DiffMediaType = z.infer<typeof diffMediaTypeSchema>;
 
 const DIFF_MEDIA_BY_EXTENSION = new Map<string, DiffMediaType>([

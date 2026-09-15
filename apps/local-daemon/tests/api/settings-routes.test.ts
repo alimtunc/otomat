@@ -1,7 +1,7 @@
 import type { AgentCapacity, ExecutionDefaults, LaunchHold } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { json, makeApiApp, request, stubSupervisor } from "../support/api.js";
+import { json, makeApiApp, put, request, stubSupervisor } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -14,16 +14,12 @@ afterEach(() => {
   t.cleanup();
 });
 
-function put(path: string, body: unknown, capacity?: AgentCapacity) {
+function putSettings(path: string, body: unknown, capacity?: AgentCapacity) {
   const app = makeApiApp(
     t,
     capacity ? { supervisor: stubSupervisor({ setCapacity: () => capacity }) } : {},
   );
-  return request(app, path, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  return put(app, path, body);
 }
 
 it("serves the cap this daemon is applying, with what it is doing with it", async () => {
@@ -47,7 +43,7 @@ it("serves the cap this daemon is applying, with what it is doing with it", asyn
 });
 
 it("applies a new cap and answers with what the daemon now enforces", async () => {
-  const res = await put(
+  const res = await putSettings(
     "/api/settings/capacity",
     { max_concurrent_sessions: 6 },
     { max_concurrent_sessions: 6, active_sessions: 4, waiting_sessions: 0 },
@@ -62,11 +58,7 @@ it("arms the launch hold and answers with the runs still in flight", async () =>
     supervisor: stubSupervisor({ setLaunchHold: (held) => ({ held, active_runs: 2 }) }),
   });
 
-  const res = await request(app, "/api/settings/launch-hold", {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ held: true }),
-  });
+  const res = await put(app, "/api/settings/launch-hold", { held: true });
 
   expect(res.status).toBe(200);
   expect(await json<LaunchHold>(res)).toEqual({ held: true, active_runs: 2 });
@@ -75,25 +67,24 @@ it("arms the launch hold and answers with the runs still in flight", async () =>
 it("rejects a launch-hold request that does not say which way", async () => {
   const app = makeApiApp(t, { supervisor: stubSupervisor() });
 
-  const res = await request(app, "/api/settings/launch-hold", {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ hold: true }),
-  });
+  const res = await put(app, "/api/settings/launch-hold", { hold: true });
 
   expect(res.status).toBe(400);
 });
 
 it("rejects a cap that is not a positive integer before the daemon applies anything", async () => {
   for (const value of [0, -2, 1.5, "6", null]) {
-    const res = await put("/api/settings/capacity", { max_concurrent_sessions: value });
+    const res = await putSettings("/api/settings/capacity", { max_concurrent_sessions: value });
     expect(res.status).toBe(400);
     expect(await json<{ error: string }>(res)).toMatchObject({ error: "invalid_request" });
   }
 });
 
 it("rejects an unknown settings key rather than silently ignoring it", async () => {
-  const res = await put("/api/settings/capacity", { max_concurrent_sessions: 2, extra: true });
+  const res = await putSettings("/api/settings/capacity", {
+    max_concurrent_sessions: 2,
+    extra: true,
+  });
   expect(res.status).toBe(400);
 });
 
@@ -108,7 +99,7 @@ it("answers with nothing selected until execution defaults are configured", asyn
 });
 
 it("stores execution defaults and serves them back for every later launch", async () => {
-  const saved = await put("/api/settings/execution-defaults", {
+  const saved = await putSettings("/api/settings/execution-defaults", {
     runtime: "fake",
     model: "fake-thorough",
     options: { effort: "low" },
@@ -123,7 +114,7 @@ it("stores execution defaults and serves them back for every later launch", asyn
 });
 
 it("refuses a default the chosen runtime and model do not announce", async () => {
-  const res = await put("/api/settings/execution-defaults", {
+  const res = await putSettings("/api/settings/execution-defaults", {
     runtime: "fake",
     model: "fake-fast",
     options: { effort: "high" },
@@ -134,7 +125,7 @@ it("refuses a default the chosen runtime and model do not announce", async () =>
 });
 
 it("refuses a model and options with no runtime to belong to", async () => {
-  const res = await put("/api/settings/execution-defaults", {
+  const res = await putSettings("/api/settings/execution-defaults", {
     runtime: null,
     model: "fake-thorough",
     options: {},
@@ -152,7 +143,7 @@ it("selects no PR metadata generator until one is chosen, so generation follows 
 });
 
 it("stores the PR metadata generator apart from the execution defaults", async () => {
-  const saved = await put("/api/settings/pr-generator", {
+  const saved = await putSettings("/api/settings/pr-generator", {
     runtime: "fake",
     model: "fake-thorough",
     options: { effort: "low" },
@@ -172,7 +163,7 @@ it("stores the PR metadata generator apart from the execution defaults", async (
 });
 
 it("refuses a generator the chosen runtime and model do not announce", async () => {
-  const res = await put("/api/settings/pr-generator", {
+  const res = await putSettings("/api/settings/pr-generator", {
     runtime: "fake",
     model: "fake-fast",
     options: { effort: "high" },

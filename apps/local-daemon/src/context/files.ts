@@ -1,24 +1,10 @@
 import { CONTEXT_FILE_MAX_BYTES, type ContextFile } from "@otomat/domain";
 
-import type { TreeSnapshot } from "#git";
-
-/** Anything that could name something outside the repository: an absolute path, a Windows/UNC root, a home shortcut, or a traversal segment. */
-function isRepositoryRelative(path: string): boolean {
-  if (path === "" || path.startsWith("/") || path.startsWith("~") || path.startsWith("\\")) {
-    return false;
-  }
-  if (/^[a-zA-Z]:[\\/]/.test(path)) return false;
-  return !path.split(/[\\/]/).includes("..");
-}
-
-/** Strips the segments a picker adds without changing which file is named. */
-function normalizeContextPath(path: string): string {
-  return path.trim().replace(/^\.\//, "").replace(/\/+$/, "");
-}
+import { isRepositoryRelative, normalizeRepositoryPath, type TreeSnapshot } from "#git";
 
 /** Refusing a symlink is what keeps an attached path from reading a host file the repository merely points at. */
 export function readContextFile(snapshot: TreeSnapshot, rawPath: string): ContextFile {
-  const path = normalizeContextPath(rawPath);
+  const path = normalizeRepositoryPath(rawPath);
   if (!isRepositoryRelative(path))
     return { state: "unavailable", path, reason: "outside_repository" };
   const read = snapshot.readFile(path, { maxBytes: CONTEXT_FILE_MAX_BYTES });

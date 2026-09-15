@@ -1,4 +1,4 @@
-import { diffMediaTypeForPath, type DiffMediaType } from "@otomat/domain";
+import { diffMediaTypeForPath, MEDIA_BLOB_MAX_BYTES, type DiffMediaType } from "@otomat/domain";
 
 import {
   DiffUnavailableError,
@@ -17,7 +17,6 @@ import type {
 } from "./types.js";
 
 const MAX_TEXT_BLOB_BYTES = 2 * 1024 * 1024;
-const MAX_MEDIA_BLOB_BYTES = 25 * 1024 * 1024;
 
 function textBlob(content: string | null): FileBlobResult | null {
   return content === null ? null : { kind: "text", content };
@@ -57,7 +56,7 @@ export function getFileBlobs(
 
   const blobs = snapshot.mediaBlobs({ path: file.path, oldPath: file.oldPath });
   const bytes = (blobs.base?.byteLength ?? 0) + (blobs.head?.byteLength ?? 0);
-  if (bytes > MAX_MEDIA_BLOB_BYTES) throw new FileTooLargeError(file.path);
+  if (bytes > MEDIA_BLOB_MAX_BYTES) throw new FileTooLargeError(file.path);
   return {
     base: mediaBlob(blobs.base, baseType),
     head: mediaBlob(blobs.head, headType),

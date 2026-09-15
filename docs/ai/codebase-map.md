@@ -103,6 +103,7 @@ under `apps/local-daemon/src/<module>`, consumed through
 | `apps/local-daemon/src/review` | Review slice: scoped diff snapshots, comment anchoring, destinations, fix-step context, fix proof; one surface for a run and an adopted pull request. |
 | `apps/local-daemon/src/github/import` | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
 | `apps/web/src/components/pull-requests` | The issue's pull requests: attached cards, detected candidates, manual import, detach. |
+| `apps/web/src/components/runs/files` | The run's Files tab: the worktree tree, one file at a revision, and the in-place editor that saves it back. |
 | `packages/domain/src/patch` | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
 | `packages/domain` | Pure TS. Canonical types, state machines, event envelope, contracts. |
 | `packages/db` | SQLite driver isolation, Drizzle schema, migrations, repositories. |
@@ -1669,6 +1670,57 @@ at once, lowering it never touches a holder and only gates the next start. In th
 desktop shell, `remote/host/capacity.ts` relays the read and the write to the host
 the operator is configuring; an unreachable host or a refused write comes back as
 a message, never as a value shown as applied.
+
+## Browsing and Editing Worktree Files
+
+The Files tab of the run cockpit shows the whole worktree, not the diff: `GET
+/api/runs/:id/files` lists every leaf of the same tree the diff reads its head
+from (`GitWorktreeService.worktreeTree`, built on `diffInputs`), so a file opened
+here is the file the diff would show, uncommitted and untracked work included and
+gitignored files excluded. A live worktree answers `editable: true`; an archived
+one serves its branch tip and refuses every write with `workspace_read_only`. A
+project-level view of the main branch does not exist: nothing edits a checkout
+Otomat did not create.
+
+Reads never touch the filesystem. `GET /api/runs/:id/files/content?path=` goes
+through `readTreeFile`, so a symlink, a binary, a directory, an absent path or a
+file past `WORKTREE_FILE_MAX_BYTES` is refused by kind (`file_symlink`,
+`file_binary`, `file_not_found`, `file_too_large`) rather than approximated, and a
+path that is absolute or carries `..` is refused before git is asked
+(`path_invalid`, via `isRepositoryRelative`). A media file is served as base64 the
+way the diff's expanded blobs are. Every text answer carries `revision`: git's
+own blob id for the content, which is what a save must present back.
+
+`PUT /api/runs/:id/files/content` is the one write. Both verbs resolve the run
+through the same `worktreeTree`, so a workspace the list reports as read-only
+refuses the save with `workspace_read_only`. `writeWorktreeFile`
+(`git/file-write.ts`) resolves the target under the live worktree root
+(`isInsideRoot`, so a parent reached through a symlink is refused like the
+symlink itself), reads the current bytes with `O_NOFOLLOW`, hashes them with
+`git hash-object --path` — clean filters included, so the value is comparable
+with the tree's oid — and refuses `file_revision_stale` when the worktree holds
+something other than what the editor opened. The write itself is a temp file in
+the same directory renamed over the target, keeping the original mode. `.git`
+internals are never a target. The check is best-effort against a writer racing
+the rename by milliseconds; the daemon itself serializes nothing here because a
+second Otomat writer does not exist.
+
+The cockpit keeps the diff as the source of truth: a successful save seeds the
+file's cache with the new revision, then invalidates the file list, the run's
+review diffs and its workspace facts, so the Diff tab shows the edit on its next
+read. Nothing is journaled on the run's ledger for an operator edit. The editor
+is Monaco, bundled locally with its own worker (`monaco-setup.ts`, never the CDN
+loader) and loaded as its own chunk the route's loader fetches ahead of the first
+file; only the editing features and the basic grammars are registered, so no
+language service ever runs against a checkout it cannot understand. CodeMirror
+measured lighter and was rejected: the operator's VS Code keybindings are the
+product criterion. The file tree is the diff reviewer's `FileTree`, which takes
+the row to render, so the two surfaces share folding and reveal without the
+Files tab depending on a diff contract. A dirty document blocks navigation
+through the router's blocker and the browser's unload prompt; a revision that
+moves under a clean document is adopted, one that moves under a dirty document —
+or a refused save — shows the conflict with a Reload that discards the edits,
+never a silent overwrite.
 
 ## Opening a Worktree Outside Otomat
 

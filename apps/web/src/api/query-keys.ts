@@ -109,6 +109,9 @@ export function hostKeys(host: ExecutionHostId) {
     commentFixProof: (id: string, commentId: string) =>
       [host, "run", id, "fix-proof", commentId] as const,
     runWorkspace: (id: string) => [host, "run", id, "workspace"] as const,
+    runFiles: (id: string) => [host, "run", id, "files"] as const,
+    runFile: (id: string, path: string | null) =>
+      [host, "run", id, "files", "content", path] as const,
     competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
       [host, "run", runId, "compete", groupId, stepId, "diff"] as const,
     reviewDetail: (target: ReviewTarget) =>

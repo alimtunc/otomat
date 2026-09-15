@@ -6,6 +6,7 @@ const COCKPIT_TABS = [
   { value: "report", icon: "list-todo", to: "/runs/$runId/report", label: "Report" },
   { value: "logs", icon: "terminal", to: "/runs/$runId/logs", label: "Logs" },
   { value: "diff", icon: "git-compare", to: "/runs/$runId/diff", label: "Diff" },
+  { value: "files", icon: "folder", to: "/runs/$runId/files", label: "Files" },
   { value: "pr", icon: "git-pull-request", to: "/runs/$runId/pr", label: "PR" },
 ] as const;
 

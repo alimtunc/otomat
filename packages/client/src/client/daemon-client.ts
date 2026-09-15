@@ -12,6 +12,7 @@ import { createIssuesClient } from "./issues.js";
 import { createLinearClient } from "./linear.js";
 import { createPullRequestsClient } from "./pull-requests.js";
 import { createReviewsClient } from "./reviews.js";
+import { createRunFilesClient } from "./run-files.js";
 import { createRunsClient } from "./runs.js";
 import { createSystemClient } from "./system.js";
 import { createUsageClient } from "./usage.js";
@@ -29,6 +30,7 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     ...createInboxClient(config),
     ...createIssuesClient(config),
     ...createRunsClient(config),
+    ...createRunFilesClient(config),
     ...createReviewsClient(config),
     ...createPullRequestsClient(config),
     ...createUsageClient(config),

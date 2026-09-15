@@ -7,7 +7,7 @@ import type {
 } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { json, makeApiApp, request, stubSupervisor } from "../support/api.js";
+import { json, makeApiApp, put, request, stubSupervisor } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 
 let t: TestDb;
@@ -154,10 +154,8 @@ it("serves a project's auto-delete setting on by default and persists a change",
   const initial = await json<WorkspaceSettings>(
     await request(app, "/api/settings/workspaces?project_id=p1"),
   );
-  const updated = await request(app, "/api/settings/workspaces?project_id=p1", {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ auto_delete_after_merge: false }),
+  const updated = await put(app, "/api/settings/workspaces?project_id=p1", {
+    auto_delete_after_merge: false,
   });
 
   expect(initial).toEqual({ auto_delete_after_merge: true });
@@ -171,11 +169,7 @@ it("keeps each project's auto-delete setting to itself", async () => {
   insertProject(t.db, { id: "p2", name: "Second", root_path: "/tmp/otomat-p2" });
   const app = makeApiApp(t);
 
-  await request(app, "/api/settings/workspaces?project_id=p1", {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ auto_delete_after_merge: false }),
-  });
+  await put(app, "/api/settings/workspaces?project_id=p1", { auto_delete_after_merge: false });
 
   expect(
     await json<WorkspaceSettings>(await request(app, "/api/settings/workspaces?project_id=p2")),

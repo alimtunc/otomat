@@ -24,6 +24,7 @@ import { createReviewRoutes } from "./routes/review.js";
 import { createReviewInboxRoutes } from "./routes/reviews.js";
 import { createRunContributionRoutes } from "./routes/run/contributions.js";
 import { createRunEventRoutes } from "./routes/run/events.js";
+import { createRunFileRoutes } from "./routes/run/files.js";
 import { createRunInteractionRoutes } from "./routes/run/interactions.js";
 import { createRunStepRoutes } from "./routes/run/steps.js";
 import { createRunRoutes } from "./routes/runs.js";
@@ -69,6 +70,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api/reviews", createReviewInboxRoutes(deps));
   app.route("/api/runs", createRunContributionRoutes(deps));
   app.route("/api/runs", createRunEventRoutes(deps));
+  app.route("/api/runs", createRunFileRoutes(deps));
   app.route("/api/runs", createRunInteractionRoutes(deps));
   app.route("/api/runs", createRunStepRoutes(deps));
   app.route("/api/runs", createRunRoutes(deps));
