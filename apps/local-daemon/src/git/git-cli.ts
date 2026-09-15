@@ -10,6 +10,8 @@ export interface RunGitOptions {
   allowFailure?: boolean;
   /** Bounds a command that can wait on a network peer; `spawnSync` blocks the whole daemon without it. */
   timeoutMs?: number;
+  /** Fed to stdin, for commands that hash or read content rather than a path. */
+  input?: Buffer | string;
 }
 
 export interface GitResult {
@@ -57,6 +59,7 @@ export function runGit(args: readonly string[], options: RunGitOptions): GitResu
     cwd: options.cwd,
     encoding: "utf8",
     env: { ...scrubGitEnv(process.env), ...options.env },
+    input: options.input,
     maxBuffer: MAX_BUFFER,
     timeout: options.timeoutMs,
   });
@@ -82,6 +85,7 @@ export function runGitBytes(args: readonly string[], options: RunGitOptions): Gi
     cwd: options.cwd,
     encoding: null,
     env: { ...scrubGitEnv(process.env), ...options.env },
+    input: options.input,
     maxBuffer: MAX_BUFFER,
     timeout: options.timeoutMs,
   });

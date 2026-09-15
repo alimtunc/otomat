@@ -1,52 +1,55 @@
-import type { DiffFileContract } from "@otomat/domain";
 import { baseName, pathSegments } from "@web/components/runs/diff/files/path";
 
-export interface DiffTreeDirectory {
+export interface FileTreeLeaf {
+  path: string;
+}
+
+export interface FileTreeDirectory<T extends FileTreeLeaf> {
   kind: "directory";
   /** Full path of the deepest folder in this row; also its collapse key. */
   path: string;
   /** Display label, holding the whole `a/b/c` run when single-child folders compacted. */
   label: string;
-  children: DiffTreeNode[];
+  children: FileTreeNode<T>[];
 }
 
-export interface DiffTreeFile {
+export interface FileTreeFile<T extends FileTreeLeaf> {
   kind: "file";
-  file: DiffFileContract;
+  file: T;
 }
 
-export type DiffTreeNode = DiffTreeDirectory | DiffTreeFile;
+export type FileTreeNode<T extends FileTreeLeaf> = FileTreeDirectory<T> | FileTreeFile<T>;
 
-export interface DiffTreeRow {
-  node: DiffTreeNode;
+export interface FileTreeRow<T extends FileTreeLeaf> {
+  node: FileTreeNode<T>;
   depth: number;
   /** Directories only: false when the folder is collapsed and its subtree is hidden. */
   expanded: boolean;
 }
 
-interface Draft {
+interface Draft<T extends FileTreeLeaf> {
   path: string;
-  directories: Map<string, Draft>;
-  files: DiffFileContract[];
+  directories: Map<string, Draft<T>>;
+  files: T[];
 }
 
-function draft(path: string): Draft {
+function draft<T extends FileTreeLeaf>(path: string): Draft<T> {
   return { path, directories: new Map(), files: [] };
 }
 
 /** Git orders a tree by entry name with directories sorted as if they ended in `/`. */
-function sortKey(node: DiffTreeNode): string {
+function sortKey<T extends FileTreeLeaf>(node: FileTreeNode<T>): string {
   return node.kind === "directory" ? `${node.label}/` : baseName(node.file.path);
 }
 
-function byTreeOrder(a: DiffTreeNode, b: DiffTreeNode): number {
+function byTreeOrder<T extends FileTreeLeaf>(a: FileTreeNode<T>, b: FileTreeNode<T>): number {
   const left = sortKey(a);
   const right = sortKey(b);
   if (left < right) return -1;
   return left > right ? 1 : 0;
 }
 
-function compact(directory: DiffTreeDirectory): DiffTreeDirectory {
+function compact<T extends FileTreeLeaf>(directory: FileTreeDirectory<T>): FileTreeDirectory<T> {
   const only = directory.children[0];
   if (directory.children.length !== 1 || only === undefined || only.kind !== "directory") {
     return directory;
@@ -54,8 +57,8 @@ function compact(directory: DiffTreeDirectory): DiffTreeDirectory {
   return { ...only, label: `${directory.label}/${only.label}` };
 }
 
-function toNodes(current: Draft): DiffTreeNode[] {
-  const nodes: DiffTreeNode[] = [];
+function toNodes<T extends FileTreeLeaf>(current: Draft<T>): FileTreeNode<T>[] {
+  const nodes: FileTreeNode<T>[] = [];
   for (const child of current.directories.values()) {
     const label = baseName(child.path);
     nodes.push(compact({ kind: "directory", path: child.path, label, children: toNodes(child) }));
@@ -66,14 +69,14 @@ function toNodes(current: Draft): DiffTreeNode[] {
   return nodes.toSorted(byTreeOrder);
 }
 
-export function buildDiffFileTree(files: readonly DiffFileContract[]): DiffTreeNode[] {
-  const root = draft("");
+export function buildFileTree<T extends FileTreeLeaf>(files: readonly T[]): FileTreeNode<T>[] {
+  const root = draft<T>("");
   for (const file of files) {
     const segments = pathSegments(file.path);
     let current = root;
     for (const segment of segments.slice(0, -1)) {
       const path = current.path === "" ? segment : `${current.path}/${segment}`;
-      const existing = current.directories.get(path) ?? draft(path);
+      const existing = current.directories.get(path) ?? draft<T>(path);
       current.directories.set(path, existing);
       current = existing;
     }
@@ -82,12 +85,27 @@ export function buildDiffFileTree(files: readonly DiffFileContract[]): DiffTreeN
   return toNodes(root);
 }
 
-export function visibleTreeRows(
-  nodes: readonly DiffTreeNode[],
+export function directoryPaths<T extends FileTreeLeaf>(
+  nodes: readonly FileTreeNode<T>[],
+): Set<string> {
+  const paths = new Set<string>();
+  const walk = (level: readonly FileTreeNode<T>[]): void => {
+    for (const node of level) {
+      if (node.kind !== "directory") continue;
+      paths.add(node.path);
+      walk(node.children);
+    }
+  };
+  walk(nodes);
+  return paths;
+}
+
+export function visibleTreeRows<T extends FileTreeLeaf>(
+  nodes: readonly FileTreeNode<T>[],
   collapsed: ReadonlySet<string>,
-): DiffTreeRow[] {
-  const rows: DiffTreeRow[] = [];
-  const walk = (level: readonly DiffTreeNode[], depth: number) => {
+): FileTreeRow<T>[] {
+  const rows: FileTreeRow<T>[] = [];
+  const walk = (level: readonly FileTreeNode<T>[], depth: number) => {
     for (const node of level) {
       if (node.kind === "file") {
         rows.push({ node, depth, expanded: true });

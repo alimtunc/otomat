@@ -38,6 +38,14 @@ export function patch(app: Hono, path: string, body: unknown): Promise<Response>
   });
 }
 
+export function put(app: Hono, path: string, body: unknown): Promise<Response> {
+  return request(app, path, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export function del(app: Hono, path: string): Promise<Response> {
   return request(app, path, { method: "DELETE" });
 }

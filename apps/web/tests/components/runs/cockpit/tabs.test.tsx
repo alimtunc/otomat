@@ -46,6 +46,7 @@ describe("CockpitTabs", () => {
       "Report",
       "Logs",
       "Diff",
+      "Files",
       "PR",
     ]);
     expect(container.querySelectorAll("button")).toHaveLength(0);

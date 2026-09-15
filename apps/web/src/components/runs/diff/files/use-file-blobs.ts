@@ -1,4 +1,3 @@
-import { DaemonRequestError } from "@otomat/client";
 import {
   diffMediaTypeForPath,
   type DiffFileBlob,
@@ -9,6 +8,7 @@ import {
 } from "@otomat/domain";
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
+import { retryTransportOnly } from "@web/api/query-client";
 import { useQueryKeys } from "@web/api/use-query-keys";
 import { blobsErrorMessage } from "@web/components/runs/diff/files/blobs-error";
 import { useMemo, useState } from "react";
@@ -63,7 +63,7 @@ export function useFileBlobs(
     queryKey: keys.reviewDiffFileBlobs(target, file.path, file.sha, scope),
     queryFn: () => daemon.getDiffFileBlobs(target, file.path, file.sha, scope),
     enabled: (requested && !file.binary) || (autoload && file.binary && mediaSupported),
-    retry: (count, error) => !(error instanceof DaemonRequestError) && count < 2,
+    retry: retryTransportOnly,
   });
 
   const blobs = query.data ?? null;

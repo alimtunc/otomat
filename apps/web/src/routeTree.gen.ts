@@ -40,6 +40,7 @@ import { Route as PullRequestsPullRequestIdDiffRouteImport } from './routes/pull
 import { Route as PullRequestsPullRequestIdOverviewRouteImport } from './routes/pull-requests/$pullRequestId/overview'
 import { Route as RunsRunIdIndexRouteImport } from './routes/runs/$runId/index'
 import { Route as RunsRunIdDiffRouteImport } from './routes/runs/$runId/diff'
+import { Route as RunsRunIdFilesRouteImport } from './routes/runs/$runId/files'
 import { Route as RunsRunIdLogsRouteImport } from './routes/runs/$runId/logs'
 import { Route as RunsRunIdPrRouteImport } from './routes/runs/$runId/pr'
 import { Route as RunsRunIdReportRouteImport } from './routes/runs/$runId/report'
@@ -209,6 +210,11 @@ const RunsRunIdDiffRoute = RunsRunIdDiffRouteImport.update({
   path: '/diff',
   getParentRoute: () => RunsRunIdRouteRoute,
 } as any)
+const RunsRunIdFilesRoute = RunsRunIdFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => RunsRunIdRouteRoute,
+} as any)
 const RunsRunIdLogsRoute = RunsRunIdLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
@@ -286,6 +292,7 @@ export interface FileRoutesByFullPath {
   '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
   '/pull-requests/$pullRequestId/overview': typeof PullRequestsPullRequestIdOverviewRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
+  '/runs/$runId/files': typeof RunsRunIdFilesRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
   '/pull-requests/$pullRequestId/overview': typeof PullRequestsPullRequestIdOverviewRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
+  '/runs/$runId/files': typeof RunsRunIdFilesRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
@@ -367,6 +375,7 @@ export interface FileRoutesById {
   '/pull-requests/$pullRequestId/diff': typeof PullRequestsPullRequestIdDiffRoute
   '/pull-requests/$pullRequestId/overview': typeof PullRequestsPullRequestIdOverviewRoute
   '/runs/$runId/diff': typeof RunsRunIdDiffRoute
+  '/runs/$runId/files': typeof RunsRunIdFilesRoute
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
@@ -411,6 +420,7 @@ export interface FileRouteTypes {
     | '/pull-requests/$pullRequestId/diff'
     | '/pull-requests/$pullRequestId/overview'
     | '/runs/$runId/diff'
+    | '/runs/$runId/files'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/pull-requests/$pullRequestId/diff'
     | '/pull-requests/$pullRequestId/overview'
     | '/runs/$runId/diff'
+    | '/runs/$runId/files'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
@@ -491,6 +502,7 @@ export interface FileRouteTypes {
     | '/pull-requests/$pullRequestId/diff'
     | '/pull-requests/$pullRequestId/overview'
     | '/runs/$runId/diff'
+    | '/runs/$runId/files'
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
@@ -738,6 +750,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRunIdDiffRouteImport
       parentRoute: typeof RunsRunIdRouteRoute
     }
+    '/runs/$runId/files': {
+      id: '/runs/$runId/files'
+      path: '/files'
+      fullPath: '/runs/$runId/files'
+      preLoaderRoute: typeof RunsRunIdFilesRouteImport
+      parentRoute: typeof RunsRunIdRouteRoute
+    }
     '/runs/$runId/logs': {
       id: '/runs/$runId/logs'
       path: '/logs'
@@ -884,6 +903,7 @@ const PullRequestsPullRequestIdRouteRouteWithChildren =
 
 interface RunsRunIdRouteRouteChildren {
   RunsRunIdDiffRoute: typeof RunsRunIdDiffRoute
+  RunsRunIdFilesRoute: typeof RunsRunIdFilesRoute
   RunsRunIdLogsRoute: typeof RunsRunIdLogsRoute
   RunsRunIdPrRoute: typeof RunsRunIdPrRoute
   RunsRunIdReportRoute: typeof RunsRunIdReportRoute
@@ -892,6 +912,7 @@ interface RunsRunIdRouteRouteChildren {
 
 const RunsRunIdRouteRouteChildren: RunsRunIdRouteRouteChildren = {
   RunsRunIdDiffRoute: RunsRunIdDiffRoute,
+  RunsRunIdFilesRoute: RunsRunIdFilesRoute,
   RunsRunIdLogsRoute: RunsRunIdLogsRoute,
   RunsRunIdPrRoute: RunsRunIdPrRoute,
   RunsRunIdReportRoute: RunsRunIdReportRoute,

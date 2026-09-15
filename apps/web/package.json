@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@git-diff-view/react": "^0.1.7",
+    "@monaco-editor/react": "^4.7.0",
     "@otomat/client": "workspace:*",
     "@otomat/domain": "workspace:*",
     "@otomat/ui": "workspace:*",
@@ -25,6 +26,7 @@
     "@tanstack/react-store": "^0.11.1",
     "@tanstack/react-table": "^9.2.4",
     "@tanstack/react-virtual": "^3.14.12",
+    "monaco-editor": "^0.56.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

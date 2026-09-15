@@ -1,18 +1,20 @@
+import type { DiffFileContract } from "@otomat/domain";
 import {
-  buildDiffFileTree,
+  buildFileTree,
+  directoryPaths,
   expandAncestors,
   visibleTreeRows,
-  type DiffTreeNode,
+  type FileTreeNode,
 } from "@web/components/runs/diff/files/tree.utils";
 import { describe, expect, it } from "vitest";
 
 import { diffFile } from "#support/diff-file";
 
-function label(node: DiffTreeNode): string {
+function label(node: FileTreeNode<DiffFileContract>): string {
   return node.kind === "directory" ? `${node.label}/` : node.file.path;
 }
 
-function rowLabels(nodes: readonly DiffTreeNode[], collapsed: string[] = []) {
+function rowLabels(nodes: readonly FileTreeNode<DiffFileContract>[], collapsed: string[] = []) {
   return visibleTreeRows(nodes, new Set(collapsed)).map(
     ({ node, depth }) => `${"  ".repeat(depth)}${label(node)}`,
   );
@@ -20,7 +22,7 @@ function rowLabels(nodes: readonly DiffTreeNode[], collapsed: string[] = []) {
 
 describe("diff file tree", () => {
   it("nests files under the folders they actually live in", () => {
-    const nodes = buildDiffFileTree([
+    const nodes = buildFileTree([
       diffFile({ path: "src/a.ts" }),
       diffFile({ path: "src/b.ts" }),
       diffFile({ path: "README.md" }),
@@ -30,13 +32,13 @@ describe("diff file tree", () => {
   });
 
   it("shows a single-child folder run as one compacted row", () => {
-    const nodes = buildDiffFileTree([diffFile({ path: "apps/web/src/main.tsx" })]);
+    const nodes = buildFileTree([diffFile({ path: "apps/web/src/main.tsx" })]);
 
     expect(rowLabels(nodes)).toEqual(["apps/web/src/", "  apps/web/src/main.tsx"]);
   });
 
   it("stops compacting where a folder branches", () => {
-    const nodes = buildDiffFileTree([
+    const nodes = buildFileTree([
       diffFile({ path: "apps/web/main.tsx" }),
       diffFile({ path: "apps/desktop/main.ts" }),
     ]);
@@ -52,10 +54,8 @@ describe("diff file tree", () => {
 
   it("orders folders and files the same way whatever order git listed them", () => {
     const paths = ["src/z.ts", "docs/guide.md", "src/a.ts", "AGENTS.md", "src/nested/deep.ts"];
-    const forward = rowLabels(buildDiffFileTree(paths.map((path) => diffFile({ path }))));
-    const reversed = rowLabels(
-      buildDiffFileTree(paths.toReversed().map((path) => diffFile({ path }))),
-    );
+    const forward = rowLabels(buildFileTree(paths.map((path) => diffFile({ path }))));
+    const reversed = rowLabels(buildFileTree(paths.toReversed().map((path) => diffFile({ path }))));
 
     expect(forward).toEqual(reversed);
     expect(forward).toEqual([
@@ -70,8 +70,17 @@ describe("diff file tree", () => {
     ]);
   });
 
+  it("names every folder, compacted runs by their deepest path", () => {
+    const nodes = buildFileTree([
+      diffFile({ path: "src/deep/a.ts" }),
+      diffFile({ path: "docs/guide.md" }),
+    ]);
+
+    expect([...directoryPaths(nodes)].toSorted()).toEqual(["docs", "src/deep"]);
+  });
+
   it("hides the subtree of a collapsed folder", () => {
-    const nodes = buildDiffFileTree([
+    const nodes = buildFileTree([
       diffFile({ path: "src/a.ts" }),
       diffFile({ path: "docs/guide.md" }),
     ]);
@@ -81,7 +90,7 @@ describe("diff file tree", () => {
   });
 
   it("keeps a compacted folder run collapsed on its deepest path", () => {
-    const nodes = buildDiffFileTree([
+    const nodes = buildFileTree([
       diffFile({ path: "src/deep/a.ts" }),
       diffFile({ path: "docs/guide.md" }),
     ]);

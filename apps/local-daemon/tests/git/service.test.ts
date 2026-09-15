@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -333,5 +341,57 @@ describe("GitWorktreeService", () => {
     expect(() => env.service.diff("ghost")).toThrow(WorktreeNotFoundError);
     expect(() => env.service.snapshot("ghost")).toThrow(WorktreeNotFoundError);
     expect(() => env.service.archive("ghost")).toThrow(WorktreeNotFoundError);
+  });
+
+  describe("worktreeTree", () => {
+    const PNG_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x00, 0x01]);
+    let worktree: string;
+
+    beforeEach(() => {
+      env.repo.write("src/app.ts", "export const a = 1;\n");
+      env.repo.write("assets/pixel.png", PNG_BYTES.toString("latin1"));
+      env.repo.write(".gitignore", "ignored.txt\n");
+      env.repo.commitAll("seed");
+      worktree = env.service.acquire({ owner: "files", branch: "feat/files" }).path;
+    });
+
+    it("lists the live worktree with untracked files and without ignored ones", () => {
+      writeFileSync(join(worktree, "notes.md"), "draft\n");
+      writeFileSync(join(worktree, "ignored.txt"), "secret\n");
+      symlinkSync("/etc/hostname", join(worktree, "host-link"));
+
+      const tree = env.service.worktreeTree("files");
+      const byPath = new Map(tree.entries().map((entry) => [entry.path, entry]));
+
+      expect(tree.worktreePath).toBe(worktree);
+      expect(byPath.get("notes.md")).toMatchObject({ kind: "file", size: 6 });
+      expect(byPath.get("host-link")?.kind).toBe("symlink");
+      expect(byPath.has("ignored.txt")).toBe(false);
+      expect(byPath.has(".git")).toBe(false);
+    });
+
+    it("reads text with its blob revision and names binaries and symlinks by kind", () => {
+      symlinkSync("/etc/hostname", join(worktree, "host-link"));
+      const tree = env.service.worktreeTree("files");
+      const limits = { maxBytes: 1024 };
+
+      const text = tree.readFile("src/app.ts", limits);
+      expect(text.kind).toBe("text");
+      if (text.kind === "text") expect(text.oid).toMatch(/^[0-9a-f]{40}$/);
+      expect(tree.readFile("assets/pixel.png", limits).kind).toBe("binary");
+      expect(tree.readFile("host-link", limits).kind).toBe("symlink");
+      expect(tree.readFile("src", limits).kind).toBe("directory");
+      expect(tree.readFile("src/app.ts", { maxBytes: 4 }).kind).toBe("too_large");
+    });
+
+    it("serves the archived branch tip read-only once the worktree is gone", () => {
+      writeFileSync(join(worktree, "src/app.ts"), "export const a = 2;\n");
+      env.service.archive("files");
+
+      const tree = env.service.worktreeTree("files");
+      expect(tree.worktreePath).toBeNull();
+      const read = tree.readFile("src/app.ts", { maxBytes: 1024 });
+      expect(read.kind === "text" && read.text).toBe("export const a = 2;\n");
+    });
   });
 });

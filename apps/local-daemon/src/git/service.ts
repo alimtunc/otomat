@@ -9,7 +9,7 @@ import { toRecord } from "./record.js";
 import { commitsSince, deleteBranch, fastForward, headSha, isAncestor, revParse } from "./repo.js";
 import { boundarySnapshot, captureWorktreeState, commitScope } from "./scopes.js";
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
-import { readTreeFile } from "./tree-file.js";
+import { listTreeFiles, readTreeBlob, readTreeFile } from "./tree-file.js";
 import { pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import { isDirty, snapshotSubject, snapshotWorktree } from "./worktree-snapshot.js";
 import {
@@ -78,6 +78,16 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     treeSnapshot(baseRef) {
       const tree = revParse(repoRoot, `${baseRef}^{tree}`);
       return { readFile: (path, limits) => readTreeFile(repoRoot, tree, path, limits) };
+    },
+
+    worktreeTree(owner) {
+      const { gitCwd, tree, live } = diffInputs(scope, resolve(owner));
+      return {
+        worktreePath: live ? gitCwd : null,
+        entries: () => listTreeFiles(gitCwd, tree),
+        readFile: (path, limits) => readTreeFile(gitCwd, tree, path, limits),
+        readBlob: (oid) => readTreeBlob(gitCwd, oid),
+      };
     },
 
     captureState(owner) {

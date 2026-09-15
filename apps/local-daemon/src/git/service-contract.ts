@@ -1,4 +1,5 @@
 import type { Db } from "@otomat/db";
+import type { WorktreeFileEntry } from "@otomat/domain";
 
 import { WorktreeNotFoundError } from "./errors.js";
 import type { CommitSummary } from "./repo.js";
@@ -65,6 +66,14 @@ export interface DiffSnapshot extends TreeSnapshot {
   mediaBlobs(paths: DiffFilePaths): DiffFileMediaBlobs;
 }
 
+/** The owner's worktree as one captured tree: entries, reads and the blob behind a media file all come from the same instant. */
+export interface WorktreeTree extends TreeSnapshot {
+  /** Live worktree directory a save writes into; null once only the archived branch tip remains. */
+  worktreePath: string | null;
+  entries(): WorktreeFileEntry[];
+  readBlob(oid: string): Buffer;
+}
+
 export interface BranchDiff {
   branch: string;
   baseRef: string;
@@ -112,6 +121,8 @@ export interface GitWorktreeService {
   branchDiff(owner: string, against?: string): BranchDiff;
   /** A tree captured from a ref rather than from a worktree: what a launch reads before its worktree exists. */
   treeSnapshot(baseRef: string): TreeSnapshot;
+  /** The same tree `diff` reads its head from, so a file opened here is the file the diff shows. Resolves like `diff`. */
+  worktreeTree(owner: string): WorktreeTree;
   /** Requires an active worktree; the tree it writes covers staged, unstaged and untracked work alike. */
   captureState(owner: string): WorktreeStateCapture;
   /** Read from the repository, so a removed worktree does not lose the delta. */
@@ -158,6 +169,18 @@ export function branchDiffOrNull(
 ): BranchDiff | null {
   try {
     return service.branchDiff(owner, against);
+  } catch (error) {
+    if (error instanceof WorktreeNotFoundError) return null;
+    throw error;
+  }
+}
+
+export function worktreeTreeOrNull(
+  service: GitWorktreeService,
+  owner: string,
+): WorktreeTree | null {
+  try {
+    return service.worktreeTree(owner);
   } catch (error) {
     if (error instanceof WorktreeNotFoundError) return null;
     throw error;
