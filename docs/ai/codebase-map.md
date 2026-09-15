@@ -275,15 +275,18 @@ picker that could not be honoured.
 The compact surface itself is not Execution's: `packages/ui`'s `ConfigMenu`
 family owns the trigger, the label/value rows, the submenus and the bounded,
 scrolling popups, and the Issues filters compose the same shell with their own
-multi-selection state. The split follows what varies — a width or scroll
-constraint is one fact in the design system, while resolving a runtime and
-confirming a dangerous value stays with Execution. It also decides what the
-compact form may drop rather than truncate: the effective value is what the row
-shows, and its provenance, the full text, and how the installed binary was read
-reach the user through the accessible name and the trigger's tooltip. The
-cockpit's Execution card answers the same way — the selected step's effective
-configuration first, every step and what the runtime reported behind a
-disclosure.
+multi-selection state. A list long enough to search — the base branch — keeps
+that trigger but opens the design system's `Combobox` instead of a menu: a menu's
+typeahead owns every keystroke, while the combobox filters its loaded items
+locally, focuses the search on open and forgets it on close. The split follows
+what varies — a width or scroll constraint is one fact in the design system,
+while resolving a runtime and confirming a dangerous value stays with Execution.
+It also decides what the compact form may drop rather than truncate: the
+effective value is what the row shows, and its provenance, the full text, and
+how the installed binary was read reach the user through the accessible name and
+the trigger's tooltip. The cockpit's Execution card answers the same way — the
+selected step's effective configuration first, every step and what the runtime
+reported behind a disclosure.
 
 ## Saved Workflow Presets
 

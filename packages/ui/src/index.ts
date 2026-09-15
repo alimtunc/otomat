@@ -45,6 +45,16 @@ export { Checkbox, type CheckboxProps } from "./primitives/checkbox";
 export { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "./primitives/collapsible";
 
 export {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxItemIndicator,
+  ComboboxList,
+} from "./primitives/combobox";
+
+export {
   Dialog,
   DialogBody,
   DialogContent,

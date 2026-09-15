@@ -1,10 +1,14 @@
 import {
   Checkbox,
-  ConfigMenu,
-  ConfigMenuChoice,
-  ConfigMenuContent,
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxItemIndicator,
+  ComboboxList,
   ConfigMenuTrigger,
-  DropdownMenuRadioGroup,
+  Icon,
   Skeleton,
 } from "@otomat/ui";
 import type { ReadyLaunchTarget } from "@web/components/runs/launch/use-launch-target";
@@ -22,24 +26,37 @@ export function BaseBranchControl({ target, disabled = false }: BaseBranchContro
 
   return (
     <>
-      <ConfigMenu>
+      <Combobox
+        items={target.branches}
+        value={target.baseBranch}
+        onValueChange={(next) => {
+          if (next !== null) target.setBaseBranch(next);
+        }}
+      >
         <ConfigMenuTrigger
+          popup="combobox"
           label="Base branch"
           summary={target.baseBranch}
           detail={WORKTREE_HELP}
           disabled={disabled || target.branches.length === 0}
         />
-        <ConfigMenuContent aria-label="Base branch">
-          <DropdownMenuRadioGroup
-            value={target.baseBranch}
-            onValueChange={(next) => target.setBaseBranch(String(next))}
-          >
-            {target.branches.map((branch) => (
-              <ConfigMenuChoice key={branch} value={branch} label={branch} />
-            ))}
-          </DropdownMenuRadioGroup>
-        </ConfigMenuContent>
-      </ConfigMenu>
+        <ComboboxContent className="w-72" aria-label="Base branch">
+          <ComboboxInput placeholder="Find branch…" aria-label="Find branch" />
+          <ComboboxEmpty>No branch matches.</ComboboxEmpty>
+          <ComboboxList>
+            {(branch: string) => (
+              <ComboboxItem key={branch} value={branch}>
+                <span className="min-w-0 flex-1 truncate" title={branch}>
+                  {branch}
+                </span>
+                <ComboboxItemIndicator>
+                  <Icon name="check" aria-hidden className="text-iris-text" />
+                </ComboboxItemIndicator>
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
       {target.hasRemote ? null : (
         <label className="flex items-center gap-2 text-xs text-text-secondary">
           <Checkbox
