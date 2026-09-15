@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "../lib/utils";
 import { Button } from "../primitives/button";
+import { ComboboxTrigger } from "../primitives/combobox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -42,6 +43,7 @@ export interface ConfigMenuTriggerProps {
   size?: "xs" | "sm";
   disabled?: boolean;
   pending?: boolean;
+  popup?: "menu" | "combobox";
   className?: string;
 }
 
@@ -54,10 +56,12 @@ export function ConfigMenuTrigger({
   size = "sm",
   disabled = false,
   pending = false,
+  popup = "menu",
   className,
 }: ConfigMenuTriggerProps) {
+  const Trigger = popup === "combobox" ? ComboboxTrigger : DropdownMenuTrigger;
   const trigger = (
-    <DropdownMenuTrigger
+    <Trigger
       render={
         <Button
           type="button"

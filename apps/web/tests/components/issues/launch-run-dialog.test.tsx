@@ -367,7 +367,7 @@ it("sends the base branch the user picked instead of the repository default", as
   const trigger = document.querySelector<HTMLElement>("button[aria-label^='Base branch']");
   if (!trigger) throw new Error("base branch control not found");
   await act(async () => trigger.click());
-  const option = [...document.querySelectorAll<HTMLElement>("[role='menuitemradio']")].find(
+  const option = [...document.querySelectorAll<HTMLElement>("[role='option']")].find(
     (item) => item.textContent?.trim() === "develop",
   );
   if (!option) throw new Error("develop option not found");
