@@ -5,7 +5,6 @@ import { drainRunEvents, drainSessionEvents, emitLedgerEvent, readRunEvents } fr
 
 import { TARGETS } from "./classify.js";
 import { cancelUndeliverableContributions } from "./contribution/deliver.js";
-import { createWorktreeDeltaProbe } from "./delivery/worktree.js";
 import { eventsForSession, findFinalStatus } from "./evidence.js";
 import { cancelSessionInteractions, ingestRunInteractions } from "./interaction/index.js";
 import { buildTerminalMarker } from "./markers.js";
@@ -61,11 +60,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
     const scoped = active === null ? events : eventsForSession(events, active.id);
 
     if (handles.length <= 1 && findFinalStatus(scoped) !== null) {
-      const settle: SettleOptions = {
-        mode: "live",
-        worktreeDelta: createWorktreeDeltaProbe(state),
-        now,
-      };
+      const settle: SettleOptions = { mode: "live", now };
       if (turn) settle.turn = turn;
       finishSettle(state, settleRun(db, dataDir, current, settle));
       const settled = getRun(db, runId);

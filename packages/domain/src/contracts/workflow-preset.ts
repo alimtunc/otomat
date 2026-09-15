@@ -25,21 +25,19 @@ export const workflowPresetErrorSchema = z.object({
   message: z.string(),
 });
 
-const workflowPresetCompetitorSchema = z
-  .object({ id: planNodeIdSchema, name: planNodeNameSchema, ...planNodeTemplateShape })
-  .strict();
+/** Not strict: a stored preset may still carry the withdrawn `delivery` key, which parsing drops. */
+const workflowPresetCompetitorSchema = z.object({
+  id: planNodeIdSchema,
+  name: planNodeNameSchema,
+  ...planNodeTemplateShape,
+});
 
 /** One agent turn inside a preset: a step, or one candidate of a compete group. */
 export type WorkflowPresetExecutable = z.infer<typeof workflowPresetCompetitorSchema>;
 
-const workflowPresetStepSchema = z
-  .object({
-    id: planNodeIdSchema,
-    name: planNodeNameSchema,
-    ...planNodeTemplateShape,
-    depends_on: planDependenciesSchema,
-  })
-  .strict();
+const workflowPresetStepSchema = workflowPresetCompetitorSchema.extend({
+  depends_on: planDependenciesSchema,
+});
 
 const workflowPresetCompeteGroupSchema = z
   .object({

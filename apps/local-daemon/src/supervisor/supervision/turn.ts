@@ -10,8 +10,6 @@ import {
 } from "@otomat/db";
 import {
   agentSessionMachine,
-  DEFAULT_DELIVERY_EXPECTATION,
-  planStepFor,
   stepPassBounds,
   stepSessions,
   supervisionDecisionsFor,
@@ -45,10 +43,8 @@ function buildBrief(state: SupervisorState, run: RunRow, step: StepRunRow): Supe
   const events = readRunEvents(state.db, run.id);
   const sessions = stepSessions(listAgentSessionsForRun(state.db, run.id), step.id);
   const sessionIds = new Set(sessions.map((session) => session.id));
-  const node = planStepFor(run.plan_json, step.id);
   return {
     step,
-    expectation: node?.delivery ?? DEFAULT_DELIVERY_EXPECTATION,
     diff: stepDiff(state, run, sessions),
     events: events.filter(
       (event) => event.agent_session_id !== null && sessionIds.has(event.agent_session_id),

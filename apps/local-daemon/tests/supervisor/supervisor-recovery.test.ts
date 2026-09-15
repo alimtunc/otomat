@@ -28,7 +28,6 @@ const RECOVERY_STEP: AppendStepInput = {
   note: null,
   references: [],
   selector: { kind: "runtime", runtimeId: "fake" },
-  delivery: "standard",
   overrides: {},
   dependsOn: [],
   replaces: null,

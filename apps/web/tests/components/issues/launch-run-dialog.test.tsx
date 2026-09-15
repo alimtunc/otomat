@@ -353,7 +353,6 @@ it("launches a multi-step workflow on the existing issue without inventing a sec
           name: "Plan",
           agent: null,
           note: "plan it",
-          delivery: "standard",
           depends_on: [],
         },
         {
@@ -361,7 +360,6 @@ it("launches a multi-step workflow on the existing issue without inventing a sec
           name: "Build",
           agent: null,
           note: "build it",
-          delivery: "standard",
           depends_on: ["step-1"],
         },
       ],
@@ -425,7 +423,6 @@ it("appends the step on the resolved runtime and follows the run it joined", asy
       note: "fix the parser",
       runtime: "claude",
       model: { kind: "model", id: "opus" },
-      delivery: "standard",
       depends_on: [],
     },
     expect.anything(),

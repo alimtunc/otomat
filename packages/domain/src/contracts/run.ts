@@ -2,10 +2,6 @@ import { z } from "zod";
 
 import { CONTEXT_NOTE_MAX_LENGTH } from "../context/limits.js";
 import { contextReferencesSchema } from "../context/reference.js";
-import {
-  DEFAULT_DELIVERY_EXPECTATION,
-  deliveryExpectationSchema,
-} from "../delivery/expectation.js";
 import { RUN_PLAN_STEP_NAME_MAX_LENGTH } from "../plan/limits.js";
 import { runPlanInputSchema } from "../plan/validate.js";
 import {
@@ -175,7 +171,6 @@ export const appendRunStepRequestSchema = z
     model: modelSelectionSchema.optional(),
     /** Provider options for this step alone; an absent key keeps what the config it resolves to carries. */
     options: executionOptionSelectionsSchema.optional(),
-    delivery: deliveryExpectationSchema.default(DEFAULT_DELIVERY_EXPECTATION),
     /** Existing plan node ids this step waits on; an empty list runs it as soon as the workspace is free. */
     depends_on: z.array(z.string().min(1)).default([]),
     /** Halted step this one recovers; once it succeeds, that failure stops holding the run in `failed`. */

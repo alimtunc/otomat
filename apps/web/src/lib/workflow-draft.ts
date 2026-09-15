@@ -1,4 +1,3 @@
-import { DEFAULT_DELIVERY_EXPECTATION, type DeliveryExpectation } from "@otomat/domain";
 import { EMPTY_CONTEXT_DRAFT, type ContextDraft } from "@web/lib/context/draft";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import { isCompleteModelSelection } from "@web/lib/model-choice";
@@ -16,7 +15,6 @@ export interface WorkflowStepDraft {
   name: string;
   context: ContextDraft;
   execution: ExecutionSelection;
-  delivery: DeliveryExpectation;
   /** Keys of top-level nodes this one waits for; competitors are never valid dependency targets. */
   dependsOn: string[];
 }
@@ -40,7 +38,6 @@ export function newWorkflowStep(counter: number): WorkflowStepDraft {
     name: "",
     context: EMPTY_CONTEXT_DRAFT,
     execution: EMPTY_EXECUTION_SELECTION,
-    delivery: DEFAULT_DELIVERY_EXPECTATION,
     dependsOn: [],
   };
 }

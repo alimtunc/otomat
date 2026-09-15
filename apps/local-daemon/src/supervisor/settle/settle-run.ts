@@ -106,7 +106,7 @@ export function settleRun(
     const turnStep = steps.find((step) => step.id === turnSession.step_run_id);
     if (!turnStep?.compete_group_id) {
       // Read before the cancel below: an ask still open when the process died is what blocks delivery, and the cancel would erase it.
-      evidence = gateDelivery(ctx, plan, turnSession, scoped, evidence);
+      evidence = gateDelivery(ctx, turnSession, evidence);
       evidence = gateSupervision(ctx, turnSession, evidence);
     }
     cancelSessionInteractions(

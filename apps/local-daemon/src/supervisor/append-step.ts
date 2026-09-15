@@ -97,7 +97,6 @@ export async function appendRunStep(
     agent: config.runtime,
     prompt: null,
     context: freezeAppendedContext(state, run, input),
-    delivery: input.delivery,
     depends_on: [...input.dependsOn],
     replaces: input.replaces,
     config,

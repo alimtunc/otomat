@@ -1,7 +1,6 @@
 import type { StepRunRow } from "@otomat/db";
 import {
   collectReportedCommands,
-  type DeliveryExpectation,
   type EventEnvelope,
   type SupervisionDecision,
 } from "@otomat/domain";
@@ -10,7 +9,6 @@ import type { CanonicalDiff } from "#git";
 
 export interface SupervisionBrief {
   step: StepRunRow;
-  expectation: DeliveryExpectation;
   /** Null when the step's trees could not be read; the supervisor is told so rather than shown an empty diff. */
   diff: CanonicalDiff | null;
   events: readonly EventEnvelope[];
@@ -18,13 +16,6 @@ export interface SupervisionBrief {
   history: readonly SupervisionDecision[];
   pendingQuestions: number;
 }
-
-const CONTRACT = {
-  standard: "standard — no particular delivery shape was declared.",
-  implementation:
-    "implementation required — the step had to change the workspace, not only describe what to change.",
-  analysis: "analysis — this step was declared not to change code; an empty diff is expected.",
-} satisfies Record<DeliveryExpectation, string>;
 
 function describeDiff(diff: CanonicalDiff | null): string {
   if (diff === null) return "The workspace delta could not be read.";
@@ -54,9 +45,6 @@ export function buildSupervisionPrompt(brief: SupervisionBrief): string {
     "# Supervision",
     "",
     `Judge whether the step "${brief.step.name}" delivered what it owed.`,
-    "",
-    "## Declared contract",
-    CONTRACT[brief.expectation],
     "",
     "## Observed workspace delta",
     describeDiff(brief.diff),

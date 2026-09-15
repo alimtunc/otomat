@@ -1,5 +1,4 @@
 import {
-  DEFAULT_DELIVERY_EXPECTATION,
   isRunPlanCompeteGroup,
   type WorkflowPresetContract,
   type WorkflowPresetExecutable,
@@ -67,7 +66,6 @@ export function draftsFromPresetPlan(plan: WorkflowPresetPlan): WorkflowNodeDraf
     const draft: WorkflowStepDraft = {
       kind: "step",
       ...executableDraft(node),
-      delivery: node.delivery ?? DEFAULT_DELIVERY_EXPECTATION,
       dependsOn: [...node.depends_on],
     };
     return draft;

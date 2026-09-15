@@ -66,7 +66,6 @@ it("saves the structure, the agents and the note, and never the attached context
       agent: null,
       profile_id: "profile-1",
       note: "keep it small",
-      delivery: "standard",
       depends_on: [],
     },
     {
@@ -75,7 +74,6 @@ it("saves the structure, the agents and the note, and never the attached context
       agent: "codex",
       model: { kind: "model", id: "gpt-5.6" },
       options: { reasoning_effort: { kind: "value", value: "high" } },
-      delivery: "standard",
       depends_on: ["step-1"],
     },
   ]);
