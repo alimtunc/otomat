@@ -14,7 +14,9 @@ it("persists preferences and replay IDs and refuses corrupt state", () => {
     seen: [],
   });
   const saved = {
-    preferences: { ...DEFAULT_NOTIFICATION_PREFERENCES, detail: "category" as const },
+    preferences: {
+      categories: { ...DEFAULT_NOTIFICATION_PREFERENCES.categories, completed: false },
+    },
     seen: ["event"],
   };
   writeNotificationState(dir, saved);

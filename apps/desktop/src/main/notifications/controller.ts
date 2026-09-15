@@ -1,6 +1,5 @@
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
-  notificationBody,
   notificationIdentity,
   notificationPreferencesSchema,
   type DesktopNotification,
@@ -15,11 +14,19 @@ export interface NotificationDeliveryOptions {
   read(): NotificationState;
   write(state: NotificationState): void;
   foreground(): boolean;
+  locked(): boolean;
   supported(): boolean;
-  native(body: string, click: () => void, failed: () => void, shown: () => void): void;
+  native(
+    copy: Pick<DesktopNotification, "title" | "body">,
+    click: () => void,
+    failed: () => void,
+    shown: () => void,
+  ): void;
   internal(notification: DesktopNotification): void;
   open(notification: DesktopNotification): void;
 }
+
+const LOCKED_COPY = { title: "Otomat", body: "Open Otomat to view an update." };
 
 export class NotificationDelivery {
   private state: NotificationState | null = null;
@@ -111,7 +118,8 @@ export class NotificationDelivery {
 
   private deliver(notification: DesktopNotification): void {
     if (this.state === null) return;
-    if (this.options.foreground()) {
+    const locked = this.options.locked();
+    if (!locked && this.options.foreground()) {
       this.options.internal(notification);
       return;
     }
@@ -124,7 +132,7 @@ export class NotificationDelivery {
     };
     try {
       this.options.native(
-        notificationBody(notification.category, this.state.preferences.detail),
+        locked ? LOCKED_COPY : { title: notification.title, body: notification.body },
         () => {
           this.pendingOpen = notification;
           this.options.open(notification);

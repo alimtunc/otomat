@@ -68,6 +68,12 @@ it("returns distinct durable requests and only allowlisted fields, leaving Inbox
     project_id: "p1",
     target: { kind: "run", run_id: "run" },
     step_run_id: run.stepRunId,
+    title: "Question asked",
+    body: "I · Agent turn\nAnswer the question",
+  });
+  expect(notices.find((n) => n.interaction_id === "permission")).toMatchObject({
+    title: "Permission requested",
+    body: "I · Agent turn\nGrant or refuse the permission",
   });
   const serialized = JSON.stringify(notices);
   expect(serialized).not.toMatch(/SECRET|private|prompt|reason|tool|questions_json/);
@@ -78,17 +84,24 @@ it("returns distinct durable requests and only allowlisted fields, leaving Inbox
   expect(after.entries).toEqual(before.entries);
 });
 
-it.each(["review_ready", "failed", "awaiting_human", "waiting_for_provider", "completed"] as const)(
+it.each([
+  ["review_ready", "Ready to review", "I\nReview the diff"],
+  ["failed", "Run failed", "I · Agent turn\nResume or abandon the run"],
+  ["awaiting_human", "Run is waiting for you", "I\nAnswer the run"],
+  ["waiting_for_provider", "Provider quota reached", "I\nWait for the reset or resume now"],
+  ["completed", "Run completed", "I\nCompletion report ready, nothing to do"],
+] as const)(
   "announces %s from canonical state and ignores reconciliation replay",
-  async (status) => {
+  async (status, title, body) => {
     seedRun(t.db, {
       runId: "run",
       runStatus: status,
-      stepStatus: "succeeded",
+      stepStatus: status === "failed" ? "failed" : "succeeded",
       sessionStatus: "terminated",
     });
     const first = await read();
     expect(first).toHaveLength(1);
+    expect(first[0]).toMatchObject({ title, body });
     t.db
       .insert(schema.runtimeEvents)
       .values({
@@ -117,13 +130,15 @@ it("keeps the PR notification stable across refresh timestamps", async () => {
     author_login: "someone",
     review_decision: "review_required",
     requested_reviewers: [{ kind: "user", handle: "operator" }],
-    title: "secret title",
+    title: "Add the inbox",
     provider_updated_at: "2026-09-10T10:00:00.000Z",
   });
   const first = await read();
   expect(first[0]).toMatchObject({
     category: "review",
     target: { kind: "pull_request", pull_request_id: "pr" },
+    title: "Review requested",
+    body: "Add the inbox\nReview the pull request",
   });
   updatePullRequest(t.db, "pr", { synced_at: "2026-09-10T11:00:00.000Z" });
   expect(await read()).toEqual(first);
@@ -182,6 +197,7 @@ it("keeps a publication failure stable while its run starts another turn", async
   const first = await read();
   expect(first).toHaveLength(1);
   expect(first[0].target.kind).toBe("run_pull_request");
+  expect(first[0].body).toBe("I\nRetry the publication");
   updateAgentSessionStatus(t.db, run.agentSessionId, "active");
   expect(await read()).toEqual(first);
 });

@@ -15,7 +15,7 @@ afterEach(async () => {
   delete window.otomat;
 });
 
-it("keeps generic copy by default, saves edited categories, and exposes a save failure", async () => {
+it("saves edited categories and exposes a save failure", async () => {
   const bridge = fakeDesktopBridge();
   const save = vi.fn(bridge.notifications.save);
   bridge.notifications.save = save;
@@ -24,10 +24,9 @@ it("keeps generic copy by default, saves edited categories, and exposes a save f
   const category = document.querySelector<HTMLButtonElement>(
     '[role="switch"][aria-label="Permission or choice requested"]',
   );
-  const detail = document.querySelector<HTMLButtonElement>(
-    '[role="switch"][aria-label="Show category"]',
+  const completed = document.querySelector<HTMLButtonElement>(
+    '[role="switch"][aria-label="Run completed"]',
   );
-  expect(detail?.getAttribute("aria-checked")).toBe("false");
   await act(async () => {
     category?.click();
   });
@@ -40,7 +39,7 @@ it("keeps generic copy by default, saves edited categories, and exposes a save f
   });
   save.mockRejectedValueOnce(new Error("Preferences could not be saved."));
   await act(async () => {
-    detail?.click();
+    completed?.click();
   });
   await act(async () => {
     findButton("Save notifications")?.click();

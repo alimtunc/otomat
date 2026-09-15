@@ -9,32 +9,21 @@ import {
   type InboxEvidence,
   type InboxPullRequestEvidence,
 } from "#domain/projections/inbox";
+import { activityEvidence } from "#test-support/activity-evidence";
 
 const NOW = "2026-08-22T12:00:00.000Z";
 const OLD = "2026-08-20T12:00:00.000Z";
 const WINDOW = { since: "2026-08-21T12:00:00.000Z", limit: 12 };
 const VIEWER = { login: "operator", teams: ["reviewers"] };
 
-function run(overrides: Partial<ActivityEvidence> = {}): ActivityEvidence {
-  return {
-    run_id: "run-1",
+const run = (overrides: Partial<ActivityEvidence> = {}): ActivityEvidence =>
+  activityEvidence({
     run_status: "failed",
     run_started_at: NOW,
     run_updated_at: NOW,
-    run_abandoned_at: null,
-    run_superseded: false,
-    current_step: "Implement",
     halted_step: "Check",
-    issue_id: "issue-1",
-    issue_identifier: "OTO-1",
-    issue_title: "Ship it",
-    issue_status: "running",
-    project_id: "project-1",
-    project_name: "Otomat",
-    publication: null,
     ...overrides,
-  };
-}
+  });
 
 function pullRequest(overrides: Partial<InboxPullRequestEvidence> = {}): InboxPullRequestEvidence {
   return {

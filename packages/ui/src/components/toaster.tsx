@@ -51,7 +51,7 @@ export function Toaster({
         style: toastStyle,
         classNames: {
           toast: "font-sans",
-          description: "text-text-secondary",
+          description: "text-text-secondary whitespace-pre-line",
           actionButton: "text-iris-text",
           cancelButton: "text-text-tertiary",
         },

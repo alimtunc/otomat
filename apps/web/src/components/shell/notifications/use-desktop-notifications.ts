@@ -1,6 +1,5 @@
 import {
   desktopNotificationSchema,
-  NOTIFICATION_HEADLINES,
   notificationIdentity,
   type DesktopNotification,
 } from "@otomat/domain";
@@ -52,7 +51,8 @@ export function useDesktopNotifications(): void {
     };
     const unsubscribeOpen = bridge.notifications.onOpen((notification) => void open(notification));
     const unsubscribeNotice = bridge.notifications.onNotice((notification) => {
-      CATEGORY_TOAST[notification.category](NOTIFICATION_HEADLINES[notification.category], {
+      CATEGORY_TOAST[notification.category](notification.title, {
+        description: notification.body,
         action: { label: "Open", onClick: () => void open(notification) },
       });
     });

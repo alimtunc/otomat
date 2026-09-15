@@ -1,5 +1,9 @@
-import { INBOX_ENTRY_KINDS, type InboxEntry, type InboxEntryKind } from "@otomat/domain";
-import { INBOX_KIND_COPY } from "@web/lib/inbox/labels";
+import {
+  INBOX_ENTRY_KINDS,
+  INBOX_KIND_COPY,
+  type InboxEntry,
+  type InboxEntryKind,
+} from "@otomat/domain";
 
 const VIEWS = ["open", "unread", "archived"] as const;
 export type InboxViewFilter = (typeof VIEWS)[number];

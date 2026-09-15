@@ -39,6 +39,8 @@ it("restores a native click after renderer creation and acknowledges it after na
     target: { kind: "run", run_id: "run-42" },
     step_run_id: null,
     interaction_id: null,
+    title: "OTO-42 · Ready to review",
+    body: "Ship it\nReview the diff",
   };
   const bridge = fakeDesktopBridge();
   const acknowledgedPaths: string[] = [];

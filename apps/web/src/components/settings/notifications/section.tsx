@@ -10,7 +10,7 @@ export function NotificationsSection() {
     <div>
       <SectionHeading
         title="Notifications"
-        description="Native notifications on this Mac. Inbox and Activity remain available in Otomat."
+        description="Native notifications on this Mac name the issue, its state and the next step. Prompts, code, paths and responses are never included, and a locked screen only gets a generic update."
       />
       {bridge === null ? (
         <p>Native notifications are available in the macOS desktop app.</p>

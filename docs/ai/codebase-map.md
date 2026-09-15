@@ -1610,8 +1610,14 @@ an estimate.
 
 `GET /api/activity/notifications` composes the existing Inbox projection and
 completed run evidence without Activity's display limit or time window. The
-domain notification projection owns intent classification and identity. The API
-loads its evidence and returns only category and navigation identifiers.
+domain notification projection owns intent classification, identity and copy. The
+API loads its evidence and returns the category, the navigation identifiers and a
+title/body built from the durable entry: the issue identifier and the Inbox label,
+then the issue title, the step and the next action — or the available result for
+a completed run, which is never worded as a demand. A pending question is
+labelled apart from a permission, a publication failure's git output stays out of
+the body, and a subject missing its identifier or title falls back to whichever
+it still has.
 Pending interactions retain their durable request UUID and step; competition
 choices retain their group ID. Run notices use the last execution boundary;
 user-answer waits also include the session start to distinguish interrupted
@@ -1627,20 +1633,22 @@ from each host after startup. A visible, focused, non-minimized cockpit receives
 an internal notice; a hidden, unfocused or locked cockpit receives a native
 macOS notification. The renderer's older Activity toasts are disabled in desktop
 mode. A native click stays pending until the renderer selects the owning host
-and project and navigates to the request's step, run diff or PR surface.
+and project and navigates to the request's step, the run diff, the completion
+report of a completed run, or the PR surface.
 
-Every notice reads its headline and tone from the notification category, never
-from the Activity bucket: the internal notice and the native body share
-`NOTIFICATION_HEADLINES`, the browser fallback classifies a run through
-`RUN_NOTIFICATION_CATEGORY` from its canonical status, and
-`shell/notifications/category-toast.ts` maps a category to one toast tone. A
-`review_ready` run is therefore a neutral "Ready for review", a wait is an orange
-"Action required", and only `failed`, blocked or stopped work is red.
+Every notice reads its tone from the notification category, never from the
+Activity bucket: the internal notice and the native notification show the
+daemon's title and body, the browser fallback classifies a run through
+`RUN_NOTIFICATION_CATEGORY` from its canonical status and headlines it with
+`NOTIFICATION_HEADLINES`, and `shell/notifications/category-toast.ts` maps a
+category to one toast tone. A `review_ready` run is therefore neutral, a wait is
+orange, and only `failed`, blocked or stopped work is red.
 
-Settings → Notifications controls native categories and generic/category-only
-copy. Neither level includes project names, issue titles, prompts, code, paths
-or responses, including on the lock screen. Persisting preferences or replay
-history can fail explicitly; delivery does not acknowledge a failed write.
+Settings → Notifications controls native categories. Copy names the issue and
+its state but never project names, prompts, code, paths or responses, and a
+screen locked at delivery gets fixed generic copy instead — the lock rule lives in
+`NotificationDelivery`, ahead of the foreground check. Persisting preferences or
+replay history can fail explicitly; delivery does not acknowledge a failed write.
 Native delivery failures remain exposed in settings until a native notification
 is shown; saving preferences or history cannot clear them. Host availability
 tracks the current configured sources, including disconnected tunnels. Settings

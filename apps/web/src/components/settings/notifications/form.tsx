@@ -57,22 +57,6 @@ export function NotificationPreferencesForm({
           )}
         </form.Field>
       ))}
-      <form.Field name="detail">
-        {(field) => (
-          <AppearanceRow
-            label="Show category"
-            description="Off: a generic update. On: only the kind of request or result. Prompts, code, paths and responses are never included."
-            control={
-              <Switch
-                aria-label="Show category"
-                checked={field.state.value === "category"}
-                onCheckedChange={(checked) => field.handleChange(checked ? "category" : "generic")}
-                onBlur={field.handleBlur}
-              />
-            }
-          />
-        )}
-      </form.Field>
       {save.error === null ? null : (
         <p role="alert" className="text-sm text-danger">
           {save.error.message}

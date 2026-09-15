@@ -13,6 +13,7 @@ it("reports disconnected hosts and clears the error when a host is removed", asy
     read: () => ({ preferences: DEFAULT_NOTIFICATION_PREFERENCES, seen: [] }),
     write: vi.fn(),
     foreground: () => false,
+    locked: () => false,
     supported: () => true,
     native: vi.fn(),
     internal: vi.fn(),

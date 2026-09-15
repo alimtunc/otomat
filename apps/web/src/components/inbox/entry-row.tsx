@@ -1,9 +1,9 @@
-import type { InboxEntry } from "@otomat/domain";
+import { INBOX_KIND_COPY, type InboxEntry } from "@otomat/domain";
 import { Checkbox, Chip, Icon, IconButton, LiveDot } from "@otomat/ui";
 import { InboxRow } from "@web/components/inbox/row";
-import { INBOX_KIND_COPY, inboxEntryTone } from "@web/lib/inbox/labels";
 import type { InboxMarkPatch } from "@web/lib/inbox/marks";
 import { inboxRoute } from "@web/lib/inbox/target";
+import { inboxEntryTone } from "@web/lib/inbox/tone";
 
 export interface InboxEntryRowProps {
   entry: InboxEntry;

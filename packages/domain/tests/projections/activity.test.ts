@@ -1,31 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import { projectActivities, type ActivityEvidence } from "#domain/projections/activity";
+import { activityEvidence } from "#test-support/activity-evidence";
 
 const NOW = "2026-08-20T12:00:00.000Z";
 const OLD = "2026-08-19T12:00:00.000Z";
 const WINDOW = { since: "2026-08-20T06:00:00.000Z", limit: 8 };
 
-function evidence(overrides: Partial<ActivityEvidence> = {}): ActivityEvidence {
-  return {
-    run_id: "run-1",
-    run_status: "running",
+const evidence = (overrides: Partial<ActivityEvidence> = {}): ActivityEvidence =>
+  activityEvidence({
     run_started_at: NOW,
     run_updated_at: NOW,
-    run_abandoned_at: null,
-    run_superseded: false,
-    current_step: "Implement",
-    halted_step: null,
-    issue_id: "issue-1",
     issue_identifier: "ABC-1",
-    issue_title: "Ship it",
-    issue_status: "running",
-    project_id: "project-1",
-    project_name: "Otomat",
-    publication: null,
     ...overrides,
-  };
-}
+  });
 
 const STOPPED_PUBLICATION = {
   id: "pr-1",

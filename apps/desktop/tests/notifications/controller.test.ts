@@ -19,6 +19,8 @@ const INTENT: NotificationIntent = {
   target: { kind: "run", run_id: "run" },
   step_run_id: "step",
   interaction_id: "one",
+  title: "OTO-1 · Permission requested",
+  body: "Ship it · Implement\nGrant or refuse the permission",
 };
 
 function harness() {
@@ -32,6 +34,7 @@ function harness() {
       saved = state;
     }),
     foreground: vi.fn(() => false),
+    locked: vi.fn(() => false),
     supported: vi.fn(() => true),
     native: vi.fn<NotificationDeliveryOptions["native"]>(),
     internal: vi.fn(),
@@ -139,20 +142,16 @@ it("pauses delivery when persisting deduplication fails, and refuses failed pref
   expect(delivery.snapshot().error).toBeNull();
 });
 
-it("uses only fixed copy for both privacy levels and isolates host identities", () => {
+it("shows the issue, its state and the next step unlocked, and only fixed copy on the lock screen", () => {
   const { options, delivery } = harness();
-  const sensitive = {
-    ...INTENT,
-    project_id: "/private/secret",
-    prompt: "private prompt",
-    code: "secret code",
-    answer: "private answer",
-  };
-  delivery.receive(HOST, [sensitive]);
-  expect(options.native.mock.calls[0][0]).toBe("Open Otomat to view an update.");
-  delivery.save({ ...DEFAULT_NOTIFICATION_PREFERENCES, detail: "category" });
-  const remote = { host_id: "remote", host_alias: "vps" } as const;
-  delivery.receive(remote, []);
-  delivery.receive(remote, [sensitive]);
-  expect(options.native.mock.calls[1][0]).toBe("Action required");
+  delivery.receive(HOST, [INTENT]);
+  expect(options.native.mock.calls[0][0]).toEqual({ title: INTENT.title, body: INTENT.body });
+  options.locked.mockReturnValue(true);
+  options.foreground.mockReturnValue(true);
+  delivery.receive(HOST, [{ ...INTENT, id: "interaction:two" }]);
+  expect(options.internal).not.toHaveBeenCalled();
+  expect(options.native.mock.calls[1][0]).toEqual({
+    title: "Otomat",
+    body: "Open Otomat to view an update.",
+  });
 });
