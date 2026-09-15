@@ -12,7 +12,7 @@ import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog"
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { setInputValue, setTextareaValue } from "#support/dom-events";
+import { click, setInputValue, setTextareaValue } from "#support/dom-events";
 import { findButton, findLabelled } from "#support/dom-queries";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
@@ -195,12 +195,6 @@ afterEach(async () => {
   appendStep.mockClear();
   appendTarget.mockClear();
 });
-
-function click(text: string) {
-  const button = findButton(text);
-  if (!button) throw new Error(`button "${text}" not found`);
-  return act(async () => button.click());
-}
 
 function clickLabelled(label: string) {
   const control = findLabelled(label);

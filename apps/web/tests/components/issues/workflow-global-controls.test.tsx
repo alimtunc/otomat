@@ -5,6 +5,7 @@ import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/exe
 import { act, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { click } from "#support/dom-events";
 import { findButton, findLabelled } from "#support/dom-queries";
 import { referencedIssue } from "#support/issue";
 import { readyLaunchTarget, repositoriesQueryResult } from "#support/launch-target";
@@ -125,12 +126,6 @@ async function openWorkflow() {
   cleanups.push(mounted.cleanup);
 }
 
-function click(text: string) {
-  const button = findButton(text);
-  if (!button) throw new Error(`button "${text}" not found`);
-  return act(async () => button.click());
-}
-
 function globalRow(): HTMLElement {
   const row = findButton("Presets")?.parentElement;
   if (!row) throw new Error("global control row not found");
@@ -162,24 +157,44 @@ it("carries the ticket, the preset, the base branch and the inherited execution 
   ).not.toBeNull();
 });
 
-it("leaves a step with its own override only, repeating no global control", async () => {
+it("leaves a step with its own execution override only, repeating no global control", async () => {
   await openWorkflow();
   const card = stepCard();
 
-  expect(card.querySelector("[data-testid='execution-picker'][data-level='step']")).toBeNull();
-  await act(async () => findLabelled("Override Step 1 execution")?.click());
   expect(card.querySelector("[data-testid='execution-picker'][data-level='step']")).not.toBeNull();
   expect(card.querySelector("button[aria-label^='Base branch']")).toBeNull();
   expect(card.textContent).not.toContain("Presets");
   expect(card.textContent).not.toContain("OTO-42");
 });
 
+it("keeps the step execution override visible whether its context is folded or open", async () => {
+  await openWorkflow();
+  const card = stepCard();
+  const context = findLabelled("Step 1 context and instructions");
+  if (!context) throw new Error("context disclosure not found");
+  const picker = () => card.querySelector("[data-testid='execution-picker'][data-level='step']");
+
+  expect(context.getAttribute("aria-expanded")).toBe("false");
+  expect(picker()).not.toBeNull();
+  await act(async () => context.click());
+  expect(context.getAttribute("aria-expanded")).toBe("true");
+  expect(picker()).not.toBeNull();
+});
+
+it("exposes no supervisor, rounds or budget on the launcher", async () => {
+  await openWorkflow();
+
+  expect(
+    document.querySelector("[data-testid='execution-picker'][data-label='Supervisor']"),
+  ).toBeNull();
+  expect(findLabelled("Supervision rounds per step")).toBeUndefined();
+  expect(findLabelled("Supervision budget in USD")).toBeUndefined();
+});
+
 it("rescopes an inherited node when the global agent changes, and leaves an explicit one alone", async () => {
   await openWorkflow();
   await click("Add step");
 
-  await act(async () => findLabelled("Override Step 1 execution")?.click());
-  await act(async () => findLabelled("Override Step 2 execution")?.click());
   await click("pick opus for Step 1");
   await click("pick codex for Step 2");
   expect(lastPickerValue("Step 1")).toEqual({

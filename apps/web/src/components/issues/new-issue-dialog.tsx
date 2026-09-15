@@ -18,7 +18,7 @@ export function NewIssueDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         aria-label="New issue"
-        className="flex max-h-[calc(100dvh-2rem)] w-[min(830px,94vw)] flex-col overflow-hidden"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden"
       >
         {open ? (
           <IssueCreationContent

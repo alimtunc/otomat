@@ -1,21 +1,17 @@
 import { issueShortId, type ContextReference, type IssueContract } from "@otomat/domain";
-import { Icon, type IconName } from "@otomat/ui";
-import type { ReactNode } from "react";
+import { Icon, Tooltip, TooltipContent, TooltipTrigger, type IconName } from "@otomat/ui";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 
-function ResultRow({
-  icon,
-  onClick,
-  children,
-}: {
+interface ResultRowProps extends Omit<ComponentPropsWithRef<"button">, "className" | "type"> {
   icon: IconName;
-  onClick: () => void;
-  children: ReactNode;
-}) {
+}
+
+function ResultRow({ icon, children, ...props }: ResultRowProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
       className="flex w-full items-center gap-1.5 truncate rounded-sm px-1.5 py-1 text-left text-xs hover:bg-surface-hover"
+      {...props}
     >
       <Icon name={icon} aria-hidden className="shrink-0 text-text-tertiary" />
       {children}
@@ -54,14 +50,22 @@ export function ContextSearchResults({
         <h4 className="px-1.5 text-xs font-semibold uppercase text-text-tertiary">Issues</h4>
         {issues.length === 0 ? <Notice>No loaded issue matches.</Notice> : null}
         {issues.map((issue) => (
-          <ResultRow
-            key={issue.id}
-            icon="list-todo"
-            onClick={() => onAdd({ kind: "issue", issue_id: issue.id })}
-          >
-            <span className="font-medium">{issueShortId(issue)}</span>
-            <span className="truncate text-text-secondary">{issue.title}</span>
-          </ResultRow>
+          <Tooltip key={issue.id}>
+            <TooltipTrigger
+              render={
+                <ResultRow
+                  icon="list-todo"
+                  onClick={() => onAdd({ kind: "issue", issue_id: issue.id })}
+                />
+              }
+            >
+              <span className="shrink-0 whitespace-nowrap font-medium tabular-nums">
+                {issueShortId(issue)}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-text-secondary">{issue.title}</span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-64 whitespace-normal">{issue.title}</TooltipContent>
+          </Tooltip>
         ))}
       </section>
       <section className="flex flex-col gap-0.5">

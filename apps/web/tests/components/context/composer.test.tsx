@@ -6,8 +6,7 @@ import { EMPTY_CONTEXT_DRAFT, type ContextDraft } from "@web/lib/context/draft";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { setInputValue } from "#support/dom-events";
-import { findButton } from "#support/dom-queries";
+import { click, setInputValue } from "#support/dom-events";
 import { repositoriesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
 
@@ -60,12 +59,6 @@ afterEach(async () => {
   fileSearches.mockClear();
   filesQuery = { data: { paths: ["src/parser.ts"], omitted: 2 }, isPending: false, isError: false };
 });
-
-function click(text: string) {
-  const button = findButton(text);
-  if (!button) throw new Error(`button "${text}" not found`);
-  return act(async () => button.click());
-}
 
 function byLabel(label: string): HTMLElement {
   const found = document.querySelector<HTMLElement>(`[aria-label='${label}']`);
@@ -121,6 +114,25 @@ it("searches issues and files, and attaches one by identity", async () => {
     references: [{ kind: "issue", issue_id: "issue-2" }],
     note: "",
   });
+});
+
+it("keeps an issue identifier whole in the results and truncates only the title", async () => {
+  await mountComposer();
+  await act(async () => byLabel("Add context").click());
+
+  const row = [...document.body.querySelectorAll("button")].find((candidate) =>
+    candidate.textContent?.includes("Backfill the fixtures"),
+  );
+  const [identifier, title] = row?.querySelectorAll("span") ?? [];
+  expect(identifier?.textContent).toBe("issue-2");
+  expect(identifier?.className).toContain("shrink-0");
+  expect(identifier?.className).toContain("whitespace-nowrap");
+  expect(title?.className).toContain("truncate");
+  expect(title?.className).toContain("min-w-0");
+
+  await act(async () => row?.focus());
+  expect(row?.getAttribute("data-popup-open")).not.toBeNull();
+  expect(document.body.textContent?.match(/Backfill the fixtures/g)).toHaveLength(2);
 });
 
 it("says how many matches a narrowed file search is holding back", async () => {

@@ -13,7 +13,6 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { setInputValue } from "#support/dom-events";
-import { findMenuItem } from "#support/dom-queries";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { referencedIssue } from "#support/issue";
 import {
@@ -291,7 +290,6 @@ describe("NewIssueDialog", () => {
     ];
     await renderDialog();
     await act(async () => buttonByText("Workflow").click());
-    await act(async () => buttonByLabel("Override Step 1 execution").click());
     await act(async () => buttonByText("pick opus for Step 1").click());
     await act(async () => buttonByText("With agent").click());
     await act(async () => buttonByText("pick codex for Ad-hoc run").click());
@@ -490,8 +488,7 @@ describe("NewIssueDialog", () => {
     await renderDialog();
 
     await act(async () => buttonByText("Workflow").click());
-    await act(async () => buttonByLabel("More step types").click());
-    await act(async () => findMenuItem("Add compete group")?.click());
+    await act(async () => buttonByText("Add compete group").click());
     const removeInitial = document.querySelector<HTMLButtonElement>(
       "button[aria-label='Remove step 1']",
     );
@@ -516,11 +513,6 @@ describe("NewIssueDialog", () => {
     ];
     expect(candidateNames).toHaveLength(2);
     expect(candidateNotes).toHaveLength(2);
-    expect(
-      document.querySelector("[data-testid='execution-picker'][data-label='Candidate A']"),
-    ).toBeNull();
-    await act(async () => buttonByLabel("Override Candidate A execution").click());
-    await act(async () => buttonByLabel("Override Candidate B execution").click());
     expect(
       document.querySelector("[data-testid='execution-picker'][data-label='Candidate A']"),
     ).not.toBeNull();
@@ -580,10 +572,6 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     await act(async () => buttonByText("Workflow").click());
 
-    expect(
-      document.querySelector("[data-testid='execution-picker'][data-label='Step 1']"),
-    ).toBeNull();
-    await act(async () => buttonByLabel("Override Step 1 execution").click());
     const calls = pickerProps.mock.calls.map(([props]: [ExecutionPickerProbeProps]) => props);
     expect(calls.find((props) => props.label === "Workflow")?.compact).not.toBe(true);
     expect(calls.find((props) => props.label === "Step 1")?.compact).toBe(true);
@@ -619,9 +607,7 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     await act(async () => buttonByText("Workflow").click());
 
-    await act(async () => buttonByLabel("More step types").click());
-    const addCompeteGroup = findMenuItem("Add compete group");
-    expect(addCompeteGroup?.querySelector(".lucide-workflow")).not.toBeNull();
+    expect(buttonByText("Add compete group").querySelector(".lucide-workflow")).not.toBeNull();
   });
 
   it("uses an informational notice for compete groups", async () => {
@@ -629,8 +615,7 @@ describe("NewIssueDialog", () => {
     await renderDialog();
     await act(async () => buttonByText("Workflow").click());
 
-    await act(async () => buttonByLabel("More step types").click());
-    await act(async () => findMenuItem("Add compete group")?.click());
+    await act(async () => buttonByText("Add compete group").click());
     const notice = [...document.querySelectorAll("p")].find((element) =>
       element.textContent?.startsWith("Steps that depend on this group"),
     );

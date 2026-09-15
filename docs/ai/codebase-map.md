@@ -1130,7 +1130,9 @@ holding.
 
 A launch may name a **supervisor**: an agent resolved and frozen on
 `runs.supervision_json` exactly like a step's, plus a loop limit and an optional
-budget. Otomat adds no built-in supervisor, prompt or profile.
+budget. Otomat adds no built-in supervisor, prompt or profile. The cockpit's
+Workflow launcher exposes none of it: a supervised launch is an API request
+only, and the run cockpit still reads `supervision_json` on runs that carry it.
 
 Supervision is event-triggered, never resident. A step that ends with no open
 ask on a supervised run lands `awaiting_human` with a `pending` entry journaled
