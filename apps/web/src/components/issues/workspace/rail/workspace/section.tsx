@@ -40,9 +40,11 @@ export function WorkspaceSection({ runId }: { runId: string }) {
                   <Chip tone={state.tone}>{state.label}</Chip>
                 </RailRow>
                 <RailRow label="Branch">
-                  <span className="truncate font-mono text-xs text-text-secondary">
-                    {entry.branch ?? "detached"}
-                  </span>
+                  {entry.branch === null ? (
+                    <span className="font-mono text-xs text-text-secondary">detached</span>
+                  ) : (
+                    <CopyablePath value={entry.branch} label="branch" />
+                  )}
                 </RailRow>
                 <RailRow label="Path">
                   <CopyablePath value={entry.path} label="Worktree path" />

@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import type { WorkspaceEntry, WorkspaceInventory } from "@otomat/domain";
 import { WorkspaceSection } from "@web/components/issues/workspace/rail/workspace/section";
+import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-import { findButton } from "#support/dom-queries";
+import { findButton, findLabelled } from "#support/dom-queries";
 import { mountRoutedWithQuery } from "#support/router";
 import { workspaceEntry } from "#support/workspace";
 
@@ -57,4 +58,18 @@ it("explains the blocker and points at the action that lifts it, instead of offe
   expect(findButton("Clean workspace…")).toBeUndefined();
   expect(findButton("Reconcile")).toBeDefined();
   expect(document.body.textContent).toContain("merge or abandon its cycle first");
+});
+
+it("copies the whole branch name while the rail only shows its truncated tail", async () => {
+  const branch = "feat/rendre-le-nom-de-branche-copiable-dans-le-workspace-d-une-issue";
+  const writeText = vi.fn(() => Promise.resolve());
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  await renderSection({ branch });
+
+  expect(document.body.querySelector(`[title="${branch}"]`)?.className).toContain("truncate");
+  const copy = findLabelled("Copy branch");
+  await act(async () => copy?.click());
+
+  expect(writeText).toHaveBeenCalledWith(branch);
+  expect(copy?.getAttribute("data-status")).toBe("copied");
 });
