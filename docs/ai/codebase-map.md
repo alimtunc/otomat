@@ -1475,11 +1475,17 @@ drives. `POST /api/runs/:id/pr` resolves the row, the generation agent and the
 first phase, then answers `202` with the publication's initial state; the work
 itself is queued on the run's in-memory chain and outlives the request, the route
 change and the disconnection that follow. A command whose `details` are absent
-asks the daemon to write the metadata as the operation's first phase; the
-cockpit always sends `details` — **Create PR** publishes the metadata the form
-holds, and **Generate title & description with AI** inside Customize PR is a
-separate `POST /api/runs/:id/pr/generate` that only fills the fields, so the
-operator edits what the generator proposed before anything is published.
+asks the daemon to write the metadata as the operation's first phase, which is
+why the compact panel's **Generate PR** is one command rather than a generation
+the component chains into a publication — a navigation used to lose the second
+half of it. It is offered only while the form holds no summary; **Create PR**
+publishes the metadata the form holds, and **Generate title & description with
+AI** beside it inside Customize PR is a separate `POST /api/runs/:id/pr/generate`
+that only fills the fields, so the operator edits what the generator proposed
+before anything is published. That answer is what fills the form; the
+publication row it also updated is refetched without being awaited, so the
+generation settles when the daemon answers, not when the workspace has been
+described again.
 
 `publication_status` is that operation's whole record: `generating`,
 `committing`, `pushing`, `creating`, then `created`, each transition journaled as

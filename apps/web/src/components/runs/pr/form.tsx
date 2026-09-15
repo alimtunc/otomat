@@ -106,6 +106,8 @@ export function PullRequestForm({
           const busy = publishing || isGenerating;
           const refusal = summary.trim() === "" ? generationRefusal : null;
           const showDetails = customize || refusal !== null;
+          // Without metadata the daemon writes it as the publication's first phase: the empty form is never validated.
+          const composeWithAi = !showDetails && !branchLocked && summary.trim() === "";
           return (
             <>
               <PullRequestSummary
@@ -175,36 +177,37 @@ export function PullRequestForm({
                     branchLocked={branchLocked}
                     headRef={publishability.head_ref}
                   />
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    {blocked ? (
-                      <p className="text-xs text-text-tertiary">
-                        Generation needs an available workspace, its GitHub remote and changes to
-                        describe.
-                      </p>
-                    ) : null}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => void generateOnly()}
-                      loading={isGenerating}
-                      disabled={busy || blocked}
-                    >
-                      Generate title &amp; description with AI
-                    </Button>
-                  </div>
                 </CollapsiblePanel>
               </Collapsible>
-              <div className="flex justify-end">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {showDetails && blocked ? (
+                  <p className="text-xs text-text-tertiary">
+                    Generation needs an available workspace, its GitHub remote and changes to
+                    describe.
+                  </p>
+                ) : null}
+                {showDetails ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void generateOnly()}
+                    loading={isGenerating}
+                    disabled={busy || blocked}
+                  >
+                    Generate title &amp; description with AI
+                  </Button>
+                ) : null}
                 <Button
-                  type="submit"
+                  type={composeWithAi ? "button" : "submit"}
                   variant="primary"
                   size="sm"
-                  disabled={!canSubmit || model.actionDisabled || busy}
+                  onClick={composeWithAi ? () => void onSubmit({ mode: values.mode }) : undefined}
+                  disabled={(!composeWithAi && !canSubmit) || model.actionDisabled || busy}
                   aria-busy={publishing || undefined}
                 >
                   {publishing ? <Spinner size={12} aria-hidden /> : null}
-                  {model.actionLabel}
+                  {composeWithAi ? "Generate PR" : model.actionLabel}
                 </Button>
               </div>
             </>
