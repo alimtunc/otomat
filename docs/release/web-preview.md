@@ -92,6 +92,12 @@ partial credentials, so an unconfigured fork stays green without masking a broke
 | Secret | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account id |
 | Secret | `PREVIEW_CLIENT_ID` | the same pair as the Pages variables |
 | Secret | `PREVIEW_CLIENT_SECRET` | the same pair as the Pages variables |
+| Variable | `CLOUDFLARE_DOCS_PROJECT` | Pages project of the documentation site |
+
+The documentation site (`.github/workflows/docs.yml`) shares the token and the account id and
+deploys to its own Pages project, named by `CLOUDFLARE_DOCS_PROJECT`, with `main` as its
+production branch and no Access policy: it is public. While the variable is absent the workflow
+still builds the site and checks its links.
 
 The Worker checks the pair itself, under the Access service-token header names — fronting the
 workers with a real Access policy on a custom domain later needs no code change.

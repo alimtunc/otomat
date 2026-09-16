@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "pnpm --filter @otomat/web dev",
     "back": "pnpm --filter @otomat/local-daemon start",
+    "docs:dev": "pnpm --filter @otomat/docs dev",
+    "docs:build": "pnpm --filter @otomat/docs build",
     "build": "pnpm -r run build && pnpm run boundaries",
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",

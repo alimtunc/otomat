@@ -1,0 +1,53 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths: [apps/docs/**, README.md, lychee.toml, .github/workflows/docs.yml]
+  pull_request:
+    branches: [main]
+    paths: [apps/docs/**, README.md, lychee.toml, .github/workflows/docs.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # `lastUpdated` reads each page's git history.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Build the site
+        run: pnpm --filter @otomat/docs run build
+
+      - name: Check every link
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --config lychee.toml --no-progress apps/docs README.md
+          fail: true
+
+      # A fork's pull request carries no secret, so it builds and checks links without deploying.
+      - name: Publish to Cloudflare Pages
+        if: vars.CLOUDFLARE_DOCS_PROJECT != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        working-directory: apps/docs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_DOCS_PROJECT }}
+          PAGES_BRANCH: ${{ github.event_name == 'push' && 'main' || format('pr-{0}', github.event.pull_request.number) }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          pnpm dlx --allow-build=esbuild --allow-build=workerd wrangler@4 pages deploy .vitepress/dist \
+            --project-name "$PAGES_PROJECT" \
+            --branch "$PAGES_BRANCH" \
+            --commit-hash "$HEAD_SHA" \
+            --commit-dirty=true

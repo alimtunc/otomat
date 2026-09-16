@@ -652,6 +652,20 @@ shows rows the real contracts produced. The image ships `procps` nowhere, so the
 a worker's identity from `/proc/<pid>/stat` and keeps `ps -o lstart` for hosts without `/proc`;
 without that, every preview run failed before its first event.
 
+## User Documentation
+
+`apps/docs` is the public guide, a VitePress site over plain Markdown, and the README is only its
+front door: value proposition, status, install, a five-step quick start and links.
+
+VitePress was chosen over GitBook, Starlight and Docusaurus for weight and portability: one
+dependency on the Vite toolchain the cockpit already builds with, Markdown GitHub renders
+unchanged, a local search index instead of a hosted one, and a build that fails on a dead internal
+link — which `pnpm build` inherits, so `pnpm check` gates the site. GitBook would have written its
+own Markdown flavour back into the repository and moved previews and link checks behind a hosted
+plan; Starlight and Docusaurus each bring a second framework. Hosting reuses the Cloudflare Pages
+pattern of the web preview (`.github/workflows/docs.yml`, configured as described in
+`docs/release/web-preview.md`), and lychee verifies the external links without a paid service.
+
 ## Error Diagnostics
 
 Otomat never shows a bare error string. Every incident is classified first —
