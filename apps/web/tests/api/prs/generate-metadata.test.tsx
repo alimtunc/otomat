@@ -30,10 +30,8 @@ function Probe() {
     <button
       type="button"
       data-pending={generate.isPending || undefined}
-      onClick={() => {
-        void generate.mutateAsync().then((proposal) => {
-          received = proposal;
-        });
+      onClick={async () => {
+        received = await generate.mutateAsync();
       }}
     >
       generate

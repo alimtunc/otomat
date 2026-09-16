@@ -138,7 +138,7 @@ export interface GitHubCli {
   loginWithToken(token: string): Promise<GitHubConnectionContract>;
   resolveRemote(cwd: string): Promise<GitHubRemote>;
   /** Fast-forward push; a rejected non-fast-forward throws `github_push_rejected` rather than forcing. */
-  push(cwd: string, remote: string, branch: string): Promise<void>;
+  push(cwd: string, remote: string, branch: string, sha?: string): Promise<void>;
   forcePushWithLease(input: ForcePushWithLeaseInput): Promise<void>;
   remoteHead(cwd: string, remote: string, branch: string): Promise<string | null>;
   fetchBranch(cwd: string, remote: string, branch: string): Promise<void>;

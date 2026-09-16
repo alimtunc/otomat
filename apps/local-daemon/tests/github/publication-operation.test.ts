@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { delimiter, join } from "node:path";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   getPullRequestForRun,
@@ -30,6 +30,7 @@ import {
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { stubRepositoryResolver } from "../support/git.js";
 import { FakeGitHubCli, publishRequest } from "../support/github.js";
+import { stubRuntimeOnPath } from "../support/runtime.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-operation";
@@ -126,17 +127,10 @@ describe("pull request publication as a durable operation", () => {
     return createGitHubService(config);
   }
 
-  /** Puts a runtime on PATH so agent resolution stops gating what this suite is really asserting. */
   function withStubbedClaude(assertion: () => Promise<void>): Promise<void> {
-    const binDir = join(fix.dataDir, "runtime-bin");
-    mkdirSync(binDir, { recursive: true });
-    writeFileSync(join(binDir, "claude"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    const restore = stubRuntimeOnPath(fix.dataDir, "claude");
     writePullRequestGenerator(fix.db, { runtime: "claude", model: null, options: {} });
-    const restore = process.env.PATH;
-    process.env.PATH = `${binDir}${delimiter}${restore ?? ""}`;
-    return assertion().finally(() => {
-      process.env.PATH = restore;
-    });
+    return assertion().finally(restore);
   }
 
   it("answers with the accepted operation and finishes the work after the caller is gone", async () => {

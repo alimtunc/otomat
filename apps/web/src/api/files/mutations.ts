@@ -1,19 +1,20 @@
-import type { SaveWorktreeFileRequest, WorktreeFileContent } from "@otomat/domain";
+import type { CheckoutTarget, SaveWorktreeFileRequest, WorktreeFileContent } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
+import { invalidateCheckout } from "@web/api/files/invalidate";
 import { useQueryKeys } from "@web/api/use-query-keys";
 import { worktreeFileMessage, worktreeFileRefusal } from "@web/lib/run/file-refusal";
 
 /** A stale revision is shown inside the editor, where the reader can reload; every other refusal is a toast. */
-export function useSaveRunFile(runId: string) {
+export function useSaveFile(target: CheckoutTarget) {
   const client = useQueryClient();
   const keys = useQueryKeys();
   return useMutation({
-    mutationFn: (request: SaveWorktreeFileRequest) => daemon.saveRunFile(runId, request),
+    mutationFn: (request: SaveWorktreeFileRequest) => daemon.saveCheckoutFile(target, request),
     onSuccess: (saved, request) => {
       client.setQueryData(
-        keys.runFile(runId, saved.path),
+        keys.checkoutFile(target, saved.path),
         (current: WorktreeFileContent | undefined) =>
           current?.kind === "text"
             ? {
@@ -24,9 +25,7 @@ export function useSaveRunFile(runId: string) {
               }
             : current,
       );
-      client.invalidateQueries({ queryKey: keys.runFiles(runId) });
-      client.invalidateQueries({ queryKey: keys.reviewDiffs({ kind: "run", id: runId }) });
-      client.invalidateQueries({ queryKey: keys.runWorkspace(runId) });
+      invalidateCheckout(client, keys, target);
     },
     onError: (error) => {
       if (worktreeFileRefusal(error) === "file_revision_stale") return;

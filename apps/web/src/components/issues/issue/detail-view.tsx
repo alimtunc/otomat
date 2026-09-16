@@ -196,6 +196,7 @@ export function IssueDetailView() {
   return (
     <RouteShell
       active="issues"
+      issueRunId={followedRun?.id}
       back={back}
       breadcrumbs={[
         { label: "Issues", href: "/issues" },

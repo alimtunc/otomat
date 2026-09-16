@@ -12,7 +12,7 @@ export function headSha(repoPath: string): string {
 }
 
 /** Short symbolic name of the checked-out branch (e.g. `main`). */
-function currentBranch(repoPath: string): string {
+export function currentBranch(repoPath: string): string {
   return runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repoPath }).stdout.trim();
 }
 
@@ -24,7 +24,7 @@ export function mergeBase(repoPath: string, a: string, b: string): string | null
   return sha === "" ? null : sha;
 }
 
-function verifyRef(repoPath: string, rev: string): string | null {
+export function verifyRef(repoPath: string, rev: string): string | null {
   const res = runGit(["rev-parse", "--verify", "--quiet", rev], {
     cwd: repoPath,
     allowFailure: true,
@@ -101,11 +101,6 @@ export function repositoryRemotes(repoPath: string): string[] {
     .filter((line) => line !== "");
 }
 
-/** Whether a local branch ref exists. */
-export function branchExists(repoPath: string, branch: string): boolean {
-  return verifyRef(repoPath, `refs/heads/${branch}`) !== null;
-}
-
 /**
  * Whether `repoPath` is still the root of a git repository. Deliberately weaker
  * than {@link probeLocalRepository}: forking a worktree needs a repository root,
@@ -130,22 +125,6 @@ export function isRepositoryRoot(repoPath: string): boolean {
   return toplevel !== "" && tryRealpath(toplevel) === canonical;
 }
 
-/** Local branch names, most recently committed first, so a base-branch picker leads with live work. */
-export function listBranches(repoPath: string): string[] {
-  const res = runGit(
-    ["for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads"],
-    {
-      cwd: repoPath,
-      allowFailure: true,
-    },
-  );
-  if (res.exitCode !== 0) return [];
-  return res.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line !== "");
-}
-
 /** Commits only this branch holds, so deleting it loses them; `null` when git cannot answer. */
 export function unpushedCommitCount(repoPath: string, branch: string): number | null {
   const res = runGit(
@@ -158,11 +137,6 @@ export function unpushedCommitCount(repoPath: string, branch: string): number | 
   if (res.exitCode !== 0) return null;
   const count = Number.parseInt(res.stdout.trim(), 10);
   return Number.isNaN(count) ? null : count;
-}
-
-/** Deletes a local branch (`-D`, force). No-op tolerant when the branch is gone. */
-export function deleteBranch(repoPath: string, branch: string): void {
-  runGit(["branch", "-D", branch], { cwd: repoPath, allowFailure: true });
 }
 
 export interface CommitSummary {

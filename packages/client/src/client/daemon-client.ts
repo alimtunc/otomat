@@ -6,14 +6,15 @@ import {
   type RunEventsHandlers,
   type RunEventsSubscription,
 } from "./events.js";
+import { createFilesClient } from "./files.js";
 import { createGitHubClient } from "./github.js";
 import { createInboxClient } from "./inbox.js";
 import { createIssuesClient } from "./issues.js";
 import { createLinearClient } from "./linear.js";
 import { createPullRequestsClient } from "./pull-requests.js";
 import { createReviewsClient } from "./reviews.js";
-import { createRunFilesClient } from "./run-files.js";
 import { createRunsClient } from "./runs.js";
+import { createSourceControlClient } from "./source-control.js";
 import { createSystemClient } from "./system.js";
 import { createUsageClient } from "./usage.js";
 import { createWorkflowPresetsClient } from "./workflow-presets.js";
@@ -30,7 +31,8 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     ...createInboxClient(config),
     ...createIssuesClient(config),
     ...createRunsClient(config),
-    ...createRunFilesClient(config),
+    ...createFilesClient(config),
+    ...createSourceControlClient(config),
     ...createReviewsClient(config),
     ...createPullRequestsClient(config),
     ...createUsageClient(config),

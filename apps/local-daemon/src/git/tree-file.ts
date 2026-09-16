@@ -18,7 +18,7 @@ export type TreeFileRead =
   | { kind: "binary"; bytes: number; oid: string }
   | { kind: "too_large"; bytes: number };
 
-interface TreeEntry {
+export interface TreeEntry {
   mode: string;
   type: string;
   oid: string;
@@ -33,9 +33,19 @@ function parseTreeRecord(record: string): TreeEntry | null {
   return { mode, type, oid, size: Number.parseInt(size ?? "0", 10) || 0, path };
 }
 
-function lsTree(gitCwd: string, tree: string, path: string): TreeEntry | null {
+export function lsTree(gitCwd: string, tree: string, path: string): TreeEntry | null {
   const result = runGit(
-    ["-c", "core.quotepath=false", "ls-tree", "--long", "-z", tree, "--", path],
+    [
+      "--literal-pathspecs",
+      "-c",
+      "core.quotepath=false",
+      "ls-tree",
+      "--long",
+      "-z",
+      tree,
+      "--",
+      path,
+    ],
     { cwd: gitCwd, allowFailure: true },
   );
   if (result.exitCode !== 0) return null;

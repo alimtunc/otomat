@@ -1,5 +1,6 @@
 import { reviewDiffResponseSchema, type ReviewDiffResponse } from "@otomat/domain";
 
+import { toDiffFileContract } from "#git";
 import type { ReviewDiffResult } from "#review";
 
 /** Maps a `ReviewDiffResult` to its wire contract, remapping camelCase fields to snake_case; `diff` is null when the result carries no computed diff. */
@@ -18,16 +19,7 @@ export function toReviewDiffResponse(
           additions: diff.additions,
           deletions: diff.deletions,
           sha: diff.sha,
-          files: diff.files.map((file) => ({
-            path: file.path,
-            old_path: file.oldPath,
-            status: file.status,
-            additions: file.additions,
-            deletions: file.deletions,
-            binary: file.binary,
-            patch: file.patch,
-            sha: file.sha,
-          })),
+          files: diff.files.map(toDiffFileContract),
         }
       : null,
     scope: result.scope,

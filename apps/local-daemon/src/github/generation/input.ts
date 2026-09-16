@@ -1,6 +1,6 @@
 import { getIssue, type Db, type RunRow } from "@otomat/db";
 
-import type { RepositoryResolver } from "#git";
+import type { CanonicalDiff, RepositoryResolver } from "#git";
 
 import { GitHubPublicationError } from "../errors.js";
 
@@ -12,9 +12,22 @@ export interface GenerationIssue {
 
 export interface GenerationInput {
   cwd: string;
-  issue: GenerationIssue;
+  issue: GenerationIssue | null;
   diffStat: string[];
   patch: string;
+}
+
+export function generationInput(
+  cwd: string,
+  issue: GenerationIssue | null,
+  diff: CanonicalDiff,
+): GenerationInput {
+  return {
+    cwd,
+    issue,
+    diffStat: diff.files.map((file) => `${file.path} +${file.additions} -${file.deletions}`),
+    patch: diff.files.map((file) => file.patch).join("\n"),
+  };
 }
 
 export function buildGenerationInput(
@@ -34,14 +47,13 @@ export function buildGenerationInput(
     throw new GitHubPublicationError("diff_empty", "The run has no changes to describe.");
   }
   const issue = getIssue(config.db, run.issue_id);
-  return {
-    cwd: worktree.path,
-    issue: {
+  return generationInput(
+    worktree.path,
+    {
       sourceIdentifier: issue?.source_identifier ?? null,
       title: issue?.title ?? "Untitled issue",
       body: issue?.body ?? null,
     },
-    diffStat: diff.files.map((file) => `${file.path} +${file.additions} -${file.deletions}`),
-    patch: diff.files.map((file) => file.patch).join("\n"),
-  };
+    diff,
+  );
 }

@@ -5,7 +5,7 @@ export function isProjectScopedDetail(pathname: string): boolean {
   return PROJECT_DETAIL_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
-const PROJECT_ROUTES = ["/issues", "/runs", "/reviews", "/pull-requests", "/usage"];
+const PROJECT_ROUTES = ["/issues", "/runs", "/reviews", "/pull-requests", "/usage", "/files"];
 
 /** Which routes a project's tab remembers: the rest of the cockpit answers for every project at once. */
 export function isProjectRoute(pathname: string): boolean {

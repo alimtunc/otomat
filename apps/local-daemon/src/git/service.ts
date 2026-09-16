@@ -2,13 +2,15 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 
 import { acquireWorktree } from "./acquire.js";
+import { deleteBranch } from "./branches.js";
 import { diffInputs, worktreeGitView } from "./diff-inputs.js";
 import { collectChangedFiles, computeCanonicalDiff, treeRangeSnapshot } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
 import { toRecord } from "./record.js";
-import { commitsSince, deleteBranch, fastForward, headSha, isAncestor, revParse } from "./repo.js";
+import { commitsSince, fastForward, headSha, isAncestor, revParse } from "./repo.js";
 import { boundarySnapshot, captureWorktreeState, commitScope } from "./scopes.js";
 import type { GitWorktreeService, GitWorktreeServiceConfig } from "./service-contract.js";
+import { commitCheckoutFiles } from "./source-control/commit.js";
 import { listTreeFiles, readTreeBlob, readTreeFile } from "./tree-file.js";
 import { pruneWorktrees, removeWorktree } from "./worktree-cli.js";
 import { isDirty, snapshotSubject, snapshotWorktree } from "./worktree-snapshot.js";
@@ -37,6 +39,12 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     const latest = findLatestByOwner(db, owner);
     if (latest && latest.status !== "removed") return latest;
     throw new WorktreeNotFoundError(owner);
+  }
+
+  function requireActive(owner: string): WorktreeRow {
+    const row = findActiveByOwner(db, owner);
+    if (!row) throw new WorktreeNotFoundError(owner);
+    return row;
   }
 
   const scope = { repoRoot, defaultBranch };
@@ -91,8 +99,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     },
 
     captureState(owner) {
-      const row = findActiveByOwner(db, owner);
-      if (!row) throw new WorktreeNotFoundError(owner);
+      const row = requireActive(owner);
       return captureWorktreeState(row.path);
     },
 
@@ -115,19 +122,23 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     },
 
     snapshot(owner, message = snapshotSubject("snapshot", owner)) {
-      const row = findActiveByOwner(db, owner);
-      if (!row) throw new WorktreeNotFoundError(owner);
+      const row = requireActive(owner);
       snapshotWorktree(row.path, message);
       const head = headSha(row.path);
       updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
       return toRecord({ ...row, head_sha: head });
     },
 
+    commitStaged(owner, request) {
+      const row = requireActive(owner);
+      const result = commitCheckoutFiles(row.path, request);
+      updateWorktreeStatus(db, row.id, { status: "active", head_sha: result.sha });
+      return result;
+    },
+
     promote(sourceOwner, canonicalOwner, expectedBaseSha) {
-      const source = findActiveByOwner(db, sourceOwner);
-      const canonical = findActiveByOwner(db, canonicalOwner);
-      if (!source) throw new WorktreeNotFoundError(sourceOwner);
-      if (!canonical) throw new WorktreeNotFoundError(canonicalOwner);
+      const source = requireActive(sourceOwner);
+      const canonical = requireActive(canonicalOwner);
 
       snapshotWorktree(source.path, snapshotSubject("promote", sourceOwner));
       const sourceHead = headSha(source.path);
@@ -161,8 +172,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     },
 
     archive(owner) {
-      const row = findActiveByOwner(db, owner);
-      if (!row) throw new WorktreeNotFoundError(owner);
+      const row = requireActive(owner);
 
       let head: string;
       if (existsSync(row.path)) {

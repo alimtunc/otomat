@@ -217,6 +217,7 @@ export {
 export { HostTag } from "./components/host-tag";
 
 export { Icon, type IconName, type IconProps, type IconSize } from "./components/icon";
+export { FileIcon, type FileIconProps } from "./components/file-icon";
 
 export { IconButton, type IconButtonProps } from "./components/icon-button";
 export {

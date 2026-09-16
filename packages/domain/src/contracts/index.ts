@@ -18,6 +18,7 @@ export * from "./desktop.js";
 export * from "./notifications.js";
 export * from "./diagnostics.js";
 export * from "./diff.js";
+export * from "./source-control.js";
 export * from "./execution-host.js";
 export * from "./review-inbox.js";
 export * from "./run-events.js";

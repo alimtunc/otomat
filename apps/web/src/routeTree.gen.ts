@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentsRouteImport } from './routes/agents'
+import { Route as FilesRouteImport } from './routes/files'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
@@ -59,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
 const AgentsRoute = AgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FilesRoute = FilesRouteImport.update({
+  id: '/files',
+  path: '/files',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InboxRoute = InboxRouteImport.update({
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/agents': typeof AgentsRouteWithChildren
+  '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
@@ -307,6 +314,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
@@ -349,6 +357,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/agents': typeof AgentsRouteWithChildren
+  '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
@@ -394,6 +403,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/agents'
+    | '/files'
     | '/inbox'
     | '/reviews'
     | '/skills'
@@ -435,6 +445,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/files'
     | '/inbox'
     | '/reviews'
     | '/skills'
@@ -476,6 +487,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/agents'
+    | '/files'
     | '/inbox'
     | '/reviews'
     | '/skills'
@@ -520,6 +532,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
   AgentsRoute: typeof AgentsRouteWithChildren
+  FilesRoute: typeof FilesRoute
   InboxRoute: typeof InboxRoute
   ReviewsRoute: typeof ReviewsRoute
   SkillsRoute: typeof SkillsRoute
@@ -545,6 +558,13 @@ declare module '@tanstack/react-router' {
       path: '/agents'
       fullPath: '/agents'
       preLoaderRoute: typeof AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/files': {
+      id: '/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof FilesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/inbox': {
@@ -927,6 +947,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
   AgentsRoute: AgentsRouteWithChildren,
+  FilesRoute: FilesRoute,
   InboxRoute: InboxRoute,
   ReviewsRoute: ReviewsRoute,
   SkillsRoute: SkillsRoute,

@@ -1,5 +1,5 @@
 import type { Db } from "@otomat/db";
-import type { WorktreeFileEntry } from "@otomat/domain";
+import type { CommitFilesRequest, CommitFilesResponse, WorktreeFileEntry } from "@otomat/domain";
 
 import { WorktreeNotFoundError } from "./errors.js";
 import type { CommitSummary } from "./repo.js";
@@ -134,6 +134,7 @@ export interface GitWorktreeService {
   commitDiff(owner: string, commit: string): CanonicalDiff;
   /** Commits outstanding changes and records the new branch tip without removing the active worktree. `message` names a commit a reader will see; the default is the internal snapshot. */
   snapshot(owner: string, message?: string): WorktreeRecord;
+  commitStaged(owner: string, request: CommitFilesRequest): CommitFilesResponse;
   /** Fast-forwards the clean canonical owner from one candidate forked at `expectedBaseSha`. */
   promote(sourceOwner: string, canonicalOwner: string, expectedBaseSha: string): WorktreePromotion;
   /**

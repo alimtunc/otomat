@@ -25,6 +25,7 @@ import { validateJson } from "../guards.js";
 import { pullRequestImportRefusal } from "../pull-request-refusal.js";
 import { toPullRequest } from "../pull-request-serialize.js";
 import { readIssue, readIssues } from "../reads.js";
+import { invalidRequestJson } from "../refusal.js";
 
 /** Mounted at `/api/issues`. */
 export function createIssueRoutes(deps: ApiDeps): Hono {
@@ -42,9 +43,7 @@ export function createIssueRoutes(deps: ApiDeps): Hono {
 
   routes.get("/search", (c) => {
     const parsed = issueSearchQuerySchema.safeParse(c.req.query());
-    if (!parsed.success) {
-      return c.json({ error: "invalid_request", issues: parsed.error.issues }, 400);
-    }
+    if (!parsed.success) return invalidRequestJson(c, parsed.error.issues);
     const { projectId, query } = parsed.data;
     const matches = searchIssues(readIssues(deps.db, projectId), query);
     return c.json({

@@ -187,6 +187,16 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     },
     getPullRequest: async () => null,
     publishability: async () => PUBLISHABLE_WORKSPACE,
+    previewRepositoryPullRequest: async () => ({
+      revision: "revision",
+      publishability: PUBLISHABLE_WORKSPACE,
+    }),
+    generateRepositoryPullRequest: async () => {
+      throw new Error("repository generation stub not configured");
+    },
+    publishRepositoryPullRequest: async () => {
+      throw new Error("publishRepositoryPullRequest stub not configured");
+    },
     publish: async () => {
       throw new Error("publish stub not configured");
     },
@@ -269,11 +279,11 @@ export class FakeGitHubCli implements GitHubCli {
     return this.remote;
   }
 
-  async push(cwd: string, _remote: string, branch: string): Promise<void> {
+  async push(cwd: string, _remote: string, branch: string, sha?: string): Promise<void> {
     this.pushCalls += 1;
     this.pushedBranches.push(branch);
     if (this.pushError) throw this.pushError;
-    this.remoteHeads.set(branch, headSha(cwd));
+    this.remoteHeads.set(branch, sha ?? headSha(cwd));
   }
 
   async forcePushWithLease(input: ForcePushWithLeaseInput): Promise<void> {

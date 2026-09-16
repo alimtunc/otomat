@@ -9,6 +9,10 @@
 
 /* Unlayered on purpose: these must out-cascade @git-diff-view's unlayered `.invisible` rule. */
 .otomat-review-diff .diff-tailwindcss-wrapper {
+  --diff-add-content--: color-mix(in srgb, var(--success) 18%, var(--surface-1));
+  --diff-del-content--: color-mix(in srgb, var(--danger) 18%, var(--surface-1));
+  --diff-add-content-highlight--: color-mix(in srgb, var(--success) 36%, var(--surface-1));
+  --diff-del-content-highlight--: color-mix(in srgb, var(--danger) 36%, var(--surface-1));
   --diff-multi-select-bg: var(--iris-solid);
   --diff-multi-select-border: var(--iris-ring);
 

@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  baseBranchForkPoint,
-  branchExists,
-  headSha,
-  mergeBase,
-  revParse,
-  unpushedCommitCount,
-} from "#git/repo";
+import { branchExists } from "#git/branches";
+import { baseBranchForkPoint, headSha, mergeBase, revParse, unpushedCommitCount } from "#git/repo";
 
 import { setupTestRepo } from "../support/git.js";
 

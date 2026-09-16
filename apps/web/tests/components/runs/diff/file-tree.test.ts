@@ -28,7 +28,7 @@ describe("diff file tree", () => {
       diffFile({ path: "README.md" }),
     ]);
 
-    expect(rowLabels(nodes)).toEqual(["README.md", "src/", "  src/a.ts", "  src/b.ts"]);
+    expect(rowLabels(nodes)).toEqual(["src/", "  src/a.ts", "  src/b.ts", "README.md"]);
   });
 
   it("shows a single-child folder run as one compacted row", () => {
@@ -59,14 +59,14 @@ describe("diff file tree", () => {
 
     expect(forward).toEqual(reversed);
     expect(forward).toEqual([
-      "AGENTS.md",
       "docs/",
       "  docs/guide.md",
       "src/",
-      "  src/a.ts",
       "  nested/",
       "    src/nested/deep.ts",
+      "  src/a.ts",
       "  src/z.ts",
+      "AGENTS.md",
     ]);
   });
 

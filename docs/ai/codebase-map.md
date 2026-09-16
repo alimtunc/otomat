@@ -103,7 +103,10 @@ under `apps/local-daemon/src/<module>`, consumed through
 | `apps/local-daemon/src/review` | Review slice: scoped diff snapshots, comment anchoring, destinations, fix-step context, fix proof; one surface for a run and an adopted pull request. |
 | `apps/local-daemon/src/github/import` | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
 | `apps/web/src/components/pull-requests` | The issue's pull requests: attached cards, detected candidates, manual import, detach. |
-| `apps/web/src/components/runs/files` | The run's Files tab: the worktree tree, one file at a revision, and the in-place editor that saves it back. |
+| `apps/web/src/components/runs/files` | The run's Files tab view: lists the worktree and hands it to the shared explorer and Files/Changes workspace. |
+| `apps/web/src/components/files` | Shared editable explorer, scoped quick-open, Monaco setup, and Files/Changes workspace. |
+| `apps/web/src/components/source-control` | Changes inside Files: staged/unstaged diffs, Git actions, commits and PR publication. |
+| `apps/local-daemon/src/git/source-control` | Captured HEAD/index/worktree diffs and revision-checked stage, unstage, discard and staged commits. |
 | `packages/domain/src/patch` | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
 | `packages/domain` | Pure TS. Canonical types, state machines, event envelope, contracts. |
 | `packages/db` | SQLite driver isolation, Drizzle schema, migrations, repositories. |
@@ -1688,16 +1691,19 @@ desktop shell, `remote/host/capacity.ts` relays the read and the write to the ho
 the operator is configuring; an unreachable host or a refused write comes back as
 a message, never as a value shown as applied.
 
-## Browsing and Editing Worktree Files
+## Browsing Project and Worktree Files
 
 The Files tab of the run cockpit shows the whole worktree, not the diff: `GET
 /api/runs/:id/files` lists every leaf of the same tree the diff reads its head
 from (`GitWorktreeService.worktreeTree`, built on `diffInputs`), so a file opened
 here is the file the diff would show, uncommitted and untracked work included and
 gitignored files excluded. A live worktree answers `editable: true`; an archived
-one serves its branch tip and refuses every write with `workspace_read_only`. A
-project-level view of the main branch does not exist: nothing edits a checkout
-Otomat did not create.
+one serves its branch tip and refuses every write with `workspace_read_only`.
+Workspace → Files opens the selected project's actual repository checkout,
+including its current branch and uncommitted files. `GET
+/api/repositories/:id/tree` and `/tree/content?path=` capture a temporary Git tree
+without changing the real index. `PUT /api/repositories/:id/tree/content` saves
+project files through the same revision-checked writer as run files.
 
 Reads never touch the filesystem. `GET /api/runs/:id/files/content?path=` goes
 through `readTreeFile`, so a symlink, a binary, a directory, an absent path or a
@@ -1708,7 +1714,7 @@ path that is absolute or carries `..` is refused before git is asked
 way the diff's expanded blobs are. Every text answer carries `revision`: git's
 own blob id for the content, which is what a save must present back.
 
-`PUT /api/runs/:id/files/content` is the one write. Both verbs resolve the run
+`PUT /api/runs/:id/files/content` writes run files. Both verbs resolve the run
 through the same `worktreeTree`, so a workspace the list reports as read-only
 refuses the save with `workspace_read_only`. `writeWorktreeFile`
 (`git/file-write.ts`) resolves the target under the live worktree root
@@ -1724,20 +1730,92 @@ second Otomat writer does not exist.
 
 The cockpit keeps the diff as the source of truth: a successful save seeds the
 file's cache with the new revision, then invalidates the file list, the run's
-review diffs and its workspace facts, so the Diff tab shows the edit on its next
+review diffs, source control and workspace facts, so the Diff tab shows the edit on its next
 read. Nothing is journaled on the run's ledger for an operator edit. The editor
 is Monaco, bundled locally with its own worker (`monaco-setup.ts`, never the CDN
 loader) and loaded as its own chunk the route's loader fetches ahead of the first
-file; only the editing features and the basic grammars are registered, so no
-language service ever runs against a checkout it cannot understand. CodeMirror
+file. Editing features include find, folding, multicursor, comments and the
+command palette (F1 or Cmd/Ctrl+Shift+P). Basic grammars and Monaco's JSON
+tokenizer provide syntax colors without starting a language service. Importing
+the full JSON language registration also loads editor services it does not need
+for coloration, so only its tokenizer is registered. CodeMirror
 measured lighter and was rejected: the operator's VS Code keybindings are the
 product criterion. The file tree is the diff reviewer's `FileTree`, which takes
 the row to render, so the two surfaces share folding and reveal without the
-Files tab depending on a diff contract. A dirty document blocks navigation
+tree layout depending on a diff contract. Git status decorates file names with
+colored A/M/D/R badges and marks changed ancestor folders, including collapsed
+ones. Deleted paths remain visible and open their change diff. Directories sort before files, with
+natural case-insensitive ordering and file-type icons. Arrow keys navigate and
+expand the tree; expansion and file selection are remembered per host and
+checkout. Cmd/Ctrl+P searches filenames and paths with fuzzy matching, using the
+run's worktree in a run or issue context and the project checkout elsewhere.
+A dirty document blocks navigation
 through the router's blocker and the browser's unload prompt; a revision that
 moves under a clean document is adopted, one that moves under a dirty document —
 or a refused save — shows the conflict with a Reload that discards the edits,
 never a silent overwrite.
+
+## Staged and Unstaged Changes
+
+Project and run Files each contain Files/Changes tabs on the same route; Changes
+is never a separate sidebar or cockpit entry. `changes=true` selects it, and
+quick-open returns to the file editor. Changes uses `GET
+/api/source-control/:kind/:id`, where `kind` is `repository` or `run`. The daemon
+resolves the checkout from its own repository bindings; archived or missing
+worktrees cannot be mutated. Each response captures HEAD, the real index tree,
+and the working tree once. Staged Changes compares HEAD to the index; Changes
+compares the index to the working tree. Review Diff retains its existing scope.
+
+`POST` to the same route stages, unstages or discards a file, change block or
+line selection. `all: true` applies the action to every change in the selected
+staged/unstaged group, validating every path before writing. Its revision hashes
+the branch and all three trees; a changed checkout is
+refused before mutation. The server derives partial patches from the captured
+diff and checks them with Git before applying them. Partial actions support
+modified text files; additions, deletions, renames and binary changes use whole
+files. Partial actions preserve mode changes. Paths are literal Git pathspecs,
+parent symlinks and Git internals are refused, and unresolved merges disable
+actions. Submodule changes require an external Git client. Validation is
+best-effort against external processes racing the synchronous Git command.
+
+Discard requires confirmation in the UI, restores the index version and keeps
+staged work; discarding an untracked file deletes it. Both single and bulk discard
+warn that the loss is irreversible; ignored files remain untouched. Successful mutations
+invalidate the checkout's files, source control and applicable review caches.
+Automatic worktree snapshots refuse mixed staged/unstaged work before changing
+the index, so publication or archival cannot silently replace a manual staging
+selection. The operator must commit that selection or stage the remaining work
+before retrying the snapshot.
+
+`POST /api/source-control/:kind/:id/commit` commits only the reviewed index,
+without staging files or replacing the configured Git identity. Hooks and signing
+settings apply. An empty index, detached HEAD, conflict or changed revision is
+refused. Run commits record the new worktree tip and appear in its normal history
+and diff, without creating an agent turn or changing run lifecycle state.
+
+A run's PR action opens its existing publication/sync view. Project publication
+reuses its `PullRequestForm`: Generate PR delegates metadata and publication to
+the daemon, while Customize PR exposes the same structured subject, description,
+branch, Draft/Ready choice and metadata-only generation. The target branch stays
+editable until an operation starts. `GET /api/repositories/:id/pr?base_ref=...`
+previews the committed diff from local refs without fetching or publishing.
+`POST /api/repositories/:id/pr` accepts the shared publication request plus the
+base and checkout revision; absent details invoke the configured PR generator.
+`POST /api/repositories/:id/pr/generate` returns an editable proposal without
+creating a branch, commit, issue, run or PR. Both paths use the existing generator,
+subject validation and GitHub metadata updater. A project has no run runtime to
+inherit, so generation requires an explicit PR generator in Settings. Its prompt
+uses one captured committed diff and no fabricated issue context; unstaged content
+is excluded. Staged changes must be committed first; unstaged changes stay local.
+Publication creates a named branch when it
+differs from the checkout, refuses default/base/protected branches and existing
+branch collisions, fetches the base, checks for a committed diff and rechecks the
+checkout revision. It pushes the captured commit by SHA, never force-pushes, and
+reuses an existing PR when retried. Generation and publication commands are
+serialized per repository and reject a checkout that changed during generation.
+Confirmed provider data is mirrored through the existing PR import store without
+inventing an issue or run. A failed push leaves the local branch available for
+retry; a failed create leaves pushed commits available for retry.
 
 ## Opening a Worktree Outside Otomat
 

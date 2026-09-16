@@ -1,6 +1,6 @@
 import { Editor, type OnMount } from "@monaco-editor/react";
 import { Spinner, useTheme } from "@otomat/ui";
-import { EDITOR_OPTIONS, editorTheme } from "@web/components/runs/files/monaco-setup";
+import { EDITOR_OPTIONS, editorTheme } from "@web/components/files/monaco-setup";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { KeyCode, KeyMod } from "monaco-editor/editor/editor.api";
 import { useEffect, useEffectEvent, useImperativeHandle, useMemo, useState, type Ref } from "react";
@@ -54,6 +54,9 @@ export function CodeEditor({
     markSaved(editor);
     const listener = editor.onDidChangeModelContent(() => reportDirty(editor));
     editor.addCommand(KeyMod.CtrlCmd | KeyCode.KeyS, () => save(editor));
+    editor.addCommand(KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyP, () =>
+      editor.trigger("keyboard", "editor.action.quickCommand", null),
+    );
     return () => listener.dispose();
   }, [editor]);
 
