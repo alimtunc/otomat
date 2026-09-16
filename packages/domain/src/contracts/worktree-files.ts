@@ -5,7 +5,7 @@ import { diffMediaTypeSchema } from "./diff.js";
 /** Text past this is viewed through an outside editor. */
 export const WORKTREE_FILE_MAX_BYTES = 1024 * 1024;
 
-export const WORKTREE_FILE_KINDS = ["file", "symlink", "submodule"] as const;
+export const WORKTREE_FILE_KINDS = ["file", "directory", "symlink", "submodule"] as const;
 export const worktreeFileEntrySchema = z.object({
   path: z.string(),
   kind: z.enum(WORKTREE_FILE_KINDS),
@@ -61,6 +61,12 @@ export const worktreeFileSavedSchema = z.object({
 });
 export type WorktreeFileSaved = z.infer<typeof worktreeFileSavedSchema>;
 
+export const createWorktreeEntryRequestSchema = z.object({
+  path: z.string().min(1),
+  kind: worktreeFileEntrySchema.shape.kind.extract(["file", "directory"]),
+});
+export type CreateWorktreeEntryRequest = z.infer<typeof createWorktreeEntryRequestSchema>;
+
 export const WORKTREE_FILE_ERRORS = [
   "workspace_unavailable",
   "workspace_read_only",
@@ -70,6 +76,9 @@ export const WORKTREE_FILE_ERRORS = [
   "file_binary",
   "file_too_large",
   "file_revision_stale",
+  "path_exists",
+  "parent_not_found",
+  "path_ignored",
 ] as const;
 export type WorktreeFileError = (typeof WORKTREE_FILE_ERRORS)[number];
 

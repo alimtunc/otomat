@@ -1,6 +1,7 @@
 import { EmptyState, ErrorState, Spinner } from "@otomat/ui";
 import { useRepositories } from "@web/api/daemon/queries";
 import { ProjectExplorer } from "@web/components/files/project/explorer";
+import { FilesTabs } from "@web/components/files/tabs";
 import { FilesWorkspace } from "@web/components/files/workspace";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
@@ -11,7 +12,12 @@ export function ProjectFilesView() {
   const { projectId } = useSelectedProject();
   const repositories = useRepositories(projectId);
   return (
-    <RouteShell active="files" titleIcon="folder" breadcrumbs={[{ label: "Files", current: true }]}>
+    <RouteShell
+      active="files"
+      titleIcon="folder"
+      breadcrumbs={[{ label: "Files", current: true }]}
+      tabs={<FilesTabs />}
+    >
       {projectId === undefined ? (
         <EmptyState
           icon="folder"

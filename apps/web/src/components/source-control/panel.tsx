@@ -5,7 +5,6 @@ import type {
   SourceControlAction,
 } from "@otomat/domain";
 import {
-  Button,
   EmptyState,
   ErrorState,
   ResizablePanel,
@@ -139,26 +138,14 @@ export function SourceControlPanel({ target }: SourceControlPanelProps) {
                     description="Select a file to review its staged or unstaged changes."
                   />
                 ) : (
-                  <div className="flex h-full min-h-0 flex-col">
-                    {selected.file.status === "deleted" ? null : (
-                      <div className="flex justify-end border-b border-border-subtle px-3 py-1">
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => fileSelection.select(selected.file.path)}
-                        >
-                          Open file
-                        </Button>
-                      </div>
-                    )}
-                    <ChangeFileDiff
-                      key={`${selected.current.staged}:${selected.file.path}:${selected.file.sha}`}
-                      file={selected.file}
-                      staged={selected.current.staged}
-                      pending={pending}
-                      onAction={(action, selection) => act(selected.file.path, action, selection)}
-                    />
-                  </div>
+                  <ChangeFileDiff
+                    key={`${selected.current.staged}:${selected.file.path}:${selected.file.sha}`}
+                    file={selected.file}
+                    staged={selected.current.staged}
+                    pending={pending}
+                    onAction={(action, selection) => act(selected.file.path, action, selection)}
+                    onOpen={() => fileSelection.select(selected.file.path)}
+                  />
                 )}
               </ResizablePanel>
             </ResizablePanelGroup>

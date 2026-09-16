@@ -7,7 +7,10 @@ import {
   SidePanel,
   usePanelGroupLayout,
 } from "@otomat/ui";
+import { useQueryClient } from "@tanstack/react-query";
+import { invalidateCheckout } from "@web/api/files/invalidate";
 import { useSourceControl } from "@web/api/source-control/queries";
+import { useQueryKeys } from "@web/api/use-query-keys";
 import { FileBrowser } from "@web/components/files/browser";
 import { FilePanel } from "@web/components/files/panel";
 import { FILES_SURFACE } from "@web/components/files/surface";
@@ -20,10 +23,19 @@ export interface FilesExplorerProps {
   target: CheckoutTarget;
   entries: readonly WorktreeFileEntry[];
   editable: boolean;
+  refreshing?: boolean;
   notice?: ReactNode;
 }
 
-export function FilesExplorer({ target, entries, editable, notice }: FilesExplorerProps) {
+export function FilesExplorer({
+  target,
+  entries,
+  editable,
+  refreshing = false,
+  notice,
+}: FilesExplorerProps) {
+  const client = useQueryClient();
+  const keys = useQueryKeys();
   const surface = FILES_SURFACE[target.kind];
   const changes = useSourceControl(target, editable);
   const active = useFileSelection(target);
@@ -62,6 +74,12 @@ export function FilesExplorer({ target, entries, editable, notice }: FilesExplor
             changes={changes.data}
             activePath={active.path}
             onSelect={active.select}
+            actions={{
+              target,
+              editable,
+              refreshing,
+              onRefresh: () => invalidateCheckout(client, keys, target),
+            }}
           />
         </SidePanel>
         <ResizablePanel id={surface.file} minSize="40%">

@@ -8,11 +8,20 @@ export interface FolderRowProps {
   label: string;
   depth: number;
   expanded: boolean;
+  selected?: boolean;
   onToggle: (path: string) => void;
   status?: ChangeStatus;
 }
 
-export function FolderRow({ path, label, depth, expanded, onToggle, status }: FolderRowProps) {
+export function FolderRow({
+  path,
+  label,
+  depth,
+  expanded,
+  selected,
+  onToggle,
+  status,
+}: FolderRowProps) {
   const color = status === undefined ? undefined : STATUS_LETTER[status].className;
   return (
     <Button
@@ -21,9 +30,13 @@ export function FolderRow({ path, label, depth, expanded, onToggle, status }: Fo
       size="sm"
       title={path}
       aria-expanded={expanded}
+      aria-current={selected ? "true" : undefined}
       onClick={() => onToggle(path)}
       style={{ paddingLeft: `${ROW_PADDING_REM + depth * INDENT_REM}rem` }}
-      className="h-7 w-full justify-start gap-1.5 rounded-none pr-3 text-xs font-normal text-text-secondary hover:bg-hover"
+      className={cn(
+        "h-7 w-full justify-start gap-1.5 rounded-none pr-3 text-xs font-normal text-text-secondary hover:bg-hover",
+        selected && "bg-selected text-foreground",
+      )}
     >
       <Icon
         name={expanded ? "chevron-down" : "chevron-right"}

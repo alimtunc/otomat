@@ -1,7 +1,13 @@
+import type { WorktreeFileEntry } from "@otomat/domain";
 import { baseName, pathSegments } from "@web/components/files/tree/path";
 
 export interface FileTreeLeaf {
   path: string;
+  kind?: WorktreeFileEntry["kind"];
+}
+
+export interface FileTreeHandle {
+  toggleAll: () => void;
 }
 
 export interface FileTreeDirectory<T extends FileTreeLeaf> {
@@ -71,13 +77,13 @@ export function buildFileTree<T extends FileTreeLeaf>(files: readonly T[]): File
   for (const file of files) {
     const segments = pathSegments(file.path);
     let current = root;
-    for (const segment of segments.slice(0, -1)) {
+    for (const segment of file.kind === "directory" ? segments : segments.slice(0, -1)) {
       const path = current.path === "" ? segment : `${current.path}/${segment}`;
       const existing = current.directories.get(path) ?? draft<T>(path);
       current.directories.set(path, existing);
       current = existing;
     }
-    current.files.push(file);
+    if (file.kind !== "directory") current.files.push(file);
   }
   return toNodes(root);
 }
@@ -123,6 +129,22 @@ export function expandAncestors(collapsed: ReadonlySet<string>, path: string): R
   const next = new Set(collapsed);
   for (const directory of hiding) next.delete(directory);
   return next;
+}
+
+export function insertionPosition<T extends FileTreeLeaf>(
+  rows: readonly FileTreeRow<T>[],
+  directory: string,
+): { index: number; depth: number } | null {
+  const parent = rows.findIndex(
+    (row) => row.node.kind === "directory" && row.node.path === directory,
+  );
+  if (directory !== "" && (parent < 0 || !rows[parent]?.expanded)) return null;
+  const depth = parent < 0 ? 0 : (rows[parent]?.depth ?? 0) + 1;
+  const index = rows.findIndex(
+    (row, i) =>
+      i > parent && (row.depth < depth || (row.depth === depth && row.node.kind === "file")),
+  );
+  return { index: index < 0 ? rows.length : index, depth };
 }
 
 type TreeKeyStep = { focus: number } | { toggle: string } | null;

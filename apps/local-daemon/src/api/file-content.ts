@@ -6,6 +6,8 @@ import {
   type WorktreeFileError,
   type WorktreeFileSaved,
   type SaveWorktreeFileRequest,
+  type CreateWorktreeEntryRequest,
+  type WorktreeFileEntry,
 } from "@otomat/domain";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -14,6 +16,7 @@ import {
   isRepositoryRelative,
   normalizeRepositoryPath,
   writeWorktreeFile,
+  createWorktreeEntry,
   type WorktreeTree,
 } from "#git";
 
@@ -28,11 +31,21 @@ const REFUSALS = {
   file_binary: [409, "This file is binary and has no text to show."],
   file_too_large: [413, "This file is larger than what Otomat opens in place."],
   file_revision_stale: [409, "This file changed since it was opened."],
+  path_exists: [409, "A file or folder already exists at this path."],
+  parent_not_found: [409, "The parent folder does not exist."],
+  path_ignored: [409, "This path is ignored by Git. Choose a path visible in the explorer."],
 } satisfies Record<WorktreeFileError, [ContentfulStatusCode, string]>;
 
 export function refuseFile(c: Context, error: WorktreeFileError) {
   const [status, message] = REFUSALS[error];
   return refusalJson(c, { status, error, message });
+}
+
+export function createEntryResponse(c: Context, cwd: string, request: CreateWorktreeEntryRequest) {
+  const path = normalizeRepositoryPath(request.path);
+  const error = createWorktreeEntry(cwd, { ...request, path });
+  if (error !== null) return refuseFile(c, error);
+  return c.json({ path, kind: request.kind, size: 0 } satisfies WorktreeFileEntry, 201);
 }
 
 export function saveFileResponse(c: Context, cwd: string, request: SaveWorktreeFileRequest) {

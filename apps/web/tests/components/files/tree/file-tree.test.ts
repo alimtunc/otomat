@@ -3,6 +3,7 @@ import {
   buildFileTree,
   directoryPaths,
   expandAncestors,
+  insertionPosition,
   visibleTreeRows,
   type FileTreeNode,
 } from "@web/components/files/tree/utils";
@@ -21,6 +22,33 @@ function rowLabels(nodes: readonly FileTreeNode<DiffFileContract>[], collapsed: 
 }
 
 describe("diff file tree", () => {
+  it("places new entries after child folders and before sibling files, including empty folders", () => {
+    const nodes = buildFileTree([
+      { path: "src/lib/util.ts", kind: "file" as const },
+      { path: "src/empty", kind: "directory" as const },
+      { path: "src/app.ts", kind: "file" as const },
+      { path: "README.md", kind: "file" as const },
+    ]);
+    const rows = visibleTreeRows(nodes, new Set());
+    expect(insertionPosition(rows, "src")).toEqual({ index: 4, depth: 1 });
+    expect(insertionPosition(rows, "src/empty")).toEqual({ index: 2, depth: 2 });
+    expect(insertionPosition(rows, "")).toEqual({ index: 5, depth: 0 });
+    expect(insertionPosition([], "")).toEqual({ index: 0, depth: 0 });
+    expect(insertionPosition(visibleTreeRows(nodes, new Set(["src"])), "src")).toBeNull();
+  });
+  it("keeps empty folders in the tree and merges explicit folders with file ancestors", () => {
+    const nodes = buildFileTree([
+      { path: "src", kind: "directory" as const },
+      { path: "src/empty/nested", kind: "directory" as const },
+      { path: "src/app.ts", kind: "file" as const },
+    ]);
+    const rows = visibleTreeRows(nodes, new Set());
+    expect(
+      rows.map(({ node }) => (node.kind === "directory" ? node.path : node.file.path)),
+    ).toEqual(["src", "src/empty/nested", "src/app.ts"]);
+    expect(rows.filter(({ node }) => node.kind === "file")).toHaveLength(1);
+  });
+
   it("nests files under the folders they actually live in", () => {
     const nodes = buildFileTree([
       diffFile({ path: "src/a.ts" }),

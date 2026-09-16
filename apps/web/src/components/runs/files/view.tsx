@@ -2,6 +2,7 @@ import { ErrorState } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunFiles } from "@web/api/runs/file-queries";
 import { FilesExplorer } from "@web/components/files/explorer";
+import { FilesTabs } from "@web/components/files/tabs";
 import { FilesWorkspace } from "@web/components/files/workspace";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
@@ -14,7 +15,7 @@ export function RunFilesView() {
   const target = { kind: "run", id: runId } as const;
 
   return (
-    <FilesWorkspace key={runId} target={target}>
+    <FilesWorkspace key={runId} target={target} tabs={<FilesTabs />}>
       <QueryBoundary
         query={files}
         pending={<DetailSkeleton blocks={2} />}
@@ -36,6 +37,7 @@ export function RunFilesView() {
             target={target}
             entries={listing.entries}
             editable={listing.editable}
+            refreshing={files.isFetching}
             notice={
               listing.editable ? null : (
                 <p className="border-b border-border-subtle bg-surface-2 px-3 py-1.5 text-xs text-text-secondary">

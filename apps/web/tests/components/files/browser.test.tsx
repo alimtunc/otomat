@@ -75,11 +75,66 @@ describe("FileBrowser", () => {
     await mounted.cleanup();
   });
 
+  it("expands and collapses all nested folders, preserving selection and unfiltered storage", async () => {
+    const onSelect = vi.fn();
+    const props = { entries: ENTRIES, activePath: "src/app.ts", onSelect, scope: "fold-all-test" };
+    const mounted = await mount(<FileBrowser {...props} />);
+    const toggle = mounted.container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Collapse / expand all folders"]',
+    );
+    const input = mounted.container.querySelector<HTMLInputElement>("input");
+    if (toggle === null || input === null) throw new Error("toolbar missing");
+
+    await act(async () => toggle.click());
+    expect(rowNames(mounted.container)).toEqual(["src", "host-link", "README.md"]);
+    await act(async () => toggle.click());
+    expect(rowNames(mounted.container)).toContain("util.ts");
+    await act(async () => toggle.click());
+    expect(rowNames(mounted.container)).toEqual(["src", "host-link", "README.md"]);
+    expect(onSelect).not.toHaveBeenCalled();
+    await act(async () => setInputValue(input, "util"));
+    expect(rowNames(mounted.container)).toEqual(["src/lib", "util.ts"]);
+    await act(async () => toggle.click());
+    expect(rowNames(mounted.container)).toEqual(["src/lib"]);
+    await act(async () => toggle.click());
+    expect(rowNames(mounted.container)).toEqual(["src/lib", "util.ts"]);
+    await act(async () => setInputValue(input, "nothing-here"));
+    expect(toggle.disabled).toBe(true);
+    await mounted.cleanup();
+
+    const restored = await mount(<FileBrowser {...props} activePath={null} />);
+    expect(rowNames(restored.container)).toEqual(["src", "host-link", "README.md"]);
+    const reopen = restored.container.querySelector<HTMLButtonElement>(
+      'button[aria-label="Collapse / expand all folders"]',
+    );
+    if (reopen === null) throw new Error("expand action missing");
+    await act(async () => reopen.click());
+    await restored.cleanup();
+    const expanded = await mount(<FileBrowser {...props} activePath={null} />);
+    expect(rowNames(expanded.container)).toContain("util.ts");
+    await expanded.cleanup();
+    localStorage.removeItem("otomat.files.folders");
+  });
+
   it("reveals the ancestors of the active file and marks it current", async () => {
     const mounted = await mount(<Harness initialPath="src/lib/util.ts" />);
     expect(rowNames(mounted.container)).toContain("util.ts");
     const current = mounted.container.querySelector('button[aria-current="true"]');
     expect(current?.getAttribute("title")).toBe("src/lib/util.ts");
+    await mounted.cleanup();
+  });
+
+  it("reveals a file opened by external navigation after a folder was selected", async () => {
+    const props = { entries: ENTRIES, activePath: "README.md", onSelect: vi.fn() };
+    const mounted = await mount(<FileBrowser {...props} />);
+    const folder = mounted.container.querySelector<HTMLButtonElement>('button[title="src"]');
+    if (folder === null) throw new Error("folder missing");
+    await act(async () => folder.click());
+    expect(folder.getAttribute("aria-current")).toBe("true");
+    await mounted.rerender(<FileBrowser {...props} activePath="src/lib/util.ts" />);
+    expect(
+      mounted.container.querySelector('button[aria-current="true"]')?.getAttribute("title"),
+    ).toBe("src/lib/util.ts");
     await mounted.cleanup();
   });
 
