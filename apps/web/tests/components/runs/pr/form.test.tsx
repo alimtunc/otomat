@@ -176,6 +176,25 @@ describe("PullRequestForm", () => {
     expect(view.textContent).toContain("A summary is required.");
   });
 
+  it("keeps Customize PR left and the primary action right on one wrapping row", () => {
+    const { view } = render({ isPending: true });
+
+    const customize = button("Customize PR");
+    const panel = customize.nextElementSibling;
+    const actions = panel?.nextElementSibling;
+    const row = customize.parentElement;
+    expect(actions).toBe(button("Generate PR").parentElement);
+    expect(row?.className).toContain("flex-wrap");
+    expect(row?.className).toContain("items-center");
+    expect(actions?.className).toContain("ml-auto");
+    expect(actions?.className).toContain("justify-end");
+    expect(panel?.hasAttribute("hidden")).toBe(true);
+    expect(panel?.className).toContain("basis-full");
+    expect(view.querySelector('[data-slot="spinner"]')?.closest("button")).toBe(
+      button("Generate PR"),
+    );
+  });
+
   it("places the generator immediately left of Create PR on one action row", () => {
     render({ customize: true });
 
