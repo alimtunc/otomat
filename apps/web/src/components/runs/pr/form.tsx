@@ -133,7 +133,11 @@ export function PullRequestForm({
               {publishability.blocker ? (
                 <p className="text-xs text-text-tertiary">Mode kept for a later publication.</p>
               ) : null}
-              <Collapsible open={showDetails} onOpenChange={onCustomizeChange}>
+              <Collapsible
+                open={showDetails}
+                onOpenChange={onCustomizeChange}
+                className="flex flex-wrap items-center gap-2"
+              >
                 <CollapsibleTrigger
                   render={
                     <Button type="button" variant="ghost" size="sm">
@@ -148,7 +152,7 @@ export function PullRequestForm({
                     </Button>
                   }
                 />
-                <CollapsiblePanel keepMounted className="flex flex-col gap-4 pt-4">
+                <CollapsiblePanel keepMounted className="flex basis-full flex-col gap-4 py-2">
                   <PullRequestSubjectFields
                     form={form}
                     disabled={busy}
@@ -178,38 +182,38 @@ export function PullRequestForm({
                     headRef={publishability.head_ref}
                   />
                 </CollapsiblePanel>
-              </Collapsible>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {showDetails && blocked ? (
-                  <p className="text-xs text-text-tertiary">
-                    Generation needs an available workspace, its GitHub remote and changes to
-                    describe.
-                  </p>
-                ) : null}
-                {showDetails ? (
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                  {showDetails && blocked ? (
+                    <p className="text-xs text-text-tertiary">
+                      Generation needs an available workspace, its GitHub remote and changes to
+                      describe.
+                    </p>
+                  ) : null}
+                  {showDetails ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void generateOnly()}
+                      loading={isGenerating}
+                      disabled={busy || blocked}
+                    >
+                      Generate title &amp; description with AI
+                    </Button>
+                  ) : null}
                   <Button
-                    type="button"
-                    variant="outline"
+                    type={composeWithAi ? "button" : "submit"}
+                    variant="primary"
                     size="sm"
-                    onClick={() => void generateOnly()}
-                    loading={isGenerating}
-                    disabled={busy || blocked}
+                    onClick={composeWithAi ? () => void onSubmit({ mode: values.mode }) : undefined}
+                    disabled={(!composeWithAi && !canSubmit) || model.actionDisabled || busy}
+                    aria-busy={publishing || undefined}
                   >
-                    Generate title &amp; description with AI
+                    {publishing ? <Spinner size={12} aria-hidden /> : null}
+                    {composeWithAi ? "Generate PR" : model.actionLabel}
                   </Button>
-                ) : null}
-                <Button
-                  type={composeWithAi ? "button" : "submit"}
-                  variant="primary"
-                  size="sm"
-                  onClick={composeWithAi ? () => void onSubmit({ mode: values.mode }) : undefined}
-                  disabled={(!composeWithAi && !canSubmit) || model.actionDisabled || busy}
-                  aria-busy={publishing || undefined}
-                >
-                  {publishing ? <Spinner size={12} aria-hidden /> : null}
-                  {composeWithAi ? "Generate PR" : model.actionLabel}
-                </Button>
-              </div>
+                </div>
+              </Collapsible>
             </>
           );
         }}
