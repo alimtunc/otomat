@@ -30,7 +30,6 @@ export function ProjectExplorer({ repositoryId }: ProjectExplorerProps) {
           target={target}
           entries={listing.entries}
           editable
-          refreshing={files.isFetching}
           notice={
             <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-1.5 text-xs">
               <Icon name="folder-git-2" aria-hidden />

@@ -1,6 +1,6 @@
 import type { DiffFileContract } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
-import { ROW_PADDING_REM } from "@web/components/files/tree/indent";
+import { rowIndent } from "@web/components/files/tree/indent";
 import {
   classifyDiffFile,
   groupDiffFiles,
@@ -65,7 +65,7 @@ export function DiffFileGroupList({
               size="sm"
               aria-expanded={expanded}
               onClick={() => toggle(group.type)}
-              style={{ paddingLeft: `${ROW_PADDING_REM}rem` }}
+              style={rowIndent(0)}
               className="h-7 w-full justify-start gap-1.5 rounded-none pr-3 text-xs font-medium text-foreground hover:bg-hover"
             >
               <Icon

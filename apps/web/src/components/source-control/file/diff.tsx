@@ -1,6 +1,6 @@
 import type { ChangeSelection, DiffFileContract, SourceControlAction } from "@otomat/domain";
 import { hunkPatches } from "@otomat/domain";
-import { Badge, Button, FileIcon } from "@otomat/ui";
+import { Button, Chip, FileIcon } from "@otomat/ui";
 import { unrenderableNote } from "@web/components/runs/diff/files/card.utils";
 import { ChangeActions } from "@web/components/source-control/change-actions";
 import { ChangeBlock } from "@web/components/source-control/change-block";
@@ -23,12 +23,12 @@ export function ChangeFileDiff({ file, staged, pending, onAction, onOpen }: Chan
           <span className="min-w-0 flex-1 truncate font-mono" title={file.path}>
             {file.path}
           </span>
-          <Badge
+          <Chip
             className="shrink-0"
-            title={staged ? "Last commit → staging area" : "Staging area → working files"}
+            hint={staged ? "Last commit → staging area" : "Staging area → working files"}
           >
             {staged ? "Staged" : "Unstaged"}
-          </Badge>
+          </Chip>
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-2">
           {file.status === "deleted" ? null : (

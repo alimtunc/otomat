@@ -1,8 +1,10 @@
 import type { CheckoutTarget, CreateWorktreeEntryRequest, WorktreeFileEntry } from "@otomat/domain";
 import { Field, FieldControl, FileIcon, Icon, Input, Spinner } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
-import { useCreateEntry } from "@web/api/files/use-create-entry";
-import { INDENT_REM, ROW_PADDING_REM } from "@web/components/files/tree/indent";
+import { useCreateEntry } from "@web/api/files/mutations";
+import { entryNameError } from "@web/components/files/entry-name";
+import { joinPath } from "@web/components/files/tree/path";
+import { fieldErrorProps } from "@web/lib/form";
 import { worktreeFileMessage } from "@web/lib/run/file-refusal";
 
 export interface CreateEntryRowProps {
@@ -10,7 +12,6 @@ export interface CreateEntryRowProps {
   kind: CreateWorktreeEntryRequest["kind"];
   directory: string;
   entries: readonly WorktreeFileEntry[];
-  depth: number;
   onCreated: (entry: WorktreeFileEntry) => void;
   onCancel: () => void;
 }
@@ -20,18 +21,19 @@ export function CreateEntryRow({
   kind,
   directory,
   entries,
-  depth,
   onCreated,
   onCancel,
 }: CreateEntryRowProps) {
   const create = useCreateEntry(target);
   const label = kind === "file" ? "file" : "folder";
-  const prefix = directory === "" ? "" : `${directory}/`;
   const form = useForm({
     defaultValues: { name: "" },
     onSubmit: ({ value }) => {
       if (!create.isPending) {
-        create.mutate({ path: `${prefix}${value.name.trim()}`, kind }, { onSuccess: onCreated });
+        create.mutate(
+          { path: joinPath(directory, value.name.trim()), kind },
+          { onSuccess: onCreated },
+        );
       }
     },
   });
@@ -40,7 +42,6 @@ export function CreateEntryRow({
       aria-label={`Create ${label} in ${directory || "project root"}`}
       aria-busy={create.isPending}
       className="py-0.5 pr-2"
-      style={{ paddingLeft: `${ROW_PADDING_REM + depth * INDENT_REM}rem` }}
       onSubmit={(event) => {
         event.preventDefault();
         void form.handleSubmit();
@@ -55,20 +56,7 @@ export function CreateEntryRow({
       <form.Field
         name="name"
         validators={{
-          onChange: ({ value }) => {
-            const name = value.trim();
-            if (name === "") return `Enter a ${label} name.`;
-            if (name.toLowerCase() === ".git") {
-              return "The name .git is reserved by Git. Names like .gitignore are allowed.";
-            }
-            if (/[\\/\0]/.test(name) || name === "." || name === "..")
-              return "Choose a name without slashes, other than . or ...";
-            const path = `${prefix}${name}`;
-            if (entries.some((entry) => entry.path === path || entry.path.startsWith(`${path}/`))) {
-              return `A file or folder named ${name} already exists here. Choose a different name.`;
-            }
-            return undefined;
-          },
+          onChange: ({ value }) => entryNameError(value.trim(), directory, entries, label),
         }}
       >
         {(field) => {
@@ -78,8 +66,9 @@ export function CreateEntryRow({
             ) : (
               <FileIcon path={field.state.value} />
             );
+          const validation = fieldErrorProps(field.state.meta);
           const error =
-            field.state.meta.errors[0] ??
+            validation.error ??
             (create.error === null
               ? undefined
               : worktreeFileMessage(create.error, `Could not create the ${label}.`));
@@ -88,11 +77,7 @@ export function CreateEntryRow({
               <span className="flex h-7 shrink-0 items-center" aria-hidden>
                 {create.isPending ? <Spinner size={14} /> : icon}
               </span>
-              <Field
-                invalid={error !== undefined}
-                error={error}
-                className="min-w-0 flex-1 gap-0 [&_[role=alert]]:border [&_[role=alert]]:border-danger [&_[role=alert]]:bg-danger/10 [&_[role=alert]]:px-2 [&_[role=alert]]:py-1"
-              >
+              <Field invalid={error !== undefined} error={error} className="min-w-0 flex-1 gap-0">
                 <FieldControl>
                   <Input
                     aria-label={`New ${label} name`}

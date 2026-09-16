@@ -1,5 +1,6 @@
 import type { ChangeStatus } from "@otomat/domain";
 import { FolderRow } from "@web/components/files/tree/folder-row";
+import { rowIndent } from "@web/components/files/tree/indent";
 import {
   buildFileTree,
   directoryPaths,
@@ -26,7 +27,7 @@ export interface FileTreeProps<T extends FileTreeLeaf> {
   renderFile: (file: T, depth: number) => ReactNode;
   selectedDirectory?: string | null;
   onSelectDirectory?: (path: string) => void;
-  insertion?: { directory: string; render: (depth: number) => ReactNode };
+  insertion?: { directory: string; row: ReactNode };
   ref?: Ref<FileTreeHandle>;
 }
 
@@ -58,14 +59,15 @@ export function FileTree<T extends FileTreeLeaf>({
     ref,
     () => ({
       toggleAll: () => {
-        const expanded = nodes.every((node) => node.kind === "file" || collapsed.has(node.path));
-        const next = expanded ? new Set<string>() : directoryPaths(nodes);
-        setRevealed(selectedDirectory ?? activePath);
+        const allCollapsed = nodes.every(
+          (node) => node.kind === "file" || collapsed.has(node.path),
+        );
+        const next = allCollapsed ? new Set<string>() : directoryPaths(nodes);
         setCollapsed(next);
         if (storageScope !== undefined) writeScoped(FOLDERS_KEY, storageScope, [...next]);
       },
     }),
-    [nodes, collapsed, storageScope, selectedDirectory, activePath],
+    [nodes, collapsed, storageScope],
   );
 
   const revealPath =
@@ -104,7 +106,13 @@ export function FileTree<T extends FileTreeLeaf>({
     ),
   );
   if (position !== null && insertion !== undefined) {
-    children.splice(position.index, 0, <li key="creation">{insertion.render(position.depth)}</li>);
+    children.splice(
+      position.index,
+      0,
+      <li key="creation" style={rowIndent(position.depth)}>
+        {insertion.row}
+      </li>,
+    );
   }
 
   return (

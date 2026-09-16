@@ -1,4 +1,11 @@
-import type { CheckoutTarget, SaveWorktreeFileRequest, WorktreeFileContent } from "@otomat/domain";
+import type {
+  CheckoutTarget,
+  CreateWorktreeEntryRequest,
+  RepositoryTreeResponse,
+  SaveWorktreeFileRequest,
+  WorktreeFileContent,
+  WorktreeFilesResponse,
+} from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
@@ -30,6 +37,26 @@ export function useSaveFile(target: CheckoutTarget) {
     onError: (error) => {
       if (worktreeFileRefusal(error) === "file_revision_stale") return;
       toast.error(worktreeFileMessage(error, "Could not save the file — is the daemon running?"));
+    },
+  });
+}
+
+export function useCreateEntry(target: CheckoutTarget) {
+  const client = useQueryClient();
+  const keys = useQueryKeys();
+  return useMutation({
+    mutationFn: (request: CreateWorktreeEntryRequest) =>
+      daemon.createCheckoutEntry(target, request),
+    onSuccess: (entry) => {
+      client.setQueryData<RepositoryTreeResponse | WorktreeFilesResponse>(
+        keys.checkoutFiles(target),
+        (current) =>
+          current && {
+            ...current,
+            entries: [...current.entries.filter((item) => item.path !== entry.path), entry],
+          },
+      );
+      invalidateCheckout(client, keys, target);
     },
   });
 }

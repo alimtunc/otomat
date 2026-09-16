@@ -10,8 +10,12 @@ export function baseName(path: string): string {
   return pathSegments(path).pop() ?? path;
 }
 
-function directoryName(path: string): string {
+export function directoryName(path: string): string {
   return pathSegments(path).slice(0, -1).join("/");
+}
+
+export function joinPath(directory: string, name: string): string {
+  return directory === "" ? name : `${directory}/${name}`;
 }
 
 export interface DiffFileLabels {

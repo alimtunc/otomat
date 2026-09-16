@@ -1,6 +1,6 @@
 import type { ChangeStatus } from "@otomat/domain";
 import { Button, Icon, cn } from "@otomat/ui";
-import { INDENT_REM, ROW_PADDING_REM } from "@web/components/files/tree/indent";
+import { rowIndent } from "@web/components/files/tree/indent";
 import { STATUS_LETTER } from "@web/components/files/tree/status";
 
 export interface FolderRowProps {
@@ -8,7 +8,7 @@ export interface FolderRowProps {
   label: string;
   depth: number;
   expanded: boolean;
-  selected?: boolean;
+  selected: boolean;
   onToggle: (path: string) => void;
   status?: ChangeStatus;
 }
@@ -32,7 +32,7 @@ export function FolderRow({
       aria-expanded={expanded}
       aria-current={selected ? "true" : undefined}
       onClick={() => onToggle(path)}
-      style={{ paddingLeft: `${ROW_PADDING_REM + depth * INDENT_REM}rem` }}
+      style={rowIndent(depth)}
       className={cn(
         "h-7 w-full justify-start gap-1.5 rounded-none pr-3 text-xs font-normal text-text-secondary hover:bg-hover",
         selected && "bg-selected text-foreground",

@@ -13,6 +13,7 @@ import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 import {
+  isCreatableRepositoryPath,
   isRepositoryRelative,
   normalizeRepositoryPath,
   writeWorktreeFile,
@@ -43,6 +44,7 @@ export function refuseFile(c: Context, error: WorktreeFileError) {
 
 export function createEntryResponse(c: Context, cwd: string, request: CreateWorktreeEntryRequest) {
   const path = normalizeRepositoryPath(request.path);
+  if (!isCreatableRepositoryPath(path)) return refuseFile(c, "path_invalid");
   const error = createWorktreeEntry(cwd, { ...request, path });
   if (error !== null) return refuseFile(c, error);
   return c.json({ path, kind: request.kind, size: 0 } satisfies WorktreeFileEntry, 201);

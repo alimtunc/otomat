@@ -20,15 +20,18 @@ function treePath(repositoryId: string): string {
   return `/api/repositories/${encodeURIComponent(repositoryId)}/tree`;
 }
 
+function checkoutPath(target: CheckoutTarget): string {
+  return target.kind === "run" ? filesPath(target.id) : treePath(target.id);
+}
+
 function contentPath(target: CheckoutTarget): string {
-  return `${target.kind === "run" ? filesPath(target.id) : treePath(target.id)}/content`;
+  return `${checkoutPath(target)}/content`;
 }
 
 export function createFilesClient(config: DaemonClientConfig) {
   return {
     async createCheckoutEntry(target: CheckoutTarget, request: CreateWorktreeEntryRequest) {
-      const path = target.kind === "run" ? filesPath(target.id) : treePath(target.id);
-      return worktreeFileEntrySchema.parse(await postJson(config, path, request));
+      return worktreeFileEntrySchema.parse(await postJson(config, checkoutPath(target), request));
     },
     async getRepositoryTree(repositoryId: string) {
       return repositoryTreeResponseSchema.parse(await getJson(config, treePath(repositoryId)));

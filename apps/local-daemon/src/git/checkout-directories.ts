@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import type { WorktreeFileEntry } from "@otomat/domain";
 
+import { GitCommandError } from "./errors.js";
 import { runGit } from "./git-cli.js";
 import { isInsideRoot } from "./probe.js";
 
@@ -21,12 +22,15 @@ export function checkoutDirectories(cwd: string): WorktreeFileEntry[] {
       .filter((entry) => entry.isDirectory())
       .map((entry) => `${path}/${entry.name}`);
     if (children.length === 0) return;
-    const ignored = runGit(["check-ignore", "-z", "--stdin"], {
+    const args = ["check-ignore", "-z", "--stdin"];
+    const ignored = runGit(args, {
       cwd,
       input: children.map((child) => `${child}/\0`).join(""),
       allowFailure: true,
     });
-    if (ignored.exitCode !== 0 && ignored.exitCode !== 1) throw new Error(ignored.stderr);
+    if (ignored.exitCode !== 0 && ignored.exitCode !== 1) {
+      throw new GitCommandError(args, cwd, ignored.exitCode, ignored.stderr);
+    }
     const excluded = new Set(ignored.stdout.split("\0"));
     for (const child of children) if (!excluded.has(`${child}/`)) walk(child);
   };

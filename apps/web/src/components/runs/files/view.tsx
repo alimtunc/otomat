@@ -37,7 +37,6 @@ export function RunFilesView() {
             target={target}
             entries={listing.entries}
             editable={listing.editable}
-            refreshing={files.isFetching}
             notice={
               listing.editable ? null : (
                 <p className="border-b border-border-subtle bg-surface-2 px-3 py-1.5 text-xs text-text-secondary">

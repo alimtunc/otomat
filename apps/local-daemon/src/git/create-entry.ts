@@ -3,36 +3,43 @@ import { join } from "node:path";
 
 import type { CreateWorktreeEntryRequest, WorktreeFileError } from "@otomat/domain";
 
+import { GitCommandError } from "./errors.js";
+import { isPathAbsent } from "./file-write.js";
 import { runGit } from "./git-cli.js";
-import { isRepositoryRelative } from "./repository-path.js";
 
+function parentRefusal(cwd: string, path: string): WorktreeFileError | null {
+  let parent = cwd;
+  for (const part of path.split("/").slice(0, -1)) {
+    parent = join(parent, part);
+    let stat;
+    try {
+      stat = lstatSync(parent);
+    } catch (error) {
+      if (isPathAbsent(error)) return "parent_not_found";
+      throw error;
+    }
+    if (stat.isSymbolicLink()) return "file_symlink";
+    if (!stat.isDirectory()) return "parent_not_found";
+    if (existsSync(join(parent, ".git"))) return "path_invalid";
+  }
+  return null;
+}
+
+/** `path` must already pass `isCreatableRepositoryPath`; a symlinked parent is refused because the entry would land where the tree does not show it. */
 export function createWorktreeEntry(
   cwd: string,
   { path, kind }: CreateWorktreeEntryRequest,
 ): WorktreeFileError | null {
-  if (
-    !isRepositoryRelative(path) ||
-    path.includes("\0") ||
-    path.includes("\\") ||
-    path.split("/").some((part) => part === "" || part === "." || part.toLowerCase() === ".git")
-  )
-    return "path_invalid";
+  const parentError = parentRefusal(cwd, path);
+  if (parentError !== null) return parentError;
+  const args = ["check-ignore", "-q", "--", kind === "directory" ? `${path}/` : path];
+  const ignored = runGit(args, { cwd, allowFailure: true });
+  if (ignored.exitCode === 0) return "path_ignored";
+  if (ignored.exitCode !== 1) {
+    throw new GitCommandError(args, cwd, ignored.exitCode, ignored.stderr);
+  }
+  const target = join(cwd, path);
   try {
-    let parent = cwd;
-    for (const part of path.split("/").slice(0, -1)) {
-      parent = join(parent, part);
-      const stat = lstatSync(parent);
-      if (stat.isSymbolicLink()) return "file_symlink";
-      if (!stat.isDirectory()) return "parent_not_found";
-      if (existsSync(join(parent, ".git"))) return "path_invalid";
-    }
-    const ignored = runGit(["check-ignore", "-q", "--", kind === "directory" ? `${path}/` : path], {
-      cwd,
-      allowFailure: true,
-    });
-    if (ignored.exitCode === 0) return "path_ignored";
-    if (ignored.exitCode !== 1) throw new Error(ignored.stderr);
-    const target = join(cwd, path);
     if (kind === "directory") mkdirSync(target);
     else
       closeSync(
@@ -42,13 +49,13 @@ export function createWorktreeEntry(
           0o666,
         ),
       );
-    return null;
   } catch (error) {
+    if (isPathAbsent(error)) return "parent_not_found";
     if (error instanceof Error && "code" in error) {
       if (error.code === "EEXIST") return "path_exists";
-      if (error.code === "ENOENT" || error.code === "ENOTDIR") return "parent_not_found";
       if (error.code === "ELOOP") return "file_symlink";
     }
     throw error;
   }
+  return null;
 }

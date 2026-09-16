@@ -1,5 +1,5 @@
 import type { WorktreeFileEntry } from "@otomat/domain";
-import { baseName, pathSegments } from "@web/components/files/tree/path";
+import { baseName, joinPath, pathSegments } from "@web/components/files/tree/path";
 
 export interface FileTreeLeaf {
   path: string;
@@ -78,7 +78,7 @@ export function buildFileTree<T extends FileTreeLeaf>(files: readonly T[]): File
     const segments = pathSegments(file.path);
     let current = root;
     for (const segment of file.kind === "directory" ? segments : segments.slice(0, -1)) {
-      const path = current.path === "" ? segment : `${current.path}/${segment}`;
+      const path = joinPath(current.path, segment);
       const existing = current.directories.get(path) ?? draft<T>(path);
       current.directories.set(path, existing);
       current = existing;
@@ -138,8 +138,9 @@ export function insertionPosition<T extends FileTreeLeaf>(
   const parent = rows.findIndex(
     (row) => row.node.kind === "directory" && row.node.path === directory,
   );
-  if (directory !== "" && (parent < 0 || !rows[parent]?.expanded)) return null;
-  const depth = parent < 0 ? 0 : (rows[parent]?.depth ?? 0) + 1;
+  const parentRow = rows[parent];
+  if (directory !== "" && (parentRow === undefined || !parentRow.expanded)) return null;
+  const depth = parentRow === undefined ? 0 : parentRow.depth + 1;
   const index = rows.findIndex(
     (row, i) =>
       i > parent && (row.depth < depth || (row.depth === depth && row.node.kind === "file")),

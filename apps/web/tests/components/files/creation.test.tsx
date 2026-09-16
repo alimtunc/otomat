@@ -23,14 +23,10 @@ it("creates inline in the selected folder, detects types and duplicates, and can
   ];
   const onSelect = vi.fn();
   const props = {
+    target: { kind: "repository", id: "repo" } as const,
+    editable: true,
     activePath: null,
     onSelect,
-    actions: {
-      target: { kind: "repository", id: "repo" } as const,
-      editable: true,
-      refreshing: false,
-      onRefresh: vi.fn(),
-    },
   };
   const mounted = await mountWithQuery(<FileBrowser {...props} entries={entries} />);
   const folder = mounted.container.querySelector<HTMLButtonElement>('button[title="src"]');

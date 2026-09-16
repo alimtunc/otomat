@@ -11,38 +11,36 @@ import { CreateEntryRow } from "@web/components/files/create-entry-row";
 import { decorateFiles } from "@web/components/files/decorations";
 import { FileBrowserRow } from "@web/components/files/row";
 import { FileTree } from "@web/components/files/tree/file-tree";
+import { directoryName } from "@web/components/files/tree/path";
 import type { FileTreeHandle } from "@web/components/files/tree/utils";
 import { useMemo, useRef, useState } from "react";
 
 export interface FileBrowserProps {
+  target: CheckoutTarget;
+  editable: boolean;
   entries: readonly WorktreeFileEntry[];
   activePath: string | null;
   onSelect: (path: string, openInChanges?: boolean) => void;
   scope?: string;
   changes?: SourceControlResponse;
-  actions?: {
-    target: CheckoutTarget;
-    editable: boolean;
-    refreshing: boolean;
-    onRefresh: () => void;
-  };
 }
 
 export function FileBrowser({
+  target,
+  editable,
   entries,
   activePath,
   onSelect,
   scope,
   changes,
-  actions,
 }: FileBrowserProps) {
   const form = useForm({ defaultValues: { query: "" } });
   const tree = useRef<FileTreeHandle>(null);
-  const toolbar = useRef<HTMLDivElement>(null);
   const [directory, setDirectory] = useState<string | null>(null);
   const [creating, setCreating] = useState<{
     kind: CreateWorktreeEntryRequest["kind"];
     directory: string;
+    opener: HTMLButtonElement;
   } | null>(null);
   const [openedFile, setOpenedFile] = useState(activePath);
   if (openedFile !== activePath) {
@@ -64,28 +62,25 @@ export function FileBrowser({
         );
         return (
           <div className="flex min-h-0 flex-1 flex-col">
-            <div ref={toolbar} className="flex items-center gap-0.5 px-2 py-1">
+            <div className="flex items-center gap-0.5 px-2 py-1">
               <span className="mr-auto truncate text-xs text-text-secondary">Explorer</span>
-              {actions === undefined ? null : (
-                <FilesActions
-                  {...actions}
-                  onCreate={(kind) => {
-                    field.handleChange("");
-                    setCreating({
-                      kind,
-                      directory: directory ?? activePath?.split("/").slice(0, -1).join("/") ?? "",
-                    });
-                  }}
-                />
-              )}
+              <FilesActions
+                target={target}
+                editable={editable}
+                onCreate={(kind, opener) => {
+                  field.handleChange("");
+                  setCreating({
+                    kind,
+                    directory: directory ?? (activePath === null ? "" : directoryName(activePath)),
+                    opener,
+                  });
+                }}
+              />
               <IconButton
                 label="Collapse / expand all folders"
                 icon={<Icon name="copy-minus" aria-hidden />}
-                disabled={!hasFolders}
-                onClick={() => {
-                  setCreating(null);
-                  tree.current?.toggleAll();
-                }}
+                disabled={!hasFolders || creating !== null}
+                onClick={() => tree.current?.toggleAll()}
               />
             </div>
             <div className="border-b border-border-subtle px-2.5 pb-2">
@@ -118,24 +113,20 @@ export function FileBrowser({
                     setDirectory(path);
                   }}
                   insertion={
-                    creating === null || actions === undefined
+                    creating === null
                       ? undefined
                       : {
                           directory: creating.directory,
-                          render: (depth) => (
+                          row: (
                             <CreateEntryRow
                               key={`${creating.kind}:${creating.directory}`}
-                              target={actions.target}
-                              {...creating}
+                              target={target}
+                              kind={creating.kind}
+                              directory={creating.directory}
                               entries={entries}
-                              depth={depth}
                               onCancel={() => {
                                 setCreating(null);
-                                toolbar.current
-                                  ?.querySelector<HTMLButtonElement>(
-                                    `button[aria-label="New ${creating.kind === "file" ? "file" : "folder"}"]`,
-                                  )
-                                  ?.focus();
+                                creating.opener.focus();
                               }}
                               onCreated={(entry) => {
                                 setCreating(null);
