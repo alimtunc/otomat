@@ -1,6 +1,6 @@
 import type { DiffFileContract, ReviewedFileContract } from "@otomat/domain";
 import { Checkbox, cn, DiffFileStatusChip, Icon, IconButton, Kbd } from "@otomat/ui";
-import { baseName, diffFileLabels } from "@web/components/runs/diff/files/path";
+import { baseName, diffFileLabels } from "@web/components/files/tree/path";
 import { ReviewedSyncBadge } from "@web/components/runs/diff/files/reviewed-sync";
 import { DiffStat } from "@web/components/runs/diff/stat";
 import type { ReactNode } from "react";

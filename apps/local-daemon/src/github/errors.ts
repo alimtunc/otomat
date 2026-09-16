@@ -1,5 +1,7 @@
 import type { PullRequestImportErrorCode } from "@otomat/domain";
 
+import { WorktreeConflictError } from "#git";
+
 export class GitHubCliError extends Error {
   constructor(
     readonly code: string,
@@ -49,6 +51,9 @@ export function safeGitHubFailure(
 ): PublicationFailure {
   if (error instanceof GitHubCliError || error instanceof GitHubPublicationError) {
     return { code: error.code, message: error.message };
+  }
+  if (error instanceof WorktreeConflictError) {
+    return { code: "worktree_conflict", message: error.message };
   }
   return fallback;
 }

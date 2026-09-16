@@ -1,30 +1,20 @@
-import { DaemonRequestError } from "@otomat/client";
 import type {
   AttachPullRequestRequest,
   IssuePullRequests,
   MergePullRequestRequest,
   PublishPullRequestRequest,
+  PublishRepositoryPullRequest,
   PushPullRequestRequest,
+  RepositoryPullRequestInput,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
+import { invalidateCheckout } from "@web/api/files/invalidate";
 import type { HostQueryKeys } from "@web/api/query-keys";
 import { useQueryKeys } from "@web/api/use-query-keys";
+import { daemonErrorMessage } from "@web/lib/daemon-error";
 import { pullRequestImportRefusal } from "@web/lib/pull-request/import-error";
-
-function daemonErrorMessage(error: unknown, fallback: string): string {
-  if (
-    error instanceof DaemonRequestError &&
-    typeof error.body === "object" &&
-    error.body !== null &&
-    "message" in error.body
-  ) {
-    const message = error.body.message;
-    if (typeof message === "string" && message !== "") return message;
-  }
-  return fallback;
-}
 
 interface RefreshPullRequestVariables {
   announce: boolean;
@@ -206,5 +196,30 @@ export function useDetachPullRequest(issueId: string) {
     },
     onError: (error) =>
       toast.error(pullRequestImportRefusal(error) ?? "Could not remove the attachment."),
+  });
+}
+
+export function usePublishRepositoryPullRequest(repositoryId: string) {
+  const client = useQueryClient();
+  const keys = useQueryKeys();
+  return useMutation({
+    mutationFn: (request: PublishRepositoryPullRequest) =>
+      daemon.publishRepositoryPullRequest(repositoryId, request),
+    onSuccess: (pullRequest) => {
+      client.setQueryData(keys.pullRequest(pullRequest.id), {
+        pull_request: pullRequest,
+        issue: null,
+      });
+      client.invalidateQueries({ queryKey: keys.pullRequest(pullRequest.id) });
+      invalidateIssuePullRequests(client, keys, null);
+    },
+    onSettled: () => invalidateCheckout(client, keys, { kind: "repository", id: repositoryId }),
+  });
+}
+
+export function useGenerateRepositoryPullRequest(repositoryId: string) {
+  return useMutation({
+    mutationFn: (request: RepositoryPullRequestInput) =>
+      daemon.generateRepositoryPullRequest(repositoryId, request),
   });
 }

@@ -9,7 +9,7 @@ import {
 
 import { emitLedgerEvent } from "#events";
 import { isInsideRoot } from "#git";
-import { deleteBranch } from "#git/repo";
+import { deleteBranch } from "#git/branches";
 import { pruneWorktrees, removeWorktree } from "#git/worktree-cli";
 import { findWorktreeById, updateWorktreeStatus } from "#git/worktrees-store";
 

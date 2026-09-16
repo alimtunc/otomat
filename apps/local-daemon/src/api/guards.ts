@@ -7,11 +7,16 @@ import {
   type RunRow,
   type WorkflowPresetRow,
 } from "@otomat/db";
+import { checkoutTargetSchema, type CheckoutTarget } from "@otomat/domain";
 import type { MiddlewareHandler } from "hono";
 import { createMiddleware } from "hono/factory";
 import type { ZodType } from "zod";
 
+import { isRepositoryRoot, type RepositoryBinding, type RepositoryResolver } from "#git";
 import type { ReviewSubjectRef } from "#review";
+
+import { refuseFile } from "./file-content.js";
+import { invalidRequestJson } from "./refusal.js";
 
 /** Hono env for the `/:id` run routes: {@link runGuard} resolves the row into `c.var.run`. */
 export type RunEnv = { Variables: { run: RunRow } };
@@ -67,11 +72,44 @@ export function workflowPresetGuard(db: Db) {
   });
 }
 
+export interface ResolvedCheckout {
+  target: CheckoutTarget;
+  cwd: string;
+  binding: RepositoryBinding;
+}
+
+/** Hono env of the checkout routes: {@link checkoutGuard} resolves `/:kind?/:id` into `c.var.checkout`. */
+export type CheckoutEnv = { Variables: { checkout: ResolvedCheckout } };
+
+/** Resolves a run's live worktree or a repository's root; 404 for an unknown target, 409 `workspace_unavailable` for a gone or archived tree. */
+export function checkoutGuard(repositories: RepositoryResolver) {
+  return createMiddleware<CheckoutEnv>(async (c, next) => {
+    const parsed = checkoutTargetSchema.safeParse({
+      kind: c.req.param("kind") ?? "repository",
+      id: c.req.param("id"),
+    });
+    if (!parsed.success) return invalidRequestJson(c, parsed.error.issues);
+    const target = parsed.data;
+    const binding =
+      target.kind === "run"
+        ? repositories.forRun(target.id)
+        : repositories.forRepository(target.id);
+    if (binding === null) {
+      return c.json(
+        { error: `${target.kind}_not_found`, message: "This checkout is not registered." },
+        404,
+      );
+    }
+    const cwd = target.kind === "run" ? binding.service.get(target.id)?.path : binding.rootPath;
+    if (cwd === undefined || !isRepositoryRoot(cwd)) return refuseFile(c, "workspace_unavailable");
+    c.set("checkout", { target, cwd, binding });
+    await next();
+  });
+}
+
 /** `zValidator("json", …)` returning a uniform 400 `invalid_request` on schema failure. */
 export function validateJson<T extends ZodType>(schema: T) {
   return zValidator("json", schema, (result, c) => {
-    if (!result.success) {
-      return c.json({ error: "invalid_request", issues: result.error.issues }, 400);
-    }
+    if (!result.success) return invalidRequestJson(c, result.error.issues);
   });
 }

@@ -116,8 +116,8 @@ class CommandGitHubCli implements GitHubCli {
     return resolveRemote(this.run, cwd);
   }
 
-  push(cwd: string, remote: string, branch: string): Promise<void> {
-    return push(this.run, cwd, remote, branch);
+  push(cwd: string, remote: string, branch: string, sha?: string): Promise<void> {
+    return push(this.run, cwd, remote, branch, sha);
   }
 
   forcePushWithLease(input: ForcePushWithLeaseInput): Promise<void> {

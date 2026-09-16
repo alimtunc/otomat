@@ -13,18 +13,20 @@ export * from "./diff.js";
 export { worktreeGitView, type WorktreeGitView } from "./diff-inputs.js";
 export { scrubGitEnv } from "./git-cli.js";
 export { availableBranchName, sanitizeBranchName } from "./branch-name.js";
+export * from "./branches.js";
 export {
-  branchExists,
   commitsSince,
   detectDefaultBranch,
   hasCommit,
   headSha,
   isRepositoryRoot,
-  listBranches,
+  mergeBase,
   repositoryRemotes,
+  revParse,
   searchTrackedFiles,
   uncommittedPaths,
   unpushedCommitCount,
+  verifyRef,
   type CommitSummary,
   type TrackedFileMatches,
 } from "./repo.js";
@@ -33,6 +35,9 @@ export { probeRemoteBranch, resolveBaseSha, type RemoteBranchProbe } from "./rem
 export * from "./repository-path.js";
 export * from "./tree-file.js";
 export * from "./file-write.js";
+export { checkoutTree } from "./checkout-tree.js";
+export { hasPartialStaging } from "./worktree-snapshot.js";
+export * from "./source-control/index.js";
 export * from "./probe.js";
 export * from "./resolver.js";
 export * from "./service-contract.js";

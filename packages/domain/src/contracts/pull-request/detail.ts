@@ -72,6 +72,7 @@ export const PUBLICATION_BLOCKERS = [
   "worktree_missing",
   "remote_missing",
   "diff_empty",
+  "staged_partial",
   "pr_terminal",
 ] as const;
 export const publicationBlockerSchema = z.object({

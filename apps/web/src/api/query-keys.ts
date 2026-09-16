@@ -5,6 +5,7 @@ import {
   type ReviewTarget,
   type RunDiffScopeSelector,
   type UsageFilters,
+  type CheckoutTarget,
 } from "@otomat/domain";
 
 function runDiffScopeKey(scope: RunDiffScopeSelector): string {
@@ -46,6 +47,15 @@ export function hostKeys(host: ExecutionHostId) {
       [host, "repositories", repositoryId, "branches"] as const,
     repositoryFiles: (repositoryId: string | null, query: string) =>
       [host, "repositories", repositoryId, "files", query] as const,
+    repositoryTree: (id: string | null) => [host, "repositories", id, "tree"] as const,
+    sourceControl: (target: CheckoutTarget) =>
+      [host, "source-control", target.kind, target.id] as const,
+    repositoryPullRequestPreview: (repositoryId: string, baseRef: string, revision: string) =>
+      [host, "source-control", "repository", repositoryId, "pr", baseRef, revision] as const,
+    checkoutFile: (target: CheckoutTarget, path: string) =>
+      target.kind === "run"
+        ? ([host, "run", target.id, "files", "content", path] as const)
+        : ([host, "repositories", target.id, "tree", "content", path] as const),
     runtimes: [host, "runtimes"] as const,
     runtimeModels: (runtimeId: string | null) => [host, "runtimes", runtimeId, "models"] as const,
     runtimeOptions: (runtimeId: string | null, model: string | null) =>
@@ -73,7 +83,7 @@ export function hostKeys(host: ExecutionHostId) {
     runs: [host, "runs"] as const,
     runsList: (projectId?: string) => [host, "runs", "project", projectId ?? null] as const,
     runCatalog: (projectId?: string) => [host, "runs", "catalog", projectId ?? null] as const,
-    runsForIssue: (issueId: string) => [host, "runs", { issueId }] as const,
+    runsForIssue: (issueId: string | null) => [host, "runs", { issueId }] as const,
     run: (id: string) => [host, "run", id] as const,
     runEventWindow: (id: string) => [host, "run-events", id] as const,
     stepEventWindow: (id: string, stepId: string) =>
@@ -110,8 +120,6 @@ export function hostKeys(host: ExecutionHostId) {
       [host, "run", id, "fix-proof", commentId] as const,
     runWorkspace: (id: string) => [host, "run", id, "workspace"] as const,
     runFiles: (id: string) => [host, "run", id, "files"] as const,
-    runFile: (id: string, path: string | null) =>
-      [host, "run", id, "files", "content", path] as const,
     competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
       [host, "run", runId, "compete", groupId, stepId, "diff"] as const,
     reviewDetail: (target: ReviewTarget) =>

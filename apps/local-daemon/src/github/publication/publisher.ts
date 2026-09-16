@@ -13,8 +13,10 @@ import type {
   PushPullRequestRequest,
 } from "@otomat/domain";
 
-import { GitHubPublicationError } from "../errors.js";
+import { serializeByKey } from "#serialize";
+
 import { resolveGenerationAgent, type GenerationAgent } from "../generation/agent.js";
+import { requireGenerator } from "../generation/generator.js";
 import { buildGenerationInput } from "../generation/input.js";
 import type { PullRequestGenerator, PullRequestView } from "../types.js";
 import { composeSubject, issueIdentifier, resolvePublicationRequest } from "./details.js";
@@ -84,7 +86,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
 
   /** Serialized with the publications: a proposal written between a push and its create would describe another tree. */
   generate(run: RunRow, agent: GenerationAgent): Promise<PullRequestProposal> {
-    const generator = this.requireGenerator();
+    const generator = requireGenerator(this.generator);
     return this.serialize(run.id, () => this.writeProposal(run, agent, generator));
   }
 
@@ -111,30 +113,12 @@ class PullRequestPublisher implements PullRequestPublicationService {
     while (this.operations.size > 0) await Promise.allSettled(this.operations.values());
   }
 
-  /** Queued, never dropped: two writers on one branch is how a lease turns into a lost commit. */
   private serialize<T>(runId: string, operation: () => Promise<T>): Promise<T> {
-    const active = this.operations.get(runId);
-    const started: Promise<T> = (active ? active.then(operation, operation) : operation()).finally(
-      () => {
-        if (this.operations.get(runId) === started) this.operations.delete(runId);
-      },
-    );
-    this.operations.set(runId, started);
-    return started;
-  }
-
-  private requireGenerator(): PullRequestGenerator {
-    if (this.generator === undefined) {
-      throw new GitHubPublicationError(
-        "pr_generation_unavailable",
-        "This daemon runs no metadata generator; write the title and description by hand.",
-      );
-    }
-    return this.generator;
+    return serializeByKey(this.operations, runId, operation);
   }
 
   private requireGenerationAgent(run: RunRow): GenerationAgent {
-    this.requireGenerator();
+    requireGenerator(this.generator);
     return resolveGenerationAgent(this.config.db, run);
   }
 
@@ -189,7 +173,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
   ): Promise<PullRequestPublicationDetails> {
     if (agent === null) throw new Error(`publication for run ${run.id} lost its generation agent`);
     this.enterPhase(run.id, "generating");
-    const proposal = await this.writeProposal(run, agent, this.requireGenerator());
+    const proposal = await this.writeProposal(run, agent, requireGenerator(this.generator));
     return { subject: proposal.subject, body: proposal.body, head_ref: proposal.branch };
   }
 

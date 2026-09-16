@@ -1,10 +1,16 @@
 import { parsePatchHunks, type PatchHunk } from "./parse.js";
 import type { PatchRange } from "./range.js";
 
-function patchPreamble(patch: string): string[] {
+export function patchPreamble(patch: string): string[] {
   const rows = patch.split("\n");
   const first = rows.findIndex((row) => row.startsWith("@@"));
   return first === -1 ? rows : rows.slice(0, first);
+}
+
+/** One self-contained unified diff per hunk, each carrying the file's preamble. */
+export function hunkPatches(patch: string): string[] {
+  const preamble = patchPreamble(patch);
+  return parsePatchHunks(patch).map((hunk) => [...preamble, hunk.text].join("\n"));
 }
 
 function overlaps(hunk: PatchHunk, range: PatchRange): boolean {

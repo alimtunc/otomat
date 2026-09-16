@@ -67,9 +67,9 @@ function availableModel(runtime: KnownRuntimeId, model: string | null): string |
   }
 }
 
-export function resolveGenerationAgent(db: Db, run: RunRow): GenerationAgent {
+export function resolveGenerationAgent(db: Db, run: RunRow | null): GenerationAgent {
   const preference = readPullRequestGenerator(db);
-  const inherited = runExecution(run);
+  const inherited = run === null ? { runtime: null, model: null } : runExecution(run);
   const requested =
     preference.runtime === null
       ? { runtime: inherited.runtime, model: inherited.model, options: {} }
@@ -77,7 +77,7 @@ export function resolveGenerationAgent(db: Db, run: RunRow): GenerationAgent {
   if (requested.runtime === null) {
     throw new GitHubPublicationError(
       "pr_generator_not_configured",
-      "This run froze no runtime to inherit. Choose a PR metadata generator in Settings, or write the metadata by hand.",
+      "This workspace has no runtime to inherit. Choose a PR metadata generator in Settings, or write the metadata by hand.",
     );
   }
   const runtime = availableRuntime(requested.runtime);

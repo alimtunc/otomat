@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
+import { retryTransportOnly } from "@web/api/query-client";
 import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useGitHubConnection() {
@@ -40,5 +41,18 @@ export function usePullRequestOverview(pullRequestId: string) {
   return useQuery({
     queryKey: keys.pullRequestOverview(pullRequestId),
     queryFn: () => daemon.getPullRequestOverview(pullRequestId),
+  });
+}
+
+export function useRepositoryPullRequestPreview(
+  repositoryId: string,
+  baseRef: string,
+  revision: string,
+) {
+  const keys = useQueryKeys();
+  return useQuery({
+    queryKey: keys.repositoryPullRequestPreview(repositoryId, baseRef, revision),
+    queryFn: () => daemon.previewRepositoryPullRequest(repositoryId, baseRef),
+    retry: retryTransportOnly,
   });
 }

@@ -69,6 +69,23 @@ describe("diff card syntax highlighting", () => {
     await cleanup();
   });
 
+  it("colours JSON keys and values in a partial package.json hunk", async () => {
+    const entry = file({
+      path: "package.json",
+      patch:
+        'diff --git a/package.json b/package.json\n--- a/package.json\n+++ b/package.json\n@@ -12,4 +12,4 @@\n   "dependencies": {\n-    "react": "^19.2.0",\n+    "react": "^19.3.0",\n     "zod": "^4.6.2"\n   }\n',
+    });
+    const { container, cleanup } = await renderCard(entry);
+    await act(async () => observer.reveal());
+    expect([...container.querySelectorAll(".hljs-attr")].map((node) => node.textContent)).toContain(
+      '"react"',
+    );
+    expect(
+      [...container.querySelectorAll(".hljs-string")].map((node) => node.textContent),
+    ).toContain('"^19.3.0"');
+    await cleanup();
+  });
+
   it("shows an unknown extension as plain text instead of inventing a language", async () => {
     const entry = file({ path: "assets/thing.zzz" });
     const { container, cleanup } = await renderCard(entry);

@@ -19,6 +19,8 @@ function truncate(text: string, budget: number): string {
 }
 
 function issueSection(input: GenerationInput): string {
+  if (input.issue === null)
+    return "Project changes; no issue is attached. Do not invent an issue reference.";
   const heading =
     input.issue.sourceIdentifier === null
       ? `Issue: ${input.issue.title}`

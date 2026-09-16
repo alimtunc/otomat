@@ -46,6 +46,8 @@ export function invalidateForEvent(
   }
   if (event.type === "git.diff_updated") {
     client.invalidateQueries({ queryKey: keys.reviewDiffs({ kind: "run", id: runId }) });
+    client.invalidateQueries({ queryKey: keys.runFiles(runId) });
+    client.invalidateQueries({ queryKey: keys.sourceControl({ kind: "run", id: runId }) });
     return;
   }
   if (event.type.startsWith("review.")) {

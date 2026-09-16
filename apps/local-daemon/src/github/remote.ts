@@ -85,10 +85,17 @@ export async function push(
   cwd: string,
   remote: string,
   branch: string,
+  sha?: string,
 ): Promise<void> {
   const result = await run({
     command: "git",
-    args: ["push", "--no-verify", "--set-upstream", remote, `HEAD:refs/heads/${branch}`],
+    args: [
+      "push",
+      "--no-verify",
+      "--set-upstream",
+      remote,
+      `${sha ?? "HEAD"}:refs/heads/${branch}`,
+    ],
     cwd,
   });
   if (commandSucceeded(result)) return;
@@ -101,7 +108,7 @@ export async function push(
   assertPublicationSucceeded(
     result,
     "github_push_failed",
-    "The run branch could not be pushed to GitHub.",
+    "The branch could not be pushed to GitHub.",
   );
 }
 

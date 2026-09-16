@@ -21,12 +21,14 @@ function fakeClient() {
   return { client, keys };
 }
 
-it("invalidates the diff cache and completion report on git.diff_updated", () => {
+it("invalidates files, source control, review diffs and the report on git.diff_updated", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, local, "run-1", event("git.diff_updated"));
   expect(keys).toEqual([
     local.runCompletionReport("run-1"),
     local.reviewDiffs({ kind: "run", id: "run-1" }),
+    local.runFiles("run-1"),
+    local.sourceControl({ kind: "run", id: "run-1" }),
   ]);
 });
 

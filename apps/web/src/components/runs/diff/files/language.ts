@@ -1,5 +1,5 @@
 import type { DiffHighlighterLang } from "@git-diff-view/react";
-import { baseName } from "@web/components/runs/diff/files/path";
+import { baseName } from "@web/components/files/tree/path";
 
 /** Names the highlighter cannot infer from an extension, keyed by lowercased basename. */
 const BY_FILENAME = new Map<string, DiffHighlighterLang>([

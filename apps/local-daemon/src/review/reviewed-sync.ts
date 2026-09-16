@@ -6,6 +6,8 @@ import {
 } from "@otomat/db";
 import type { SetReviewedFileRequest } from "@otomat/domain";
 
+import { serializeByKey } from "#serialize";
+
 import { computeDiff } from "./diff.js";
 import { reloadOrThrow } from "./reload.js";
 import { driveReviewedFileSync, upsertReviewedMark } from "./reviewed-files.js";
@@ -16,17 +18,6 @@ import type { ReviewContext, ReviewSubject } from "./types.js";
 /** Queued per mark: a check/uncheck burst on one file must reach GitHub in the order the reviewer made it. */
 const deliveries = new Map<string, Promise<unknown>>();
 
-function serialize<T>(markId: string, operation: () => Promise<T>): Promise<T> {
-  const active = deliveries.get(markId);
-  const started: Promise<T> = (active ? active.then(operation, operation) : operation()).finally(
-    () => {
-      if (deliveries.get(markId) === started) deliveries.delete(markId);
-    },
-  );
-  deliveries.set(markId, started);
-  return started;
-}
-
 export function deliverReviewedFile(
   ctx: ReviewContext,
   subject: ReviewSubject,
@@ -36,7 +27,7 @@ export function deliverReviewedFile(
   if (pullRequest === null || pullRequest.number === null) {
     return Promise.resolve(driveReviewedFileSync(ctx, mark, "local", { sync_error: null }));
   }
-  return serialize(mark.id, async () => {
+  return serializeByKey(deliveries, mark.id, async () => {
     const current = reloadOrThrow(
       () => getReviewedFile(ctx.db, mark.id),
       `reviewed file ${mark.id} vanished while synchronizing`,

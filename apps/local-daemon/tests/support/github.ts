@@ -8,6 +8,7 @@ import type {
 } from "@otomat/domain";
 
 import { headSha } from "#git";
+import { runGit } from "#git/git-cli";
 import {
   GitHubCliError,
   type ForcePushWithLeaseInput,
@@ -187,6 +188,16 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     },
     getPullRequest: async () => null,
     publishability: async () => PUBLISHABLE_WORKSPACE,
+    previewRepositoryPullRequest: async () => ({
+      revision: "revision",
+      publishability: PUBLISHABLE_WORKSPACE,
+    }),
+    generateRepositoryPullRequest: async () => {
+      throw new Error("repository generation stub not configured");
+    },
+    publishRepositoryPullRequest: async () => {
+      throw new Error("publishRepositoryPullRequest stub not configured");
+    },
     publish: async () => {
       throw new Error("publish stub not configured");
     },
@@ -269,11 +280,14 @@ export class FakeGitHubCli implements GitHubCli {
     return this.remote;
   }
 
-  async push(cwd: string, _remote: string, branch: string): Promise<void> {
+  async push(cwd: string, remote: string, branch: string, sha?: string): Promise<void> {
     this.pushCalls += 1;
     this.pushedBranches.push(branch);
     if (this.pushError) throw this.pushError;
-    this.remoteHeads.set(branch, headSha(cwd));
+    const pushed = sha ?? headSha(cwd);
+    this.remoteHeads.set(branch, pushed);
+    // A real push also moves the remote-tracking ref, which the upstream set afterwards points at.
+    runGit(["update-ref", `refs/remotes/${remote}/${branch}`, pushed], { cwd });
   }
 
   async forcePushWithLease(input: ForcePushWithLeaseInput): Promise<void> {

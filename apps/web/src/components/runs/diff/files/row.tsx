@@ -1,8 +1,8 @@
 import type { DiffFileContract } from "@otomat/domain";
-import { Button, cn, Icon, resolveStatus } from "@otomat/ui";
-import { diffFileLabels } from "@web/components/runs/diff/files/path";
-import { INDENT_REM, ROW_PADDING_REM } from "@web/components/runs/diff/files/row.utils";
-import { STATUS_LETTER } from "@web/components/runs/diff/files/status";
+import { Button, cn, FileIcon, Icon, resolveStatus } from "@otomat/ui";
+import { INDENT_REM, ROW_PADDING_REM } from "@web/components/files/tree/indent";
+import { diffFileLabels } from "@web/components/files/tree/path";
+import { STATUS_LETTER } from "@web/components/files/tree/status";
 import { DiffStat } from "@web/components/runs/diff/stat";
 
 export interface DiffFileRowProps {
@@ -39,6 +39,7 @@ export function DiffFileRow({
         active && "bg-selected text-foreground",
       )}
     >
+      <FileIcon path={file.path} />
       <span
         aria-label={resolveStatus("diffFile", file.status).label}
         className={cn("w-3 shrink-0 text-center font-mono text-micro", status.className)}
