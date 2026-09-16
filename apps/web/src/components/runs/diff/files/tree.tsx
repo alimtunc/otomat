@@ -1,6 +1,6 @@
 import type { DiffFileContract } from "@otomat/domain";
-import { FileTree } from "@web/components/runs/diff/files/file-tree";
-import { diffFileLabels } from "@web/components/runs/diff/files/path";
+import { FileTree } from "@web/components/files/tree/file-tree";
+import { diffFileLabels } from "@web/components/files/tree/path";
 import { DiffFileRow } from "@web/components/runs/diff/files/row";
 
 export interface DiffFileTreeProps {

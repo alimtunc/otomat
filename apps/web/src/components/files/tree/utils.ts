@@ -1,4 +1,4 @@
-import { baseName, pathSegments } from "@web/components/runs/diff/files/path";
+import { baseName, pathSegments } from "@web/components/files/tree/path";
 
 export interface FileTreeLeaf {
   path: string;

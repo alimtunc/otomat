@@ -1,8 +1,8 @@
 import type { RunDetail } from "@otomat/domain";
 import { RunStatusChip } from "@otomat/ui";
 import { useRunUsage } from "@web/api/runs/queries";
+import { baseName } from "@web/components/files/tree/path";
 import { CopyablePath } from "@web/components/runs/copyable-path";
-import { baseName } from "@web/components/runs/diff/files/path";
 import { UsageTokens } from "@web/components/runs/usage/tokens";
 import type { ReactNode } from "react";
 

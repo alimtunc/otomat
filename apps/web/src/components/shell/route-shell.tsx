@@ -40,7 +40,6 @@ export interface RouteShellProps {
   /** Fixed row between the page header and the scrollable content. */
   banner?: ReactNode;
   rightPanel?: ReactNode;
-  issueRunId?: string;
   children: ReactNode;
 }
 
@@ -55,7 +54,6 @@ export function RouteShell({
   actions,
   banner,
   rightPanel,
-  issueRunId,
   children,
 }: RouteShellProps) {
   const { density } = useTheme();
@@ -186,7 +184,7 @@ export function RouteShell({
         onSearchChange={palette.setSearch}
         groups={paletteGroups}
       />
-      <QuickOpen projectId={shell.currentProjectId} issueRunId={issueRunId} />
+      <QuickOpen projectId={shell.currentProjectId} />
       <NewIssueDialog
         open={newIssueOpen}
         onOpenChange={setNewIssueOpen}

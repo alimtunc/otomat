@@ -59,6 +59,7 @@ export function RepositoryPullRequestDialog({
           {(data) => (
             <RepositoryPullRequestForm
               repositoryId={repositoryId}
+              branches={data.branches}
               defaultBranch={data.default_branch}
               revision={revision}
               publish={publish}

@@ -1,4 +1,4 @@
-import { diffFileLabels } from "@web/components/runs/diff/files/path";
+import { diffFileLabels } from "@web/components/files/tree/path";
 import { describe, expect, it } from "vitest";
 
 function names(path: string, oldPath: string | null = null) {

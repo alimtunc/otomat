@@ -1,7 +1,7 @@
 import { getPullRequestForRun, type PullRequestRow } from "@otomat/db";
 import type { PublicationBlocker, PullRequestPublishability } from "@otomat/domain";
 
-import { uncommittedPaths } from "#git";
+import { hasPartialStaging, uncommittedPaths } from "#git";
 
 import { GitHubCliError, GitHubPublicationError } from "../errors.js";
 import type { PublicationConfig, PublicationWorkspace } from "./types.js";
@@ -68,6 +68,16 @@ export async function computePublishability(
     deletions: diff.files.reduce((total, file) => total + file.deletions, 0),
     dirty: uncommittedPaths(workspace.worktree.path).length > 0,
   };
+  // Publication commits the worktree as a whole, so a partial selection in its index would be lost or merged in.
+  if (hasPartialStaging(workspace.worktree.path)) {
+    return {
+      ...resolved,
+      blocker: {
+        code: "staged_partial",
+        message: `The worktree on ${workspace.worktree.branch} has staged and unstaged changes. Commit the staged selection or stage the rest before publishing.`,
+      },
+    };
+  }
   // An existing pull request takes updates whatever the diff now shows; only a creation needs one.
   if (row?.number !== null && row?.number !== undefined) return { ...resolved, blocker: null };
   if (diff.files.length === 0) {

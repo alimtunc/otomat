@@ -1,5 +1,5 @@
 import type { ChangeStatus } from "@otomat/domain";
-import { FolderRow } from "@web/components/runs/diff/files/folder-row";
+import { FolderRow } from "@web/components/files/tree/folder-row";
 import {
   buildFileTree,
   directoryPaths,
@@ -7,7 +7,7 @@ import {
   treeKeyStep,
   visibleTreeRows,
   type FileTreeLeaf,
-} from "@web/components/runs/diff/files/tree.utils";
+} from "@web/components/files/tree/utils";
 import { asStrings } from "@web/lib/coerce";
 import { readScoped, writeScoped } from "@web/lib/storage";
 import { useMemo, useState, type ReactNode } from "react";

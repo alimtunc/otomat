@@ -104,7 +104,7 @@ under `apps/local-daemon/src/<module>`, consumed through
 | `apps/local-daemon/src/github/import` | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
 | `apps/web/src/components/pull-requests` | The issue's pull requests: attached cards, detected candidates, manual import, detach. |
 | `apps/web/src/components/runs/files` | The run's Files tab view: lists the worktree and hands it to the shared explorer and Files/Changes workspace. |
-| `apps/web/src/components/files` | Shared editable explorer, scoped quick-open, Monaco setup, and Files/Changes workspace. |
+| `apps/web/src/components/files` | Shared editable explorer, the file tree primitives (`tree/`), scoped quick-open, Monaco setup, and Files/Changes workspace. |
 | `apps/web/src/components/source-control` | Changes inside Files: staged/unstaged diffs, Git actions, commits and PR publication. |
 | `apps/local-daemon/src/git/source-control` | Captured HEAD/index/worktree diffs and revision-checked stage, unstage, discard and staged commits. |
 | `packages/domain/src/patch` | The one unified-diff reader: hunks, range coverage, GitHub anchor refusals. |
@@ -1740,9 +1740,9 @@ tokenizer provide syntax colors without starting a language service. Importing
 the full JSON language registration also loads editor services it does not need
 for coloration, so only its tokenizer is registered. CodeMirror
 measured lighter and was rejected: the operator's VS Code keybindings are the
-product criterion. The file tree is the diff reviewer's `FileTree`, which takes
-the row to render, so the two surfaces share folding and reveal without the
-tree layout depending on a diff contract. Git status decorates file names with
+product criterion. The file tree (`components/files/tree`) takes the row to
+render, so the diff reviewer and the Files surfaces share folding, reveal and
+keyboard navigation without the tree layout depending on a diff contract. Git status decorates file names with
 colored A/M/D/R badges and marks changed ancestor folders, including collapsed
 ones. Deleted paths remain visible and open their change diff. Directories sort before files, with
 natural case-insensitive ordering and file-type icons. Arrow keys navigate and
@@ -1764,7 +1764,10 @@ quick-open returns to the file editor. Changes uses `GET
 resolves the checkout from its own repository bindings; archived or missing
 worktrees cannot be mutated. Each response captures HEAD, the real index tree,
 and the working tree once. Staged Changes compares HEAD to the index; Changes
-compares the index to the working tree. Review Diff retains its existing scope.
+compares the index to the working tree. An unmerged index writes no tree, so a
+conflicted checkout answers its conflicts with a revision hashed from the stage
+listing: the stale check still holds and every mutation is refused as
+`checkout_conflicted`. Review Diff retains its existing scope.
 
 `POST` to the same route stages, unstages or discards a file, change block or
 line selection. `all: true` applies the action to every change in the selected
@@ -1784,8 +1787,11 @@ warn that the loss is irreversible; ignored files remain untouched. Successful m
 invalidate the checkout's files, source control and applicable review caches.
 Automatic worktree snapshots refuse mixed staged/unstaged work before changing
 the index, so publication or archival cannot silently replace a manual staging
-selection. The operator must commit that selection or stage the remaining work
-before retrying the snapshot.
+selection. A run's publishability names that state as the `staged_partial`
+blocker before a publication starts; a snapshot that still meets it fails the
+publication as `worktree_conflict`, and the API answers the same refusal with a
+409. The operator must commit that selection or stage the remaining work before
+retrying the snapshot.
 
 `POST /api/source-control/:kind/:id/commit` commits only the reviewed index,
 without staging files or replacing the configured Git identity. Hooks and signing
@@ -1810,8 +1816,8 @@ is excluded. Staged changes must be committed first; unstaged changes stay local
 Publication creates a named branch when it
 differs from the checkout, refuses default/base/protected branches and existing
 branch collisions, fetches the base, checks for a committed diff and rechecks the
-checkout revision. It pushes the captured commit by SHA, never force-pushes, and
-reuses an existing PR when retried. Generation and publication commands are
+checkout revision. It pushes the captured commit by SHA, never force-pushes,
+sets the branch's upstream afterwards, and reuses an existing PR when retried. Generation and publication commands are
 serialized per repository and reject a checkout that changed during generation.
 Confirmed provider data is mirrored through the existing PR import store without
 inventing an issue or run. A failed push leaves the local branch available for

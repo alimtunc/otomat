@@ -5,6 +5,7 @@ import { showRoutes } from "hono/dev";
 import { HTTPException } from "hono/http-exception";
 
 import { correlatedRequestLog, DiagnosticLogRing, recordThrownFailure } from "#diagnostics";
+import { WorktreeConflictError } from "#git";
 
 import type { ApiDeps } from "./deps.js";
 import { createActivityRoutes } from "./routes/activity.js";
@@ -84,6 +85,9 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse();
+    if (err instanceof WorktreeConflictError) {
+      return c.json({ error: "worktree_conflict", message: err.message }, 409);
+    }
     console.error("[otomat] api error", err);
     recordThrownFailure(diagnosticLog, c, err);
     return c.json({ error: "internal_error" }, 500);

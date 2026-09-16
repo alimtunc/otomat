@@ -1,8 +1,8 @@
 import { Button, cn, FileIcon } from "@otomat/ui";
 import type { DecoratedFile } from "@web/components/files/decorations";
-import { baseName } from "@web/components/runs/diff/files/path";
-import { INDENT_REM, ROW_PADDING_REM } from "@web/components/runs/diff/files/row.utils";
-import { STATUS_LETTER } from "@web/components/runs/diff/files/status";
+import { INDENT_REM, ROW_PADDING_REM } from "@web/components/files/tree/indent";
+import { baseName } from "@web/components/files/tree/path";
+import { STATUS_LETTER } from "@web/components/files/tree/status";
 
 export interface FileBrowserRowProps {
   entry: DecoratedFile;

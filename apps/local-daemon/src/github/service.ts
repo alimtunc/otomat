@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 
+import { serializeByKey } from "#serialize";
+
 import { createGitHubConnectionService } from "./connection.js";
 import { createDeviceAuthorization } from "./device-flow.js";
 import { resolveGenerationAgent } from "./generation/agent.js";
@@ -17,7 +19,6 @@ import {
   previewRepositoryPullRequest,
 } from "./repository/workspace.js";
 import { submitPullRequestReview } from "./review-submission.js";
-import { serializeByKey } from "./serialize.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
 import { readViewedFiles, syncViewedFile } from "./viewed-files.js";
 

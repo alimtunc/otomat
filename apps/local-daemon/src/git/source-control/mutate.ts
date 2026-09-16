@@ -26,7 +26,11 @@ function changePaths(files: DiffFileContract[]): string[] {
   ];
 }
 
-function assertFileChanges(cwd: string, snapshot: CheckoutSnapshot, paths: string[]): void {
+function assertFileChanges(
+  cwd: string,
+  snapshot: Extract<CheckoutSnapshot, { conflicted: false }>,
+  paths: string[],
+): void {
   for (const path of paths) {
     assertChangePath(cwd, path);
     for (const tree of [snapshot.head, snapshot.index, snapshot.tree]) {
@@ -86,7 +90,7 @@ function discardPaths(cwd: string, index: string, paths: string[]): void {
 export function changeCheckoutFiles(cwd: string, request: ChangeFilesRequest): void {
   if (request.path !== undefined) assertChangePath(cwd, request.path);
   const snapshot = sourceControlSnapshot(cwd);
-  if (snapshot.response.conflicts.length > 0)
+  if (snapshot.conflicted)
     throw new SourceControlError(
       "checkout_conflicted",
       "Resolve merge conflicts before changing the staging area.",

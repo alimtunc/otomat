@@ -26,7 +26,6 @@ beforeEach(() => {
   vi.spyOn(cli, "push").mockImplementation(async (cwd, remote, branch, sha) => {
     if (cli.pushError !== null) throw cli.pushError;
     runGit(["push", remote, `${sha}:refs/heads/${branch}`], { cwd });
-    cli.pushedBranches.push(branch);
     cli.remoteHeads.set(branch, sha ?? "");
   });
   github = createGitHubService({
@@ -82,6 +81,9 @@ it(
     expect(cli.push).toHaveBeenCalledWith(fix.repo.root, "origin", "feat/manual-pr", head);
     expect(fix.repo.git("rev-parse", "origin/main")).toBe(remoteMain);
     expect(fix.repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("feat/manual-pr");
+    expect(fix.repo.git("rev-parse", "--abbrev-ref", "feat/manual-pr@{upstream}").trim()).toBe(
+      "origin/feat/manual-pr",
+    );
     expect(readFileSync(join(fix.repo.root, "manual.txt"), "utf8")).toBe("uncommitted\n");
     expect(listRuns(fix.db)).toEqual([]);
     const retried = await github.publishRepositoryPullRequest(fix.repositoryId, request());

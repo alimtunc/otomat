@@ -1,5 +1,5 @@
 import type { DiffFileContract } from "@otomat/domain";
-import { diffFileLabels } from "@web/components/runs/diff/files/path";
+import { diffFileLabels } from "@web/components/files/tree/path";
 import { DiffFileRow } from "@web/components/runs/diff/files/row";
 
 export interface DiffFileListProps {

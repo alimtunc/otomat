@@ -2,11 +2,9 @@ import { z } from "zod";
 
 import { publishPullRequestRequestSchema, pullRequestPublishabilitySchema } from "./detail.js";
 
-export const BRANCH_REF_MAX_LENGTH = 120;
-
 export const repositoryPullRequestInputSchema = z.strictObject({
   revision: z.string().min(1),
-  base_ref: z.string().trim().min(1).max(BRANCH_REF_MAX_LENGTH),
+  base_ref: z.string().trim().min(1).max(120),
 });
 export type RepositoryPullRequestInput = z.infer<typeof repositoryPullRequestInputSchema>;
 

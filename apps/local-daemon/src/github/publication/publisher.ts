@@ -13,10 +13,11 @@ import type {
   PushPullRequestRequest,
 } from "@otomat/domain";
 
+import { serializeByKey } from "#serialize";
+
 import { resolveGenerationAgent, type GenerationAgent } from "../generation/agent.js";
 import { requireGenerator } from "../generation/generator.js";
 import { buildGenerationInput } from "../generation/input.js";
-import { serializeByKey } from "../serialize.js";
 import type { PullRequestGenerator, PullRequestView } from "../types.js";
 import { composeSubject, issueIdentifier, resolvePublicationRequest } from "./details.js";
 import { publishOnce } from "./publish-once.js";

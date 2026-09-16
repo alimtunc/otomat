@@ -27,11 +27,11 @@ export function useProjectRuns(projectId: string | undefined) {
   });
 }
 
-export function useRunsForIssue(issueId: string) {
+export function useRunsForIssue(issueId: string | null) {
   const keys = useQueryKeys();
   return useQuery({
     queryKey: keys.runsForIssue(issueId),
-    queryFn: () => daemon.listRuns({ issueId }),
+    queryFn: issueId === null ? skipToken : () => daemon.listRuns({ issueId }),
   });
 }
 

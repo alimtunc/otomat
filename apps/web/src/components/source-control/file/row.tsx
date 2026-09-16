@@ -1,6 +1,6 @@
 import type { DiffFileContract, SourceControlAction } from "@otomat/domain";
 import { Button, FileIcon, cn, resolveStatus } from "@otomat/ui";
-import { STATUS_LETTER } from "@web/components/runs/diff/files/status";
+import { STATUS_LETTER } from "@web/components/files/tree/status";
 import { ChangeActions } from "@web/components/source-control/change-actions";
 
 export interface ChangeFileRowProps {

@@ -36,6 +36,7 @@ export * from "./repository-path.js";
 export * from "./tree-file.js";
 export * from "./file-write.js";
 export { checkoutTree } from "./checkout-tree.js";
+export { hasPartialStaging } from "./worktree-snapshot.js";
 export * from "./source-control/index.js";
 export * from "./probe.js";
 export * from "./resolver.js";

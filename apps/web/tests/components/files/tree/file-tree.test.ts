@@ -5,7 +5,7 @@ import {
   expandAncestors,
   visibleTreeRows,
   type FileTreeNode,
-} from "@web/components/runs/diff/files/tree.utils";
+} from "@web/components/files/tree/utils";
 import { describe, expect, it } from "vitest";
 
 import { diffFile } from "#support/diff-file";

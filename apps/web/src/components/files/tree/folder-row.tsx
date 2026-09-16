@@ -1,7 +1,7 @@
 import type { ChangeStatus } from "@otomat/domain";
 import { Button, Icon, cn } from "@otomat/ui";
-import { INDENT_REM, ROW_PADDING_REM } from "@web/components/runs/diff/files/row.utils";
-import { STATUS_LETTER } from "@web/components/runs/diff/files/status";
+import { INDENT_REM, ROW_PADDING_REM } from "@web/components/files/tree/indent";
+import { STATUS_LETTER } from "@web/components/files/tree/status";
 
 export interface FolderRowProps {
   path: string;

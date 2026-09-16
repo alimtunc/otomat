@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
 import { createGitWorktreeService, type GitWorktreeService } from "#git";
+import { runGit } from "#git/git-cli";
 import { createGitHubService, type GitHubService } from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
@@ -113,6 +114,15 @@ describe("publishing a run whose execution did not succeed", () => {
       blocker: { code: "diff_empty" },
     });
     expect(publishability.blocker?.message).not.toContain("Run not ready");
+  });
+
+  it("blocks a partially staged worktree so a snapshot never commits half a selection", async () => {
+    runGit(["add", "change.txt"], { cwd: worktreePath });
+    writeFileSync(join(worktreePath, "change.txt"), "unstaged on top\n");
+
+    await expect(github.publishability(RUN_ID)).resolves.toMatchObject({
+      blocker: { code: "staged_partial" },
+    });
   });
 
   it("blocks a run whose workspace is gone on the exact technical reason", async () => {

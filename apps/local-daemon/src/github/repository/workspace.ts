@@ -60,7 +60,7 @@ async function repositoryPublicationWorkspace(
   const cwd = binding.rootPath;
   assertBranchName(cwd, baseRef, "Enter a valid target branch name.");
   const snapshot = sourceControlSnapshot(cwd);
-  if (snapshot.response.conflicts.length > 0)
+  if (snapshot.conflicted)
     throw new GitHubPublicationError(
       "checkout_conflicted",
       "Resolve merge conflicts before publishing.",

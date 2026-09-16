@@ -7,7 +7,7 @@ import { sourceControlSnapshot } from "./snapshot.js";
 
 export function commitCheckoutFiles(cwd: string, request: CommitFilesRequest): CommitFilesResponse {
   const snapshot = sourceControlSnapshot(cwd);
-  if (snapshot.response.conflicts.length > 0)
+  if (snapshot.conflicted)
     throw new SourceControlError(
       "checkout_conflicted",
       "Resolve merge conflicts before committing.",

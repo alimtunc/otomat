@@ -92,7 +92,7 @@ export async function push(
     args: [
       "push",
       "--no-verify",
-      ...(sha === undefined ? ["--set-upstream"] : []),
+      "--set-upstream",
       remote,
       `${sha ?? "HEAD"}:refs/heads/${branch}`,
     ],

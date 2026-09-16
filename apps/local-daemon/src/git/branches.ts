@@ -40,3 +40,8 @@ export function switchToNewBranch(repoPath: string, branch: string): string | nu
 export function deleteBranch(repoPath: string, branch: string): void {
   runGit(["branch", "-D", branch], { cwd: repoPath, allowFailure: true });
 }
+
+/** `push --set-upstream` only tracks a branch it pushed by name; a push by sha leaves this to do. */
+export function setUpstream(repoPath: string, branch: string, remote: string): void {
+  runGit(["branch", `--set-upstream-to=${remote}/${branch}`, branch], { cwd: repoPath });
+}

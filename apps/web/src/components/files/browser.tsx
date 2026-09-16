@@ -3,7 +3,7 @@ import { Icon, Input } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { decorateFiles } from "@web/components/files/decorations";
 import { FileBrowserRow } from "@web/components/files/row";
-import { FileTree } from "@web/components/runs/diff/files/file-tree";
+import { FileTree } from "@web/components/files/tree/file-tree";
 import { useMemo } from "react";
 
 export interface FileBrowserProps {

@@ -1,4 +1,3 @@
-import { DaemonRequestError } from "@otomat/client";
 import type {
   AttachPullRequestRequest,
   IssuePullRequests,
@@ -14,20 +13,8 @@ import { daemon } from "@web/api/client";
 import { invalidateCheckout } from "@web/api/files/invalidate";
 import type { HostQueryKeys } from "@web/api/query-keys";
 import { useQueryKeys } from "@web/api/use-query-keys";
+import { daemonErrorMessage } from "@web/lib/daemon-error";
 import { pullRequestImportRefusal } from "@web/lib/pull-request/import-error";
-
-function daemonErrorMessage(error: unknown, fallback: string): string {
-  if (
-    error instanceof DaemonRequestError &&
-    typeof error.body === "object" &&
-    error.body !== null &&
-    "message" in error.body
-  ) {
-    const message = error.body.message;
-    if (typeof message === "string" && message !== "") return message;
-  }
-  return fallback;
-}
 
 interface RefreshPullRequestVariables {
   announce: boolean;

@@ -1,5 +1,5 @@
 import type { DiffFileContract } from "@otomat/domain";
-import { baseName, pathSegments } from "@web/components/runs/diff/files/path";
+import { baseName, pathSegments } from "@web/components/files/tree/path";
 
 export type DiffFileType = "implementation" | "tests" | "config" | "docs" | "assets" | "other";
 

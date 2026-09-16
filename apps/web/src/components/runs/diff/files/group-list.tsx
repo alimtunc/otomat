@@ -1,12 +1,12 @@
 import type { DiffFileContract } from "@otomat/domain";
 import { Button, Icon } from "@otomat/ui";
+import { ROW_PADDING_REM } from "@web/components/files/tree/indent";
 import {
   classifyDiffFile,
   groupDiffFiles,
   type DiffFileType,
 } from "@web/components/runs/diff/files/group";
 import { DiffFileList } from "@web/components/runs/diff/files/list";
-import { ROW_PADDING_REM } from "@web/components/runs/diff/files/row.utils";
 import { DiffFileTree } from "@web/components/runs/diff/files/tree";
 import type { DiffBrowserMode } from "@web/components/runs/diff/prefs/prefs";
 import { DiffStat } from "@web/components/runs/diff/stat";

@@ -10,6 +10,8 @@ import {
   type PullRequestProposal,
 } from "@otomat/domain";
 
+import { setUpstream } from "#git";
+
 import { normalizePullRequestBody } from "../body.js";
 import type { GitHubPullRequest } from "../cli/contract.js";
 import { GitHubPublicationError } from "../errors.js";
@@ -61,6 +63,7 @@ export async function publishRepositoryPullRequest(
       "This branch's pull request is closed. Choose a new branch.",
     );
   await config.cli.push(cwd, remote.name, head, snapshot.head);
+  setUpstream(cwd, head, remote.name);
   const publication = {
     title,
     body: details.body,

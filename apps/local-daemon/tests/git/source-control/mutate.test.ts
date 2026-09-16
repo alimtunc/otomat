@@ -179,7 +179,10 @@ it("reports unresolved merges and refuses staging them", () => {
     input: `0 ${"0".repeat(40)}\tnotes.txt\n100644 ${oid} 1\tnotes.txt\n100644 ${oid} 2\tnotes.txt\n100644 ${oid} 3\tnotes.txt\n`,
   });
   writeFileSync(join(repo.root, "notes.txt"), "conflict\n");
-  expect(sourceControlSnapshot(repo.root).response.conflicts).toEqual(["notes.txt"]);
+  const conflicted = sourceControlSnapshot(repo.root).response;
+  expect(conflicted.conflicts).toEqual(["notes.txt"]);
+  expect(conflicted.revision).not.toBe("");
+  expect(sourceControlSnapshot(repo.root).response.revision).toBe(conflicted.revision);
   expect(() => change({ action: "stage", path: "notes.txt" })).toThrow("Resolve merge conflicts");
 });
 

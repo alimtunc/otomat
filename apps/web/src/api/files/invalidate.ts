@@ -12,7 +12,9 @@ export function invalidateCheckout(
     void client.invalidateQueries({ queryKey: keys.repositoryTree(target.id) });
     void client.invalidateQueries({ queryKey: keys.repositoryBranches(target.id) });
   } else {
-    void client.invalidateQueries({ queryKey: keys.run(target.id) });
+    void client.invalidateQueries({ queryKey: keys.runFiles(target.id) });
+    void client.invalidateQueries({ queryKey: keys.runWorkspace(target.id) });
+    void client.invalidateQueries({ queryKey: keys.runCommits(target.id) });
     void client.invalidateQueries({ queryKey: keys.reviewDiffs({ kind: "run", id: target.id }) });
   }
 }

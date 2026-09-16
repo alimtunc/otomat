@@ -83,7 +83,7 @@ export function hostKeys(host: ExecutionHostId) {
     runs: [host, "runs"] as const,
     runsList: (projectId?: string) => [host, "runs", "project", projectId ?? null] as const,
     runCatalog: (projectId?: string) => [host, "runs", "catalog", projectId ?? null] as const,
-    runsForIssue: (issueId: string) => [host, "runs", { issueId }] as const,
+    runsForIssue: (issueId: string | null) => [host, "runs", { issueId }] as const,
     run: (id: string) => [host, "run", id] as const,
     runEventWindow: (id: string) => [host, "run-events", id] as const,
     stepEventWindow: (id: string, stepId: string) =>

@@ -8,8 +8,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@otomat/ui";
+import { STATUS_LETTER } from "@web/components/files/tree/status";
 import { adjacentFile } from "@web/components/runs/diff/diff-nav";
-import { STATUS_LETTER } from "@web/components/runs/diff/files/status";
 
 export function DiffFileNav({
   files,
