@@ -71,6 +71,7 @@ vi.mock("electron", () => ({
     }
   },
   nativeImage: { createFromPath: () => ({ setTemplateImage: vi.fn() }) },
+  session: { defaultSession: {} },
 }));
 vi.mock("#main/background/read-work", () => ({
   readLocalWork: () =>
@@ -121,6 +122,7 @@ vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
 vi.mock("#main/notifications/electron", () => ({ startNotifications: vi.fn() }));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", () => ({
+  denyRendererPermissions: vi.fn(),
   hardenWebContents: vi.fn(),
   resolveAllowedOrigins: vi.fn(() => []),
 }));

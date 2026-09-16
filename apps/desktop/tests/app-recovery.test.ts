@@ -40,6 +40,7 @@ vi.mock("electron", () => ({
   BrowserWindow: vi.fn(),
   dialog: { showMessageBox: async () => ({ response: 1 }) },
   ipcMain: { handle: vi.fn(), on: vi.fn() },
+  session: { defaultSession: {} },
 }));
 vi.mock("#main/update/electron-updater", () => ({
   createElectronUpdaterPort: () => ({
@@ -71,6 +72,7 @@ vi.mock("#main/ipc", () => ({
 vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", () => ({
+  denyRendererPermissions: vi.fn(),
   hardenWebContents: vi.fn(),
   resolveAllowedOrigins: vi.fn(() => []),
 }));

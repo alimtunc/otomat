@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 
 import type { DesktopStartupDiagnostic } from "@otomat/domain";
-import { app, ipcMain } from "electron";
+import { app, ipcMain, session } from "electron";
 
 import type { BuildInfo } from "#shared/build-info";
 import { DEV_SERVER_ENV } from "#shared/constants";
@@ -26,7 +26,7 @@ import type { AppPaths } from "./paths.js";
 import { serveAppScheme } from "./protocol.js";
 import { QuitSequence } from "./quit.js";
 import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
-import { hardenWebContents, resolveAllowedOrigins } from "./security.js";
+import { denyRendererPermissions, hardenWebContents, resolveAllowedOrigins } from "./security.js";
 import { SplashWindow } from "./splash-window.js";
 import {
   attachAvailableBackup,
@@ -115,6 +115,7 @@ export class DesktopApp {
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
     const origins = resolveAllowedOrigins(this.devServer, (message) => this.log.write(message));
     app.on("web-contents-created", (_event, contents) => hardenWebContents(contents, origins));
+    denyRendererPermissions(session.defaultSession, origins, (message) => this.log.write(message));
     if (this.paths.packaged && this.paths.webDist !== null) {
       serveAppScheme(this.paths.webDist, (document) => this.csp.headerFor(document));
     }
@@ -241,10 +242,7 @@ export class DesktopApp {
   }
 
   private showPrimary(): void {
-    if (this.cockpit.isOpen) {
-      this.cockpit.show();
-      return;
-    }
-    this.splash.focus();
+    if (this.cockpit.isOpen) this.cockpit.show();
+    else this.splash.focus();
   }
 }

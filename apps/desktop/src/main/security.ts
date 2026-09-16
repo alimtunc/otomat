@@ -1,4 +1,4 @@
-import { shell, type WebContents } from "electron";
+import { shell, type Session, type WebContents } from "electron";
 
 import { APP_ORIGIN, DEV_SERVER_ENV } from "#shared/constants";
 
@@ -25,12 +25,9 @@ function isSafeExternal(url: string): boolean {
   }
 }
 
-function originOf(url: string): string | null {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
+// Node's URL reports an opaque "null" origin for the custom app scheme, so match by prefix.
+function withinAllowedOrigin(url: string, allowedOrigins: readonly string[]): boolean {
+  return allowedOrigins.some((origin) => url === origin || url.startsWith(`${origin}/`));
 }
 
 /**
@@ -45,9 +42,31 @@ export function hardenWebContents(contents: WebContents, allowedOrigins: readonl
   });
 
   contents.on("will-navigate", (event, url) => {
-    const origin = originOf(url);
-    if (origin !== null && allowedOrigins.includes(origin)) return;
+    if (withinAllowedOrigin(url, allowedOrigins)) return;
     event.preventDefault();
     if (isSafeExternal(url)) void shell.openExternal(url);
   });
+}
+
+// The copy buttons need the sanitized clipboard write; notifications are raised from main.
+const RENDERER_PERMISSION_ALLOWLIST: ReadonlySet<string> = new Set(["clipboard-sanitized-write"]);
+
+export function denyRendererPermissions(
+  session: Pick<Session, "setPermissionRequestHandler" | "setPermissionCheckHandler">,
+  allowedOrigins: readonly string[],
+  log: (message: string) => void,
+): void {
+  const decide = (permission: string, url: string): boolean => {
+    const allowed =
+      RENDERER_PERMISSION_ALLOWLIST.has(permission) && withinAllowedOrigin(url, allowedOrigins);
+    if (!allowed) log(`Denied renderer permission "${permission}" for ${url}`);
+    return allowed;
+  };
+
+  session.setPermissionRequestHandler((_contents, permission, callback, details) =>
+    callback(decide(permission, details.requestingUrl)),
+  );
+  session.setPermissionCheckHandler((_contents, permission, requestingOrigin) =>
+    decide(permission, requestingOrigin),
+  );
 }

@@ -10,12 +10,14 @@ import { scratchDir } from "#support/scratch-dir";
 interface Harness {
   cockpitUrls: (string | null)[];
   hardenedOrigins: string[][];
+  permissionOrigins: string[][];
   appListeners: Map<string, (...args: unknown[]) => void>;
 }
 
 const harness = vi.hoisted((): Harness => ({
   cockpitUrls: [],
   hardenedOrigins: [],
+  permissionOrigins: [],
   appListeners: new Map(),
 }));
 
@@ -29,6 +31,7 @@ vi.mock("electron", () => ({
   BrowserWindow: vi.fn(),
   dialog: { showMessageBox: vi.fn() },
   ipcMain: { handle: vi.fn(), on: vi.fn() },
+  session: { defaultSession: {} },
 }));
 vi.mock("#main/update/electron-updater", () => ({
   createElectronUpdaterPort: () => ({
@@ -65,6 +68,8 @@ vi.mock("#main/notifications/electron", () => ({ startNotifications: vi.fn() }))
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#main/security")>()),
+  denyRendererPermissions: (_session: unknown, origins: string[]) =>
+    harness.permissionOrigins.push(origins),
   hardenWebContents: (_contents: unknown, origins: string[]) =>
     harness.hardenedOrigins.push(origins),
 }));
@@ -102,6 +107,7 @@ async function startDesktop(url: string | null): Promise<void> {
 afterEach(() => {
   harness.cockpitUrls.length = 0;
   harness.hardenedOrigins.length = 0;
+  harness.permissionOrigins.length = 0;
   harness.appListeners.clear();
   vi.unstubAllEnvs();
 });
@@ -122,6 +128,7 @@ it("allowlists only the origin of the session's own dev server", async () => {
   created(null, {});
 
   expect(harness.hardenedOrigins).toEqual([["http://127.0.0.1:51987"]]);
+  expect(harness.permissionOrigins).toEqual([["http://127.0.0.1:51987"]]);
 });
 
 it("falls back to the app scheme when no dev server is handed over", async () => {
