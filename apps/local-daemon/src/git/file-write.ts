@@ -28,7 +28,7 @@ function blobRevision(worktreePath: string, path: string, content: Buffer): stri
 }
 
 /** A parent that is a file (ENOTDIR) names nothing, exactly like a missing entry; every other failure is the host's to report. */
-function isPathAbsent(error: unknown): boolean {
+export function isPathAbsent(error: unknown): boolean {
   return (
     error instanceof Error &&
     "code" in error &&

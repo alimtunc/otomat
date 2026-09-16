@@ -7,6 +7,13 @@ export function isRepositoryRelative(path: string): boolean {
   return !path.split(/[\\/]/).includes("..");
 }
 
+export function isCreatableRepositoryPath(path: string): boolean {
+  if (!isRepositoryRelative(path) || /[\\\0]/.test(path)) return false;
+  return !path
+    .split("/")
+    .some((part) => part === "" || part === "." || part.toLowerCase() === ".git");
+}
+
 /** Strips the segments a picker adds without changing which file is named. */
 export function normalizeRepositoryPath(path: string): string {
   return path.trim().replace(/^\.\//, "").replace(/\/+$/, "");

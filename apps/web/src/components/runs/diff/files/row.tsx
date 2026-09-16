@@ -1,6 +1,6 @@
 import type { DiffFileContract } from "@otomat/domain";
 import { Button, cn, FileIcon, Icon, resolveStatus } from "@otomat/ui";
-import { INDENT_REM, ROW_PADDING_REM } from "@web/components/files/tree/indent";
+import { rowIndent } from "@web/components/files/tree/indent";
 import { diffFileLabels } from "@web/components/files/tree/path";
 import { STATUS_LETTER } from "@web/components/files/tree/status";
 import { DiffStat } from "@web/components/runs/diff/stat";
@@ -33,7 +33,7 @@ export function DiffFileRow({
       title={labels.full}
       onClick={() => onSelect(file)}
       aria-current={active ? "true" : undefined}
-      style={{ paddingLeft: `${ROW_PADDING_REM + indent * INDENT_REM}rem` }}
+      style={rowIndent(indent)}
       className={cn(
         "h-7 w-full justify-start gap-1.5 rounded-none pr-3 text-xs font-normal text-text-secondary hover:bg-hover",
         active && "bg-selected text-foreground",

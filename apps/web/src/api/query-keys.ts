@@ -21,6 +21,8 @@ function runDiffScopeKey(scope: RunDiffScopeSelector): string {
 export const PROJECT_HEALTH_KEY = "project-health";
 
 export function hostKeys(host: ExecutionHostId) {
+  const repositoryTree = (id: string | null) => [host, "repositories", id, "tree"] as const;
+  const runFiles = (id: string) => [host, "run", id, "files"] as const;
   return {
     host: [host] as const,
     health: [host, "health"] as const,
@@ -47,11 +49,13 @@ export function hostKeys(host: ExecutionHostId) {
       [host, "repositories", repositoryId, "branches"] as const,
     repositoryFiles: (repositoryId: string | null, query: string) =>
       [host, "repositories", repositoryId, "files", query] as const,
-    repositoryTree: (id: string | null) => [host, "repositories", id, "tree"] as const,
+    repositoryTree,
     sourceControl: (target: CheckoutTarget) =>
       [host, "source-control", target.kind, target.id] as const,
     repositoryPullRequestPreview: (repositoryId: string, baseRef: string, revision: string) =>
       [host, "source-control", "repository", repositoryId, "pr", baseRef, revision] as const,
+    checkoutFiles: (target: CheckoutTarget) =>
+      target.kind === "run" ? runFiles(target.id) : repositoryTree(target.id),
     checkoutFile: (target: CheckoutTarget, path: string) =>
       target.kind === "run"
         ? ([host, "run", target.id, "files", "content", path] as const)
@@ -119,7 +123,7 @@ export function hostKeys(host: ExecutionHostId) {
     commentFixProof: (id: string, commentId: string) =>
       [host, "run", id, "fix-proof", commentId] as const,
     runWorkspace: (id: string) => [host, "run", id, "workspace"] as const,
-    runFiles: (id: string) => [host, "run", id, "files"] as const,
+    runFiles,
     competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
       [host, "run", runId, "compete", groupId, stepId, "diff"] as const,
     reviewDetail: (target: ReviewTarget) =>

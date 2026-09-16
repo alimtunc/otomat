@@ -9,6 +9,9 @@ it("finds fuzzy paths and ranks exact filenames ahead of path matches", () => {
     "packages/domain/contracts.ts",
     "app.ts.backup",
   ].map((path) => ({ path, kind: "file", size: 1 }));
+  entries.unshift({ path: "empty-folder", kind: "directory", size: 0 });
+  expect(searchFiles(entries, "").every((entry) => entry.kind !== "directory")).toBe(true);
+  expect(searchFiles(entries, "empty-folder")).toEqual([]);
   expect(searchFiles(entries, "app.ts").map((entry) => entry.path)).toEqual([
     "app.ts",
     "app.ts.backup",

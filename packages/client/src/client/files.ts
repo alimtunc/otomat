@@ -3,12 +3,14 @@ import {
   worktreeFileSavedSchema,
   worktreeFilesResponseSchema,
   repositoryTreeResponseSchema,
+  worktreeFileEntrySchema,
+  type CreateWorktreeEntryRequest,
   type CheckoutTarget,
   type SaveWorktreeFileRequest,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, putJson, queryString } from "./http.js";
+import { getJson, postJson, putJson, queryString } from "./http.js";
 
 function filesPath(runId: string): string {
   return `/api/runs/${encodeURIComponent(runId)}/files`;
@@ -18,12 +20,19 @@ function treePath(repositoryId: string): string {
   return `/api/repositories/${encodeURIComponent(repositoryId)}/tree`;
 }
 
+function checkoutPath(target: CheckoutTarget): string {
+  return target.kind === "run" ? filesPath(target.id) : treePath(target.id);
+}
+
 function contentPath(target: CheckoutTarget): string {
-  return `${target.kind === "run" ? filesPath(target.id) : treePath(target.id)}/content`;
+  return `${checkoutPath(target)}/content`;
 }
 
 export function createFilesClient(config: DaemonClientConfig) {
   return {
+    async createCheckoutEntry(target: CheckoutTarget, request: CreateWorktreeEntryRequest) {
+      return worktreeFileEntrySchema.parse(await postJson(config, checkoutPath(target), request));
+    },
     async getRepositoryTree(repositoryId: string) {
       return repositoryTreeResponseSchema.parse(await getJson(config, treePath(repositoryId)));
     },

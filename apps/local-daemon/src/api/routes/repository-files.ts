@@ -1,10 +1,24 @@
-import { saveWorktreeFileRequestSchema, type RepositoryTreeResponse } from "@otomat/domain";
+import {
+  createWorktreeEntryRequestSchema,
+  saveWorktreeFileRequestSchema,
+  type RepositoryTreeResponse,
+} from "@otomat/domain";
 import { Hono } from "hono";
 
-import { checkoutTree, isRepositoryRelative, normalizeRepositoryPath } from "#git";
+import {
+  checkoutDirectories,
+  checkoutTree,
+  isRepositoryRelative,
+  normalizeRepositoryPath,
+} from "#git";
 
 import type { ApiDeps } from "../deps.js";
-import { fileContentResponse, refuseFile, saveFileResponse } from "../file-content.js";
+import {
+  createEntryResponse,
+  fileContentResponse,
+  refuseFile,
+  saveFileResponse,
+} from "../file-content.js";
 import { checkoutGuard, validateJson, type CheckoutEnv } from "../guards.js";
 
 export function createRepositoryFileRoutes(deps: ApiDeps): Hono<CheckoutEnv> {
@@ -18,9 +32,13 @@ export function createRepositoryFileRoutes(deps: ApiDeps): Hono<CheckoutEnv> {
     return c.json({
       repository_id: binding.repositoryId,
       branch: tree.branch,
-      entries: tree.entries(),
+      entries: [...tree.entries(), ...checkoutDirectories(cwd)],
     } satisfies RepositoryTreeResponse);
   });
+
+  routes.post("/:id/tree", validateJson(createWorktreeEntryRequestSchema), (c) =>
+    createEntryResponse(c, c.get("checkout").cwd, c.req.valid("json")),
+  );
 
   routes.get("/:id/tree/content", (c) => {
     const path = normalizeRepositoryPath(c.req.query("path") ?? "");

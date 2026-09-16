@@ -1,6 +1,6 @@
 import { Button, cn, FileIcon } from "@otomat/ui";
 import type { DecoratedFile } from "@web/components/files/decorations";
-import { INDENT_REM, ROW_PADDING_REM } from "@web/components/files/tree/indent";
+import { rowIndent } from "@web/components/files/tree/indent";
 import { baseName } from "@web/components/files/tree/path";
 import { STATUS_LETTER } from "@web/components/files/tree/status";
 
@@ -21,7 +21,7 @@ export function FileBrowserRow({ entry, active, indent, onSelect }: FileBrowserR
       title={entry.path}
       onClick={() => onSelect(entry.path)}
       aria-current={active ? "true" : undefined}
-      style={{ paddingLeft: `${ROW_PADDING_REM + indent * INDENT_REM}rem` }}
+      style={rowIndent(indent)}
       className={cn(
         "h-7 w-full justify-start gap-1.5 rounded-none pr-3 text-xs font-normal text-text-secondary hover:bg-hover",
         active && "bg-selected text-foreground",

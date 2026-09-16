@@ -1,11 +1,21 @@
-import { saveWorktreeFileRequestSchema, type WorktreeFilesResponse } from "@otomat/domain";
+import {
+  createWorktreeEntryRequestSchema,
+  saveWorktreeFileRequestSchema,
+  type WorktreeFilesResponse,
+} from "@otomat/domain";
 import { Hono } from "hono";
 
 import type { ApiDeps } from "#api/deps";
-import { fileContentResponse, refuseFile, saveFileResponse } from "#api/file-content";
+import {
+  createEntryResponse,
+  fileContentResponse,
+  refuseFile,
+  saveFileResponse,
+} from "#api/file-content";
 import { runGuard, validateJson, type RunEnv } from "#api/guards";
 import {
   isRepositoryRelative,
+  checkoutDirectories,
   normalizeRepositoryPath,
   worktreeTreeOrNull,
   type WorktreeTree,
@@ -27,10 +37,25 @@ export function createRunFileRoutes(deps: ApiDeps): Hono<RunEnv> {
     const response: WorktreeFilesResponse = {
       run_id: run.id,
       editable: tree.worktreePath !== null,
-      entries: tree.entries(),
+      entries: [
+        ...tree.entries(),
+        ...(tree.worktreePath === null ? [] : checkoutDirectories(tree.worktreePath)),
+      ],
     };
     return c.json(response);
   });
+
+  routes.post(
+    "/:id/files",
+    runGuard(deps.db),
+    validateJson(createWorktreeEntryRequestSchema),
+    (c) => {
+      const tree = runTree(deps, c.get("run").id);
+      if (tree === null) return refuseFile(c, "workspace_unavailable");
+      if (tree.worktreePath === null) return refuseFile(c, "workspace_read_only");
+      return createEntryResponse(c, tree.worktreePath, c.req.valid("json"));
+    },
+  );
 
   routes.get("/:id/files/content", runGuard(deps.db), (c) => {
     const run = c.get("run");

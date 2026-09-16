@@ -57,6 +57,8 @@ export function FilesExplorer({ target, entries, editable, notice }: FilesExplor
         >
           <FileBrowser
             key={active.scope}
+            target={target}
+            editable={editable}
             scope={active.scope}
             entries={entries}
             changes={changes.data}

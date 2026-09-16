@@ -1705,7 +1705,15 @@ including its current branch and uncommitted files. `GET
 without changing the real index. `PUT /api/repositories/:id/tree/content` saves
 project files through the same revision-checked writer as run files.
 
-Reads never touch the filesystem. `GET /api/runs/:id/files/content?path=` goes
+`POST /api/repositories/:id/tree` and `POST /api/runs/:id/files` create an empty
+file or folder in the selected checkout. Creation requires an existing parent,
+never overwrites an entry, and refuses ignored paths, Git internals, nested
+repositories and symlinked parents. Archived worktrees remain read-only.
+Live listings supplement the captured Git tree with untracked directory entries,
+including empty folders: Git selects the visible roots and ignore rules prune
+the directory walk, which never follows symlinks or reads file contents.
+
+File-content reads never touch the filesystem. `GET /api/runs/:id/files/content?path=` goes
 through `readTreeFile`, so a symlink, a binary, a directory, an absent path or a
 file past `WORKTREE_FILE_MAX_BYTES` is refused by kind (`file_symlink`,
 `file_binary`, `file_not_found`, `file_too_large`) rather than approximated, and a
@@ -1749,6 +1757,14 @@ natural case-insensitive ordering and file-type icons. Arrow keys navigate and
 expand the tree; expansion and file selection are remembered per host and
 checkout. Cmd/Ctrl+P searches filenames and paths with fuzzy matching, using the
 run's worktree in a run or issue context and the project checkout elsewhere.
+The explorer toolbar groups new file, new folder, refresh and a single toggle
+that collapses open folders or expands the whole tree when all are closed.
+Creation uses an inline name field in the selected folder or the open file's parent.
+The icon follows the filename extension, existing names are refused while typing,
+Enter creates the entry and Escape cancels. New files open in the editor and new
+folders remain selected. The daemon also refuses duplicates at write time.
+Folding leaves the open file unchanged and shares the tree's scoped expansion storage;
+folding a filtered result leaves the unfiltered tree's saved state intact.
 A dirty document blocks navigation
 through the router's blocker and the browser's unload prompt; a revision that
 moves under a clean document is adopted, one that moves under a dirty document —
@@ -1758,7 +1774,11 @@ never a silent overwrite.
 ## Staged and Unstaged Changes
 
 Project and run Files each contain Files/Changes tabs on the same route; Changes
-is never a separate sidebar or cockpit entry. `changes=true` selects it, and
+is never a separate sidebar or cockpit entry. Project tabs sit in the page
+header; run tabs stay inside the Files workspace below the cockpit navigation.
+The selected change has one toolbar for its path, staged/unstaged state and
+file actions; the state's tooltip names the compared Git layers.
+`changes=true` selects Changes, and
 quick-open returns to the file editor. Changes uses `GET
 /api/source-control/:kind/:id`, where `kind` is `repository` or `run`. The daemon
 resolves the checkout from its own repository bindings; archived or missing

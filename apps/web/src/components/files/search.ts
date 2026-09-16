@@ -23,8 +23,9 @@ export function searchFiles(
   query: string,
 ): WorktreeFileEntry[] {
   const needle = query.trim().toLowerCase();
-  if (needle === "") return entries.slice(0, RESULT_LIMIT);
-  return entries
+  const files = entries.filter((entry) => entry.kind !== "directory");
+  if (needle === "") return files.slice(0, RESULT_LIMIT);
+  return files
     .map((entry) => ({ entry, score: scorePath(entry.path, needle) }))
     .filter(({ score }) => Number.isFinite(score))
     .toSorted((a, b) => a.score - b.score || a.entry.path.localeCompare(b.entry.path))
