@@ -38,10 +38,9 @@ const SETTLED_RUN_STATUSES = new Set(["review_ready", "succeeded", "failed", "ca
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function request(baseUrl, path, init) {
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
-    headers: init?.body ? { "content-type": "application/json" } : undefined,
-  });
+  const headers = { authorization: `Bearer ${process.env.OTOMAT_API_TOKEN ?? ""}` };
+  if (init?.body) headers["content-type"] = "application/json";
+  const response = await fetch(`${baseUrl}${path}`, { ...init, headers });
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(`${init?.method ?? "GET"} ${path} failed: ${response.status} ${detail}`);

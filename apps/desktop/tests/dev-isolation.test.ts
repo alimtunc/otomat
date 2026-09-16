@@ -59,6 +59,7 @@ function sessionFor(worktree: string, appData: string) {
       quitAndInstall: () => {},
       onProgress: () => {},
     },
+    daemonFetch: fetch,
     localDaemonUrl: () => "",
     onRemoteStatus: () => {},
     onLinearDelivery: () => {},

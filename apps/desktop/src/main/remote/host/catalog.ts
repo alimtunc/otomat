@@ -17,7 +17,7 @@ import {
   type WorkspaceReconcileReport,
 } from "@otomat/domain";
 
-import type { RemoteSessionHandle } from "../session.js";
+import type { RemoteSessionHandle } from "../session-contract.js";
 import { resolveCommandBaseUrl, type ResolvedDaemonUrl } from "./command-url.js";
 import { hostCommandRefusal } from "./refusal.js";
 

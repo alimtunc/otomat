@@ -8,12 +8,14 @@
  */
 import { defaultDbPath } from "@otomat/db";
 import {
+  DAEMON_API_TOKEN_ENV,
   MAINTENANCE_ACTION_ENV,
   MAINTENANCE_RESTORE_ACTION,
   RESTORE_BACKUP_ENV,
   WORKER_JOB_ENV,
 } from "@otomat/domain";
 
+import { takeDaemonApiToken } from "#api";
 import { formatStartupDiagnostic, runRestoreMaintenance } from "#data-safety";
 import { runWorkerMain } from "#supervisor";
 
@@ -70,7 +72,14 @@ if (process.env[MAINTENANCE_ACTION_ENV] === MAINTENANCE_RESTORE_ACTION) {
 } else if (process.env[WORKER_JOB_ENV]) {
   void runWorkerMain();
 } else if (!process.env.VITEST) {
-  void startDaemon()
+  const apiToken = takeDaemonApiToken();
+  if (apiToken === null) {
+    console.error(
+      `[otomat] ${DAEMON_API_TOKEN_ENV} is not set: the daemon serves its API only behind a bearer token.`,
+    );
+    process.exit(1);
+  }
+  void startDaemon({ apiToken })
     .then((handle) => {
       console.log(`${describeFoundation()} — listening on http://localhost:${handle.port}/api`);
       installShutdownHandlers(handle);

@@ -5,7 +5,7 @@ import {
 } from "../bootstrap/scripts.js";
 import { scriptFailure, trimDetail } from "../bootstrap/status.js";
 import { deployBundle } from "../deploy.js";
-import type { RemoteSessionHandle } from "../session.js";
+import type { RemoteSessionHandle } from "../session-contract.js";
 import type { runSshScript } from "../ssh/script.js";
 import {
   backupDatabaseScript,

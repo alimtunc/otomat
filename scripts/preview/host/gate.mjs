@@ -36,3 +36,8 @@ export function daemonUrl(requestUrl) {
   const url = new URL(requestUrl);
   return new URL(`${url.pathname}${url.search}`, `http://127.0.0.1:${String(DAEMON_PORT)}`);
 }
+
+/** The container's daemon takes the pair's secret as its bearer, so the worker and the seeder share one credential with it. */
+export function daemonAuthorization(env) {
+  return `Bearer ${env.PREVIEW_CLIENT_SECRET ?? ""}`;
+}

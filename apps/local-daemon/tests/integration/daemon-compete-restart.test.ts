@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { createClient, listAgentSessionsForRun, listStepRunsForRun, type Db } from "@otomat/db";
 import {
+  DAEMON_API_TOKEN_ENV,
   runDetailSchema,
   runLaunchResponseSchema,
   WORKER_JOB_ENV,
@@ -27,6 +28,8 @@ import {
 import { setupTestRepo } from "../support/git.js";
 import { waitFor } from "../support/poll.js";
 
+const API_TOKEN = "integration-api-token";
+const AUTHORIZED = { Authorization: `Bearer ${API_TOKEN}` };
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DAEMON_ENTRY = resolve(HERE, "..", "..", "src", "index.ts");
 const COMPETE_PLAN = {
@@ -63,6 +66,7 @@ function daemonEnv(
     OTOMAT_PROJECT_ROOT: projectRoot,
     OTOMAT_ENABLE_FAKE_RUNTIME: "1",
     OTOMAT_FAKE_RUNTIME_BARRIER_PATH: barrierPath,
+    [DAEMON_API_TOKEN_ENV]: API_TOKEN,
   };
   delete env.VITEST;
   delete env.VITEST_WORKER_ID;
@@ -141,7 +145,7 @@ async function stopProcess(child: ChildProcess, signal: NodeJS.Signals): Promise
 }
 
 async function readDetail(origin: string, runId: string): Promise<RunDetail> {
-  const response = await fetch(`${origin}/api/runs/${runId}`);
+  const response = await fetch(`${origin}/api/runs/${runId}`, { headers: AUTHORIZED });
   if (!response.ok) throw new Error(`run detail returned ${response.status}`);
   return runDetailSchema.parse(await response.json());
 }
@@ -174,7 +178,7 @@ it(
       daemon = await startDaemon(dbPath, repo.root, barrierPath);
       const launchResponse = await fetch(`${daemon.origin}/api/runs`, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { ...AUTHORIZED, "content-type": "application/json" },
         body: JSON.stringify({ prompt: "restart proof", runtime: "fake", plan: COMPETE_PLAN }),
       });
       expect(launchResponse.status).toBe(201);
@@ -261,7 +265,7 @@ it(
       writeFileSync(barrierPath, "resume");
       const resumeResponse = await fetch(
         `${restartedDaemon.origin}/api/runs/${launchedRun.id}/resume`,
-        { method: "POST" },
+        { method: "POST", headers: AUTHORIZED },
       );
       expect(resumeResponse.ok).toBe(true);
       expect(

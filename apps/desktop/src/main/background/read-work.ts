@@ -9,16 +9,17 @@ export type LocalWorkReading =
 /** A wedged daemon would otherwise hold the window's close, and with it every quit, indefinitely. */
 const READ_TIMEOUT_MS = 2_000;
 
-const boundedFetch: typeof fetch = (input, init) =>
-  fetch(input, { ...init, signal: AbortSignal.timeout(READ_TIMEOUT_MS) });
-
 /** An unreadable daemon is reported, never counted as an idle one: quitting would still cut its runs. */
 export async function readLocalWork(
   daemonUrl: string,
-  fetchImpl: typeof fetch = boundedFetch,
+  fetchImpl: typeof fetch = fetch,
 ): Promise<LocalWorkReading> {
   if (daemonUrl === "") return { ok: true, items: [] };
-  const client = createDaemonClient({ baseUrl: daemonUrl, fetch: fetchImpl });
+  const client = createDaemonClient({
+    baseUrl: daemonUrl,
+    fetch: (input, init) =>
+      fetchImpl(input, { ...init, signal: AbortSignal.timeout(READ_TIMEOUT_MS) }),
+  });
   try {
     return { ok: true, items: localWorkItems((await client.listActivity()).activities) };
   } catch (error) {

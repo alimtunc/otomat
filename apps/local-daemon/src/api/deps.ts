@@ -9,6 +9,7 @@ import type { Supervisor } from "#supervisor";
 
 export interface ApiDeps {
   db: Db;
+  apiToken: string;
   name: string;
   version: string;
   build: string | null;

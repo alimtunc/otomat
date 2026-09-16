@@ -51,7 +51,11 @@ it("exposes the daemon before the development Linear connection settles", async 
   vi.stubGlobal("fetch", fetchMock);
 
   let startedHandle: DaemonHandle | null = null;
-  const startup = startDaemon({ port: 0, dbPath: join(scratch, "otomat.db") }).then((handle) => {
+  const startup = startDaemon({
+    port: 0,
+    dbPath: join(scratch, "otomat.db"),
+    apiToken: "server-test-token",
+  }).then((handle) => {
     startedHandle = handle;
     return handle;
   });

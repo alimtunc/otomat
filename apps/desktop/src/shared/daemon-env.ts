@@ -1,4 +1,5 @@
 import {
+  DAEMON_API_TOKEN_ENV,
   MAINTENANCE_ACTION_ENV,
   RESTORE_BACKUP_ENV,
   WORKER_JOB_ENV,
@@ -15,6 +16,8 @@ export interface DaemonEnvOptions {
   projectRoot: string;
   /** Resolved PATH so the daemon finds user CLIs even from a Finder launch. */
   path: string;
+  /** Bearer the daemon's API will demand; omit for a maintenance process, which serves none. */
+  apiToken?: string;
   /** Renderer origin to add to the daemon's CORS allowlist; omit in dev (loopback origins are auto-allowed). */
   allowedOrigin?: string;
   baseEnv?: NodeJS.ProcessEnv;
@@ -34,6 +37,7 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
     OTOMAT_PROJECT_ROOT: options.projectRoot,
   };
   delete env.OTOMAT_LINEAR_API_KEY;
+  delete env[DAEMON_API_TOKEN_ENV];
   delete env[MAINTENANCE_ACTION_ENV];
   delete env[RESTORE_BACKUP_ENV];
   delete env[WORKER_JOB_ENV];
@@ -41,6 +45,7 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
   delete env.OTOMAT_WORKTREES_ROOT;
   delete env.OTOMAT_ALLOWED_ORIGINS;
   delete env.OTOMAT_BUILD_SHA;
+  if (options.apiToken !== undefined) env[DAEMON_API_TOKEN_ENV] = options.apiToken;
   if (options.allowedOrigin !== undefined) env.OTOMAT_ALLOWED_ORIGINS = options.allowedOrigin;
   if (options.runAsNode === true) env.ELECTRON_RUN_AS_NODE = "1";
   if (options.buildSha !== undefined) env.OTOMAT_BUILD_SHA = options.buildSha;

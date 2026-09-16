@@ -33,12 +33,13 @@ import { createSkillRoutes } from "./routes/skills.js";
 import { createUsageRoutes } from "./routes/usage.js";
 import { createWorkflowPresetRoutes } from "./routes/workflow-presets.js";
 import { createWorkspaceRoutes } from "./routes/workspaces.js";
-import { allowedOrigin, hostGuard } from "./security.js";
+import { allowedOrigin, bearerGuard, hostGuard } from "./security.js";
 
 /**
- * Builds the daemon's Hono app: a host-guard then CORS on `/api/*` (the guard runs
- * first, so a rejected `Host` never reaches CORS), the correlation-id log that lets a
- * failure be traced back to this host, the mounted route groups, and a JSON
+ * Builds the daemon's Hono app: a host-guard, CORS, the correlation-id log that lets a
+ * failure be traced back to this host, then the bearer guard on `/api/*` (a rejected
+ * `Host` never reaches CORS, a preflight is answered before any token is asked for, and a
+ * refused token still leaves a trace), the mounted route groups, and a JSON
  * fallthrough — unmatched routes return 404 `not_found`, `HTTPException`s are
  * passed through, and any other thrown error is logged and returned as 500 `internal_error`.
  */
@@ -49,6 +50,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.use("/api/*", hostGuard());
   app.use("/api/*", cors({ origin: allowedOrigin(), exposeHeaders: [CORRELATION_ID_HEADER] }));
   app.use("/api/*", correlatedRequestLog(diagnosticLog));
+  app.use("/api/*", bearerGuard(deps.apiToken));
 
   app.route("/api", createHealthRoutes(deps));
   app.route("/api", createDiagnosticsRoutes(diagnosticLog));

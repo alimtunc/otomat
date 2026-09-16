@@ -14,7 +14,7 @@ async function createControllerHarness(
   terminateChild: () => Promise<void> = async () => {},
 ) {
   const children: FakeChild[] = [];
-  const spawn = vi.fn(() => {
+  const spawn = vi.fn((_command: string, _args: string[], _options: { env: NodeJS.ProcessEnv }) => {
     const child = new FakeChild();
     children.push(child);
     return child;
@@ -130,4 +130,27 @@ it("does not spawn restore maintenance when the active daemon cannot be terminat
 
   await expect(restore).rejects.toThrow("daemon remained alive");
   expect(harness.spawn).toHaveBeenCalledTimes(1);
+});
+
+it("hands each daemon start a fresh bearer and exposes it only while that daemon serves", async () => {
+  const harness = await createControllerHarness();
+  expect(harness.controller.credential).toBeNull();
+
+  const url = await harness.controller.start();
+  const credential = harness.controller.credential;
+  const token = harness.spawn.mock.calls[0]?.[2].env.OTOMAT_API_TOKEN;
+  expect(credential).toEqual({ url, token });
+  expect(token?.length).toBeGreaterThanOrEqual(32);
+
+  harness.children[0]?.emit("close", 0);
+  await vi.waitFor(() => expect(harness.controller.credential).toBeNull());
+  await harness.controller.start();
+  expect(harness.controller.credential?.token).not.toBe(credential?.token);
+
+  const restore = harness.controller.restoreBackup("/tmp/backups/otomat-backup.sqlite");
+  harness.children[1]?.emit("close", 0);
+  await vi.waitFor(() => expect(harness.spawn).toHaveBeenCalledTimes(3));
+  expect(harness.controller.credential).toBeNull();
+  harness.children[2]?.emit("close", 0);
+  await restore;
 });

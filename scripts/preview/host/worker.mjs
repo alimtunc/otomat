@@ -5,12 +5,17 @@ import {
   CLIENT_ID_HEADER,
   CLIENT_SECRET_HEADER,
   DAEMON_PORT,
+  daemonAuthorization,
   daemonUrl,
 } from "./gate.mjs";
 
 export class PreviewDaemon extends Container {
   defaultPort = DAEMON_PORT;
   sleepAfter = "1h";
+
+  constructor(ctx, env) {
+    super(ctx, env, { envVars: { OTOMAT_API_TOKEN: env.PREVIEW_CLIENT_SECRET ?? "" } });
+  }
 }
 
 export default {
@@ -41,6 +46,7 @@ export default {
     const upstream = new Request(daemonUrl(request.url), request);
     upstream.headers.delete(CLIENT_ID_HEADER);
     upstream.headers.delete(CLIENT_SECRET_HEADER);
+    upstream.headers.set("authorization", daemonAuthorization(env));
     return container.fetch(upstream);
   },
 };

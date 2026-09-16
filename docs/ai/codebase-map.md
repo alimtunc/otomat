@@ -34,7 +34,7 @@ apps/
       main/            # app lifecycle, daemon spawn, data layout/recovery, logs, support export
         remote/        # remote execution host: ssh tunnel, daemon start-or-verify, host selection, daemon update journey
       preload/         # contextBridge preloads (cockpit + splash)
-      shared/          # pure lifecycle logic (free port, PATH resolve, health poll, env, terminate)
+      shared/          # pure lifecycle logic (free port, PATH resolve, health poll, env, credentials, terminate)
 
 packages/
   domain/              # pure TS domain, state machines, event envelope, zod contracts
@@ -611,8 +611,9 @@ as-is so SSE streams, and the daemon's loopback protections are **untouched**. T
 verifies the request's Access JWT at the origin (`functions/_access.ts`, fail closed while
 unconfigured), so it lends its machine credential only to an identity Access actually authenticated.
 Nothing of the browser's identity crosses over — no `Origin`, no `Cookie`, no `Host` — and the
-worker rewrites `Host` to loopback, so `hostGuard` and `allowedOrigin` keep refusing everything else
-with `OTOMAT_ALLOWED_ORIGINS` unset.
+worker rewrites `Host` to loopback and carries the daemon's bearer
+([daemon API authentication](#daemon-api-authentication)), so `hostGuard` and `allowedOrigin` keep
+refusing everything else with `OTOMAT_ALLOWED_ORIGINS` unset.
 
 **The daemon runs in a Cloudflare container, not on the operator's VPS.** Each pull request owns
 one Worker (`otomat-preview-pr-<n>`, deployed by `scripts/preview/instance.mjs` from CI) whose
@@ -648,6 +649,44 @@ issue. Seeding through the API rather than through SQL or React fixtures is the 
 shows rows the real contracts produced. The image ships `procps` nowhere, so the supervisor stamps
 a worker's identity from `/proc/<pid>/stat` and keeps `ps -o lstart` for hosts without `/proc`;
 without that, every preview run failed before its first event.
+
+## Daemon API Authentication
+
+A loopback bind and the `Host` guard stop DNS rebinding, not the neighbours: every page served
+from `localhost:*`, every local process and every foreign site's simple request (a body-less
+`POST`, or `text/plain` that Hono's validator turns into `{}`) could otherwise drive the API. So
+`/api/*` demands `Authorization: Bearer <token>` — `bearerGuard` in `api/security.ts`, mounted
+after CORS and the request log so a preflight is still answered and a refused token still leaves a
+trace, exempting only `/api/health`, which liveness probes hit before any secret is shared. The daemon reads the token from `OTOMAT_API_TOKEN` and refuses to
+start without one; `takeDaemonApiToken` deletes it from `process.env` at once, so a re-exec'd
+worker and the provider CLIs it spawns never inherit it.
+
+Each daemon's bearer stays with whoever started that daemon, never with page code:
+
+- **Desktop, local daemon.** `DaemonController.start()` draws a fresh random token per start and
+  exposes it as `credential` (`{ url, token }`) while that daemon serves.
+- **Desktop, remote host.** The start-or-verify script keeps one bearer per deployment in
+  `$OTOMAT_HOME/api-token` (mode 0600, created on first use) and reports it as
+  `RUNNING:<pid>:<token>` / `STARTED:<pid>:<token>`; `RemoteHostSession.credential` pairs it with
+  the tunnel's local origin once connected. A host bundle from before bearers reports no token, and
+  its daemon asks for none.
+- **Desktop, every caller.** `shared/daemon-credentials.ts` resolves a request to its daemon by
+  origin: `authorizedFetch` is the one `fetchImpl` the main process hands to the host catalog,
+  capacity, update gate, sandbox seeding, notifications and background reads, and
+  `authorizeRendererRequests` stamps the same header onto the renderer's requests through
+  `session.webRequest` — below the CORS layer, so `fetch` and `EventSource` authenticate without
+  the token ever being readable from the page. A host switch needs no new plumbing: the header
+  follows the origin.
+- **Vite dev.** `pnpm back` defaults `OTOMAT_API_TOKEN` to `otomat-dev` and the `/api` proxy in
+  `apps/web/vite.config.ts` sends the same default, so the two-terminal flow keeps working; set the
+  variable in both shells to change it.
+- **Web preview.** The pull request's worker starts its container with the client pair's secret
+  as `OTOMAT_API_TOKEN` and sets the bearer on every upstream request; `seed.mjs` reads it from the
+  container environment.
+
+Rejected: a token in the renderer bridge and typed client. It would have meant a new field on every
+host-switch contract, a query-string token for `EventSource`, and one more secret in page memory —
+for no gain over the network-layer injection the shell already sits on.
 
 ## Error Diagnostics
 

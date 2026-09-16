@@ -76,10 +76,16 @@ export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string 
     `OTOMAT_HOME="$HOME/${deployment.homeSuffix}"`,
     'ENTRY="$OTOMAT_HOME/daemon/dist/index.js"',
     'PID_FILE="$OTOMAT_HOME/daemon.pid"',
+    'API_TOKEN_FILE="$OTOMAT_HOME/api-token"',
     'mkdir -p "$OTOMAT_HOME/data"',
+    // The bearer lives with the deployment, so a daemon a previous session started answers this one.
+    'if [ ! -s "$API_TOKEN_FILE" ]; then',
+    '  (umask 077 && head -c 32 /dev/urandom | od -An -tx1 | tr -d " \\n" > "$API_TOKEN_FILE")',
+    "fi",
+    'API_TOKEN="$(cat "$API_TOKEN_FILE")"',
     'PID="$(cat "$PID_FILE" 2>/dev/null || true)"',
     'if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null && grep -aqF "$ENTRY" "/proc/$PID/cmdline" 2>/dev/null; then',
-    `  echo "${TOKEN_PREFIX}RUNNING:$PID"`,
+    `  echo "${TOKEN_PREFIX}RUNNING:$PID:$API_TOKEN"`,
     "  exit 0",
     "fi",
     'if [ ! -f "$ENTRY" ]; then',
@@ -96,6 +102,7 @@ export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string 
     "  exit 0",
     "fi",
     `OTOMAT_DAEMON_HOST=127.0.0.1 OTOMAT_DAEMON_PORT=${deployment.port} \\`,
+    '  OTOMAT_API_TOKEN="$API_TOKEN" \\',
     '  OTOMAT_DB_PATH="$OTOMAT_HOME/data/otomat.db" \\',
     '  OTOMAT_PROJECT_ROOT="$OTOMAT_HOME/data" \\',
     "  OTOMAT_ALLOWED_ORIGINS=otomat://app \\",
@@ -107,7 +114,7 @@ export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string 
     "  exit 0",
     "fi",
     'echo "$DAEMON_PID" > "$PID_FILE"',
-    `echo "${TOKEN_PREFIX}STARTED:$DAEMON_PID"`,
+    `echo "${TOKEN_PREFIX}STARTED:$DAEMON_PID:$API_TOKEN"`,
     "",
   ].join("\n");
 }
@@ -141,16 +148,19 @@ export function stopDaemonScript(deployment: RemoteDeployment): string {
 }
 
 export type RemoteBootstrapOutcome =
-  | { kind: "running"; pid: number }
-  | { kind: "started"; pid: number }
+  | { kind: "running"; pid: number; apiToken: string | null }
+  | { kind: "started"; pid: number; apiToken: string | null }
   | { kind: "start_failed"; logTail: string }
   | { kind: "daemon_missing"; entry: string }
   | { kind: "node_missing" }
   | { kind: "node_too_old"; version: string };
 
+/** A host bundle from before bearers reports only the pid; its daemon asks for no token either. */
 function liveDaemon(kind: "running" | "started", detail: string): RemoteBootstrapOutcome | null {
-  const pid = Number.parseInt(detail, 10);
-  return Number.isInteger(pid) && pid > 0 ? { kind, pid } : null;
+  const [pidText, token] = detail.split(":");
+  const pid = Number.parseInt(pidText ?? "", 10);
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  return { kind, pid, apiToken: token === undefined || token === "" ? null : token };
 }
 
 /** Last `OTOMAT_REMOTE:` token wins; null means the script never reported (treated as a start failure). */

@@ -983,6 +983,40 @@ it("accepts a loopback Host with a port", async () => {
   expect(res.status).toBe(200);
 });
 
+it("serves health without the bearer and nothing else", async () => {
+  const app = makeApiApp(t);
+  const bare = { headers: { Host: "127.0.0.1" } };
+  expect((await app.request("/api/health", bare)).status).toBe(200);
+
+  const read = await app.request("/api/repositories", bare);
+  expect(read.status).toBe(401);
+  expect(await read.json()).toEqual({ error: "unauthorized" });
+
+  const wrong = await app.request("/api/repositories", {
+    headers: { Host: "127.0.0.1", Authorization: "Bearer not-the-token" },
+  });
+  expect(wrong.status).toBe(401);
+});
+
+// A foreign page can send these without a preflight; the bearer, not CORS, is what stops them running.
+it("refuses a foreign origin's simple requests: text/plain and body-less POSTs", async () => {
+  const app = makeApiApp(t);
+  const foreign = { Host: "127.0.0.1", Origin: "https://evil.example.com" };
+
+  const textPlain = await app.request("/api/linear/sync", {
+    method: "POST",
+    headers: { ...foreign, "content-type": "text/plain" },
+    body: "x",
+  });
+  expect(textPlain.status).toBe(401);
+
+  const bodyless = await app.request("/api/workspaces/reconcile", {
+    method: "POST",
+    headers: foreign,
+  });
+  expect(bodyless.status).toBe(401);
+});
+
 it("echoes CORS for a loopback origin but not a foreign one", async () => {
   const app = makeApiApp(t);
   const ok = await request(app, "/api/health", { headers: { Origin: "http://localhost:5173" } });

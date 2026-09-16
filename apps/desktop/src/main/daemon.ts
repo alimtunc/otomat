@@ -1,4 +1,5 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { randomBytes } from "node:crypto";
 
 import {
   MAINTENANCE_ACTION_ENV,
@@ -8,6 +9,7 @@ import {
 } from "@otomat/domain";
 
 import { APP_ORIGIN, DAEMON_HOST, DAEMON_TERMINATE_GRACE_MS } from "#shared/constants";
+import type { DaemonCredential } from "#shared/daemon-credentials";
 import { buildDaemonEnv } from "#shared/daemon-env";
 import { waitForHealth } from "#shared/health";
 import { findFreeLoopbackPort } from "#shared/ports";
@@ -43,6 +45,8 @@ interface ActiveChild {
   child: ChildProcess;
   closed: Promise<number | null>;
   output: DaemonOutputCapture;
+  /** Null for a maintenance process, which serves no API. */
+  credential: DaemonCredential | null;
 }
 
 const OUTPUT_DRAIN_TIMEOUT_MS = 1000;
@@ -61,17 +65,26 @@ export class DaemonController {
     return this.active?.child.pid;
   }
 
+  get credential(): DaemonCredential | null {
+    return this.active?.credential ?? null;
+  }
+
   async start(): Promise<string> {
     if (this.restoreOperation !== null) {
       throw new Error("The database restore process is still running.");
     }
     if (this.active !== null) throw new Error("The local daemon is already running.");
     const port = await findFreeLoopbackPort();
+    const credential = {
+      url: `http://${DAEMON_HOST}:${port}`,
+      token: randomBytes(32).toString("base64url"),
+    };
     const env = buildDaemonEnv({
       port,
       dbPath: this.options.dbPath,
       projectRoot: this.options.projectRoot,
       path: this.options.userPath,
+      apiToken: credential.token,
       allowedOrigin: this.options.packaged ? APP_ORIGIN : undefined,
       baseEnv: this.options.baseEnv ?? process.env,
       runAsNode: this.options.packaged,
@@ -82,7 +95,7 @@ export class DaemonController {
       env,
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const active = this.trackChild(child);
+    const active = this.trackChild(child, credential);
 
     const deadDuringBoot = new AbortController();
     let spawnError: Error | null = null;
@@ -119,7 +132,7 @@ export class DaemonController {
     }
     child.off("exit", onEarlyExit);
     child.off("error", onSpawnError);
-    return `http://${DAEMON_HOST}:${port}`;
+    return credential.url;
   }
 
   async restoreBackup(backupPath: string): Promise<void> {
@@ -150,7 +163,7 @@ export class DaemonController {
       env,
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const active = this.trackChild(child);
+    const active = this.trackChild(child, null);
     let spawnError: Error | null = null;
     child.once("error", (error) => {
       spawnError = error;
@@ -172,9 +185,9 @@ export class DaemonController {
     await this.stopActive(active);
   }
 
-  private trackChild(child: ChildProcess): ActiveChild {
+  private trackChild(child: ChildProcess, credential: DaemonCredential | null): ActiveChild {
     const output = new DaemonOutputCapture(this.options.writeLog);
-    const active = { child, output, closed: output.attach(child) };
+    const active = { child, output, credential, closed: output.attach(child) };
     this.active = active;
     // A daemon that dies on its own must stop reading as running, or restart stays
     // refused forever; the identity guard keeps an old exit off a replacement child.

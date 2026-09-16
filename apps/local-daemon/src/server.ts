@@ -55,7 +55,7 @@ function daemonStartupCleanupFailure(operation: unknown, cleanup: unknown): Erro
 }
 
 /** The daemon is the single writer: it migrates, bootstraps the project, reconciles crashed runs, then owns the supervisor. */
-export async function startDaemon(options: StartDaemonOptions = {}): Promise<DaemonHandle> {
+export async function startDaemon(options: StartDaemonOptions): Promise<DaemonHandle> {
   const developmentLinearKey = takeLinearKeyFromEnv();
   const dbPath = options.dbPath ?? defaultDbPath();
   await prepareDatabase(dbPath);
@@ -169,6 +169,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
 
     const app = createApiApp({
       db,
+      apiToken: options.apiToken,
       name: DAEMON_NAME,
       version: DAEMON_VERSION,
       build: daemonBuild(),

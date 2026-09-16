@@ -7,6 +7,7 @@ import type { NotificationDelivery } from "./controller.js";
 export function pollNotifications(
   catalog: Pick<HostCatalog, "targets">,
   delivery: NotificationDelivery,
+  fetchImpl: typeof fetch = fetch,
 ): () => void {
   let running = false;
   const poll = async (): Promise<void> => {
@@ -21,7 +22,8 @@ export function pollNotifications(
           try {
             const snapshot = await createDaemonClient({
               baseUrl: url,
-              fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(5_000) }),
+              fetch: (input, init) =>
+                fetchImpl(input, { ...init, signal: AbortSignal.timeout(5_000) }),
             }).listNotifications();
             delivery.receive(
               { host_id: host.id, host_alias: host.kind === "ssh" ? host.label : null },

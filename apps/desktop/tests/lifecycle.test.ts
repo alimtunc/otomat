@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, expect, it } from "vitest";
 
 import { DaemonController } from "#main/daemon";
+import { authorizedFetch } from "#shared/daemon-credentials";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, "..", "..", "..");
@@ -117,8 +118,9 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
       baseEnv: envWithoutVitest(),
     });
 
+    const daemonFetch = authorizedFetch(() => [controller.credential]);
     const firstUrl = await controller.start();
-    const before = await fetch(`${firstUrl}/api/issues`, {
+    const before = await daemonFetch(`${firstUrl}/api/issues`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ project_id: "local-default", title: "Before backup" }),
@@ -135,7 +137,7 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
     copyFileSync(dbPath, backupPath);
 
     const secondUrl = await controller.start();
-    const after = await fetch(`${secondUrl}/api/issues`, {
+    const after = await daemonFetch(`${secondUrl}/api/issues`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ project_id: "local-default", title: "After backup" }),
@@ -146,7 +148,7 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
     await controller.restoreBackup(backupPath);
     const restoredUrl = await controller.start();
     // SAFETY: the daemon answers the issues route with an array of issue contracts.
-    const issues = (await (await fetch(`${restoredUrl}/api/issues`)).json()) as {
+    const issues = (await (await daemonFetch(`${restoredUrl}/api/issues`)).json()) as {
       title: string;
     }[];
     expect(issues.map((issue) => issue.title)).toContain("Before backup");

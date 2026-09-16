@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { authorizedClient, CLIENT_ID_HEADER, CLIENT_SECRET_HEADER, daemonUrl } from "./gate.mjs";
+import {
+  authorizedClient,
+  CLIENT_ID_HEADER,
+  CLIENT_SECRET_HEADER,
+  daemonAuthorization,
+  daemonUrl,
+} from "./gate.mjs";
 
 const ENV = { PREVIEW_CLIENT_ID: "preview-id", PREVIEW_CLIENT_SECRET: "preview-secret" };
 
@@ -32,4 +38,8 @@ test("refuses everybody while the worker carries no client pair", async () => {
 test("rewrites the upstream to the loopback origin the daemon's hostGuard admits", () => {
   const url = daemonUrl("https://otomat-preview-pr-142.example.workers.dev/api/runs?limit=5");
   assert.equal(url.href, "http://127.0.0.1:4331/api/runs?limit=5");
+});
+
+test("hands the daemon the pair's secret as its bearer", () => {
+  assert.equal(daemonAuthorization(ENV), "Bearer preview-secret");
 });

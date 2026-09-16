@@ -1,13 +1,10 @@
 import type { RemoteHostStatus } from "@otomat/domain";
 
+import type { DaemonCredential } from "#shared/daemon-credentials";
 import { waitForHealth } from "#shared/health";
 import { findFreeLoopbackPort } from "#shared/ports";
 
-import {
-  startOrVerifyDaemonScript,
-  stopDaemonScript,
-  type RemoteDeployment,
-} from "./bootstrap/scripts.js";
+import { startOrVerifyDaemonScript, stopDaemonScript } from "./bootstrap/scripts.js";
 import {
   resolveBootstrapResult,
   trimDetail,
@@ -15,35 +12,12 @@ import {
   type RemoteErrorStatus,
 } from "./bootstrap/status.js";
 import { ReconnectLoop } from "./reconnect.js";
+import type { RemoteSessionHandle, RemoteSessionOptions } from "./session-contract.js";
 import { runSshScript } from "./ssh/script.js";
 import { SshTunnel, type SshTunnelOptions, type TunnelHandle } from "./ssh/tunnel.js";
 
 const BOOTSTRAP_TIMEOUT_MS = 30_000;
 const TUNNEL_HEALTH_TIMEOUT_MS = 15_000;
-
-export interface RemoteSessionOptions {
-  alias: string;
-  /** Daemon location and port on the host. */
-  deployment: RemoteDeployment;
-  log(message: string): void;
-  onStatus(status: RemoteHostStatus): void;
-  runScript?: typeof runSshScript;
-  createTunnel?: (options: SshTunnelOptions) => TunnelHandle;
-  health?: typeof waitForHealth;
-  reservePort?: typeof findFreeLoopbackPort;
-  scheduleRetry?: (callback: () => void, delayMs: number) => NodeJS.Timeout | number;
-}
-
-export interface RemoteSessionHandle {
-  readonly alias: string;
-  readonly status: RemoteHostStatus;
-  readonly url: string | null;
-  readonly remoteBuild: string | null;
-  ensureLocalPort(): Promise<number>;
-  connect(retryOnFailure: boolean): Promise<RemoteHostStatus>;
-  refreshDaemon(): Promise<RemoteHostStatus>;
-  dispose(): Promise<void>;
-}
 
 // `connected` is declared only after a health response came back through the tunnel; the remote daemon is never stopped from here — durability is the point.
 export class RemoteHostSession implements RemoteSessionHandle {
@@ -53,6 +27,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
   private disposed = false;
   private inFlight: Promise<RemoteHostStatus> | null = null;
   private lastRemoteBuild: string | null = null;
+  private remoteApiToken: string | null = null;
   private readonly retry: ReconnectLoop;
 
   constructor(private readonly options: RemoteSessionOptions) {
@@ -76,6 +51,14 @@ export class RemoteHostSession implements RemoteSessionHandle {
 
   get url(): string | null {
     return this.localPort === null ? null : `http://127.0.0.1:${this.localPort}`;
+  }
+
+  get credential(): DaemonCredential | null {
+    const url = this.url;
+    if (url === null || this.remoteApiToken === null || this.currentStatus.phase !== "connected") {
+      return null;
+    }
+    return { url, token: this.remoteApiToken };
   }
 
   async ensureLocalPort(): Promise<number> {
@@ -129,6 +112,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
       const bootstrap = await this.bootstrapDaemon();
       if (this.disposed) return this.settleDisposed();
       if ("failure" in bootstrap) return this.settleFailure(bootstrap.failure, retryOnFailure);
+      this.remoteApiToken = bootstrap.apiToken;
       const tunnelFailure = await this.openTunnel(localPort);
       if (tunnelFailure !== null) return this.settleFailure(tunnelFailure, retryOnFailure);
       if (this.disposed) {
