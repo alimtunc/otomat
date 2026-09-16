@@ -9,7 +9,7 @@ import {
   writeExecutionHostsConfig,
 } from "#main/remote/host/config";
 import { ExecutionHostManager } from "#main/remote/manager";
-import type { RemoteSessionHandle } from "#main/remote/session";
+import type { RemoteSessionHandle } from "#main/remote/session-contract";
 import { scratchDir } from "#support/scratch-dir";
 
 const CONNECTED: RemoteHostStatus = { phase: "connected", detail: null };
@@ -17,6 +17,7 @@ const CONNECTED: RemoteHostStatus = { phase: "connected", detail: null };
 class FakeSession implements RemoteSessionHandle {
   status: RemoteHostStatus = { phase: "disconnected", detail: null };
   url: string | null = null;
+  credential = null;
   remoteBuild: string | null = null;
   disposeCount = 0;
   refreshCount = 0;

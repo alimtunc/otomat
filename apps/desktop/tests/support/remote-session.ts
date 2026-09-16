@@ -1,6 +1,6 @@
 import type { RemoteHostStatus } from "@otomat/domain";
 
-import type { RemoteSessionHandle } from "#main/remote/session";
+import type { RemoteSessionHandle } from "#main/remote/session-contract";
 
 /** What one `refreshDaemon()` settles on: the phase it reports, and the build health then named. */
 export interface FakeRemoteRefresh {
@@ -37,6 +37,10 @@ export class FakeRemoteSession implements RemoteSessionHandle {
 
   get url(): string | null {
     return this.options.url === undefined ? "http://127.0.0.1:49200" : this.options.url;
+  }
+
+  get credential(): null {
+    return null;
   }
 
   get remoteBuild(): string | null {

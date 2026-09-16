@@ -65,6 +65,7 @@ vi.mock("#main/notifications/electron", () => ({ startNotifications: vi.fn() }))
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#main/security")>()),
+  authorizeRendererRequests: vi.fn(),
   hardenWebContents: (_contents: unknown, origins: string[]) =>
     harness.hardenedOrigins.push(origins),
 }));

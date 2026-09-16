@@ -8,7 +8,11 @@ import { NotificationDelivery } from "./controller.js";
 import { pollNotifications } from "./source.js";
 import { readNotificationState, writeNotificationState } from "./state.js";
 
-export function startNotifications(runtime: DesktopRuntime, cockpit: CockpitWindow): void {
+export function startNotifications(
+  runtime: DesktopRuntime,
+  cockpit: CockpitWindow,
+  daemonFetch: typeof fetch,
+): void {
   const held = new Set<Notification>();
   let locked = false;
   powerMonitor.on("lock-screen", () => {
@@ -51,5 +55,5 @@ export function startNotifications(runtime: DesktopRuntime, cockpit: CockpitWind
   ipcMain.handle(NOTIFICATION_CHANNELS.settings, () =>
     shell.openExternal("x-apple.systempreferences:com.apple.Notifications-Settings.extension"),
   );
-  app.once("will-quit", pollNotifications(runtime.hosts.catalog, delivery));
+  app.once("will-quit", pollNotifications(runtime.hosts.catalog, delivery, daemonFetch));
 }

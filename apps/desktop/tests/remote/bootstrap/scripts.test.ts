@@ -60,6 +60,16 @@ it("keeps the remote daemon loopback-bound with the packaged renderer origin all
   expect(script).not.toContain("0.0.0.0");
 });
 
+it("keeps one private bearer per deployment and hands it to the daemon and the caller", () => {
+  const script = startOrVerifyDaemonScript(STABLE_DEPLOYMENT);
+  expect(script).toContain('API_TOKEN_FILE="$OTOMAT_HOME/api-token"');
+  expect(script).toContain('if [ ! -s "$API_TOKEN_FILE" ]; then');
+  expect(script).toContain("umask 077");
+  expect(script).toContain('OTOMAT_API_TOKEN="$API_TOKEN"');
+  expect(script).toContain("RUNNING:$PID:$API_TOKEN");
+  expect(script).toContain("STARTED:$DAEMON_PID:$API_TOKEN");
+});
+
 it("detaches the daemon, verifies it survived boot, and records a pidfile", () => {
   const script = startOrVerifyDaemonScript(STABLE_DEPLOYMENT);
   expect(script).toContain("nohup node");
@@ -70,8 +80,10 @@ it("detaches the daemon, verifies it survived boot, and records a pidfile", () =
 });
 
 it.each([
-  ["OTOMAT_REMOTE:RUNNING:4242", { kind: "running", pid: 4242 }],
-  ["OTOMAT_REMOTE:STARTED:7", { kind: "started", pid: 7 }],
+  ["OTOMAT_REMOTE:RUNNING:4242:0a1b", { kind: "running", pid: 4242, apiToken: "0a1b" }],
+  ["OTOMAT_REMOTE:STARTED:7:0a1b", { kind: "started", pid: 7, apiToken: "0a1b" }],
+  // A host bundle from before bearers reports no token; its daemon asks for none.
+  ["OTOMAT_REMOTE:RUNNING:4242", { kind: "running", pid: 4242, apiToken: null }],
   [
     "OTOMAT_REMOTE:NO_DAEMON:/home/u/.otomat/daemon/dist/index.js",
     { kind: "daemon_missing", entry: "/home/u/.otomat/daemon/dist/index.js" },
@@ -91,10 +103,10 @@ it("ignores login-shell noise around the token and keeps the last token", () => 
     "Welcome to Ubuntu 24.04 LTS",
     "Last login: Fri Aug  1 10:00:00 2026",
     "OTOMAT_REMOTE:NO_DAEMON:/stale/entry",
-    "OTOMAT_REMOTE:STARTED:1234",
+    "OTOMAT_REMOTE:STARTED:1234:0a1b",
     "",
   ].join("\n");
-  expect(parseBootstrapOutput(stdout)).toEqual({ kind: "started", pid: 1234 });
+  expect(parseBootstrapOutput(stdout)).toEqual({ kind: "started", pid: 1234, apiToken: "0a1b" });
 });
 
 it.each(["", "no token at all", "OTOMAT_REMOTE:STARTED:not-a-pid", "OTOMAT_REMOTE:UNKNOWN:x"])(

@@ -1,6 +1,6 @@
 import type { ExecutionHostId, RemoteHostStatus } from "@otomat/domain";
 
-import type { RemoteSessionHandle } from "../session.js";
+import type { RemoteSessionHandle } from "../session-contract.js";
 
 export type ResolvedDaemonUrl = { url: string } | { message: string };
 

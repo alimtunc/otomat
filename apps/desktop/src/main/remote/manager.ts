@@ -13,11 +13,8 @@ import { safeSshAliases, validateSshAlias } from "./host/alias.js";
 import { HostCatalog } from "./host/catalog.js";
 import { HostSelection } from "./host/selection.js";
 import { executionHostSnapshot } from "./host/snapshot.js";
-import {
-  RemoteHostSession,
-  type RemoteSessionHandle,
-  type RemoteSessionOptions,
-} from "./session.js";
+import type { RemoteSessionHandle, RemoteSessionOptions } from "./session-contract.js";
+import { RemoteHostSession } from "./session.js";
 import { listSshConfigAliases } from "./ssh/config-aliases.js";
 import { RemoteUpgradeCoordinator } from "./upgrade/coordinator.js";
 import type { RemoteUpdateResult } from "./upgrade/daemon.js";

@@ -1,6 +1,7 @@
-import { shell, type WebContents } from "electron";
+import { session, shell, type WebContents } from "electron";
 
 import { APP_ORIGIN, DEV_SERVER_ENV } from "#shared/constants";
+import { daemonAuthorization, type DaemonCredentials } from "#shared/daemon-credentials";
 
 /** Origins a renderer may navigate within: the packaged app scheme, or the dev server's. */
 export function resolveAllowedOrigins(
@@ -49,5 +50,20 @@ export function hardenWebContents(contents: WebContents, allowedOrigins: readonl
     if (origin !== null && allowedOrigins.includes(origin)) return;
     event.preventDefault();
     if (isSafeExternal(url)) void shell.openExternal(url);
+  });
+}
+
+/**
+ * Stamps the daemon bearer onto the renderer's own requests below the CORS layer, so the
+ * cockpit and its EventSource streams authenticate without the token ever reaching page code.
+ */
+export function authorizeRendererRequests(credentials: DaemonCredentials): void {
+  session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    const authorization = daemonAuthorization(credentials, details.url);
+    callback(
+      authorization === null
+        ? {}
+        : { requestHeaders: { ...details.requestHeaders, Authorization: authorization } },
+    );
   });
 }

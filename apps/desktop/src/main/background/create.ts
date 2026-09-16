@@ -9,15 +9,17 @@ export function createBackgroundMode({
   trayIcon,
   appIcon,
   daemonUrl,
+  daemonFetch,
   ...shell
 }: Pick<BackgroundModeOptions, "hideWindow" | "openWindow" | "openRun" | "log"> & {
   trayIcon(): string;
   appIcon(): string;
   daemonUrl(): string;
+  daemonFetch: typeof fetch;
 }): BackgroundMode {
   return new BackgroundMode({
     ...shell,
-    readWork: () => readLocalWork(daemonUrl()),
+    readWork: () => readLocalWork(daemonUrl(), daemonFetch),
     askCloseChoice: (items) => askCloseChoice(items, appIcon()),
     createTray: (actions) => new BackgroundTray(trayIcon(), actions),
     quit: () => app.quit(),

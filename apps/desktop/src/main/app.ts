@@ -16,7 +16,7 @@ import { resolveUserPath } from "#shared/user-path";
 
 import { createBackgroundMode } from "./background/create.js";
 import { CockpitWindow } from "./cockpit-window.js";
-import { RendererCsp } from "./csp.js";
+import { DaemonLink } from "./daemon-link.js";
 import { resolveExpectedBuild } from "./expected-build.js";
 import { buildIpcActions } from "./ipc-actions.js";
 import { registerIpc, type IpcState } from "./ipc.js";
@@ -26,7 +26,7 @@ import type { AppPaths } from "./paths.js";
 import { serveAppScheme } from "./protocol.js";
 import { QuitSequence } from "./quit.js";
 import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
-import { hardenWebContents, resolveAllowedOrigins } from "./security.js";
+import { authorizeRendererRequests, hardenWebContents, resolveAllowedOrigins } from "./security.js";
 import { SplashWindow } from "./splash-window.js";
 import {
   attachAvailableBackup,
@@ -47,14 +47,10 @@ export class DesktopApp {
   private readonly userData: string;
   private readonly support: DesktopSupport;
   private runtime: DesktopRuntime | null = null;
-  private localDaemonUrl = "";
   private notificationsStarted = false;
   private diagnostic: DesktopStartupDiagnostic | null = null;
   private operation: "restoring" | "starting" | null = null;
-  private readonly csp = new RendererCsp(() => [
-    this.localDaemonUrl,
-    this.runtime?.hosts.remoteSession?.url ?? null,
-  ]);
+  private readonly link = new DaemonLink(() => this.runtime);
   private readonly rejectedBackupPaths = new Set<string>();
   private readonly log = new StartupLogSink(() => this.runtime?.desktopLog ?? null);
   private readonly splash = new SplashWindow(() => createSplashWindow(this.paths));
@@ -65,7 +61,8 @@ export class DesktopApp {
   readonly background = createBackgroundMode({
     trayIcon: () => this.paths.trayIcon,
     appIcon: () => this.paths.appIcon,
-    daemonUrl: () => this.localDaemonUrl,
+    daemonUrl: this.link.localUrl,
+    daemonFetch: this.link.fetch,
     hideWindow: () => this.cockpit.hide(),
     openWindow: () => this.showPrimary(),
     openRun: (runId) => this.cockpit.send(OPEN_RUN_CHANNEL, runId),
@@ -115,8 +112,9 @@ export class DesktopApp {
     ipcMain.on(SPLASH_RETRY_CHANNEL, () => void this.runStartup());
     const origins = resolveAllowedOrigins(this.devServer, (message) => this.log.write(message));
     app.on("web-contents-created", (_event, contents) => hardenWebContents(contents, origins));
+    authorizeRendererRequests(this.link.credentials);
     if (this.paths.packaged && this.paths.webDist !== null) {
-      serveAppScheme(this.paths.webDist, (document) => this.csp.headerFor(document));
+      serveAppScheme(this.paths.webDist, (document) => this.link.csp.headerFor(document));
     }
     await this.splash.open();
     installApplicationMenu({
@@ -151,7 +149,8 @@ export class DesktopApp {
         updaterPort: createElectronUpdaterPort(feedOf(this.buildInfo.version), (message) =>
           this.log.write(message),
         ),
-        localDaemonUrl: () => this.localDaemonUrl,
+        daemonFetch: this.link.fetch,
+        localDaemonUrl: this.link.localUrl,
         onRemoteStatus: (status) => {
           this.cockpit.send(EXECUTION_HOST_STATUS_CHANNEL, status);
           if (status.phase === "connected") void this.runtime?.linear.reconcile();
@@ -160,27 +159,26 @@ export class DesktopApp {
         onUpdate: (snapshot) => this.cockpit.send(UPDATE_STATUS_CHANNEL, snapshot),
         applyRendererUrl: (url) => this.applyRendererUrl(url),
         onSandboxDaemonStarted: (url) => {
-          this.localDaemonUrl = url;
           void this.runtime?.linear.reconcile();
           if (this.runtime?.hosts.activeHostId !== "remote") this.ipcState.daemonUrl = url;
         },
       });
-      this.localDaemonUrl = await this.runtime.daemon.start();
-      this.ipcState.daemonUrl = this.localDaemonUrl;
-      await this.runtime.sandbox.ensure(this.localDaemonUrl);
+      this.ipcState.daemonUrl = await this.runtime.daemon.start();
+      await this.runtime.sandbox.ensure(this.ipcState.daemonUrl);
       const remoteUrl = await this.runtime.hosts.bootActivate();
       if (remoteUrl !== null) this.ipcState.daemonUrl = remoteUrl;
       await this.runtime.linear.reconcile();
       this.rejectedBackupPaths.clear();
       this.diagnostic = null;
-      if (!this.notificationsStarted) startNotifications(this.runtime, this.cockpit);
+      if (!this.notificationsStarted) {
+        startNotifications(this.runtime, this.cockpit, this.link.fetch);
+      }
       this.notificationsStarted = true;
       this.cockpit.open();
       this.splash.close();
       this.runtime.updater.start();
     } catch (error) {
       this.ipcState.daemonUrl = "";
-      this.localDaemonUrl = "";
       this.diagnostic = attachAvailableBackup(describeStartupFailure(error), this.backupContext());
       this.log.write(`${this.diagnostic.code}: ${this.diagnostic.message}`);
       this.splash.send({ phase: "failed", diagnostic: this.diagnostic });
@@ -237,7 +235,7 @@ export class DesktopApp {
 
   private applyRendererUrl(url: string): void {
     this.ipcState.daemonUrl = url;
-    if (!this.csp.allows(url)) this.cockpit.reload();
+    if (!this.link.csp.allows(url)) this.cockpit.reload();
   }
 
   private showPrimary(): void {

@@ -1,7 +1,7 @@
 import { insertPullRequest, updatePullRequest } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { makeApiApp } from "../support/api.js";
+import { API_HEADERS, makeApiApp } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { seedRun } from "../support/seed.js";
 
@@ -40,7 +40,7 @@ it(
   { timeout: 20_000 },
   async () => {
     const app = makeApiApp(t);
-    const sse = await app.request(`/api/runs/${RUN_ID}/events`, { headers: { Host: "127.0.0.1" } });
+    const sse = await app.request(`/api/runs/${RUN_ID}/events`, { headers: API_HEADERS });
     const reader = sse.body?.getReader();
     if (!reader) throw new Error("SSE response has no body");
 

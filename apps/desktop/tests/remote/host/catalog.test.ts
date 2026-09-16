@@ -2,7 +2,7 @@ import { countWorkspaces, type RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
 import { HostCatalog, type HostCatalogOptions } from "#main/remote/host/catalog";
-import type { RemoteSessionHandle } from "#main/remote/session";
+import type { RemoteSessionHandle } from "#main/remote/session-contract";
 
 const LOCAL_URL = "http://127.0.0.1:4319";
 const REMOTE_URL = "http://127.0.0.1:4400";

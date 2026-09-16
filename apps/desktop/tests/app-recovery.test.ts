@@ -71,6 +71,7 @@ vi.mock("#main/ipc", () => ({
 vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", () => ({
+  authorizeRendererRequests: vi.fn(),
   hardenWebContents: vi.fn(),
   resolveAllowedOrigins: vi.fn(() => []),
 }));

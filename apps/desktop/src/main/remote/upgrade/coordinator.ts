@@ -3,7 +3,7 @@ import { PREVIEW_BUILD_SHA, type RemoteHostStatus } from "@otomat/domain";
 import type { RemoteDeployment } from "../bootstrap/scripts.js";
 import { trimDetail } from "../bootstrap/status.js";
 import { remoteBusyRuns } from "../idle.js";
-import type { RemoteSessionHandle } from "../session.js";
+import type { RemoteSessionHandle } from "../session-contract.js";
 import { runSshScript } from "../ssh/script.js";
 import { ArtifactWait } from "./artifact-wait.js";
 import {

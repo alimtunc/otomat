@@ -6,7 +6,11 @@ import { RemoteHostSession } from "#main/remote/session";
 import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh/script";
 import type { SshTunnelOptions, TunnelHandle } from "#main/remote/ssh/tunnel";
 
-const STARTED: SshScriptResult = { code: 0, stdout: "OTOMAT_REMOTE:STARTED:100\n", stderr: "" };
+const STARTED: SshScriptResult = {
+  code: 0,
+  stdout: "OTOMAT_REMOTE:STARTED:100:remote-token\n",
+  stderr: "",
+};
 
 const HEALTHY: HealthResponse = {
   status: "ok",
@@ -84,6 +88,7 @@ it("declares connected only after a health response came back through the tunnel
     "connected",
   ]);
   expect(session.url).toBe("http://127.0.0.1:45000");
+  expect(session.credential).toEqual({ url: "http://127.0.0.1:45000", token: "remote-token" });
   expect(session.remoteBuild).toBe("abc1234");
   expect(tunnels).toHaveLength(1);
   expect(health).toHaveBeenCalledWith(
@@ -180,6 +185,7 @@ it("stops reconnecting once disposed", async () => {
   await session.dispose();
   retries[0]?.();
   expect(session.status.phase).toBe("disconnected");
+  expect(session.credential).toBeNull();
 });
 
 it("refreshDaemon enters the reconnect loop when the daemon does not come back at once", async () => {

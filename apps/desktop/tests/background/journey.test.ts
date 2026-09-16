@@ -121,6 +121,7 @@ vi.mock("#main/menu", () => ({ installApplicationMenu: vi.fn() }));
 vi.mock("#main/notifications/electron", () => ({ startNotifications: vi.fn() }));
 vi.mock("#main/protocol", () => ({ serveAppScheme: vi.fn() }));
 vi.mock("#main/security", () => ({
+  authorizeRendererRequests: vi.fn(),
   hardenWebContents: vi.fn(),
   resolveAllowedOrigins: vi.fn(() => []),
 }));

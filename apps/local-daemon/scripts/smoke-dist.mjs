@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
+import { DAEMON_API_TOKEN_ENV, WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
 
 const PORT = 43190;
 const dir = mkdtempSync(join(tmpdir(), "otomat-smoke-"));
@@ -15,6 +15,7 @@ const childEnv = {
   OTOMAT_DAEMON_PORT: String(PORT),
   OTOMAT_DB_PATH: join(dir, "smoke.db"),
   OTOMAT_PROJECT_ROOT: dir,
+  [DAEMON_API_TOKEN_ENV]: "smoke-api-token",
 };
 delete childEnv.OTOMAT_LINEAR_API_KEY;
 delete childEnv[WORKER_JOB_ENV];

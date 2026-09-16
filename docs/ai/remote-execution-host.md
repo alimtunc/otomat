@@ -17,7 +17,9 @@ desktop app stays the UI. This document is the contract for that mode.
 - The remote daemon binds **loopback only** (`127.0.0.1:4319`). No API port is
   ever exposed publicly; the desktop reaches it through `ssh -N -L
   127.0.0.1:<local>:127.0.0.1:4319`, and the daemon's loopback `Host`-header
-  guard and CORS behavior apply unchanged.
+  guard, CORS behavior and bearer token apply unchanged — the start-or-verify
+  script keeps the token in `~/.otomat/api-token` and reports it to the desktop
+  with the daemon's pid.
 - **No state synchronization.** The local and remote daemons own separate
   SQLite databases. When the remote host is active, the cockpit reads only the
   remote daemon's persistent state; switching hosts re-points the renderer's one
@@ -55,6 +57,7 @@ The desktop's start-or-verify step (one ssh round trip at every connect) expects
   data/otomat.db         # SQLite; runs/, worktrees/ live beside it
   daemon.log             # appended by the daemon process
   daemon.pid             # written when the desktop starts the daemon
+  api-token              # the daemon's API bearer, 0600, created on first start-or-verify
 ```
 
 Requirements on the host: Linux with `bash`, Node.js >= 22 on the login-shell

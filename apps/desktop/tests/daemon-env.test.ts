@@ -109,3 +109,27 @@ describe("buildDaemonEnv", () => {
     expect(env.PATH).toBe("/resolved");
   });
 });
+
+describe("buildDaemonEnv api token", () => {
+  it("sets the daemon's bearer from the caller, never from the launching shell", () => {
+    const baseEnv = { OTOMAT_API_TOKEN: "stale-shell-token" };
+    const maintenance = buildDaemonEnv({
+      port: 0,
+      dbPath: "d",
+      projectRoot: "p",
+      path: "x",
+      baseEnv,
+    });
+    expect(maintenance.OTOMAT_API_TOKEN).toBeUndefined();
+
+    const served = buildDaemonEnv({
+      port: 1,
+      dbPath: "d",
+      projectRoot: "p",
+      path: "x",
+      apiToken: "fresh-token",
+      baseEnv,
+    });
+    expect(served.OTOMAT_API_TOKEN).toBe("fresh-token");
+  });
+});

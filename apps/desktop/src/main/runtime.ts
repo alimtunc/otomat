@@ -55,6 +55,8 @@ interface DesktopRuntimeOptions {
   version: string;
   installability: Installability;
   updaterPort: UpdaterPort;
+  /** Carries each daemon's bearer; every main-process call to a daemon goes through it. */
+  daemonFetch: typeof fetch;
   localDaemonUrl(): string;
   onRemoteStatus(status: RemoteHostStatus): void;
   onLinearDelivery(snapshot: LinearDeliverySnapshot): void;
@@ -91,6 +93,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     daemon,
     onDaemonStarted: options.onSandboxDaemonStarted,
     remoteHomeSuffix: deployment.homeSuffix,
+    fetchImpl: options.daemonFetch,
     log: (message) => desktopLog.write(message),
   });
   const hosts = new ExecutionHostManager({
@@ -103,6 +106,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     expectedBuild: options.expectedBuild,
     deployment,
     repo: OTOMAT_GITHUB_REPO,
+    fetchImpl: options.daemonFetch,
   });
   const linear = new LinearCoordinator({
     vault: createMainLinearVault(dataDirectory.root),
@@ -116,6 +120,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
   });
   const capacity = new HostCapacityActions({
     daemonUrl: (hostId) => hosts.catalog.resolveBaseUrl(hostId),
+    fetchImpl: options.daemonFetch,
     log: (message) => desktopLog.write(message),
   });
   const updater = new DesktopUpdater({
@@ -124,6 +129,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     dataDir: dataDirectory.root,
     gate: new UpdateGate({
       hosts: () => hosts.catalog.targets(),
+      fetchImpl: options.daemonFetch,
       log: (message) => desktopLog.write(message),
     }),
     port: options.updaterPort,

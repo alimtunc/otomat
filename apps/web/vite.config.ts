@@ -6,6 +6,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 const DAEMON_TARGET = "http://localhost:4319";
+// `pnpm back` defaults to the same dev token, so the two-terminal flow needs no shared setup.
+const DAEMON_API_TOKEN = process.env.OTOMAT_API_TOKEN ?? "otomat-dev";
 
 export default defineConfig({
   plugins: [tanstackRouter({ target: "react" }), react(), tailwindcss()],
@@ -14,7 +16,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      "/api": { target: DAEMON_TARGET, changeOrigin: true },
+      "/api": {
+        target: DAEMON_TARGET,
+        changeOrigin: true,
+        headers: { authorization: `Bearer ${DAEMON_API_TOKEN}` },
+      },
     },
   },
   build: {

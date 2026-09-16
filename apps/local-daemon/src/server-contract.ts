@@ -12,6 +12,7 @@ export function daemonBuild(): string | null {
 export interface StartDaemonOptions {
   port?: number;
   dbPath?: string;
+  apiToken: string;
 }
 
 export interface CloseOptions {

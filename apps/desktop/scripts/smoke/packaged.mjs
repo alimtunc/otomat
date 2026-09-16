@@ -149,6 +149,7 @@ async function smokeDaemon(appPath, expectedBuild) {
       ELECTRON_RUN_AS_NODE: "1",
       OTOMAT_DAEMON_HOST: "127.0.0.1",
       OTOMAT_DAEMON_PORT: String(DAEMON_PORT),
+      OTOMAT_API_TOKEN: "smoke-api-token",
       OTOMAT_DB_PATH: join(dataDir, "otomat.db"),
       OTOMAT_PROJECT_ROOT: dataDir,
     }),

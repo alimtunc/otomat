@@ -1,3 +1,6 @@
+import { timingSafeEqual } from "node:crypto";
+
+import { DAEMON_API_TOKEN_ENV, DAEMON_HEALTH_PATH } from "@otomat/domain";
 import type { MiddlewareHandler } from "hono";
 
 const LOOPBACK_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
@@ -60,5 +63,28 @@ export function hostGuard(env: NodeJS.ProcessEnv = process.env): MiddlewareHandl
       return next();
     }
     return c.json({ error: "forbidden_host" }, 403);
+  };
+}
+
+/** Reads the token once and removes it, so a worker re-exec'd with this environment never carries it. */
+export function takeDaemonApiToken(env: NodeJS.ProcessEnv = process.env): string | null {
+  const token = env[DAEMON_API_TOKEN_ENV];
+  delete env[DAEMON_API_TOKEN_ENV];
+  return token === undefined || token === "" ? null : token;
+}
+
+function bearerMatches(header: string | undefined, token: string): boolean {
+  const expected = Buffer.from(`Bearer ${token}`);
+  const given = Buffer.from(header ?? "");
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+/** Every `/api` route but health needs the bearer; a browser cannot attach it cross-origin without a preflight, which closes CSRF as well. */
+export function bearerGuard(token: string): MiddlewareHandler {
+  return async (c, next) => {
+    if (c.req.path === DAEMON_HEALTH_PATH || bearerMatches(c.req.header("Authorization"), token)) {
+      return next();
+    }
+    return c.json({ error: "unauthorized" }, 401);
   };
 }

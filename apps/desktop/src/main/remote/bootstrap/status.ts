@@ -19,7 +19,9 @@ export function scriptFailure(result: SshScriptResult): string {
   return trimDetail(result.stderr) || `ssh exited with code ${String(result.code)}`;
 }
 
-export type BootstrapResolution = { failure: RemoteErrorStatus } | { detail: string };
+export type BootstrapResolution =
+  | { failure: RemoteErrorStatus }
+  | { detail: string; apiToken: string | null };
 
 /** Turns one start-or-verify round trip into either a typed failure or the running-daemon detail. */
 export function resolveBootstrapResult(result: SshScriptResult): BootstrapResolution {
@@ -59,6 +61,6 @@ export function resolveBootstrapResult(result: SshScriptResult): BootstrapResolu
       return { failure: { phase: "error", code: "node_too_old", detail: outcome.version } };
     case "running":
     case "started":
-      return { detail: `daemon ${outcome.kind} (pid ${outcome.pid})` };
+      return { detail: `daemon ${outcome.kind} (pid ${outcome.pid})`, apiToken: outcome.apiToken };
   }
 }
