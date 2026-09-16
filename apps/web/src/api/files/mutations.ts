@@ -11,15 +11,10 @@ export function useSaveFile(target: CheckoutTarget) {
   const client = useQueryClient();
   const keys = useQueryKeys();
   return useMutation({
-    mutationFn: (request: SaveWorktreeFileRequest) =>
-      target.kind === "run"
-        ? daemon.saveRunFile(target.id, request)
-        : daemon.saveRepositoryFile(target.id, request),
+    mutationFn: (request: SaveWorktreeFileRequest) => daemon.saveCheckoutFile(target, request),
     onSuccess: (saved, request) => {
       client.setQueryData(
-        target.kind === "run"
-          ? keys.runFile(target.id, saved.path)
-          : keys.repositoryFile(target.id, saved.path),
+        keys.checkoutFile(target, saved.path),
         (current: WorktreeFileContent | undefined) =>
           current?.kind === "text"
             ? {

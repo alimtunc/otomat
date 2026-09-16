@@ -1,10 +1,8 @@
 import { z } from "zod";
 
-import { diffFileContractSchema, diffSideSchema } from "./diff.js";
-import {
-  publishPullRequestRequestSchema,
-  pullRequestPublishabilitySchema,
-} from "./pull-request/detail.js";
+import { diffFileContractSchema, diffSideSchema, type DiffFileContract } from "./diff.js";
+
+export const COMMIT_MESSAGE_MAX_LENGTH = 10_000;
 
 export const checkoutTargetSchema = z.object({
   kind: z.enum(["repository", "run"]),
@@ -34,6 +32,11 @@ export const changeSelectionSchema = z.discriminatedUnion("kind", [
 ]);
 export type ChangeSelection = z.infer<typeof changeSelectionSchema>;
 
+/** Git applies a partial patch only to text a plain modification produced; renames, additions and binaries move whole. */
+export function changeSupportsSelection(file: DiffFileContract): boolean {
+  return file.status === "modified" && file.old_path === null && !file.binary;
+}
+
 export const sourceControlActionSchema = z.enum(["stage", "unstage", "discard"]);
 export type SourceControlAction = z.infer<typeof sourceControlActionSchema>;
 
@@ -54,26 +57,9 @@ export type ChangeFilesRequest = z.infer<typeof changeFilesRequestSchema>;
 
 export const commitFilesRequestSchema = z.object({
   revision: z.string().min(1),
-  message: z.string().trim().min(1).max(10000),
+  message: z.string().trim().min(1).max(COMMIT_MESSAGE_MAX_LENGTH),
 });
 export type CommitFilesRequest = z.infer<typeof commitFilesRequestSchema>;
 
 export const commitFilesResponseSchema = z.object({ sha: z.string().min(1) });
 export type CommitFilesResponse = z.infer<typeof commitFilesResponseSchema>;
-
-export const repositoryPullRequestInputSchema = z.strictObject({
-  revision: z.string().min(1),
-  base_ref: z.string().trim().min(1).max(120),
-});
-export type RepositoryPullRequestInput = z.infer<typeof repositoryPullRequestInputSchema>;
-
-export const repositoryPullRequestPreviewSchema = z.object({
-  revision: z.string(),
-  publishability: pullRequestPublishabilitySchema,
-});
-export type RepositoryPullRequestPreview = z.infer<typeof repositoryPullRequestPreviewSchema>;
-
-export const publishRepositoryPullRequestSchema = publishPullRequestRequestSchema.extend(
-  repositoryPullRequestInputSchema.shape,
-);
-export type PublishRepositoryPullRequest = z.infer<typeof publishRepositoryPullRequestSchema>;

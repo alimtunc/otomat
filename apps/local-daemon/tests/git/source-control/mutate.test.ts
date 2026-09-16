@@ -8,12 +8,11 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 
-import type { ChangeFilesRequest } from "@otomat/domain";
+import { changeFilesRequestSchema, type ChangeFilesRequest } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { changeCheckoutFiles, sourceControlSnapshot } from "#git";
 import { runGit } from "#git/git-cli";
-import { snapshotWorktree } from "#git/worktree-snapshot";
 import { setupTestRepo, type TestRepo } from "#test-support/git";
 
 let repo: TestRepo;
@@ -184,13 +183,69 @@ it("reports unresolved merges and refuses staging them", () => {
   expect(() => change({ action: "stage", path: "notes.txt" })).toThrow("Resolve merge conflicts");
 });
 
-it("never lets an automatic snapshot overwrite a partial staging selection", () => {
-  repo.write("notes.txt", "staged\n");
-  change({ action: "stage", path: "notes.txt" });
-  repo.write("notes.txt", "unstaged\n");
-  const head = repo.git("rev-parse", "HEAD");
-  expect(() => snapshotWorktree(repo.root, "snapshot")).toThrow("staged and unstaged");
-  expect(repo.git("rev-parse", "HEAD")).toBe(head);
-  expect(indexText()).toBe("staged\n");
-  expect(readFileSync(join(repo.root, "notes.txt"), "utf8")).toBe("unstaged\n");
+it("stages and unstages all changes without changing their content", () => {
+  repo.write("README.md", "edited\n");
+  repo.write("new.txt", "new\n");
+  changeCheckoutFiles(repo.root, {
+    action: "stage",
+    all: true,
+    revision: sourceControlSnapshot(repo.root).response.revision,
+  });
+  expect(sourceControlSnapshot(repo.root).response.staged).toHaveLength(2);
+  changeCheckoutFiles(repo.root, {
+    action: "unstage",
+    all: true,
+    revision: sourceControlSnapshot(repo.root).response.revision,
+  });
+  const after = sourceControlSnapshot(repo.root).response;
+  expect(after.staged).toEqual([]);
+  expect(after.unstaged).toHaveLength(2);
+  expect(readFileSync(join(repo.root, "README.md"), "utf8")).toBe("edited\n");
+});
+
+it("discards all unstaged changes while preserving staged changes and ignored files", () => {
+  repo.write(".gitignore", "ignored.txt\n");
+  repo.commitAll("ignore");
+  repo.write("README.md", "staged\n");
+  repo.git("add", "README.md");
+  repo.write("README.md", "unstaged\n");
+  repo.write("new.txt", "untracked\n");
+  repo.write("ignored.txt", "keep\n");
+  changeCheckoutFiles(repo.root, {
+    action: "discard",
+    all: true,
+    revision: sourceControlSnapshot(repo.root).response.revision,
+  });
+  expect(readFileSync(join(repo.root, "README.md"), "utf8")).toBe("staged\n");
+  expect(existsSync(join(repo.root, "new.txt"))).toBe(false);
+  expect(readFileSync(join(repo.root, "ignored.txt"), "utf8")).toBe("keep\n");
+  expect(sourceControlSnapshot(repo.root).response.staged).toHaveLength(1);
+  expect(sourceControlSnapshot(repo.root).response.unstaged).toEqual([]);
+});
+
+it("rejects stale bulk operations and ambiguous requests", () => {
+  repo.write("README.md", "reviewed\n");
+  const revision = sourceControlSnapshot(repo.root).response.revision;
+  repo.write("new.txt", "written after confirmation\n");
+  expect(() => changeCheckoutFiles(repo.root, { action: "discard", all: true, revision })).toThrow(
+    "checkout changed",
+  );
+  expect(existsSync(join(repo.root, "new.txt"))).toBe(true);
+  expect(changeFilesRequestSchema.safeParse({ action: "discard", revision }).success).toBe(false);
+  expect(
+    changeFilesRequestSchema.safeParse({
+      action: "discard",
+      revision,
+      all: true,
+      path: "README.md",
+    }).success,
+  ).toBe(false);
+  expect(
+    changeFilesRequestSchema.safeParse({
+      action: "discard",
+      revision,
+      all: true,
+      selection: { kind: "hunk", index: 0 },
+    }).success,
+  ).toBe(false);
 });

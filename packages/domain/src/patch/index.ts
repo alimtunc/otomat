@@ -1,5 +1,5 @@
 export { parsePatchHunks, type PatchHunk, type PatchLine, type PatchLineKind } from "./parse.js";
-export { narrowPatchToRange } from "./select.js";
+export { hunkPatches, narrowPatchToRange, patchPreamble } from "./select.js";
 export {
   hunkCoveringRange,
   rangeShapeRefusal,

@@ -1,6 +1,7 @@
 import type { CommitFilesRequest, CommitFilesResponse } from "@otomat/domain";
 
 import { runGit } from "../git-cli.js";
+import { headSha } from "../repo.js";
 import { SourceControlError } from "./errors.js";
 import { sourceControlSnapshot } from "./snapshot.js";
 
@@ -31,5 +32,5 @@ export function commitCheckoutFiles(cwd: string, request: CommitFilesRequest): C
       "commit_failed",
       result.stderr.trim() || result.stdout.trim() || "Git could not create the commit.",
     );
-  return { sha: runGit(["rev-parse", "HEAD"], { cwd }).stdout.trim() };
+  return { sha: headSha(cwd) };
 }

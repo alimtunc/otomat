@@ -11,20 +11,22 @@ export * from "./types.js";
 export * from "./errors.js";
 export * from "./diff.js";
 export { worktreeGitView, type WorktreeGitView } from "./diff-inputs.js";
-export { runGit, scrubGitEnv } from "./git-cli.js";
+export { scrubGitEnv } from "./git-cli.js";
 export { availableBranchName, sanitizeBranchName } from "./branch-name.js";
+export * from "./branches.js";
 export {
-  branchExists,
   commitsSince,
   detectDefaultBranch,
   hasCommit,
   headSha,
   isRepositoryRoot,
-  listBranches,
+  mergeBase,
   repositoryRemotes,
+  revParse,
   searchTrackedFiles,
   uncommittedPaths,
   unpushedCommitCount,
+  verifyRef,
   type CommitSummary,
   type TrackedFileMatches,
 } from "./repo.js";

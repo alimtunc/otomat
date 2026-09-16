@@ -12,8 +12,8 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { branchExists } from "#git/branches";
 import { GitCommandError, WorktreeConflictError, WorktreeNotFoundError } from "#git/errors";
-import { branchExists } from "#git/repo";
 import { createGitWorktreeService } from "#git/service";
 import { type GitWorktreeService } from "#git/service-contract";
 import { listWorktrees } from "#git/worktree-cli";

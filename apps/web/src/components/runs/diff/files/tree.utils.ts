@@ -124,3 +124,29 @@ export function expandAncestors(collapsed: ReadonlySet<string>, path: string): R
   for (const directory of hiding) next.delete(directory);
   return next;
 }
+
+type TreeKeyStep = { focus: number } | { toggle: string } | null;
+
+export function treeKeyStep<T extends FileTreeLeaf>(
+  rows: readonly FileTreeRow<T>[],
+  index: number,
+  key: string,
+): TreeKeyStep {
+  const row = rows[index];
+  if (row === undefined) return null;
+  const last = rows.length - 1;
+  if (key === "ArrowDown") return { focus: Math.min(index + 1, last) };
+  if (key === "ArrowUp") return { focus: Math.max(index - 1, 0) };
+  if (key === "Home") return { focus: 0 };
+  if (key === "End") return { focus: last };
+  if (key === "ArrowRight") {
+    if (row.node.kind !== "directory") return null;
+    return row.expanded ? { focus: Math.min(index + 1, last) } : { toggle: row.node.path };
+  }
+  if (key === "ArrowLeft") {
+    if (row.node.kind === "directory" && row.expanded) return { toggle: row.node.path };
+    const parent = rows.findLastIndex((candidate, i) => i < index && candidate.depth < row.depth);
+    return parent < 0 ? null : { focus: parent };
+  }
+  return null;
+}

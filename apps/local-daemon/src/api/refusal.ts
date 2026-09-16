@@ -22,3 +22,7 @@ export function commandRefusalJson<E extends Env>(
     message: error.message,
   });
 }
+
+export function invalidRequestJson<E extends Env>(c: Context<E>, issues: unknown) {
+  return c.json({ error: "invalid_request", issues }, 400);
+}

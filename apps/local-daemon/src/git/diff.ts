@@ -3,6 +3,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type { DiffFileContract } from "@otomat/domain";
+
 import { parseNameStatusZ, parseNumstatZ, splitPatchByFile } from "./diff-parse.js";
 import { runGit, runGitBytes } from "./git-cli.js";
 import type { DiffSnapshot } from "./service-contract.js";
@@ -62,6 +64,11 @@ export function collectChangedFiles(gitCwd: string, base: string, tree: string):
       binary: count?.binary ?? false,
     };
   });
+}
+
+export function toDiffFileContract(file: DiffFile): DiffFileContract {
+  const { oldPath, ...rest } = file;
+  return { ...rest, old_path: oldPath };
 }
 
 /** Canonical diff of `base..tree`: per-file patches, counts, and stable shas. */

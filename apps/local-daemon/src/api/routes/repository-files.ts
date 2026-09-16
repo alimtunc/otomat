@@ -1,25 +1,20 @@
 import { saveWorktreeFileRequestSchema, type RepositoryTreeResponse } from "@otomat/domain";
 import { Hono } from "hono";
 
-import {
-  checkoutTree,
-  isRepositoryRelative,
-  isRepositoryRoot,
-  normalizeRepositoryPath,
-} from "#git";
+import { checkoutTree, isRepositoryRelative, normalizeRepositoryPath } from "#git";
 
 import type { ApiDeps } from "../deps.js";
 import { fileContentResponse, refuseFile, saveFileResponse } from "../file-content.js";
-import { validateJson } from "../guards.js";
+import { checkoutGuard, validateJson, type CheckoutEnv } from "../guards.js";
 
-export function createRepositoryFileRoutes(deps: ApiDeps): Hono {
-  const routes = new Hono();
+export function createRepositoryFileRoutes(deps: ApiDeps): Hono<CheckoutEnv> {
+  const routes = new Hono<CheckoutEnv>();
+  routes.use("/:id/tree", checkoutGuard(deps.repositories));
+  routes.use("/:id/tree/content", checkoutGuard(deps.repositories));
 
   routes.get("/:id/tree", (c) => {
-    const binding = deps.repositories.forRepository(c.req.param("id"));
-    if (binding === null) return c.json({ error: "repository_not_found" }, 404);
-    if (!isRepositoryRoot(binding.rootPath)) return refuseFile(c, "workspace_unavailable");
-    const tree = checkoutTree(binding.rootPath);
+    const { binding, cwd } = c.get("checkout");
+    const tree = checkoutTree(cwd);
     return c.json({
       repository_id: binding.repositoryId,
       branch: tree.branch,
@@ -30,18 +25,12 @@ export function createRepositoryFileRoutes(deps: ApiDeps): Hono {
   routes.get("/:id/tree/content", (c) => {
     const path = normalizeRepositoryPath(c.req.query("path") ?? "");
     if (!isRepositoryRelative(path)) return refuseFile(c, "path_invalid");
-    const binding = deps.repositories.forRepository(c.req.param("id"));
-    if (binding === null) return c.json({ error: "repository_not_found" }, 404);
-    if (!isRepositoryRoot(binding.rootPath)) return refuseFile(c, "workspace_unavailable");
-    return fileContentResponse(c, checkoutTree(binding.rootPath), path);
+    return fileContentResponse(c, checkoutTree(c.get("checkout").cwd), path);
   });
 
-  routes.put("/:id/tree/content", validateJson(saveWorktreeFileRequestSchema), (c) => {
-    const binding = deps.repositories.forRepository(c.req.param("id"));
-    if (binding === null) return c.json({ error: "repository_not_found" }, 404);
-    if (!isRepositoryRoot(binding.rootPath)) return refuseFile(c, "workspace_unavailable");
-    return saveFileResponse(c, binding.rootPath, c.req.valid("json"));
-  });
+  routes.put("/:id/tree/content", validateJson(saveWorktreeFileRequestSchema), (c) =>
+    saveFileResponse(c, c.get("checkout").cwd, c.req.valid("json")),
+  );
 
   return routes;
 }

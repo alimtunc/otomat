@@ -15,6 +15,7 @@ import { GitHubCliError, GitHubPublicationError, type PullRequestView } from "#g
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
 import { toPullRequest } from "../pull-request-serialize.js";
+import { invalidRequestJson } from "../refusal.js";
 
 function detail(
   view: PullRequestView | null,
@@ -46,6 +47,11 @@ function refusal(error: unknown): { error: string; message: string } | null {
 
 export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
+  routes.onError((error, c) => {
+    const refused = refusal(error);
+    if (refused === null) throw error;
+    return c.json(refused, 409);
+  });
 
   const publicationDetail = async (
     runId: string,
@@ -57,48 +63,25 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
 
   routes.get("/repositories/:id/pr", async (c) => {
     const base = repositoryPullRequestInputSchema.shape.base_ref.safeParse(c.req.query("base_ref"));
-    if (!base.success) return c.json({ error: "invalid_request", issues: base.error.issues }, 400);
-    try {
-      return c.json(await deps.github.previewRepositoryPullRequest(c.req.param("id"), base.data));
-    } catch (error) {
-      const refused = refusal(error);
-      if (refused) return c.json(refused, 409);
-      throw error;
-    }
+    if (!base.success) return invalidRequestJson(c, base.error.issues);
+    return c.json(await deps.github.previewRepositoryPullRequest(c.req.param("id"), base.data));
   });
 
   routes.post(
     "/repositories/:id/pr/generate",
     validateJson(repositoryPullRequestInputSchema),
-    async (c) => {
-      try {
-        return c.json(
-          await deps.github.generateRepositoryPullRequest(c.req.param("id"), c.req.valid("json")),
-        );
-      } catch (error) {
-        const refused = refusal(error);
-        if (refused) return c.json(refused, 409);
-        throw error;
-      }
-    },
+    async (c) =>
+      c.json(
+        await deps.github.generateRepositoryPullRequest(c.req.param("id"), c.req.valid("json")),
+      ),
   );
 
-  routes.post(
-    "/repositories/:id/pr",
-    validateJson(publishRepositoryPullRequestSchema),
-    async (c) => {
-      try {
-        return c.json(
-          toPullRequest(
-            await deps.github.publishRepository(c.req.param("id"), c.req.valid("json")),
-          ),
-        );
-      } catch (error) {
-        const refused = refusal(error);
-        if (refused) return c.json(refused, 409);
-        throw error;
-      }
-    },
+  routes.post("/repositories/:id/pr", validateJson(publishRepositoryPullRequestSchema), async (c) =>
+    c.json(
+      toPullRequest(
+        await deps.github.publishRepositoryPullRequest(c.req.param("id"), c.req.valid("json")),
+      ),
+    ),
   );
 
   routes.get("/runs/:id/pr", runGuard(deps.db), async (c) => {
@@ -106,15 +89,9 @@ export function createGitHubRoutes(deps: ApiDeps): Hono<RunEnv> {
     return c.json(await publicationDetail(runId, await deps.github.getPullRequest(runId)));
   });
 
-  routes.post("/runs/:id/pr/generate", runGuard(deps.db), async (c) => {
-    try {
-      return c.json(await deps.github.generatePullRequestMetadata(c.get("run")));
-    } catch (error) {
-      const refused = refusal(error);
-      if (refused) return c.json(refused, 409);
-      throw error;
-    }
-  });
+  routes.post("/runs/:id/pr/generate", runGuard(deps.db), async (c) =>
+    c.json(await deps.github.generatePullRequestMetadata(c.get("run"))),
+  );
 
   /** Accepted, not performed: the publication outlives this request, so the answer is its reference and initial state. */
   routes.post(

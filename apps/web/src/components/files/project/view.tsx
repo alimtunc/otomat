@@ -4,7 +4,7 @@ import { ProjectExplorer } from "@web/components/files/project/explorer";
 import { FilesWorkspace } from "@web/components/files/workspace";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
-import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 
 export function ProjectFilesView() {
@@ -19,7 +19,7 @@ export function ProjectFilesView() {
           description="Add or select a project to browse its files."
         />
       ) : (
-        <QueryBoundary
+        <QueryList
           query={repositories}
           pending={
             <CenteredState>
@@ -32,24 +32,25 @@ export function ProjectFilesView() {
               onRetry={() => void repositories.refetch()}
             />
           }
+          empty={
+            <EmptyState
+              icon="folder"
+              title="No repository"
+              description="Connect a repository in project settings."
+            />
+          }
         >
-          {(entries) =>
-            entries[0] === undefined ? (
-              <EmptyState
-                icon="folder"
-                title="No repository"
-                description="Connect a repository in project settings."
-              />
-            ) : (
+          {([repository]) =>
+            repository === undefined ? null : (
               <FilesWorkspace
-                key={entries[0].id}
-                target={{ kind: "repository", id: entries[0].id }}
+                key={repository.id}
+                target={{ kind: "repository", id: repository.id }}
               >
-                <ProjectExplorer repositoryId={entries[0].id} />
+                <ProjectExplorer repositoryId={repository.id} />
               </FilesWorkspace>
             )
           }
-        </QueryBoundary>
+        </QueryList>
       )}
     </RouteShell>
   );

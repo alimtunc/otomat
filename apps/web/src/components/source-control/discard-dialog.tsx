@@ -27,7 +27,7 @@ export function DiscardDialog({ request, onClose, onConfirm }: DiscardDialogProp
       }}
     >
       <DialogContent>
-        <DialogHeader className="flex-col items-start gap-2 pr-10">
+        <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {request?.all

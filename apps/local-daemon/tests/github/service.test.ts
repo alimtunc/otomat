@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { delimiter, join } from "node:path";
+import { existsSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   getIssue,
@@ -26,6 +26,7 @@ import {
   publishAndSettle,
   publishRequest,
 } from "../support/github.js";
+import { stubRuntimeOnPath } from "../support/runtime.js";
 import { seedRun } from "../support/seed.js";
 
 const RUN_ID = "r-github";
@@ -97,17 +98,10 @@ describe("GitHubService", () => {
     return createGitHubService(config);
   }
 
-  /** Puts a runtime on PATH so agent resolution stops gating what this suite is really asserting. */
   function withStubbedClaude(assertion: () => Promise<void>): Promise<void> {
-    const binDir = join(fix.dataDir, "runtime-bin");
-    mkdirSync(binDir, { recursive: true });
-    writeFileSync(join(binDir, "claude"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+    const restore = stubRuntimeOnPath(fix.dataDir, "claude");
     writePullRequestGenerator(fix.db, { runtime: "claude", model: null, options: {} });
-    const restore = process.env.PATH;
-    process.env.PATH = `${binDir}${delimiter}${restore ?? ""}`;
-    return assertion().finally(() => {
-      process.env.PATH = restore;
-    });
+    return assertion().finally(restore);
   }
 
   it("submits one review on the anchor sha review supplies", async () => {
@@ -461,7 +455,7 @@ describe("GitHubService", () => {
   it("keeps confirmed metadata null when push fails", async () => {
     cli.pushError = new GitHubCliError(
       "github_push_failed",
-      "The run branch could not be pushed to GitHub.",
+      "The branch could not be pushed to GitHub.",
     );
 
     const result = await publishAndSettle(service(), fix.db, run(), READY_REQUEST);

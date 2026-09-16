@@ -5,14 +5,17 @@ import {
   pullRequestOverviewSchema,
   pullRequestProposalSchema,
   pullRequestReviewContextSchema,
+  repositoryPullRequestPreviewSchema,
   type AttachPullRequestRequest,
   type MergePullRequestRequest,
   type PublishPullRequestRequest,
+  type PublishRepositoryPullRequest,
   type PushPullRequestRequest,
+  type RepositoryPullRequestInput,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { deleteJson, getJson, postJson } from "./http.js";
+import { deleteJson, getJson, postJson, queryString } from "./http.js";
 
 export function createPullRequestsClient(config: DaemonClientConfig) {
   return {
@@ -74,6 +77,27 @@ export function createPullRequestsClient(config: DaemonClientConfig) {
     },
     async detachPullRequest(pullRequestId: string) {
       await deleteJson(config, `/api/pull-requests/${encodeURIComponent(pullRequestId)}`);
+    },
+    async previewRepositoryPullRequest(repositoryId: string, baseRef: string) {
+      const id = encodeURIComponent(repositoryId);
+      return repositoryPullRequestPreviewSchema.parse(
+        await getJson(config, `/api/repositories/${id}/pr${queryString({ base_ref: baseRef })}`),
+      );
+    },
+    async generateRepositoryPullRequest(repositoryId: string, request: RepositoryPullRequestInput) {
+      const id = encodeURIComponent(repositoryId);
+      return pullRequestProposalSchema.parse(
+        await postJson(config, `/api/repositories/${id}/pr/generate`, request),
+      );
+    },
+    async publishRepositoryPullRequest(
+      repositoryId: string,
+      request: PublishRepositoryPullRequest,
+    ) {
+      const id = encodeURIComponent(repositoryId);
+      return pullRequestContractSchema.parse(
+        await postJson(config, `/api/repositories/${id}/pr`, request),
+      );
     },
   };
 }

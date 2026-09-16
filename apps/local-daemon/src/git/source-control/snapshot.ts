@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 
-import type { DiffFileContract, SourceControlResponse } from "@otomat/domain";
+import type { SourceControlResponse } from "@otomat/domain";
 
-import { computeCanonicalDiff, worktreeStateTree } from "../diff.js";
+import { computeCanonicalDiff, toDiffFileContract, worktreeStateTree } from "../diff.js";
 import { runGit } from "../git-cli.js";
-import type { DiffFile } from "../types.js";
+import { currentBranch, headSha } from "../repo.js";
 
 export interface CheckoutSnapshot {
   head: string;
@@ -13,14 +13,9 @@ export interface CheckoutSnapshot {
   response: SourceControlResponse;
 }
 
-function contract(file: DiffFile): DiffFileContract {
-  const { oldPath, ...rest } = file;
-  return { ...rest, old_path: oldPath };
-}
-
 export function sourceControlSnapshot(cwd: string): CheckoutSnapshot {
-  const head = runGit(["rev-parse", "HEAD"], { cwd }).stdout.trim();
-  const branch = runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd }).stdout.trim();
+  const head = headSha(cwd);
+  const branch = currentBranch(cwd);
   const unmerged = runGit(["ls-files", "--unmerged", "-z"], { cwd }).stdout;
   const conflicts = [
     ...new Set(
@@ -48,8 +43,8 @@ export function sourceControlSnapshot(cwd: string): CheckoutSnapshot {
       branch,
       revision,
       conflicts,
-      staged: computeCanonicalDiff(cwd, head, index).files.map(contract),
-      unstaged: computeCanonicalDiff(cwd, index, tree).files.map(contract),
+      staged: computeCanonicalDiff(cwd, head, index).files.map(toDiffFileContract),
+      unstaged: computeCanonicalDiff(cwd, index, tree).files.map(toDiffFileContract),
     },
   };
 }

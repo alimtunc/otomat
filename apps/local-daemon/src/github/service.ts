@@ -17,6 +17,7 @@ import {
   previewRepositoryPullRequest,
 } from "./repository/workspace.js";
 import { submitPullRequestReview } from "./review-submission.js";
+import { serializeByKey } from "./serialize.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
 import { readViewedFiles, syncViewedFile } from "./viewed-files.js";
 
@@ -27,15 +28,8 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
   const imports = createPullRequestImportService(normalizedConfig);
   const inbox = createPullRequestInboxService(normalizedConfig);
   const repositoryPublications = new Map<string, Promise<unknown>>();
-  const inRepository = <T>(repositoryId: string, operation: () => Promise<T>): Promise<T> => {
-    const active = repositoryPublications.get(repositoryId);
-    const started = (active ? active.then(operation, operation) : operation()).finally(() => {
-      if (repositoryPublications.get(repositoryId) === started)
-        repositoryPublications.delete(repositoryId);
-    });
-    repositoryPublications.set(repositoryId, started);
-    return started;
-  };
+  const inRepository = <T>(repositoryId: string, operation: () => Promise<T>): Promise<T> =>
+    serializeByKey(repositoryPublications, repositoryId, operation);
   return {
     ...connection,
     pullRequestInbox: (projectId) => inbox.read(projectId),
@@ -67,7 +61,7 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
           await prepareRepositoryPublication(config, repositoryId, request),
         ),
       ),
-    publishRepository: (repositoryId, request) =>
+    publishRepositoryPullRequest: (repositoryId, request) =>
       inRepository(repositoryId, () =>
         publishRepositoryPullRequest(normalizedConfig, repositoryId, request),
       ),

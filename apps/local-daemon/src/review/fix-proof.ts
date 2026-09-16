@@ -2,28 +2,14 @@ import { getReviewComment, listAgentSessionsForRun, type ReviewCommentRow } from
 import {
   narrowPatchToRange,
   type CommentFixProof,
-  type DiffFileContract,
   type FixProofPass,
   type PatchRange,
 } from "@otomat/domain";
 
-import type { DiffFile } from "#git";
+import { toDiffFileContract } from "#git";
 
 import { resolveScope } from "./scope.js";
 import type { ReviewContext } from "./types.js";
-
-function toDiffFile(file: DiffFile): DiffFileContract {
-  return {
-    path: file.path,
-    old_path: file.oldPath,
-    status: file.status,
-    additions: file.additions,
-    deletions: file.deletions,
-    binary: file.binary,
-    patch: file.patch,
-    sha: file.sha,
-  };
-}
 
 /** A head-side anchor of the reviewed diff is the old side of the fix pass's delta, so the selection is exact rather than guessed. */
 function proofRange(comment: ReviewCommentRow): PatchRange | null {
@@ -75,7 +61,7 @@ export function getCommentFixProof(
     return {
       state: "reported",
       pass,
-      file: toDiffFile(file),
+      file: toDiffFileContract(file),
       excerpt: file.patch,
       whole_file: true,
     };
@@ -89,5 +75,11 @@ export function getCommentFixProof(
       reason: `This pass changed ${comment.file_path}, but not the lines this comment anchors to.`,
     };
   }
-  return { state: "reported", pass, file: toDiffFile(file), excerpt: narrowed, whole_file: false };
+  return {
+    state: "reported",
+    pass,
+    file: toDiffFileContract(file),
+    excerpt: narrowed,
+    whole_file: false,
+  };
 }

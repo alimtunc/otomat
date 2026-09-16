@@ -1,6 +1,7 @@
 import type { DiffFileContract, SourceControlAction } from "@otomat/domain";
-import { Button, FileIcon, Icon, IconButton, cn } from "@otomat/ui";
+import { Button, FileIcon, cn, resolveStatus } from "@otomat/ui";
 import { STATUS_LETTER } from "@web/components/runs/diff/files/status";
+import { ChangeActions } from "@web/components/source-control/change-actions";
 
 export interface ChangeFileRowProps {
   file: DiffFileContract;
@@ -32,24 +33,20 @@ export function ChangeFileRow({
       >
         <FileIcon path={file.path} />
         <span className="min-w-0 flex-1 truncate text-left text-xs">{file.path}</span>
-        <span className={cn("font-mono text-micro", status.className)} aria-label={file.status}>
+        <span
+          className={cn("font-mono text-micro", status.className)}
+          aria-label={resolveStatus("diffFile", file.status).label}
+        >
           {status.letter}
         </span>
       </Button>
-      <IconButton
-        label={`${staged ? "Unstage" : "Stage"} ${file.path}`}
-        icon={<Icon name={staged ? "arrow-down" : "plus"} aria-hidden />}
-        disabled={pending}
-        onClick={() => onAction(staged ? "unstage" : "stage")}
+      <ChangeActions
+        staged={staged}
+        pending={pending}
+        subject={file.path}
+        compact
+        onAction={onAction}
       />
-      {!staged ? (
-        <IconButton
-          label={`Discard ${file.path}`}
-          icon={<Icon name="trash-2" aria-hidden />}
-          disabled={pending}
-          onClick={() => onAction("discard")}
-        />
-      ) : null}
     </li>
   );
 }

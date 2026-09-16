@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { RepositoryPullRequestForm } from "@web/components/source-control/repository-pr-form";
+import { RepositoryPullRequestPublication } from "@web/components/source-control/repository/publication";
 import { act } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
@@ -17,11 +17,16 @@ vi.mock("@tanstack/react-router", async (original) => ({
   ...(await original<object>()),
   useNavigate: () => mocks.navigate,
 }));
-vi.mock("@web/api/source-control/publication", () => ({
-  usePublishRepositoryPullRequest: () => mocks.publish,
-  useGenerateRepositoryPullRequest: () => mocks.generate,
-}));
-vi.mock("@web/api/source-control/queries", () => ({
+vi.mock("@web/api/prs/queries", () => ({
+  useGitHubConnection: () => ({
+    data: {
+      status: "connected",
+      login: "octocat",
+      device_authorization: null,
+      error_message: null,
+    },
+    isError: false,
+  }),
   useRepositoryPullRequestPreview: () => ({
     data: {
       revision: "captured",
@@ -35,17 +40,6 @@ vi.mock("@web/api/source-control/queries", () => ({
         deletions: 0,
         dirty: false,
       },
-    },
-    isError: false,
-  }),
-}));
-vi.mock("@web/api/prs/queries", () => ({
-  useGitHubConnection: () => ({
-    data: {
-      status: "connected",
-      login: "octocat",
-      device_authorization: null,
-      error_message: null,
     },
     isError: false,
   }),
@@ -68,14 +62,14 @@ beforeEach(() => {
 
 it("uses Generate PR to publish in ready mode with the captured checkout and target", async () => {
   const onPublished = vi.fn();
-  const onBusyChange = vi.fn();
   const view = await mountWithQuery(
-    <RepositoryPullRequestForm
+    <RepositoryPullRequestPublication
       repositoryId="repo-1"
-      changes={{ branch: "main", revision: "initial", staged: [], unstaged: [], conflicts: [] }}
       baseRef="main"
+      revision="initial"
+      publish={mocks.publish}
+      generate={mocks.generate}
       onPublished={onPublished}
-      onBusyChange={onBusyChange}
     />,
   );
   const button = findButton("Generate PR");
@@ -88,7 +82,6 @@ it("uses Generate PR to publish in ready mode with the captured checkout and tar
   });
   expect(mocks.generate.mutateAsync).not.toHaveBeenCalled();
   expect(onPublished).toHaveBeenCalledOnce();
-  expect(onBusyChange.mock.calls).toEqual([[true], [false]]);
   expect(mocks.navigate).toHaveBeenCalledWith({
     to: "/pull-requests/$pullRequestId/diff",
     params: { pullRequestId: "pr-created" },
@@ -98,12 +91,13 @@ it("uses Generate PR to publish in ready mode with the captured checkout and tar
 
 it("reuses Customize PR to generate editable metadata and publishes the human edit", async () => {
   const view = await mountWithQuery(
-    <RepositoryPullRequestForm
+    <RepositoryPullRequestPublication
       repositoryId="repo-1"
-      changes={{ branch: "main", revision: "initial", staged: [], unstaged: [], conflicts: [] }}
       baseRef="main"
+      revision="initial"
+      publish={mocks.publish}
+      generate={mocks.generate}
       onPublished={vi.fn()}
-      onBusyChange={vi.fn()}
     />,
   );
   await act(async () => findButton("Customize PR")?.click());

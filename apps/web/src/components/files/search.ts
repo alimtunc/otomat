@@ -1,5 +1,7 @@
 import type { WorktreeFileEntry } from "@otomat/domain";
 
+const RESULT_LIMIT = 80;
+
 function scorePath(path: string, query: string): number {
   const lower = path.toLowerCase();
   const name = lower.slice(lower.lastIndexOf("/") + 1);
@@ -21,11 +23,11 @@ export function searchFiles(
   query: string,
 ): WorktreeFileEntry[] {
   const needle = query.trim().toLowerCase();
-  if (needle === "") return entries.slice(0, 80);
+  if (needle === "") return entries.slice(0, RESULT_LIMIT);
   return entries
     .map((entry) => ({ entry, score: scorePath(entry.path, needle) }))
     .filter(({ score }) => Number.isFinite(score))
     .toSorted((a, b) => a.score - b.score || a.entry.path.localeCompare(b.entry.path))
-    .slice(0, 80)
+    .slice(0, RESULT_LIMIT)
     .map(({ entry }) => entry);
 }

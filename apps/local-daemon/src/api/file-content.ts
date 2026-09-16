@@ -4,6 +4,7 @@ import {
   WORKTREE_FILE_MAX_BYTES,
   type WorktreeFileContent,
   type WorktreeFileError,
+  type WorktreeFileSaved,
   type SaveWorktreeFileRequest,
 } from "@otomat/domain";
 import type { Context } from "hono";
@@ -42,7 +43,7 @@ export function saveFileResponse(c: Context, cwd: string, request: SaveWorktreeF
   const result = writeWorktreeFile(cwd, path, request.revision, request.text);
   switch (result.kind) {
     case "written":
-      return c.json({ path, revision: result.revision });
+      return c.json({ path, revision: result.revision } satisfies WorktreeFileSaved);
     case "stale":
       return refuseFile(c, "file_revision_stale");
     case "symlink":

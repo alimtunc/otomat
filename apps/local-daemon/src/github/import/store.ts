@@ -1,4 +1,5 @@
 import {
+  findPullRequestByNumber,
   getPullRequest,
   insertPullRequest,
   updatePullRequest,
@@ -18,6 +19,7 @@ import { closeMergedIssue, type MergeClosureConfig } from "#supervisor";
 
 import type { GitHubPullRequest } from "../cli/contract.js";
 import { mirroredColumns } from "../mirror.js";
+import { classifyPullRequest } from "./verify.js";
 
 export interface ImportStoreConfig extends MergeClosureConfig {
   idFactory(): string;
@@ -126,4 +128,26 @@ export function markPullRequestDetached(
 ): PullRequestRow {
   updatePullRequest(config.db, row.id, { detached_at: new Date().toISOString() });
   return reload(config, row.id);
+}
+
+export interface MirrorTarget {
+  repositoryId: string;
+  provider: GitHubPullRequest;
+  connectedLogin: string | null;
+  syncedAt: string;
+}
+
+/** Mirrors what GitHub shows for a pull request into its row, inserting one when none exists; never an adoption. */
+export function mirrorPullRequest(config: ImportStoreConfig, target: MirrorTarget): PullRequestRow {
+  const { provenance } = classifyPullRequest(config.db, target);
+  const state = { provider: target.provider, provenance, trees: null, syncedAt: target.syncedAt };
+  const existing = findPullRequestByNumber(config.db, target.repositoryId, target.provider.number);
+  if (existing) return applyProviderState(config, existing, state);
+  return insertMirroredPullRequest(config, {
+    ...state,
+    issueId: null,
+    repositoryId: target.repositoryId,
+    evidence: null,
+    attachedBy: null,
+  });
 }

@@ -2,9 +2,10 @@ import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
+import { branchExists, deleteBranch } from "./branches.js";
 import { WorktreeConflictError } from "./errors.js";
 import { toRecord } from "./record.js";
-import { branchExists, deleteBranch, revParse } from "./repo.js";
+import { revParse } from "./repo.js";
 import type { AcquireWorktreeInput, GitWorktreeServiceConfig } from "./service-contract.js";
 import type { WorktreeRecord } from "./types.js";
 import { addWorktree, pruneWorktrees, removeWorktree } from "./worktree-cli.js";

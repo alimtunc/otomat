@@ -95,7 +95,7 @@ export interface GitHubService {
   publishability(runId: string): Promise<PullRequestPublishability>;
   /** Accepts the publication and answers its initial state; it never pushes to a pull request that already exists. */
   publish(run: RunRow, request: PublishPullRequestRequest): Promise<PullRequestView>;
-  publishRepository(
+  publishRepositoryPullRequest(
     repositoryId: string,
     request: PublishRepositoryPullRequest,
   ): Promise<PullRequestRow>;

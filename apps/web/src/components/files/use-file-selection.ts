@@ -1,28 +1,36 @@
+import type { CheckoutTarget } from "@otomat/domain";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { readStored, writeStored } from "@web/lib/storage";
+import { fileScope } from "@web/components/files/scope";
+import { useActiveHostId } from "@web/lib/active-host";
+import { asString } from "@web/lib/coerce";
+import { readScoped, writeScoped } from "@web/lib/storage";
 import { useEffect } from "react";
 
-export function useFileSelection(scope: string) {
-  const { file, fileScope } = useSearch({ strict: false });
+const SELECTION_KEY = "otomat.files.selection";
+
+export function useFileSelection(target: CheckoutTarget) {
+  const { file, fileScope: selectedScope } = useSearch({ strict: false });
   const navigate = useNavigate();
-  const key = `otomat.files.selection:${scope}`;
+  const scope = fileScope(useActiveHostId(), target);
+  const remembered = readScoped(SELECTION_KEY, scope, asString);
   const path =
-    fileScope === undefined || fileScope === scope ? (file ?? readStored(key)) : readStored(key);
+    selectedScope === undefined || selectedScope === scope ? (file ?? remembered) : remembered;
 
   // otomat-allow-effect: remember only committed navigation, including files opened from the global picker.
   useEffect(() => {
-    if (file !== undefined && (fileScope === undefined || fileScope === scope))
-      writeStored(key, file);
-  }, [file, fileScope, scope, key]);
+    if (file !== undefined && (selectedScope === undefined || selectedScope === scope))
+      writeScoped(SELECTION_KEY, scope, file);
+  }, [file, selectedScope, scope]);
 
   return {
+    scope,
     path,
-    select: (next: string, changes = false): void => {
+    select: (next: string, openInChanges = false): void => {
       void navigate({
         to: ".",
         search: (previous) => ({
           ...previous,
-          changes: changes || undefined,
+          changes: openInChanges || undefined,
           file: next,
           fileScope: scope,
         }),

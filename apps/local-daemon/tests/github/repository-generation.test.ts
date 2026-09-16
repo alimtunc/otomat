@@ -1,5 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { delimiter, join } from "node:path";
+import { join } from "node:path";
 
 import { listRuns, writePullRequestGenerator } from "@otomat/db";
 import type { PullRequestProposal } from "@otomat/domain";
@@ -10,6 +9,7 @@ import { createGitHubService, createPullRequestGenerator, type GitHubService } f
 import type { PullRequestGenerator } from "#github/types";
 import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
 import { FakeGitHubCli } from "#test-support/github";
+import { stubRuntimeOnPath } from "#test-support/runtime";
 
 const PROPOSAL: PullRequestProposal = {
   subject: { type: "feat", scope: "files", summary: "describe project commits" },
@@ -23,15 +23,13 @@ let fix: DaemonTestDb;
 let cli: FakeGitHubCli;
 let github: GitHubService;
 let generate: ReturnType<typeof vi.fn<PullRequestGenerator["generate"]>>;
+let restorePath: () => void;
 
 beforeEach(() => {
   fix = setupDaemonDb();
   fix.repo.write("manual.txt", "committed\n");
   fix.repo.commitAll("feat: project changes");
-  const bin = join(fix.dataDir, "bin");
-  mkdirSync(bin);
-  writeFileSync(join(bin, "claude"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
-  vi.stubEnv("PATH", `${bin}${delimiter}${process.env.PATH ?? ""}`);
+  restorePath = stubRuntimeOnPath(fix.dataDir, "claude");
   writePullRequestGenerator(fix.db, { runtime: "claude", model: null, options: {} });
   cli = new FakeGitHubCli();
   vi.spyOn(cli, "fetchBranch").mockImplementation(async () => {
@@ -50,7 +48,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
-  vi.unstubAllEnvs();
+  restorePath();
   fix.cleanup();
 });
 
@@ -79,7 +77,10 @@ it("previews and generates committed changes without creating a branch, run, com
 });
 
 it("generates and publishes in the chosen mode using the configured generator", async () => {
-  const row = await github.publishRepository(fix.repositoryId, { ...request(), mode: "ready" });
+  const row = await github.publishRepositoryPullRequest(fix.repositoryId, {
+    ...request(),
+    mode: "ready",
+  });
   expect(generate).toHaveBeenCalledOnce();
   expect(cli.createInput).toMatchObject({
     title: "feat(files): describe project commits",
@@ -101,7 +102,7 @@ it("refuses a changed checkout after generation before pushing or creating a bra
     return PROPOSAL;
   });
   await expect(
-    github.publishRepository(fix.repositoryId, { ...request(), mode: "draft" }),
+    github.publishRepositoryPullRequest(fix.repositoryId, { ...request(), mode: "draft" }),
   ).rejects.toThrow("checkout changed during generation");
   expect(cli.pushCalls).toBe(0);
   expect(cli.createCalls).toBe(0);

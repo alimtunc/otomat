@@ -1,9 +1,14 @@
-import type { CheckoutTarget, SourceControlResponse } from "@otomat/domain";
+import {
+  COMMIT_MESSAGE_MAX_LENGTH,
+  shortSha,
+  type CheckoutTarget,
+  type SourceControlResponse,
+} from "@otomat/domain";
 import { Button, Field, FieldControl, FieldLabel, Textarea, toast } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useCommitFiles } from "@web/api/source-control/mutations";
 import { sourceControlMessage } from "@web/components/source-control/refusal";
-import { fieldErrorProps } from "@web/lib/form";
+import { fieldErrorProps, hasText, requiredTrimmed } from "@web/lib/form";
 
 export interface CommitFormProps {
   target: CheckoutTarget;
@@ -22,7 +27,7 @@ export function CommitForm({ target, changes, disabled }: CommitFormProps) {
           message: value.message,
         });
         formApi.reset();
-        toast.success(`Committed ${result.sha.slice(0, 7)} on ${changes.branch}`);
+        toast.success(`Committed ${shortSha(result.sha)} on ${changes.branch}`);
       } catch (error) {
         toast.error(sourceControlMessage(error));
       }
@@ -39,9 +44,7 @@ export function CommitForm({ target, changes, disabled }: CommitFormProps) {
     >
       <form.Field
         name="message"
-        validators={{
-          onChange: ({ value }) => (value.trim() === "" ? "Enter a commit message." : undefined),
-        }}
+        validators={{ onChange: requiredTrimmed("Enter a commit message.") }}
       >
         {(field) => (
           <Field {...fieldErrorProps(field.state.meta)}>
@@ -53,19 +56,19 @@ export function CommitForm({ target, changes, disabled }: CommitFormProps) {
                 onBlur={field.handleBlur}
                 placeholder="Describe your changes"
                 rows={2}
-                maxLength={10000}
+                maxLength={COMMIT_MESSAGE_MAX_LENGTH}
                 disabled={commit.isPending}
               />
             </FieldControl>
           </Field>
         )}
       </form.Field>
-      <form.Subscribe selector={(state) => [state.canSubmit, state.values.message] as const}>
-        {([canSubmit, message]) => (
+      <form.Subscribe selector={(state) => hasText(state.values.message)}>
+        {(filled) => (
           <Button
             type="submit"
             size="sm"
-            disabled={unavailable || !canSubmit || message.trim() === ""}
+            disabled={unavailable || !filled}
             loading={commit.isPending}
           >
             Commit staged ({changes.staged.length})

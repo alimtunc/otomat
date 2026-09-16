@@ -26,13 +26,15 @@ function hasGitIdentity(cwd: string): boolean {
 
 /** Commits the worktree's current state so an archived branch keeps the work. */
 export function snapshotWorktree(cwd: string, message: string): void {
-  if (!isDirty(cwd)) return;
-  const staged = runGit(["diff", "--cached", "--name-only", "-z"], { cwd }).stdout !== "";
+  // `--untracked-files` is forced so a `status.showUntrackedFiles=no` config cannot hide work from the guard.
+  const lines = runGit(["status", "--porcelain", "--untracked-files=normal"], { cwd })
+    .stdout.split("\n")
+    .filter(Boolean);
+  if (lines.length === 0) return;
+  // Porcelain XY columns: a non-blank, non-`?` X is staged; a non-blank Y is unstaged or untracked work.
+  const staged = lines.some((line) => line[0] !== " " && line[0] !== "?");
   if (staged) {
-    const unstaged = runGit(["diff", "--name-only", "-z"], { cwd }).stdout !== "";
-    const untracked =
-      runGit(["ls-files", "--others", "--exclude-standard", "-z"], { cwd }).stdout !== "";
-    if (unstaged || untracked)
+    if (lines.some((line) => line[1] !== " "))
       throw new WorktreeConflictError(
         "This checkout has staged and unstaged changes. Commit your selection or stage the remaining changes before Otomat snapshots it.",
       );

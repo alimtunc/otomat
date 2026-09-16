@@ -1,10 +1,10 @@
 import { worktreeStateTree } from "./diff.js";
-import { runGit } from "./git-cli.js";
+import { currentBranch } from "./repo.js";
 import type { WorktreeTree } from "./service-contract.js";
 import { listTreeFiles, readTreeBlob, readTreeFile } from "./tree-file.js";
 
 export function checkoutTree(cwd: string): WorktreeTree & { branch: string } {
-  const branch = runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd }).stdout.trim();
+  const branch = currentBranch(cwd);
   const tree = worktreeStateTree(cwd, "HEAD");
   return {
     branch,

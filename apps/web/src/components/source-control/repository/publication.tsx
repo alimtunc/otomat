@@ -1,13 +1,11 @@
-import type { SourceControlResponse } from "@otomat/domain";
 import { ErrorState, Spinner, toast } from "@otomat/ui";
 import { useNavigate } from "@tanstack/react-router";
-import { useConnectGitHub } from "@web/api/prs/mutations";
-import { useGitHubConnection } from "@web/api/prs/queries";
-import {
+import type {
   useGenerateRepositoryPullRequest,
   usePublishRepositoryPullRequest,
-} from "@web/api/source-control/publication";
-import { useRepositoryPullRequestPreview } from "@web/api/source-control/queries";
+} from "@web/api/prs/mutations";
+import { useConnectGitHub } from "@web/api/prs/mutations";
+import { useGitHubConnection, useRepositoryPullRequestPreview } from "@web/api/prs/queries";
 import { PullRequestConnectionPanel } from "@web/components/runs/pr/connection-panel";
 import { PullRequestForm } from "@web/components/runs/pr/form";
 import { PullRequestGeneratorNote } from "@web/components/runs/pr/generator-note";
@@ -17,26 +15,32 @@ import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { sourceControlMessage } from "@web/components/source-control/refusal";
 import { useState } from "react";
 
-export interface RepositoryPullRequestFormProps {
+export interface RepositoryPullRequestPublicationProps {
   repositoryId: string;
-  changes: SourceControlResponse;
   baseRef: string;
+  revision: string;
+  publish: Pick<
+    ReturnType<typeof usePublishRepositoryPullRequest>,
+    "mutateAsync" | "isPending" | "error"
+  >;
+  generate: Pick<
+    ReturnType<typeof useGenerateRepositoryPullRequest>,
+    "mutateAsync" | "isPending" | "error" | "data"
+  >;
   onPublished: () => void;
-  onBusyChange: (busy: boolean) => void;
 }
 
-export function RepositoryPullRequestForm({
+export function RepositoryPullRequestPublication({
   repositoryId,
-  changes,
   baseRef,
+  revision,
+  publish,
+  generate,
   onPublished,
-  onBusyChange,
-}: RepositoryPullRequestFormProps) {
-  const preview = useRepositoryPullRequestPreview(repositoryId, baseRef, changes.revision);
+}: RepositoryPullRequestPublicationProps) {
+  const preview = useRepositoryPullRequestPreview(repositoryId, baseRef, revision);
   const connection = useGitHubConnection();
   const connect = useConnectGitHub();
-  const publish = usePublishRepositoryPullRequest(repositoryId);
-  const generate = useGenerateRepositoryPullRequest(repositoryId);
   const [customize, setCustomize] = useState(false);
   const navigate = useNavigate();
   const error = generate.error ?? publish.error;
@@ -104,7 +108,6 @@ export function RepositoryPullRequestForm({
                     onCustomizeChange={setCustomize}
                     chosenMode={undefined}
                     onSubmit={async (request) => {
-                      onBusyChange(true);
                       try {
                         const pullRequest = await publish.mutateAsync({
                           ...request,
@@ -118,28 +121,23 @@ export function RepositoryPullRequestForm({
                           params: { pullRequestId: pullRequest.id },
                         });
                         return true;
-                      } catch (failure) {
-                        toast.error(sourceControlMessage(failure));
+                      } catch {
                         return false;
-                      } finally {
-                        onBusyChange(false);
                       }
                     }}
                     onGenerate={async () => {
-                      onBusyChange(true);
                       try {
                         return await generate.mutateAsync({
                           revision: data.revision,
                           base_ref: baseRef,
                         });
-                      } catch (failure) {
-                        toast.error(sourceControlMessage(failure));
+                      } catch {
                         return null;
-                      } finally {
-                        onBusyChange(false);
                       }
                     }}
-                    generationRefusal={error === null ? null : sourceControlMessage(error)}
+                    generationRefusal={
+                      generate.error === null ? null : sourceControlMessage(generate.error)
+                    }
                     isPending={publish.isPending}
                     isGenerating={generate.isPending}
                   />

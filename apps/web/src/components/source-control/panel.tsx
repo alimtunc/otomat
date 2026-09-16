@@ -8,8 +8,6 @@ import {
   Button,
   EmptyState,
   ErrorState,
-  Icon,
-  IconButton,
   ResizablePanel,
   ResizablePanelGroup,
   SidePanel,
@@ -25,9 +23,9 @@ import { CommitForm } from "@web/components/source-control/commit-form";
 import { DiscardDialog } from "@web/components/source-control/discard-dialog";
 import { ChangeFileDiff } from "@web/components/source-control/file/diff";
 import { ChangeFileGroup } from "@web/components/source-control/file/group";
-import { PublishAction } from "@web/components/source-control/publish-action";
+import { SourceControlHeader } from "@web/components/source-control/header";
 import { sourceControlMessage } from "@web/components/source-control/refusal";
-import { useActiveHostId } from "@web/lib/active-host";
+import { selectedChange, type ActiveChange } from "@web/components/source-control/selection";
 import { useState } from "react";
 
 export interface SourceControlPanelProps {
@@ -37,76 +35,31 @@ export interface SourceControlPanelProps {
 export function SourceControlPanel({ target }: SourceControlPanelProps) {
   const changes = useSourceControl(target);
   const mutation = useChangeFiles(target);
-  const [active, setActive] = useState<{ staged: boolean; path: string } | null>(null);
+  const [active, setActive] = useState<ActiveChange | null>(null);
   const [discard, setDiscard] = useState<ChangeFilesRequest | null>(null);
   const layout = usePanelGroupLayout("otomat.source-control");
-  const host = useActiveHostId();
-  const fileSelection = useFileSelection(`${host}:${target.kind}:${target.id}`);
-
-  const act = (
-    path: string | undefined,
-    action: SourceControlAction,
-    selection?: ChangeSelection,
-  ): void => {
-    if (changes.data === undefined || changes.isFetching || mutation.isPending) return;
-    const request: ChangeFilesRequest = {
-      path,
-      all: path === undefined ? true : undefined,
-      action,
-      selection,
-      revision: changes.data.revision,
-    };
-    if (action === "discard") setDiscard(request);
-    else mutation.mutate(request);
-  };
+  const fileSelection = useFileSelection(target);
+  const pending = mutation.isPending || changes.isFetching || changes.isError;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-1.5 text-xs">
-        <Icon name="folder-git-2" aria-hidden />
-        <span className="truncate font-mono">
-          {changes.data?.branch === "HEAD" ? "Detached HEAD" : changes.data?.branch}
-        </span>
-        <span className="ml-auto text-text-tertiary">
-          {target.kind === "run" ? "Issue worktree" : "Project checkout"}
-        </span>
-        {changes.data === undefined ? null : (
-          <PublishAction
-            target={target}
-            changes={changes.data}
-            disabled={
-              changes.isFetching ||
-              changes.isError ||
-              mutation.isPending ||
-              changes.data.conflicts.length > 0
-            }
-          />
-        )}
-        <IconButton
-          label="Refresh changes"
-          icon={<Icon name="refresh-cw" aria-hidden />}
-          loading={changes.isFetching}
-          onClick={() => void changes.refetch()}
+      <SourceControlHeader
+        target={target}
+        changes={changes.data}
+        pending={pending}
+        refreshing={changes.isFetching}
+        onRefresh={() => void changes.refetch()}
+      />
+      {mutation.error === null ? null : (
+        <ErrorState
+          variant="inline"
+          title={sourceControlMessage(mutation.error)}
+          onRetry={() => {
+            mutation.reset();
+            void changes.refetch();
+          }}
         />
-      </div>
-      {mutation.error !== null ? (
-        <div
-          role="alert"
-          className="flex items-center gap-2 border-b border-border-subtle bg-warning-bg px-3 py-2 text-xs"
-        >
-          <span className="flex-1">{sourceControlMessage(mutation.error)}</span>
-          <Button
-            size="xs"
-            variant="outline"
-            onClick={() => {
-              mutation.reset();
-              void changes.refetch();
-            }}
-          >
-            Refresh
-          </Button>
-        </div>
-      ) : null}
+      )}
       <QueryBoundary
         query={changes}
         pending={
@@ -123,21 +76,21 @@ export function SourceControlPanel({ target }: SourceControlPanelProps) {
         }
       >
         {(data) => {
-          const current =
-            active ??
-            (fileSelection.path === null
-              ? null
-              : {
-                  path: fileSelection.path,
-                  staged: !data.unstaged.some((file) => file.path === fileSelection.path),
-                });
-          const file =
-            current === null
-              ? undefined
-              : (current.staged ? data.staged : data.unstaged).find(
-                  (entry) => entry.path === current.path,
-                );
-          const pending = mutation.isPending || changes.isFetching || changes.isError;
+          const act = (
+            path: string | undefined,
+            action: SourceControlAction,
+            selection?: ChangeSelection,
+          ): void => {
+            const request: ChangeFilesRequest = {
+              path,
+              all: path === undefined ? true : undefined,
+              action,
+              selection,
+              revision: data.revision,
+            };
+            if (action === "discard") setDiscard(request);
+            else mutation.mutate(request);
+          };
           if (data.conflicts.length > 0)
             return (
               <ErrorState
@@ -146,6 +99,7 @@ export function SourceControlPanel({ target }: SourceControlPanelProps) {
                 onRetry={() => void changes.refetch()}
               />
             );
+          const selected = selectedChange(data, active, fileSelection.path);
           return (
             <ResizablePanelGroup {...layout} className="min-h-0 flex-1">
               <SidePanel
@@ -163,7 +117,9 @@ export function SourceControlPanel({ target }: SourceControlPanelProps) {
                       key={String(staged)}
                       staged={staged}
                       files={staged ? data.staged : data.unstaged}
-                      activePath={current?.staged === staged ? current.path : null}
+                      activePath={
+                        selected?.current.staged === staged ? selected.current.path : null
+                      }
                       pending={pending}
                       onSelect={(path) => setActive({ staged, path })}
                       onAction={act}
@@ -172,7 +128,7 @@ export function SourceControlPanel({ target }: SourceControlPanelProps) {
                 </div>
               </SidePanel>
               <ResizablePanel id="change-diff" minSize="40%">
-                {file === undefined || current === null ? (
+                {selected === null ? (
                   <EmptyState
                     icon="git-compare"
                     title={
@@ -184,23 +140,23 @@ export function SourceControlPanel({ target }: SourceControlPanelProps) {
                   />
                 ) : (
                   <div className="flex h-full min-h-0 flex-col">
-                    {file.status !== "deleted" ? (
+                    {selected.file.status === "deleted" ? null : (
                       <div className="flex justify-end border-b border-border-subtle px-3 py-1">
                         <Button
                           size="xs"
                           variant="ghost"
-                          onClick={() => fileSelection.select(file.path)}
+                          onClick={() => fileSelection.select(selected.file.path)}
                         >
                           Open file
                         </Button>
                       </div>
-                    ) : null}
+                    )}
                     <ChangeFileDiff
-                      key={`${current.staged}:${file.path}:${file.sha}`}
-                      file={file}
-                      staged={current.staged}
+                      key={`${selected.current.staged}:${selected.file.path}:${selected.file.sha}`}
+                      file={selected.file}
+                      staged={selected.current.staged}
                       pending={pending}
-                      onAction={(action, selection) => act(file.path, action, selection)}
+                      onAction={(action, selection) => act(selected.file.path, action, selection)}
                     />
                   </div>
                 )}

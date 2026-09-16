@@ -9,7 +9,7 @@ import { useMemo } from "react";
 export interface FileBrowserProps {
   entries: readonly WorktreeFileEntry[];
   activePath: string | null;
-  onSelect: (path: string, changes?: boolean) => void;
+  onSelect: (path: string, openInChanges?: boolean) => void;
   scope?: string;
   changes?: SourceControlResponse;
 }
@@ -44,17 +44,14 @@ export function FileBrowser({ entries, activePath, onSelect, scope, changes }: F
                   {entries.length === 0 ? "This checkout is empty." : "No file matches."}
                 </p>
               ) : (
+                // A filtered tree remounts with every folder open: a match hidden under a fold reads as no match.
                 <FileTree
                   key={needle}
                   files={matched}
                   activePath={activePath}
                   directoryStatuses={decorated.directories}
                   collapsedByDefault={needle === ""}
-                  storageKey={
-                    scope === undefined || needle !== ""
-                      ? undefined
-                      : `otomat.files.folders:${scope}`
-                  }
+                  storageScope={needle === "" ? scope : undefined}
                   renderFile={(entry, depth) => (
                     <FileBrowserRow
                       entry={entry}

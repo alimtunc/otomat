@@ -1,7 +1,7 @@
 import type { CheckoutTarget, SourceControlResponse } from "@otomat/domain";
-import { Button, Dialog } from "@otomat/ui";
+import { Button, Dialog, DialogTrigger } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
-import { RepositoryPullRequestDialog } from "@web/components/source-control/repository-pr-dialog";
+import { RepositoryPullRequestDialog } from "@web/components/source-control/repository/dialog";
 import { useState } from "react";
 
 export interface PublishActionProps {
@@ -26,13 +26,18 @@ export function PublishAction({ target, changes, disabled }: PublishActionProps)
     );
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button size="xs" variant="outline" disabled={disabled} onClick={() => setOpen(true)}>
-        Create / update PR…
-      </Button>
+      <DialogTrigger
+        render={
+          <Button size="xs" variant="outline" disabled={disabled}>
+            Create / update PR…
+          </Button>
+        }
+      />
       {open ? (
         <RepositoryPullRequestDialog
           repositoryId={target.id}
-          changes={changes}
+          branch={changes.branch}
+          revision={changes.revision}
           onClose={() => setOpen(false)}
         />
       ) : null}

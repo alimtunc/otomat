@@ -52,8 +52,10 @@ export function hostKeys(host: ExecutionHostId) {
       [host, "source-control", target.kind, target.id] as const,
     repositoryPullRequestPreview: (repositoryId: string, baseRef: string, revision: string) =>
       [host, "source-control", "repository", repositoryId, "pr", baseRef, revision] as const,
-    repositoryFile: (id: string, path: string | null) =>
-      [host, "repositories", id, "tree", "content", path] as const,
+    checkoutFile: (target: CheckoutTarget, path: string) =>
+      target.kind === "run"
+        ? ([host, "run", target.id, "files", "content", path] as const)
+        : ([host, "repositories", target.id, "tree", "content", path] as const),
     runtimes: [host, "runtimes"] as const,
     runtimeModels: (runtimeId: string | null) => [host, "runtimes", runtimeId, "models"] as const,
     runtimeOptions: (runtimeId: string | null, model: string | null) =>
@@ -118,8 +120,6 @@ export function hostKeys(host: ExecutionHostId) {
       [host, "run", id, "fix-proof", commentId] as const,
     runWorkspace: (id: string) => [host, "run", id, "workspace"] as const,
     runFiles: (id: string) => [host, "run", id, "files"] as const,
-    runFile: (id: string, path: string | null) =>
-      [host, "run", id, "files", "content", path] as const,
     competeCandidateDiff: (runId: string, groupId: string, stepId: string) =>
       [host, "run", runId, "compete", groupId, stepId, "diff"] as const,
     reviewDetail: (target: ReviewTarget) =>

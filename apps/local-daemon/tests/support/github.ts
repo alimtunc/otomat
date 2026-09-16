@@ -194,8 +194,8 @@ export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHu
     generateRepositoryPullRequest: async () => {
       throw new Error("repository generation stub not configured");
     },
-    publishRepository: async () => {
-      throw new Error("publishRepository stub not configured");
+    publishRepositoryPullRequest: async () => {
+      throw new Error("publishRepositoryPullRequest stub not configured");
     },
     publish: async () => {
       throw new Error("publish stub not configured");

@@ -103,7 +103,7 @@ under `apps/local-daemon/src/<module>`, consumed through
 | `apps/local-daemon/src/review` | Review slice: scoped diff snapshots, comment anchoring, destinations, fix-step context, fix proof; one surface for a run and an adopted pull request. |
 | `apps/local-daemon/src/github/import` | Adoption of an existing pull request: reference, verification, provenance, detection, audit. |
 | `apps/web/src/components/pull-requests` | The issue's pull requests: attached cards, detected candidates, manual import, detach. |
-| `apps/web/src/components/runs/files` | The run's Files tab: the worktree tree, one file at a revision, and the in-place editor that saves it back. |
+| `apps/web/src/components/runs/files` | The run's Files tab view: lists the worktree and hands it to the shared explorer and Files/Changes workspace. |
 | `apps/web/src/components/files` | Shared editable explorer, scoped quick-open, Monaco setup, and Files/Changes workspace. |
 | `apps/web/src/components/source-control` | Changes inside Files: staged/unstaged diffs, Git actions, commits and PR publication. |
 | `apps/local-daemon/src/git/source-control` | Captured HEAD/index/worktree diffs and revision-checked stage, unstage, discard and staged commits. |

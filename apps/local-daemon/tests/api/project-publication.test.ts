@@ -24,7 +24,7 @@ it("routes project preview, generation and publication through the shared struct
     github: stubGitHubService({
       previewRepositoryPullRequest: preview,
       generateRepositoryPullRequest: generate,
-      publishRepository: publish,
+      publishRepositoryPullRequest: publish,
     }),
   });
   try {

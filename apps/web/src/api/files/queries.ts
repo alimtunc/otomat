@@ -1,5 +1,5 @@
-import type { CheckoutTarget } from "@otomat/domain";
-import { useQuery } from "@tanstack/react-query";
+import type { CheckoutTarget, WorktreeFileEntry } from "@otomat/domain";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { retryTransportOnly } from "@web/api/query-client";
 import { useQueryKeys } from "@web/api/use-query-keys";
@@ -7,12 +7,25 @@ import { useQueryKeys } from "@web/api/use-query-keys";
 export function useFile(target: CheckoutTarget, path: string) {
   const keys = useQueryKeys();
   return useQuery({
+    queryKey: keys.checkoutFile(target, path),
+    queryFn: () => daemon.getCheckoutFile(target, path),
+    retry: retryTransportOnly,
+  });
+}
+
+export function useCheckoutFiles(target: CheckoutTarget | null, enabled: boolean) {
+  const keys = useQueryKeys();
+  return useQuery({
     queryKey:
-      target.kind === "run" ? keys.runFile(target.id, path) : keys.repositoryFile(target.id, path),
-    queryFn: () =>
-      target.kind === "run"
-        ? daemon.getRunFile(target.id, path)
-        : daemon.getRepositoryFile(target.id, path),
+      target?.kind === "run" ? keys.runFiles(target.id) : keys.repositoryTree(target?.id ?? null),
+    queryFn:
+      target === null
+        ? skipToken
+        : async (): Promise<{ entries: WorktreeFileEntry[] }> =>
+            target.kind === "run"
+              ? daemon.getRunFiles(target.id)
+              : daemon.getRepositoryTree(target.id),
+    enabled,
     retry: retryTransportOnly,
   });
 }

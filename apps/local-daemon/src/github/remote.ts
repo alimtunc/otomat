@@ -108,7 +108,7 @@ export async function push(
   assertPublicationSucceeded(
     result,
     "github_push_failed",
-    "The run branch could not be pushed to GitHub.",
+    "The branch could not be pushed to GitHub.",
   );
 }
 

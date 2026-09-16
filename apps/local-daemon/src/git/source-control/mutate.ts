@@ -1,13 +1,87 @@
 import { unlinkSync } from "node:fs";
 import { join } from "node:path";
 
-import type { ChangeFilesRequest } from "@otomat/domain";
+import {
+  changeSupportsSelection,
+  type ChangeFilesRequest,
+  type ChangeSelection,
+  type DiffFileContract,
+  type SourceControlAction,
+} from "@otomat/domain";
 
 import { runGit } from "../git-cli.js";
+import { lsTree } from "../tree-file.js";
 import { SourceControlError } from "./errors.js";
 import { assertChangePath } from "./paths.js";
 import { selectedPatch } from "./selection.js";
-import { sourceControlSnapshot } from "./snapshot.js";
+import { sourceControlSnapshot, type CheckoutSnapshot } from "./snapshot.js";
+
+function changePaths(files: DiffFileContract[]): string[] {
+  return [
+    ...new Set(
+      files.flatMap((entry) =>
+        entry.old_path === null ? [entry.path] : [entry.old_path, entry.path],
+      ),
+    ),
+  ];
+}
+
+function assertFileChanges(cwd: string, snapshot: CheckoutSnapshot, paths: string[]): void {
+  for (const path of paths) {
+    assertChangePath(cwd, path);
+    for (const tree of [snapshot.head, snapshot.index, snapshot.tree]) {
+      const entry = lsTree(cwd, tree, path);
+      if (entry !== null && entry.type !== "blob")
+        throw new SourceControlError(
+          "change_unavailable",
+          "Open submodule and directory changes in an external Git client.",
+        );
+    }
+  }
+}
+
+function applySelection(
+  cwd: string,
+  file: DiffFileContract,
+  action: SourceControlAction,
+  selection: ChangeSelection,
+): void {
+  if (!changeSupportsSelection(file))
+    throw new SourceControlError(
+      "selection_unavailable",
+      "Stage, unstage or discard this change as a whole file.",
+    );
+  const reverse = action !== "stage";
+  const patch = selectedPatch(file.patch, selection, reverse);
+  const args = [
+    "apply",
+    "--recount",
+    ...(reverse ? ["--reverse"] : []),
+    ...(action === "discard" ? [] : ["--cached"]),
+  ];
+  const check = runGit([...args, "--check"], { cwd, input: patch, allowFailure: true });
+  if (check.exitCode !== 0)
+    throw new SourceControlError(
+      "selection_unavailable",
+      "This selection no longer applies cleanly. Refresh or select the whole change block.",
+    );
+  runGit(args, { cwd, input: patch });
+}
+
+function discardPaths(cwd: string, index: string, paths: string[]): void {
+  // A failed lookup must throw here: an untracked verdict deletes the file from disk.
+  const tracked = paths.filter(
+    (path) =>
+      runGit(["--literal-pathspecs", "ls-tree", "-z", index, "--", path], { cwd }).stdout !== "",
+  );
+  for (const path of paths.filter((candidate) => !tracked.includes(candidate)))
+    unlinkSync(join(cwd, path));
+  if (tracked.length > 0)
+    runGit(
+      ["--literal-pathspecs", "restore", "--worktree", `--source=${index}`, "--", ...tracked],
+      { cwd },
+    );
+}
 
 export function changeCheckoutFiles(cwd: string, request: ChangeFilesRequest): void {
   if (request.path !== undefined) assertChangePath(cwd, request.path);
@@ -31,46 +105,10 @@ export function changeCheckoutFiles(cwd: string, request: ChangeFilesRequest): v
       "change_unavailable",
       "This file has no change in the selected section.",
     );
-  const paths = [
-    ...new Set(
-      files.flatMap((entry) =>
-        entry.old_path === null ? [entry.path] : [entry.old_path, entry.path],
-      ),
-    ),
-  ];
-  for (const path of paths) {
-    assertChangePath(cwd, path);
-    for (const tree of [snapshot.head, snapshot.index, snapshot.tree]) {
-      const metadata = runGit(["--literal-pathspecs", "ls-tree", tree, "--", path], { cwd }).stdout;
-      if (metadata.startsWith("160000") || metadata.startsWith("040000"))
-        throw new SourceControlError(
-          "change_unavailable",
-          "Open submodule and directory changes in an external Git client.",
-        );
-    }
-  }
-
+  const paths = changePaths(files);
+  assertFileChanges(cwd, snapshot, paths);
   if (request.selection !== undefined) {
-    if (file.binary || file.old_path !== null || file.status !== "modified")
-      throw new SourceControlError(
-        "selection_unavailable",
-        "Stage, unstage or discard this change as a whole file.",
-      );
-    const reverse = request.action !== "stage";
-    const patch = selectedPatch(file.patch, request.selection, reverse);
-    const args = [
-      "apply",
-      "--recount",
-      ...(reverse ? ["--reverse"] : []),
-      ...(request.action === "discard" ? [] : ["--cached"]),
-    ];
-    const check = runGit([...args, "--check"], { cwd, input: patch, allowFailure: true });
-    if (check.exitCode !== 0)
-      throw new SourceControlError(
-        "selection_unavailable",
-        "This selection no longer applies cleanly. Refresh or select the whole change block.",
-      );
-    runGit(args, { cwd, input: patch });
+    applySelection(cwd, file, request.action, request.selection);
   } else if (request.action === "stage") {
     runGit(["--literal-pathspecs", "add", "-A", "--", ...paths], { cwd });
   } else if (request.action === "unstage") {
@@ -79,24 +117,6 @@ export function changeCheckoutFiles(cwd: string, request: ChangeFilesRequest): v
       { cwd },
     );
   } else {
-    const tracked = paths.filter(
-      (path) =>
-        runGit(["--literal-pathspecs", "ls-tree", "-z", snapshot.index, "--", path], { cwd })
-          .stdout !== "",
-    );
-    for (const path of paths.filter((candidate) => !tracked.includes(candidate)))
-      unlinkSync(join(cwd, path));
-    if (tracked.length > 0)
-      runGit(
-        [
-          "--literal-pathspecs",
-          "restore",
-          "--worktree",
-          `--source=${snapshot.index}`,
-          "--",
-          ...tracked,
-        ],
-        { cwd },
-      );
+    discardPaths(cwd, snapshot.index, paths);
   }
 }

@@ -15,8 +15,8 @@ export interface CodeEditorProps {
   /** Changing it replaces the document with `doc` and marks the editor clean. */
   docKey: string;
   readOnly: boolean;
-  onDirtyChange?: (dirty: boolean) => void;
-  onSave?: (text: string) => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onSave: (text: string) => void;
   ref?: Ref<CodeEditorHandle>;
 }
 
@@ -38,13 +38,13 @@ export function CodeEditor({
 
   const markSaved = useEffectEvent((current: MonacoEditor) => {
     setSavedVersion(current.getModel()?.getAlternativeVersionId() ?? null);
-    onDirtyChange?.(false);
+    onDirtyChange(false);
   });
   const reportDirty = useEffectEvent((current: MonacoEditor) => {
     const version = current.getModel()?.getAlternativeVersionId() ?? null;
-    onDirtyChange?.(version !== savedVersion);
+    onDirtyChange(version !== savedVersion);
   });
-  const save = useEffectEvent((current: MonacoEditor) => onSave?.(current.getValue()));
+  const save = useEffectEvent((current: MonacoEditor) => onSave(current.getValue()));
 
   useImperativeHandle(ref, () => ({ read: () => editor?.getValue() ?? doc }), [editor, doc]);
 

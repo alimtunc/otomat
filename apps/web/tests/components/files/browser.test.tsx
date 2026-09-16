@@ -120,6 +120,6 @@ describe("FileBrowser", () => {
       restored.container.querySelector('button[title="src"]')?.getAttribute("aria-expanded"),
     ).toBe("true");
     await restored.cleanup();
-    localStorage.removeItem("otomat.files.folders:keyboard-test");
+    localStorage.removeItem("otomat.files.folders");
   });
 });

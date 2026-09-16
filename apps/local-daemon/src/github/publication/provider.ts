@@ -97,14 +97,12 @@ export function providerPatch(provider: GitHubPullRequest): PullRequestPatch {
   };
 }
 
-async function createProvider(
-  store: PublicationStore,
+/** Creates the pull request and answers what GitHub shows for it; a create it does not confirm is a refusal, never a guess. */
+export async function createConfirmedPullRequest(
   cli: GitHubCli,
-  row: PullRequestRow,
   selector: PullRequestSelector,
-  request: PublicationRequest,
-): Promise<ProviderResult> {
-  row = store.transition(row, "creating", {}, "github");
+  request: Pick<PublicationRequest, "title" | "body" | "mode">,
+): Promise<GitHubPullRequest> {
   try {
     await cli.createPullRequest({
       ...selector,
@@ -132,7 +130,18 @@ async function createProvider(
       "GitHub did not return the created pull request.",
     );
   }
-  return { row, provider };
+  return provider;
+}
+
+async function createProvider(
+  store: PublicationStore,
+  cli: GitHubCli,
+  row: PullRequestRow,
+  selector: PullRequestSelector,
+  request: PublicationRequest,
+): Promise<ProviderResult> {
+  row = store.transition(row, "creating", {}, "github");
+  return { row, provider: await createConfirmedPullRequest(cli, selector, request) };
 }
 
 /** Title, body and Draft/Ready of a pull request that already exists — the branch it ships is untouched. */

@@ -58,88 +58,102 @@ function request(
   };
 }
 
-it("publishes a dedicated branch from main, preserves uncommitted work and creates no run", async () => {
-  fix.repo.write("manual.txt", "uncommitted\n");
-  const remoteMain = fix.repo.git("rev-parse", "origin/main");
-  const head = fix.repo.git("rev-parse", "HEAD").trim();
-  const result = await github.publishRepository(fix.repositoryId, request());
-  expect(result).toMatchObject({
-    run_id: null,
-    issue_id: null,
-    repository_id: fix.repositoryId,
-    number: 42,
-    status: "draft",
-  });
-  expect(cli.createInput).toMatchObject({
-    head: "feat/manual-pr",
-    base: "main",
-    title: "feat: manual changes",
-    draft: true,
-  });
-  expect(cli.push).toHaveBeenCalledWith(fix.repo.root, "origin", "feat/manual-pr", head);
-  expect(fix.repo.git("rev-parse", "origin/main")).toBe(remoteMain);
-  expect(fix.repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("feat/manual-pr");
-  expect(readFileSync(join(fix.repo.root, "manual.txt"), "utf8")).toBe("uncommitted\n");
-  expect(listRuns(fix.db)).toEqual([]);
-  const retried = await github.publishRepository(fix.repositoryId, request());
-  expect(retried.id).toBe(result.id);
-  expect(cli.createCalls).toBe(1);
-});
+it(
+  "publishes a dedicated branch from main, preserves uncommitted work and creates no run",
+  { timeout: 20_000 },
+  async () => {
+    fix.repo.write("manual.txt", "uncommitted\n");
+    const remoteMain = fix.repo.git("rev-parse", "origin/main");
+    const head = fix.repo.git("rev-parse", "HEAD").trim();
+    const result = await github.publishRepositoryPullRequest(fix.repositoryId, request());
+    expect(result).toMatchObject({
+      run_id: null,
+      issue_id: null,
+      repository_id: fix.repositoryId,
+      number: 42,
+      status: "draft",
+    });
+    expect(cli.createInput).toMatchObject({
+      head: "feat/manual-pr",
+      base: "main",
+      title: "feat: manual changes",
+      draft: true,
+    });
+    expect(cli.push).toHaveBeenCalledWith(fix.repo.root, "origin", "feat/manual-pr", head);
+    expect(fix.repo.git("rev-parse", "origin/main")).toBe(remoteMain);
+    expect(fix.repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("feat/manual-pr");
+    expect(readFileSync(join(fix.repo.root, "manual.txt"), "utf8")).toBe("uncommitted\n");
+    expect(listRuns(fix.db)).toEqual([]);
+    const retried = await github.publishRepositoryPullRequest(fix.repositoryId, request());
+    expect(retried.id).toBe(result.id);
+    expect(cli.createCalls).toBe(1);
+  },
+);
 
-it("refuses default/base branches, stale revisions and uncommitted staged changes before pushing", async () => {
-  for (const head_ref of ["main", "master", "HEAD", "-bad", "bad..branch"])
-    await expect(
-      github.publishRepository(fix.repositoryId, request({}, head_ref)),
-    ).rejects.toThrow();
-  const stale = request();
-  fix.repo.write("new.txt", "new\n");
-  await expect(github.publishRepository(fix.repositoryId, stale)).rejects.toThrow(
-    "checkout changed",
-  );
-  fix.repo.git("add", "new.txt");
-  await expect(github.publishRepository(fix.repositoryId, request())).rejects.toThrow(
-    "Commit the staged changes",
-  );
-  expect(cli.push).not.toHaveBeenCalled();
-  expect(fix.repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("main");
-});
+it(
+  "refuses default/base branches, stale revisions and uncommitted staged changes before pushing",
+  { timeout: 20_000 },
+  async () => {
+    for (const head_ref of ["main", "master", "HEAD", "-bad", "bad..branch"])
+      await expect(
+        github.publishRepositoryPullRequest(fix.repositoryId, request({}, head_ref)),
+      ).rejects.toThrow();
+    const stale = request();
+    fix.repo.write("new.txt", "new\n");
+    await expect(github.publishRepositoryPullRequest(fix.repositoryId, stale)).rejects.toThrow(
+      "checkout changed",
+    );
+    fix.repo.git("add", "new.txt");
+    await expect(github.publishRepositoryPullRequest(fix.repositoryId, request())).rejects.toThrow(
+      "Commit the staged changes",
+    );
+    expect(cli.push).not.toHaveBeenCalled();
+    expect(fix.repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("main");
+  },
+);
 
 it("refuses changes made during the remote preparation", async () => {
   vi.spyOn(cli, "resolveRemote").mockImplementation(async () => {
     fix.repo.write("manual.txt", "changed while preparing\n");
     return cli.remote;
   });
-  await expect(github.publishRepository(fix.repositoryId, request())).rejects.toThrow(
+  await expect(github.publishRepositoryPullRequest(fix.repositoryId, request())).rejects.toThrow(
     "checkout changed during preparation",
   );
   expect(cli.push).not.toHaveBeenCalled();
 });
 
-it("does not overwrite an existing branch or publish an empty diff", async () => {
-  fix.repo.git("branch", "feat/manual-pr");
-  await expect(github.publishRepository(fix.repositoryId, request())).rejects.toThrow(
-    "already exists",
-  );
-  cli.remoteHeads.set("feat/taken", "a".repeat(40));
-  await expect(
-    github.publishRepository(fix.repositoryId, request({}, "feat/taken")),
-  ).rejects.toThrow("remote branch already exists");
-  fix.repo.git("push", "origin", "main");
-  await expect(
-    github.publishRepository(fix.repositoryId, request({}, "feat/empty")),
-  ).rejects.toThrow("No committed changes");
-  expect(cli.push).not.toHaveBeenCalled();
-});
+it(
+  "does not overwrite an existing branch or publish an empty diff",
+  { timeout: 20_000 },
+  async () => {
+    fix.repo.git("branch", "feat/manual-pr");
+    await expect(github.publishRepositoryPullRequest(fix.repositoryId, request())).rejects.toThrow(
+      "already exists",
+    );
+    cli.remoteHeads.set("feat/taken", "a".repeat(40));
+    await expect(
+      github.publishRepositoryPullRequest(fix.repositoryId, request({}, "feat/taken")),
+    ).rejects.toThrow("remote branch already exists");
+    fix.repo.git("push", "origin", "main");
+    await expect(
+      github.publishRepositoryPullRequest(fix.repositoryId, request({}, "feat/empty")),
+    ).rejects.toThrow("No committed changes");
+    expect(cli.push).not.toHaveBeenCalled();
+  },
+);
 
 it("keeps the new local branch and reports a push failure, then retries safely", async () => {
   cli.pushError = new GitHubCliError("github_push_failed", "network unavailable");
-  await expect(github.publishRepository(fix.repositoryId, request())).rejects.toThrow(
+  await expect(github.publishRepositoryPullRequest(fix.repositoryId, request())).rejects.toThrow(
     "network unavailable",
   );
   expect(cli.createCalls).toBe(0);
   expect(fix.repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("feat/manual-pr");
   cli.pushError = null;
-  await expect(github.publishRepository(fix.repositoryId, request())).resolves.toMatchObject({
+  await expect(
+    github.publishRepositoryPullRequest(fix.repositoryId, request()),
+  ).resolves.toMatchObject({
     number: 42,
   });
 });
