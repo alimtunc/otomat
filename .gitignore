@@ -38,3 +38,4 @@ docs/design/**
 !docs/ai/**
 !docs/release/
 !docs/release/**
+.vitepress/cache/

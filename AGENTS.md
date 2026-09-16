@@ -29,6 +29,7 @@ apps/
     src/{agents,api,context,data-safety,diagnostics,events,git,health,review,runtime,supervisor}/
   desktop/              Electron shell: manages the daemon lifecycle, serves the web build
     src/{main,preload,shared}/
+  docs/                 VitePress user documentation, published from main
 packages/
   domain/               Pure TypeScript domain model and contracts
   db/                   SQLite, Drizzle, and better-sqlite3 boundary
@@ -154,13 +155,16 @@ judgment.
 ### Documentation
 
 Maintain durable behavior, architecture and operating instructions in the existing
-owning document. Create a document only for a lasting use that no existing file
-serves, and name it by subject, never by ticket or PR identifier. Keep ticket/PR
-history, session reports, check logs, host snapshots and pending patch bundles in
-the handoff or PR, outside tracked documentation. A request for an audit, plan or
-handoff does not by itself require a new repository file. If a skill requests a
-report file, return it in the conversation unless the user explicitly requests
-a versioned deliverable. Do not rename disposable reports to make them look durable.
+owning document. User-facing guides live in `apps/docs` and describe the product as it
+behaves; agent rules, architecture rationale and release operations stay in `AGENTS.md`
+and `docs/`, linked from the site rather than copied into it. Create a document only
+for a lasting use that no existing file serves, and name it by subject, never by ticket
+or PR identifier. Keep ticket/PR history, session reports, check logs, host snapshots
+and pending patch bundles in the handoff or PR, outside tracked documentation. A
+request for an audit, plan or handoff does not by itself require a new repository
+file. If a skill requests a report file, return it in the conversation unless the
+user explicitly requests a versioned deliverable. Do not rename disposable reports
+to make them look durable.
 
 ### Final diff pass (mandatory)
 
@@ -194,6 +198,8 @@ pnpm guardrails    # run frontend-specific static checks
 pnpm check         # run the complete PR gate, including smoke:dist
 pnpm db:migrate    # apply Drizzle migrations to local SQLite
 pnpm clean:data    # wipe this checkout's dev data (--vps <alias>, --repo <path>, --dry-run)
+pnpm docs:dev         # preview the user documentation site
+pnpm docs:build       # build it; a dead internal link fails the build
 pnpm desktop:dev      # run the Electron shell in dev (Vite + a spawned daemon)
 pnpm desktop:package  # build the unsigned macOS .app/.dmg
 pnpm desktop:preflight # check the release inputs without building anything

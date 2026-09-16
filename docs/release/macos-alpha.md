@@ -23,7 +23,7 @@ ID signature is invalid metadata and is refused, not downgraded to something els
 
 | Channel | Built by | Bundle | Data root under `~/Library/Application Support` | Daemon on a remote host |
 | --- | --- | --- | --- | --- |
-| `dev` | `pnpm desktop:dev` | — | `Otomat Dev/<worktree>` | `~/.otomat` |
+| `dev` | `pnpm desktop:dev` | — | `Otomat Dev/<worktree>-<hash>` | `~/.otomat` |
 | `preview` | CI on a pull request | `Otomat PR <n>.app`, `com.otomat.desktop.pr<n>` | `Otomat Preview PR <n>` | `~/.otomat/instances/<short-sha>` |
 | `local` | `pnpm desktop:package` | `Otomat.app`, `com.otomat.desktop` | `Otomat Local` | `~/.otomat/local` |
 | `stable` | `pnpm desktop:release` | `Otomat.app`, `com.otomat.desktop` | `Otomat` | `~/.otomat` |
@@ -253,19 +253,27 @@ second user account):
 
 ## Uninstall and rollback
 
-- Uninstall the app: move `Otomat.app` to the Trash.
-- Remove its data: delete `~/Library/Application Support/Otomat`. Otomat installs nothing else — no
-  global daemon, no launch agent, no `/usr/local` install. It does leave the branches and
-  `git worktree` registrations it created *inside the repositories you added*; run
-  `git worktree prune` there.
-- Roll back: install the previous DMG over the current one. The data directory is left in place, and
-  Otomat refuses to start on a data layout newer than it understands rather than migrating downward,
-  so a rollback across a layout change means restoring a backup from
-  `~/Library/Application Support/Otomat/backups`.
+Described for users in the
+[installation guide](../../apps/docs/guide/install.md#uninstall-and-roll-back).
 
 ## Local development
 
-`pnpm desktop:dev` runs the shell against the Vite dev server with a daemon built from source.
+`pnpm desktop:dev` runs the shell against the Vite dev server with a daemon built from source, and
+keeps everything that session touches to itself, so several worktrees can run at once:
+
+- `userData` is the `dev` data root above, keyed by the canonical worktree path. The SQLite
+  database, run artifacts, generated git worktrees, logs, and Electron's single-instance lock all
+  live there — never inside the checkout, and never in the packaged app's own `userData`.
+- Vite is started on a port reserved for that session and pinned with `--strictPort`; Electron is
+  handed that exact URL, so a session cannot attach to another worktree's dev server.
+
+Two dev-only overrides:
+
+| Variable | Effect |
+| --- | --- |
+| `OTOMAT_DESKTOP_DEV_DATA_ROOT` | Absolute path to use as the session's data root instead of the derived one — e.g. scratch data for a throwaway session. |
+| `OTOMAT_DESKTOP_DEV_SERVER` | `http(s)` URL of a dev server that is already running. The runner then starts no Vite of its own and Electron loads that origin. |
+
 `pnpm desktop:package` produces the ad-hoc signed artifact for testing the packaged shape on your
 own machine — the `local` channel, whose profile survives every rebuild, so installing a newer one
 keeps the projects, repositories, issues, runs and reviews of the previous.

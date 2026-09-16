@@ -1,0 +1,7 @@
+include_fragments = "full"
+max_retries = 2
+# A rate-limited host answers 429; that is not a dead link.
+accept = ["200..=204", "429"]
+exclude_path = ["apps/docs/.vitepress", "apps/docs/node_modules"]
+# The README links the production site, which lags a pull request's own pages.
+exclude = ["^https://otomat-docs\\.pages\\.dev"]
