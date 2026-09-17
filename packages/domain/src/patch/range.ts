@@ -43,6 +43,9 @@ export function rangeShapeRefusal(range: PatchRange): string | null {
   return null;
 }
 
+export const WHOLE_FILE_REVIEW_REFUSAL =
+  "GitHub anchors a review comment to lines, so a whole-file note can only go to the agent.";
+
 /** GitHub anchors a comment only to lines its diff shows, and a multi-line one must stay inside a single hunk. */
 export function reviewRangeRefusal(patch: string, range: PatchRange): string | null {
   const shape = rangeShapeRefusal(range);

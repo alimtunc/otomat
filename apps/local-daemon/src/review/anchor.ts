@@ -4,6 +4,7 @@ import {
   readRangeLines,
   reviewRangeRefusal,
   suggestionRefusal,
+  WHOLE_FILE_REVIEW_REFUSAL,
   type CreateReviewCommentRequest,
   type PatchRange,
 } from "@otomat/domain";
@@ -45,9 +46,7 @@ export function captureAnchor(patch: string, request: CreateReviewCommentRequest
   const range = anchoredRange(request);
   if (range === null) {
     if (request.destination === "pr_review") {
-      throw new CommentRangeInvalidError(
-        "GitHub anchors a review comment to lines, so a whole-file note can only go to the agent.",
-      );
+      throw new CommentRangeInvalidError(WHOLE_FILE_REVIEW_REFUSAL);
     }
     return {
       startLine: null,

@@ -14,10 +14,11 @@ export interface CommentRangeControlProps {
   onMoveEdge?: (edge: "start" | "end", by: 1 | -1) => void;
 }
 
-function describeRange(range: CommentRangeControlProps["range"]): string {
-  if (range === null) return "the whole file";
-  if (range.start === range.end) return `line ${range.start}`;
-  return `lines ${range.start}–${range.end}`;
+function describeAnchor(side: DiffSide, range: CommentRangeControlProps["range"]): string {
+  if (range === null) return "whole file, no line targeted";
+  const lines =
+    range.start === range.end ? `line ${range.start}` : `lines ${range.start}–${range.end}`;
+  return `${lines} · ${sideLabel(side)} side`;
 }
 
 export function CommentRangeControl({
@@ -26,11 +27,10 @@ export function CommentRangeControl({
   range,
   onMoveEdge,
 }: CommentRangeControlProps) {
-  const anchor = describeRange(range);
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-xs text-text-tertiary">
       <span>
-        {filePath} · {anchor} · {sideLabel(side)} side
+        {filePath} · {describeAnchor(side, range)}
       </span>
       {range === null || onMoveEdge === undefined
         ? null

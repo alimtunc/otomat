@@ -4,6 +4,7 @@ import { ReviewCommentComposer } from "@web/components/runs/review/comment/compo
 import { act, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { click } from "#support/dom-events";
 import { findButton, findLabelled } from "#support/dom-queries";
 import { mount } from "#support/mount";
 
@@ -101,11 +102,46 @@ describe("review comment composer", () => {
     await cleanup();
   });
 
-  it("offers no edge to move when the anchor is the whole file", async () => {
-    const { cleanup } = await renderComposer({ line: null });
+  it("names the file and says no line is targeted when the anchor is the whole file", async () => {
+    const { container, cleanup } = await renderComposer({ line: null });
 
+    expect(container.textContent).toContain("notes.md · whole file, no line targeted");
+    expect(container.textContent).not.toContain("head side");
     expect(findLabelled("Move the range start up one line")).toBeUndefined();
     expect(findLabelled("Move the range end down one line")).toBeUndefined();
+    await cleanup();
+  });
+
+  it("sends a whole-file comment to the agent with no line anchor", async () => {
+    const onSubmit = vi.fn(async () => {});
+    const { container, cleanup } = await renderComposer({ line: null, onSubmit });
+
+    await type(textarea(container, "Review comment"), "needs a test file");
+    await click("Add comment");
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      side: "new",
+      start_line: null,
+      line: null,
+      body: "needs a test file",
+      destination: "agent",
+      suggestion: null,
+    });
+    await cleanup();
+  });
+
+  it("keeps a whole-file comment off the PR review even once a pull request exists", async () => {
+    const { container, cleanup } = await renderComposer({
+      line: null,
+      destinations: WITH_PR,
+      preferredDestination: "pr_review",
+    });
+
+    expect(findButton("PR review")?.hasAttribute("disabled")).toBe(true);
+    expect(findButton("Agent")?.getAttribute("aria-pressed")).toBe("true");
+    expect(container.textContent).toContain(
+      "Falling back to Agent: GitHub anchors a review comment to lines",
+    );
     await cleanup();
   });
 

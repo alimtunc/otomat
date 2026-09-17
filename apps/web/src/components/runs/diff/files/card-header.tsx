@@ -19,6 +19,7 @@ export interface DiffFileCardHeaderProps {
   fullFile: boolean;
   /** Absent when the file has no text to expand, so no full-file action is offered. */
   onFullFileChange: ((fullFile: boolean) => void) | null;
+  onCommentFile: () => void;
 }
 
 export function DiffFileCardHeader({
@@ -34,6 +35,7 @@ export function DiffFileCardHeader({
   onCollapsedChange,
   fullFile,
   onFullFileChange,
+  onCommentFile,
 }: DiffFileCardHeaderProps) {
   const labels = diffFileLabels(file);
   return (
@@ -67,6 +69,12 @@ export function DiffFileCardHeader({
             <DiffStat additions={file.additions} deletions={file.deletions} />
           </span>
         ) : null}
+        <IconButton
+          size="sm"
+          label={`Add file comment on ${file.path}`}
+          icon={<Icon name="message-square" />}
+          onClick={onCommentFile}
+        />
         {onFullFileChange === null ? null : (
           <IconButton
             size="sm"

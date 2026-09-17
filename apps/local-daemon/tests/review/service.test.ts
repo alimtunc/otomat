@@ -630,6 +630,30 @@ it("refuses a whole-file anchor for the pull-request destination", async () => {
   ).rejects.toThrow(CommentRangeInvalidError);
 });
 
+it("keeps a whole-file agent comment out of the review a pull request receives", async () => {
+  openPullRequest();
+  const anchor = currentAnchor();
+  const whole = await addComment(runTarget(), {
+    file_path: "notes.md",
+    line: null,
+    diff_sha: anchor.sha,
+    body: "This file needs a header.",
+  });
+  await addComment(runTarget(), {
+    file_path: "notes.md",
+    line: 2,
+    diff_sha: anchor.sha,
+    destination: "pr_review",
+    body: "on the PR",
+  });
+
+  const detail = await review.submitReview(runTarget(), { body: "", event: "comment" });
+
+  expect(submissions[0]?.comments.map((comment) => comment.line)).toEqual([2]);
+  const kept = detail.comments.find((comment) => comment.id === whole.id);
+  expect(kept?.publication_status).toBe("local");
+});
+
 it("carries the summary, the verdict and every pending comment in one submission", async () => {
   openPullRequest();
   const created = await addComment(runTarget(), {
