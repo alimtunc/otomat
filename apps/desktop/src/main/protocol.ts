@@ -54,9 +54,14 @@ function isFile(candidate: string): boolean {
   }
 }
 
-/** Resolves `pathname` under `root`, rejecting any `..` escape outside the served dir. */
 function resolveWithinRoot(root: string, pathname: string): string | null {
-  const candidate = normalize(join(root, decodeURIComponent(pathname)));
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+  const candidate = normalize(join(root, decoded));
   const rootWithSep = root.endsWith(sep) ? root : root + sep;
   if (candidate !== root && !candidate.startsWith(rootWithSep)) return null;
   return candidate;
