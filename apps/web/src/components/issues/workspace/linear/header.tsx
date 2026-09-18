@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import { DraftBar } from "./draft-bar";
 import { InlineTextField } from "./inline-text-field";
+import { LinearAttachmentsSection, LinearMediaProvider } from "./media";
 import { useLinearIssueEditing, type LinearIssueEditing } from "./use-issue-editing";
 
 function assigneeName(issue: IssueContract, editing: LinearIssueEditing): string | null {
@@ -61,22 +62,25 @@ export function LinearIssueHeader({
       </div>
       <DraftBar editing={editing} />
       {children}
-      <IssueDescription
-        key={`${issue.id}:${hasRun}`}
-        body={description}
-        collapsed={hasRun}
-        comments={comments}
-      >
-        <InlineTextField
-          multiline
-          value={description}
-          placeholder="Add a description…"
-          ariaLabel="Issue description"
-          disabled={!editing.canEdit}
-          className="text-sm leading-[1.65] text-foreground"
-          onCommit={(next) => editing.updateFields({ description: next })}
-        />
-      </IssueDescription>
+      <LinearMediaProvider issueId={issue.id}>
+        <IssueDescription
+          key={`${issue.id}:${hasRun}`}
+          body={description}
+          collapsed={hasRun}
+          comments={comments}
+        >
+          <InlineTextField
+            multiline
+            value={description}
+            placeholder="Add a description…"
+            ariaLabel="Issue description"
+            disabled={!editing.canEdit}
+            className="text-sm leading-[1.65] text-foreground"
+            onCommit={(next) => editing.updateFields({ description: next })}
+          />
+          <LinearAttachmentsSection issueId={issue.id} />
+        </IssueDescription>
+      </LinearMediaProvider>
     </div>
   );
 }

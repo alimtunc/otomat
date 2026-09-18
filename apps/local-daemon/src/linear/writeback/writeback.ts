@@ -20,7 +20,7 @@ import { publishFields } from "./publishers/fields.js";
 import { publishLifecycle } from "./publishers/lifecycle.js";
 import { publishPrLink } from "./publishers/pr-link.js";
 import { publishStatus } from "./publishers/status.js";
-import { comments, editorState } from "./readers.js";
+import { attachments, comments, editorState, media } from "./readers.js";
 import { writebackState } from "./state.js";
 import type { LinearWriteback, LinearWritebackConfig, PublishLifecycleRequest } from "./types.js";
 
@@ -41,6 +41,14 @@ class DefaultLinearWriteback implements LinearWriteback {
 
   comments(issueId: string) {
     return comments(this.config, issueId);
+  }
+
+  attachments(issueId: string) {
+    return attachments(this.config, issueId);
+  }
+
+  media(issueId: string, url: string) {
+    return media(this.config, issueId, url);
   }
 
   saveDraft(issueId: string, request: SaveLinearDraftRequest) {

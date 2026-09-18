@@ -8,4 +8,10 @@ export {
   usePublishLinearStatus,
   useRetryLinearWrite,
 } from "./publishers";
-export { useLinearComments, useLinearEditor, useLinearWriteback } from "./queries";
+export {
+  useLinearAttachments,
+  useLinearComments,
+  useLinearEditor,
+  useLinearMedia,
+  useLinearWriteback,
+} from "./queries";

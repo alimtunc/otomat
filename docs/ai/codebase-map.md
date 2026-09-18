@@ -557,6 +557,22 @@ that asks: the cockpit lists the projects that lose their mapping before the dae
 connection, its sources and their cursors. Rolling back a rotation never does that — the vault still
 holds the previous key, so a failed vault write re-delivers it instead of deleting anything.
 
+## Linear Media
+
+`uploads.linear.app` answers only to the same `Authorization` header as the GraphQL API, so a
+`<img src>` from the renderer can never load a Linear upload. `LinearWriteback.media(issueId, url)`
+resolves the key through the issue's project like every other read and streams the response through
+`GET /api/linear/issues/:id/media?url=` — `linear/client/files.ts` refuses anything but that https
+host before sending the header, follows no redirect, allows only the `DIFF_MEDIA_TYPES` the cockpit
+renders and caps the size; nothing is buffered or persisted on the daemon. The cockpit reads the
+bytes as a `Blob` through the typed client and renders them as a data URL, like diff media, which
+is why a local and a tunnelled daemon behave identically and no daemon origin has to enter the
+renderer CSP. `Markdown` and `MarkdownMediaLink` take their media renderer from
+`MarkdownMediaContext`; `LinearMediaProvider` swaps in `LinearMedia`, which routes Linear uploads
+through the daemon and leaves every other https host on the direct `MarkdownMedia` path.
+Attachments are a live read like comments (`GET /api/linear/issues/:id/attachments`); the section
+renders only the ones that are uploads or carry a media extension.
+
 ## One Remote Host Journey
 
 Connecting to a remote host and putting the expected daemon on it are one state machine, not two:

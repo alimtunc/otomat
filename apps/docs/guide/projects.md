@@ -47,6 +47,12 @@ there are no webhooks. Beyond those two transitions, Otomat writes to Linear onl
 yourself from the issue page: **Publish to Linear** for edited fields, a status change, a
 **Comment**, or a pull-request link.
 
+Images and videos embedded in a Linear description or comment, and media attached to the issue,
+display inline on the issue page — click an image to enlarge it; videos use the native player and
+never autoplay. The daemon fetches them with the workspace key, which never reaches the app, and
+keeps nothing on disk. A file Linear no longer serves, or one Otomat does not display inline, keeps
+an **Open in Linear** link instead.
+
 ## Add a VPS as an execution host
 
 The daemon can run on a Linux server you own while the desktop app stays the user interface.

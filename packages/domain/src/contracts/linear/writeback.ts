@@ -74,6 +74,21 @@ export const linearCommentsResponseSchema = z.object({
   comments: z.array(linearCommentSchema),
 });
 
+export const LINEAR_UPLOADS_HOST = "uploads.linear.app";
+
+export const linearAttachmentSchema = z.object({
+  id: z.string().min(1),
+  title: z.string(),
+  url: z.url(),
+  created_at: z.iso.datetime(),
+});
+export type LinearAttachmentContract = z.infer<typeof linearAttachmentSchema>;
+
+/** GET /attachments — network-backed read of the remote attachments (409 when offline). */
+export const linearAttachmentsResponseSchema = z.object({
+  attachments: z.array(linearAttachmentSchema),
+});
+
 export const publishPrLinkRequestSchema = z
   .object({
     url: z.url(),

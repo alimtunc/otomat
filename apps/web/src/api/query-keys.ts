@@ -82,6 +82,8 @@ export function hostKeys(host: ExecutionHostId) {
     linearWriteback: (issueId: string) => [host, "linear", "writeback", issueId] as const,
     linearEditor: (issueId: string) => [host, "linear", "editor", issueId] as const,
     linearComments: (issueId: string) => [host, "linear", "comments", issueId] as const,
+    linearAttachments: (issueId: string) => [host, "linear", "attachments", issueId] as const,
+    linearMedia: (issueId: string, url: string) => [host, "linear", "media", issueId, url] as const,
     usage: [host, "usage"] as const,
     usageDashboard: (filters: UsageFilters) => [host, "usage", filters] as const,
     runs: [host, "runs"] as const,
