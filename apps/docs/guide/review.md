@@ -32,13 +32,14 @@ Reading is keyboard-first — the **Keyboard shortcuts** button in the toolbar l
 
 ## Comment
 
-Select a line or a range in the diff — or comment the whole file — and write. Two facts are chosen
-per comment, never inferred:
+Select a line or a range in the diff — or use **Add file comment** in a file's header, folded or
+not, for a remark that targets no line — and write. Two facts are chosen per comment, never
+inferred:
 
 - **Comment destination** — **Agent** stays in Otomat and is what a fix step consumes; **PR
   review** is published to GitHub, and only there. A comment destined to the pull request must
   anchor to lines the pull request's diff shows, inside one hunk, which is GitHub's own rule; a
-  range that breaks it is explained, not shortened.
+  range that breaks it is explained, not shortened, and a file comment can only go to the agent.
 - **Comment kind** — a plain comment, or **Suggest change**, whose replacement applies to the
   head lines it covers.
 

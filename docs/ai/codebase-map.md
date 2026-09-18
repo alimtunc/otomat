@@ -1266,7 +1266,12 @@ comment anchors only to lines its diff shows, start and end inside one hunk —
 and `suggestionRefusal` adds that a replacement is applied to head lines. A
 refused range is explained, never shortened or re-anchored. An agent comment
 carries no such constraint beyond a well-formed span, because expanded context
-puts unchanged lines on screen and they are legitimate to comment on.
+puts unchanged lines on screen and they are legitimate to comment on. A
+whole-file comment can only go to the agent: the review-submission endpoint, the
+one publish path, takes line-anchored comments only, so the composer disables
+`PR review` with that reason (`WHOLE_FILE_REVIEW_REFUSAL`, stated once in the
+domain) and the daemon refuses it rather than letting one such note sink a whole
+review.
 
 A comment's destination is chosen, never inferred. `agent` stays in Otomat and
 is the only thing `Fix selected comments with AI` will consume; `pr_review` is

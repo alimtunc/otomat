@@ -5,6 +5,8 @@ import {
   type DiffSide,
   type PatchRange,
   type ReviewCommentDestination,
+  type ReviewDestinationAvailability,
+  WHOLE_FILE_REVIEW_REFUSAL,
 } from "@otomat/domain";
 import { useForm, useStore } from "@tanstack/react-form";
 import { hasText } from "@web/lib/form";
@@ -31,18 +33,21 @@ export interface CommentComposerOptions {
   side: DiffSide;
   line: number | null;
   fromLine: number | null;
-  prReview: { available: boolean; reason: string };
+  destinations: ReviewDestinationAvailability;
   preferredDestination: ReviewCommentDestination;
   onSubmit: (comment: ComposedComment) => Promise<void>;
   onClose: () => void;
 }
 
-const WHOLE_FILE_REFUSAL = "A suggestion replaces lines, so a whole-file note cannot carry one.";
+const WHOLE_FILE_SUGGESTION_REFUSAL =
+  "A suggestion replaces lines, so a whole-file note cannot carry one.";
 
 export function useCommentComposer(options: CommentComposerOptions) {
-  const { patch, side, prReview, preferredDestination } = options;
+  const { patch, side, preferredDestination } = options;
   const range: CommentRange | null =
     options.line === null ? null : { start: options.fromLine ?? options.line, end: options.line };
+  const destinations: ReviewDestinationAvailability =
+    range === null ? { pr_review: false, reason: WHOLE_FILE_REVIEW_REFUSAL } : options.destinations;
 
   const patchRange = (lines: CommentRange): PatchRange => ({
     side,
@@ -50,11 +55,11 @@ export function useCommentComposer(options: CommentComposerOptions) {
     endLine: lines.end,
   });
   const refusal = (lines: CommentRange | null): string | null =>
-    lines === null ? WHOLE_FILE_REFUSAL : suggestionRefusal(patch, patchRange(lines));
+    lines === null ? WHOLE_FILE_SUGGESTION_REFUSAL : suggestionRefusal(patch, patchRange(lines));
   const headLines = (lines: CommentRange | null): string =>
     lines === null ? "" : (readRangeLines(patch, patchRange(lines)) ?? []).join("\n");
   const reachable = (destination: ReviewCommentDestination): ReviewCommentDestination =>
-    destination === "pr_review" && !prReview.available ? "agent" : destination;
+    destination === "pr_review" && !destinations.pr_review ? "agent" : destination;
 
   const prefill = headLines(range);
 
@@ -102,6 +107,7 @@ export function useCommentComposer(options: CommentComposerOptions) {
     suggestionPrefill: prefill,
     suggestionBlocked: refusal(range),
     destination: request.destination,
+    prReviewUnavailable: destinations.pr_review ? null : destinations.reason,
     destinationFellBack: reachable(preferredDestination) !== preferredDestination,
     canSubmit: hasText(values.body) || request.suggestion !== null,
   };

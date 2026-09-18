@@ -41,7 +41,7 @@ export function ReviewCommentComposer({
     side,
     line,
     fromLine,
-    prReview: { available: destinations.pr_review, reason: destinations.reason },
+    destinations,
     preferredDestination,
     onSubmit,
     onClose,
@@ -117,7 +117,7 @@ export function ReviewCommentComposer({
       <CommentDestinationControl
         destination={destination}
         onChange={(next) => form.setFieldValue("destination", next)}
-        unavailableReason={destinations.pr_review ? null : destinations.reason}
+        unavailableReason={composer.prReviewUnavailable}
         fellBack={composer.destinationFellBack}
       />
       <div className="flex justify-end gap-2">

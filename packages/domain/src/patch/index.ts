@@ -6,5 +6,6 @@ export {
   readRangeLines,
   reviewRangeRefusal,
   suggestionRefusal,
+  WHOLE_FILE_REVIEW_REFUSAL,
   type PatchRange,
 } from "./range.js";
