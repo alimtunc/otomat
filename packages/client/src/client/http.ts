@@ -105,6 +105,10 @@ export async function getJson(config: DaemonClientConfig, path: string): Promise
   return (await daemonFetch(config, path)).json();
 }
 
+export async function getBlob(config: DaemonClientConfig, path: string): Promise<Blob> {
+  return (await daemonFetch(config, path)).blob();
+}
+
 export async function postJson(
   config: DaemonClientConfig,
   path: string,

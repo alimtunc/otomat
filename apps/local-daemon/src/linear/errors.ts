@@ -39,6 +39,8 @@ const LINEAR_ERROR_MESSAGES = {
   linear_issue_not_writable: "Only a Linear-sourced issue can be edited or published.",
   linear_write_conflict: "The Linear issue changed since you started editing.",
   linear_write_not_found: "That Linear write attempt no longer exists.",
+  linear_media_refused: "This file can’t be displayed inline.",
+  linear_media_expired: "This file is no longer available on Linear.",
 } satisfies Record<LinearErrorCode, string>;
 
 export function linearError(code: LinearErrorCode, cause?: unknown): LinearError {

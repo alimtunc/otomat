@@ -1,5 +1,6 @@
 import {
   issueSourceContractSchema,
+  linearAttachmentsResponseSchema,
   linearCommentsResponseSchema,
   linearConnectionContractSchema,
   linearEditorStateSchema,
@@ -21,7 +22,7 @@ import {
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { deleteJson, getJson, patchJson, postJson, queryString } from "./http.js";
+import { deleteJson, getBlob, getJson, patchJson, postJson, queryString } from "./http.js";
 
 export function createLinearClient(config: DaemonClientConfig) {
   return {
@@ -91,6 +92,17 @@ export function createLinearClient(config: DaemonClientConfig) {
       return linearCommentsResponseSchema.parse(
         await getJson(config, `/api/linear/issues/${encodeURIComponent(issueId)}/comments`),
       ).comments;
+    },
+    async getLinearAttachments(issueId: string) {
+      return linearAttachmentsResponseSchema.parse(
+        await getJson(config, `/api/linear/issues/${encodeURIComponent(issueId)}/attachments`),
+      ).attachments;
+    },
+    async getLinearMedia(issueId: string, url: string) {
+      return getBlob(
+        config,
+        `/api/linear/issues/${encodeURIComponent(issueId)}/media${queryString({ url })}`,
+      );
     },
     async saveLinearDraft(issueId: string, request: SaveLinearDraftRequest) {
       return linearIssueDraftSchema.parse(

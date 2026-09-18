@@ -338,3 +338,40 @@ it("never puts the API key in an error it raises", async () => {
   expect(JSON.stringify({ message: error.message })).not.toContain(KEY);
   expect(error.stack ?? "").not.toContain(KEY);
 });
+
+it("lists an issue's attachments and reports a vanished issue", async () => {
+  const { requests, transport } = fakeTransport([
+    ok({
+      issue: {
+        attachments: {
+          nodes: [
+            {
+              id: "a1",
+              title: "demo.mp4",
+              url: "https://uploads.linear.app/ws/issue/file/demo.mp4",
+              createdAt: "2026-07-21T10:00:00.000Z",
+            },
+          ],
+          pageInfo: LAST_PAGE,
+        },
+      },
+    }),
+    ok({ issue: null }),
+  ]);
+  const client = createLinearApiClient(transport);
+
+  const attachments = await client.listAttachments(KEY, "L-1");
+
+  expect(attachments).toEqual([
+    {
+      id: "a1",
+      title: "demo.mp4",
+      url: "https://uploads.linear.app/ws/issue/file/demo.mp4",
+      created_at: "2026-07-21T10:00:00.000Z",
+    },
+  ]);
+  expect(requests[0]?.variables).toMatchObject({ id: "L-1" });
+  await expect(client.listAttachments(KEY, "L-gone")).rejects.toMatchObject({
+    code: "linear_remote_issue_not_found",
+  });
+});

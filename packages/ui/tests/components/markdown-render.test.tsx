@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { Markdown } from "@otomat/ui";
+import { Markdown, MarkdownMediaContext, type MarkdownMediaProps } from "@otomat/ui";
 import { afterEach, expect, it } from "vitest";
 
 import { render, unmountAll } from "#test-support/render";
@@ -132,6 +132,34 @@ it("does not load non-HTTPS media", async () => {
 
   expect(container.querySelector("img")).toBeNull();
   expect(container.querySelector("a")?.getAttribute("href")).toBe("http://uploads.test/a.png");
+});
+
+function Proxied({ href, kind, label }: MarkdownMediaProps) {
+  return (
+    <output data-kind={kind} data-href={href}>
+      {label}
+    </output>
+  );
+}
+
+it("hands images and media links to the surface's own media component", async () => {
+  const container = await render(
+    <MarkdownMediaContext.Provider value={(props) => <Proxied {...props} />}>
+      <Markdown
+        value="![screenshot](https://uploads.test/a.png)\n\n[Demo](https://uploads.test/demo.mp4)"
+        allowMedia
+      />
+    </MarkdownMediaContext.Provider>,
+  );
+  const outputs = [...container.querySelectorAll("output")];
+
+  expect(container.querySelector("img")).toBeNull();
+  expect(outputs.map((node) => node.dataset.kind)).toEqual(["image", "video"]);
+  expect(outputs.map((node) => node.dataset.href)).toEqual([
+    "https://uploads.test/a.png",
+    "https://uploads.test/demo.mp4",
+  ]);
+  expect(outputs.map((node) => node.textContent)).toEqual(["screenshot", "Demo"]);
 });
 
 it("keeps a long code block scrollable and copyable", async () => {

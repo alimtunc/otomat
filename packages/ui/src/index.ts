@@ -230,6 +230,10 @@ export { Kbd, type KbdProps } from "./components/kbd";
 export { LiveDot, type LiveDotProps } from "./components/live-dot";
 
 export { Markdown, type MarkdownProps } from "./components/markdown";
+export { MarkdownLink, type MarkdownLinkProps } from "./components/markdown-link";
+export { MarkdownMediaContext, type MarkdownMediaRenderer } from "./components/media-context";
+export { MarkdownMedia, type MarkdownMediaProps } from "./components/remote-media";
+export { markdownMediaKind } from "./lib/markdown/media";
 
 export { MetaList, type MetaListItem, type MetaListProps } from "./components/meta-list";
 

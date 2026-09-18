@@ -1,4 +1,4 @@
-import type { LinearWorkspaceContract } from "@otomat/domain";
+import type { DiffMediaType, LinearWorkspaceContract } from "@otomat/domain";
 
 export interface LinearViewer {
   user_name: string;
@@ -98,6 +98,19 @@ export interface LinearAttachmentInput {
   title: string;
 }
 
+export interface LinearAttachment {
+  id: string;
+  title: string;
+  url: string;
+  created_at: string;
+}
+
+export interface LinearFile {
+  media_type: DiffMediaType;
+  size: number | null;
+  body: ReadableStream<Uint8Array>;
+}
+
 export interface LinearApiClient {
   viewer(apiKey: string, signal?: AbortSignal): Promise<LinearViewer>;
   workspace(apiKey: string, signal?: AbortSignal): Promise<LinearWorkspaceContract>;
@@ -112,9 +125,15 @@ export interface LinearApiClient {
   ): Promise<LinearIssueDetail>;
   listComments(apiKey: string, issueId: string, signal?: AbortSignal): Promise<LinearComment[]>;
   createComment(apiKey: string, input: LinearCommentInput, signal?: AbortSignal): Promise<string>;
+  listAttachments(
+    apiKey: string,
+    issueId: string,
+    signal?: AbortSignal,
+  ): Promise<LinearAttachment[]>;
   linkAttachment(
     apiKey: string,
     input: LinearAttachmentInput,
     signal?: AbortSignal,
   ): Promise<string>;
+  downloadFile(apiKey: string, url: string, signal?: AbortSignal): Promise<LinearFile>;
 }

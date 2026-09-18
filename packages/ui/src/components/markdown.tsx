@@ -1,11 +1,11 @@
 import MarkdownDocument, { RuleType, type MarkdownToJSX } from "markdown-to-jsx/react";
-import { useMemo } from "react";
+import { Fragment, useContext, useMemo } from "react";
 
 import { openFenceBody } from "../lib/markdown";
 import { cn } from "../lib/utils";
 import { MarkdownCodeBlock } from "./markdown-code-block";
 import { MarkdownLink } from "./markdown-link";
-import { MarkdownMedia } from "./remote-media";
+import { MarkdownMediaContext } from "./media-context";
 import { MarkdownMediaLink } from "./remote-media-link";
 
 const LIST = "flex list-outside flex-col gap-1 pl-5 marker:text-text-tertiary";
@@ -52,6 +52,7 @@ export interface MarkdownProps {
 /** The one renderer for Linear descriptions, agent messages and report prose. Streaming
     suppression stays off: an unclosed `**` must keep its characters, not swallow them. */
 export function Markdown({ value, className, allowMedia = false }: MarkdownProps) {
+  const renderMedia = useContext(MarkdownMediaContext);
   const options = useMemo<MarkdownToJSX.Options>(() => {
     const streaming = openFenceBody(value)?.trimEnd() ?? null;
     return {
@@ -75,7 +76,9 @@ export function Markdown({ value, className, allowMedia = false }: MarkdownProps
         if (node.type === RuleType.image) {
           if (allowMedia && node.target !== null) {
             return (
-              <MarkdownMedia key={state.key} href={node.target} kind="image" label={node.alt} />
+              <Fragment key={state.key}>
+                {renderMedia({ href: node.target, kind: "image", label: node.alt })}
+              </Fragment>
             );
           }
           return (
@@ -100,7 +103,7 @@ export function Markdown({ value, className, allowMedia = false }: MarkdownProps
         return next();
       },
     };
-  }, [allowMedia, value]);
+  }, [renderMedia, allowMedia, value]);
 
   return (
     // The leading comes last: every caller sets a text size, and tailwind-merge drops a

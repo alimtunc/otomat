@@ -448,3 +448,67 @@ it("keeps the Linear routes behind the loopback host guard", async () => {
   expect(res.status).toBe(403);
   expect(await res.json()).toEqual({ error: "forbidden_host" });
 });
+
+it("streams an issue's media with its type and never the key", async () => {
+  const bytes = new Uint8Array([1, 2, 3]);
+  const media = vi.fn(async () => ({
+    media_type: "image/png" as const,
+    size: 3,
+    body: new Blob([bytes]).stream(),
+  }));
+  const app = makeApiApp(t, { linear: stubLinearService({ writeback: { media } }) });
+  const upload = "https://uploads.linear.app/ws/issue/file/a.png";
+
+  const res = await request(app, `/api/linear/issues/li/media?url=${encodeURIComponent(upload)}`);
+
+  expect(res.status).toBe(200);
+  expect(res.headers.get("content-type")).toBe("image/png");
+  expect(res.headers.get("content-length")).toBe("3");
+  expect(res.headers.get("cache-control")).toBe("no-store");
+  expect(new Uint8Array(await res.arrayBuffer())).toEqual(bytes);
+  expect(media).toHaveBeenCalledWith("li", upload);
+  expect([...res.headers.values()].join(" ")).not.toContain(KEY);
+});
+
+it("requires a media url and maps a gone or refused file to its status", async () => {
+  const app = makeApiApp(t, {
+    linear: stubLinearService({
+      writeback: {
+        media: async (_issueId, url) => {
+          throw linearError(url.endsWith(".png") ? "linear_media_expired" : "linear_media_refused");
+        },
+      },
+    }),
+  });
+
+  expect((await request(app, "/api/linear/issues/li/media")).status).toBe(400);
+  const gone = await request(
+    app,
+    `/api/linear/issues/li/media?url=${encodeURIComponent("https://uploads.linear.app/a.png")}`,
+  );
+  expect(gone.status).toBe(404);
+  expect(await gone.json()).toMatchObject({ error: "linear_media_expired" });
+  const refused = await request(
+    app,
+    `/api/linear/issues/li/media?url=${encodeURIComponent("https://uploads.linear.app/a.html")}`,
+  );
+  expect(refused.status).toBe(400);
+  expect(await refused.json()).toMatchObject({ error: "linear_media_refused" });
+});
+
+it("lists an issue's attachments", async () => {
+  const attachment = {
+    id: "a1",
+    title: "demo.mp4",
+    url: "https://uploads.linear.app/ws/issue/file/demo.mp4",
+    created_at: "2026-07-21T10:00:00.000Z",
+  };
+  const app = makeApiApp(t, {
+    linear: stubLinearService({ writeback: { attachments: async () => [attachment] } }),
+  });
+
+  const res = await request(app, "/api/linear/issues/li/attachments");
+
+  expect(res.status).toBe(200);
+  expect(await res.json()).toEqual({ attachments: [attachment] });
+});

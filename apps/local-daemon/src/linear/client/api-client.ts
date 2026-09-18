@@ -2,6 +2,7 @@ import type { LinearTransport } from "../transport.js";
 import { createAttachmentOperations } from "./attachments.js";
 import { createCommentOperations } from "./comments.js";
 import { createGraphQLExecutor } from "./executor.js";
+import { createFileOperations } from "./files.js";
 import { createIssueOperations } from "./issues.js";
 import type { LinearApiClient } from "./types.js";
 import { createWorkspaceOperations } from "./workspace.js";
@@ -13,5 +14,6 @@ export function createLinearApiClient(transport: LinearTransport): LinearApiClie
     ...createIssueOperations(executor),
     ...createCommentOperations(executor),
     ...createAttachmentOperations(executor),
+    ...createFileOperations(),
   };
 }

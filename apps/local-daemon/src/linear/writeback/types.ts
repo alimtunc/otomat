@@ -1,5 +1,6 @@
 import type { Db, IssueRow } from "@otomat/db";
 import type {
+  LinearAttachmentContract,
   LinearCommentContract,
   LinearEditorState,
   LinearIssueDraft,
@@ -14,7 +15,7 @@ import type {
   TrackerStateRef,
 } from "@otomat/domain";
 
-import type { LinearApiClient } from "../client/types.js";
+import type { LinearApiClient, LinearFile } from "../client/types.js";
 import type { LinearAuthorization } from "../connections.js";
 
 export interface LinearWritebackConfig {
@@ -66,6 +67,8 @@ export interface LinearWriteback {
   writebackState(issueId: string): LinearWritebackState;
   editorState(issueId: string): Promise<LinearEditorState>;
   comments(issueId: string): Promise<LinearCommentContract[]>;
+  attachments(issueId: string): Promise<LinearAttachmentContract[]>;
+  media(issueId: string, url: string): Promise<LinearFile>;
   saveDraft(issueId: string, request: SaveLinearDraftRequest): LinearIssueDraft;
   discardDraft(issueId: string): void;
   publishFields(issueId: string, request: PublishFieldsRequest): Promise<LinearWritebackState>;

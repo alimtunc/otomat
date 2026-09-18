@@ -16,10 +16,13 @@ export type {
   LinearTransportRequest,
   LinearTransportResponse,
 } from "./transport.js";
+export { LINEAR_FILE_MAX_BYTES } from "./client/files.js";
 export type {
   LinearApiClient,
+  LinearAttachment,
   LinearAttachmentInput,
   LinearCommentInput,
+  LinearFile,
   LinearIssue,
   LinearIssueDetail,
   LinearIssueEditor,

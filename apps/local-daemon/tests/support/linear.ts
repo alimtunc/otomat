@@ -42,6 +42,12 @@ function stubLinearWriteback(overrides: Partial<LinearWriteback> = {}): LinearWr
     comments: async () => {
       throw new Error("comments stub not configured");
     },
+    attachments: async () => {
+      throw new Error("attachments stub not configured");
+    },
+    media: async () => {
+      throw new Error("media stub not configured");
+    },
     saveDraft: () => {
       throw new Error("saveDraft stub not configured");
     },
@@ -136,8 +142,14 @@ export function stubLinearApiClient(overrides: Partial<LinearApiClient> = {}): L
     createComment: async () => {
       throw new Error("createComment stub not configured");
     },
+    listAttachments: async () => {
+      throw new Error("listAttachments stub not configured");
+    },
     linkAttachment: async () => {
       throw new Error("linkAttachment stub not configured");
+    },
+    downloadFile: async () => {
+      throw new Error("downloadFile stub not configured");
     },
     ...overrides,
   };

@@ -19,6 +19,8 @@ export const LINEAR_ERROR_CODES = [
   "linear_issue_not_writable",
   "linear_write_conflict",
   "linear_write_not_found",
+  "linear_media_refused",
+  "linear_media_expired",
 ] as const;
 export type LinearErrorCode = (typeof LINEAR_ERROR_CODES)[number];
 

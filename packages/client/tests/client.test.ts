@@ -801,6 +801,32 @@ it("reads mapped issue sources and triggers a sync", async () => {
   ]);
 });
 
+it("reads an issue's Linear attachments and its media bytes through the daemon", async () => {
+  const urls: string[] = [];
+  const attachment = {
+    id: "a1",
+    title: "demo.mp4",
+    url: "https://uploads.linear.app/ws/issue/file/demo.mp4",
+    created_at: "2026-07-21T10:00:00.000Z",
+  };
+  const fetchMock: typeof fetch = async (input) => {
+    const url = String(input);
+    urls.push(url);
+    if (url.endsWith("/attachments")) return jsonResponse({ attachments: [attachment] });
+    return new Response(new Uint8Array([1, 2]), { headers: { "content-type": "image/png" } });
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+
+  expect(await client.getLinearAttachments("li")).toEqual([attachment]);
+  const media = await client.getLinearMedia("li", "https://uploads.linear.app/ws/a.png?x=1&y=2");
+  expect(media.type).toBe("image/png");
+  expect(media.size).toBe(2);
+  expect(urls).toEqual([
+    "http://localhost:4319/api/linear/issues/li/attachments",
+    "http://localhost:4319/api/linear/issues/li/media?url=https%3A%2F%2Fuploads.linear.app%2Fws%2Fa.png%3Fx%3D1%26y%3D2",
+  ]);
+});
+
 it("reads the host's activity snapshot and validates its buckets", async () => {
   let calledUrl = "";
   const fetchMock: typeof fetch = async (input) => {

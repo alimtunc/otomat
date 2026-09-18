@@ -37,6 +37,8 @@ const LINEAR_ERROR_STATUS = {
   linear_issue_not_writable: 400,
   linear_write_conflict: 409,
   linear_write_not_found: 404,
+  linear_media_refused: 400,
+  linear_media_expired: 404,
 } satisfies Record<LinearErrorCode, ContentfulStatusCode>;
 
 export function createLinearRoutes(deps: ApiDeps): Hono {
@@ -106,6 +108,22 @@ export function createLinearRoutes(deps: ApiDeps): Hono {
   routes.get("/issues/:id/comments", async (c) =>
     c.json({ comments: await deps.linear.writeback.comments(c.req.param("id")) }),
   );
+
+  routes.get("/issues/:id/attachments", async (c) =>
+    c.json({ attachments: await deps.linear.writeback.attachments(c.req.param("id")) }),
+  );
+
+  routes.get("/issues/:id/media", async (c) => {
+    const url = c.req.query("url");
+    if (url === undefined || url === "") {
+      return c.json({ error: "invalid_request", message: "url is required." }, 400);
+    }
+    const file = await deps.linear.writeback.media(c.req.param("id"), url);
+    c.header("content-type", file.media_type);
+    c.header("cache-control", "no-store");
+    if (file.size !== null) c.header("content-length", String(file.size));
+    return c.body(file.body, 200);
+  });
 
   routes.post("/issues/:id/draft", validateJson(saveLinearDraftRequestSchema), (c) =>
     c.json(deps.linear.writeback.saveDraft(c.req.param("id"), c.req.valid("json"))),
