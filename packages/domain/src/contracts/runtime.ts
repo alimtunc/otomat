@@ -33,6 +33,13 @@ export const runtimeResumeModelCapabilitySchema = z.discriminatedUnion("status",
 ]);
 export type RuntimeResumeModelCapability = z.infer<typeof runtimeResumeModelCapabilitySchema>;
 
+/** Whether a message can carry images into this runtime; `standalone` says an image may be the whole message, or must ride with text. */
+export const runtimeImageCapabilitySchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("supported"), standalone: z.boolean() }),
+  z.object({ status: z.literal("unsupported"), reason: z.string().min(1) }),
+]);
+export type RuntimeImageCapability = z.infer<typeof runtimeImageCapabilitySchema>;
+
 /** Which question kinds a runtime can genuinely round-trip; `unsupported` states why rather than leaving the operator to guess. */
 export const runtimeInteractionCapabilitySchema = z.discriminatedUnion("status", [
   z.object({
@@ -122,6 +129,7 @@ export const runtimeCapabilitiesSchema = z.object({
   abort: z.boolean(),
   resume: z.boolean(),
   resume_model: runtimeResumeModelCapabilitySchema,
+  images: runtimeImageCapabilitySchema,
   interactions: runtimeInteractionCapabilitySchema,
   diff_hints: z.boolean(),
   provider_limit: runtimeProviderLimitModeSchema,

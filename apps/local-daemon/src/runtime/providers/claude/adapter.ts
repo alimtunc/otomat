@@ -150,7 +150,7 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
       source: "claude",
       command: this.binary,
       args: [...this.turnArgs(input, permission.mode), ...sessionArgs],
-      prompt: claudeUserFrame(input.prompt),
+      prompt: claudeUserFrame(input.prompt, input.images),
       cwd: input.cwd,
       ref,
       streamStdin: liveInput?.stream,

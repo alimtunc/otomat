@@ -173,11 +173,17 @@ function useContributionMutation<TVariables, TResult>(
   });
 }
 
+export interface CreateRunContributionVariables {
+  request: CreateRunContributionRequest;
+  images: readonly File[];
+}
+
 /** The composer surfaces the failure inline, so no toast doubles it. */
 export function useCreateRunContribution(runId: string) {
   return useContributionMutation(
     runId,
-    (request: CreateRunContributionRequest) => daemon.createRunContribution(runId, request),
+    ({ request, images }: CreateRunContributionVariables) =>
+      daemon.createRunContribution(runId, request, images),
     seedContribution,
     () => {},
   );

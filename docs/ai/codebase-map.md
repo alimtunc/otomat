@@ -366,6 +366,31 @@ only when that turn's own start gate was consumed, and returns it to the queue
 otherwise. That is what makes a replay idempotent — a message is never delivered
 twice, and never buried as delivered by a worker that never ran.
 
+A message's images are part of that same durable row, never a second upload
+flow. The composer posts one `multipart/form-data` request whose `request` part
+is the JSON a text-only message posts and whose `images` parts are the files;
+`contribution/images.ts` sniffs the real type from the bytes, enforces the count
+and size limits `@otomat/domain` publishes to both sides, names each file itself
+under `runs/<run>/images/`, and writes it before the row is inserted — a refused
+upload or a failed insert leaves nothing on disk, so there is no temporary file
+to reap later. The row keeps only `{id, media_type, size_bytes}`; the client's
+file name and path never reach the daemon, the frontend reads bytes back through
+`GET …/contributions/:id/images/:imageId`, and a run on a remote host receives
+them through the same tunnelled request as the text.
+
+Whether a runtime can take images is a probed capability like `resume_model`:
+`RuntimeCapabilities.images` is `supported` with a `standalone` flag or
+`unsupported` with the reason, stated by the registry from the installed CLI's
+own help. Claude Code carries an image as a content block of the streaming-input
+user frame — the one channel it already reads text from, so an image-only
+message is valid; Codex takes `--image <file>` on `exec` and on `exec resume`
+and still needs a prompt on stdin, so an image-only message is refused before
+it is persisted. The worker job and the live-input item carry `{path,
+media_type}` on the daemon's own disk; `readRuntimeImage` refuses anything but a
+regular file, the Codex launch log replaces each image path with `[image]`, and
+no layer logs the bytes. A runtime that announces nothing is refused at the
+composer and again at `contributeToRun`, never handed an image it would drop.
+
 The run ledger remains the canonical event sequence, but conversation history is
 read through `/api/runs/:id/steps/:stepId/events/window`. The cockpit keeps the
 selected step in the route search, filters the live SSE tail to that same step,

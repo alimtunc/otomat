@@ -127,6 +127,7 @@ function runtimeDescriptor(
       resume: true,
       permissions: false,
       diff_hints: false,
+      images: { status: "supported", standalone: true },
     },
     availability: available
       ? { status: "available", version: null }

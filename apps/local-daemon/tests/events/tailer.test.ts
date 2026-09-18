@@ -47,6 +47,7 @@ describe("EventTailer", () => {
         step_run_id: t.stepRunId,
         agent_session_id: t.agentSessionId,
         prompt: "do the thing",
+        images: [],
         run_dir: t.dir,
         cwd: t.dir,
       },

@@ -199,6 +199,7 @@ describe("ClaudeRuntimeAdapter", () => {
       runtimeSessionRef("sess-claude-1"),
       {
         prompt: "follow up",
+        images: [],
         run_dir: worktree,
         cwd: worktree,
         options: { permission_mode: "plan" },
@@ -238,7 +239,7 @@ describe("ClaudeRuntimeAdapter", () => {
 
     await adapter.resume(
       runtimeSessionRef("sess-claude-1"),
-      { prompt: "follow up", run_dir: worktree, cwd: worktree, options },
+      { prompt: "follow up", images: [], run_dir: worktree, cwd: worktree, options },
       new MemorySink(),
       new AbortController().signal,
     );
@@ -270,7 +271,7 @@ describe("ClaudeRuntimeAdapter", () => {
 
     await adapter.resume(
       runtimeSessionRef("sess-claude-1"),
-      { prompt: "follow up", run_dir: worktree, cwd: worktree, model: "opus" },
+      { prompt: "follow up", images: [], run_dir: worktree, cwd: worktree, model: "opus" },
       new MemorySink(),
       new AbortController().signal,
     );
@@ -374,7 +375,7 @@ describe("ClaudeRuntimeAdapter", () => {
 
     const final = await adapter.resume(
       session,
-      { prompt: "follow up", run_dir: worktree, cwd: worktree },
+      { prompt: "follow up", images: [], run_dir: worktree, cwd: worktree },
       sink,
       new AbortController().signal,
     );
@@ -387,7 +388,7 @@ describe("ClaudeRuntimeAdapter", () => {
     await expect(
       adapter.resume(
         { ...session, provider_session_id: null },
-        { prompt: "follow up", run_dir: worktree, cwd: worktree },
+        { prompt: "follow up", images: [], run_dir: worktree, cwd: worktree },
         sink,
         new AbortController().signal,
       ),

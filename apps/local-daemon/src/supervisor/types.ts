@@ -3,6 +3,7 @@ import type {
   AgentCapacity,
   AgentSessionKind,
   ContextReference,
+  ContributionImageMediaType,
   ContextReviewComment,
   ContextSelection,
   ExecutionOverrides,
@@ -22,7 +23,12 @@ import type {
 
 import type { AgentConfigSelector } from "#agents";
 import type { RepositoryResolver } from "#git";
-import type { KnownRuntimeId } from "#runtime";
+import type { KnownRuntimeId, RuntimeImageFile } from "#runtime";
+
+export interface ContributionImageContent {
+  media_type: ContributionImageMediaType;
+  bytes: Buffer;
+}
 
 /** What asked for a plan revision; kept on the journaled event so the history reads honestly. */
 export type PlanRevisionOrigin = "user" | "review_fix";
@@ -73,6 +79,8 @@ export interface SupervisedJob extends Omit<
   "kind" | "prompt" | "contextSelection" | "carryContributionIds"
 > {
   prompt: string;
+  /** The carried messages' images, on this host's disk, in message order. */
+  images: RuntimeImageFile[];
   mode: "run" | "resume";
   providerSessionId: string | null;
 }
@@ -151,14 +159,21 @@ export interface Supervisor {
   workspaceClosure(runId: string): WorkspaceClosureFacts | null;
   /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
   appendStep(runId: string, input: AppendStepInput): Promise<RunRow>;
-  /** Persist one user message on an explicitly selected step as `queued`, then deliver it if that step can take it now. */
+  /** Persist one user message, with its uploaded images, on an explicitly selected step as `queued`, then deliver it if that step can take it now. */
   contribute(
     runId: string,
     stepRunId: string,
     targetAgentSessionId: string | null,
     targetConfigHash: string,
     body: string,
+    uploads: readonly Uint8Array[],
   ): Promise<RunContributionRow>;
+  /** One image a contribution carries, read from the daemon's own store; `null` for an unknown run, message or image. */
+  contributionImage(
+    runId: string,
+    contributionId: string,
+    imageId: string,
+  ): ContributionImageContent | null;
   /** Re-queue a failed message that never reached the provider and retry the run's queue. */
   retryContribution(runId: string, contributionId: string): Promise<RunContributionRow>;
   /** Withdraw a message no turn has claimed yet; it stays in the conversation as `canceled`. */

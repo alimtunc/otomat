@@ -18,6 +18,7 @@ export function runtimeDescriptor(overrides: Partial<RuntimeDescriptor> = {}): R
       resume_model: { status: "supported" },
       interactions: { status: "unsupported", reason: "no channel" },
       diff_hints: false,
+      images: { status: "supported", standalone: true },
       provider_limit: "detects",
     },
     availability: { status: "available", version: null },

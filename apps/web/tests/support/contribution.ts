@@ -9,6 +9,7 @@ export function contribution(
     step_run_id: "s1",
     seq: 0,
     body: "keep going",
+    images: [],
     status: "queued",
     agent_session_id: null,
     target_agent_session_id: null,

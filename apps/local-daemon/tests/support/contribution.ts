@@ -9,6 +9,7 @@ export async function contributeToStep(
   runId: string,
   stepRunId: string,
   body: string,
+  uploads: readonly Uint8Array[] = [],
 ) {
   const run = getRun(db, runId);
   const session = listAgentSessionsForRun(db, runId).findLast(
@@ -18,5 +19,12 @@ export async function contributeToStep(
     session?.config_json ??
     (run ? executableSteps(run.plan_json).find((step) => step.id === stepRunId)?.config : null);
   if (!config) throw new Error(`test step ${stepRunId} has no frozen config`);
-  return supervisor.contribute(runId, stepRunId, session?.id ?? null, config.config_hash, body);
+  return supervisor.contribute(
+    runId,
+    stepRunId,
+    session?.id ?? null,
+    config.config_hash,
+    body,
+    uploads,
+  );
 }

@@ -1,4 +1,5 @@
 import {
+  contributionImageMediaTypeSchema,
   modelIdSchema,
   providerLimitSchema,
   providerOptionsSchema,
@@ -40,12 +41,21 @@ export const runtimeFinalStateSchema = z.object({
 });
 export type RuntimeFinalState = z.infer<typeof runtimeFinalStateSchema>;
 
+/** One image a turn hands its provider, already stored by the daemon on this host; the path is the daemon's own, never the client's. */
+export const runtimeImageFileSchema = z.object({
+  path: z.string().min(1),
+  media_type: contributionImageMediaTypeSchema,
+});
+export type RuntimeImageFile = z.infer<typeof runtimeImageFileSchema>;
+export const runtimeImageFilesSchema = z.array(runtimeImageFileSchema);
+
 /** Inputs to a fresh run. `run_dir` is the per-run artifact directory. `options` are the frozen provider options the adapter maps to CLI flags. */
 const runtimeRunInputSchema = z.object({
   run_id: z.string(),
   step_run_id: z.string(),
   agent_session_id: z.string(),
   prompt: z.string(),
+  images: runtimeImageFilesSchema,
   run_dir: z.string(),
   /** Worktree the turn executes in; a run that cannot own one is refused at launch, so it is never absent. */
   cwd: z.string().min(1),
@@ -58,6 +68,7 @@ export type RuntimeRunInput = z.infer<typeof runtimeRunInputSchema>;
 /** Inputs to a follow-up turn that resumes an existing provider session. */
 const runtimeResumeInputSchema = z.object({
   prompt: z.string(),
+  images: runtimeImageFilesSchema,
   run_dir: z.string(),
   cwd: z.string().min(1),
   options: providerOptionsSchema.optional(),
@@ -95,7 +106,7 @@ export interface RuntimeOneShot {
  * channel because both are the daemon writing into a running provider's stdin.
  */
 export type LiveInputItem =
-  | { kind: "message"; id: string; body: string }
+  | { kind: "message"; id: string; body: string; images: RuntimeImageFile[] }
   | {
       kind: "interaction_answer";
       id: string;
@@ -129,8 +140,8 @@ export type RuntimeSessionRef = z.infer<typeof runtimeSessionRefSchema>;
  * takes `live` messages into the invocation it is already running, and every
  * other one carries a follow-up as a new turn via `resume`.
  */
-/** `resume_model` is absent here on purpose: it is probed from the installed CLI, so the registry states it. */
-export type RuntimeAdapterCapabilities = Omit<RuntimeCapabilities, "resume_model">;
+/** `resume_model` and `images` are absent here on purpose: they are probed from the installed CLI, so the registry states them. */
+export type RuntimeAdapterCapabilities = Omit<RuntimeCapabilities, "resume_model" | "images">;
 
 export interface RuntimeAdapter {
   readonly id: RuntimeId;

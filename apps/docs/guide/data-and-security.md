@@ -9,7 +9,7 @@ Otomat is local-first: everything it knows lives on machines you control, and it
 | Path         | Content                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------- |
 | `otomat.db`  | The SQLite database: projects, issues, runs, steps, sessions, comments, pull-request mirrors, settings. |
-| `runs/`      | Each run's event ledger and provider output.                                                            |
+| `runs/`      | Each run's event ledger, provider output, and the images attached to its messages.                      |
 | `worktrees/` | The git worktrees agents work in.                                                                       |
 | `backups/`   | Database backups taken before every schema migration.                                                   |
 | `logs/`      | Rotating, redacted logs of the desktop shell and the daemon.                                            |

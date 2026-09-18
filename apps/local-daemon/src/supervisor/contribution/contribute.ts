@@ -26,6 +26,11 @@ import type { SupervisorState } from "../state.js";
 import { assertContributionTransitions } from "../transitions.js";
 import { deliverQueuedContributions } from "./deliver.js";
 import { emitContributionEvent, requireRunContribution } from "./events.js";
+import {
+  removeContributionImages,
+  requireImageCapability,
+  storeContributionImages,
+} from "./images.js";
 
 /** No such message or step on this run — a bad id, not a conflict. */
 export class RunContributionNotFoundError extends Error {
@@ -144,6 +149,7 @@ function contributionTarget(
   return { sessionId: requestedSessionId, config };
 }
 
+/** Images are written before the row and removed if the row never lands, so a contribution is announced only once everything it carries is durable. */
 export async function contributeToRun(
   state: SupervisorState,
   runId: string,
@@ -151,6 +157,7 @@ export async function contributeToRun(
   targetAgentSessionId: string | null,
   targetConfigHash: string,
   body: string,
+  uploads: readonly Uint8Array[],
 ): Promise<RunContributionRow> {
   const accepting = stepAcceptingContributions(state, runId, stepRunId);
   const target = contributionTarget(
@@ -160,14 +167,23 @@ export async function contributeToRun(
     targetAgentSessionId,
     targetConfigHash,
   );
-  const row = appendRunContribution(state.db, {
-    id: randomUUID(),
-    run_id: runId,
-    step_run_id: stepRunId,
-    body,
-    target_agent_session_id: target.sessionId,
-    target_config_json: target.config,
-  });
+  if (uploads.length > 0) requireImageCapability(target.config.runtime, body);
+  const images = storeContributionImages(state.dataDir, runId, uploads);
+  let row: RunContributionRow;
+  try {
+    row = appendRunContribution(state.db, {
+      id: randomUUID(),
+      run_id: runId,
+      step_run_id: stepRunId,
+      body,
+      images_json: images,
+      target_agent_session_id: target.sessionId,
+      target_config_json: target.config,
+    });
+  } catch (error) {
+    removeContributionImages(state.dataDir, runId, images);
+    throw error;
+  }
   emitContributionEvent(state, row);
   state.stopHeld.delete(stepRunId);
   await deliverQueuedContributions(state, runId);

@@ -113,6 +113,15 @@ export async function postJson(
   return sendJson(config, "POST", path, body);
 }
 
+/** No content type is set: the runtime writes the multipart boundary itself. */
+export async function postForm(
+  config: DaemonClientConfig,
+  path: string,
+  form: FormData,
+): Promise<JsonValue> {
+  return (await daemonFetch(config, path, { method: "POST", body: form })).json();
+}
+
 export async function patchJson(
   config: DaemonClientConfig,
   path: string,

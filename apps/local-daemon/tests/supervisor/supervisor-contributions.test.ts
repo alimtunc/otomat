@@ -267,6 +267,7 @@ it("fails an unreachable step's batch and still delivers the step that can take 
     run_id: "mixed",
     step_run_id: "mixed-stuck",
     body: "for the session that never reported",
+    images_json: [],
     target_agent_session_id: stuck.agentSessionId,
     target_config_json: frozenSessionConfig("mixed", stuck.agentSessionId),
   });
@@ -275,6 +276,7 @@ it("fails an unreachable step's batch and still delivers the step that can take 
     run_id: "mixed",
     step_run_id: "mixed-live",
     body: "for the resumable one",
+    images_json: [],
     target_agent_session_id: live.agentSessionId,
     target_config_json: frozenSessionConfig("mixed", live.agentSessionId),
   });
@@ -403,6 +405,7 @@ it("replays a message a restart left queued exactly once", async () => {
     run_id: "reconnected",
     step_run_id: seeded.stepRunId,
     body: "survive the restart",
+    images_json: [],
     target_agent_session_id: seeded.agentSessionId,
     target_config_json: frozenSessionConfig("reconnected", seeded.agentSessionId),
   });

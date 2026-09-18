@@ -62,7 +62,7 @@ it.each(REAL_PROVIDERS)(
 
     const final = await adapter.resume(
       runtimeSessionRef(providerSessionId),
-      { prompt: "also update the changelog", run_dir: worktree, cwd: worktree },
+      { prompt: "also update the changelog", images: [], run_dir: worktree, cwd: worktree },
       new MemorySink(),
       new AbortController().signal,
     );

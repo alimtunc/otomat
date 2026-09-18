@@ -17,6 +17,21 @@ can do:
 A message is never lost or delivered twice: it stays visible with its state — queued, delivered,
 acknowledged, or failed with the reason — and a failed one can be retried.
 
+### Images
+
+A message can carry up to four PNG, JPEG, GIF or WebP images of at most 5 MB each: pick them with
+the image button, drop them on the composer, or paste them from the clipboard. Each one shows as a
+thumbnail you can remove before sending, and stays visible in the conversation afterwards, on
+this machine or on a remote host — the file travels with the message to the daemon that runs the
+session, which stores it under the run and never learns its original path or name.
+
+An image reaches the agent only through a channel its runtime announces: Claude Code takes it in
+the same streaming message as the text, alone or with text; Codex takes it with `--image` on the
+turn that carries the message, and needs a text message next to it. The composer refuses an
+attachment before sending when the selected runtime cannot take images, when a file is not really
+an image, or when it exceeds the limits, and says why. No OCR runs and nothing is sent to a third
+party.
+
 ## Questions and permissions
 
 An agent that stops on a permission it cannot settle itself, a choice, or a written question

@@ -1,6 +1,7 @@
 import {
   type RuntimeAvailability,
   type RuntimeDescriptor,
+  type RuntimeImageCapability,
   type RuntimeKind,
   type RuntimeResumeModelCapability,
 } from "@otomat/domain";
@@ -13,8 +14,10 @@ import {
   CLAUDE_BINARY,
   ClaudeRuntimeAdapter,
 } from "./providers/claude/adapter.js";
+import { claudeImageCapability } from "./providers/claude/images.js";
 import { claudeResumeModelCapability } from "./providers/claude/resume-model.js";
 import { CODEX_ADAPTER_ID, CODEX_BINARY, CodexRuntimeAdapter } from "./providers/codex/adapter.js";
+import { codexImageCapability } from "./providers/codex/images.js";
 import { codexResumeModelCapability } from "./providers/codex/resume-model.js";
 import { FAKE_ADAPTER_ID, FakeRuntimeAdapter } from "./providers/fake/adapter.js";
 
@@ -25,6 +28,7 @@ interface RuntimeRegistration {
   /** CLI binary probed for availability; null for the built-in simulated runtime. */
   binary: string | null;
   resumeModel(): RuntimeResumeModelCapability;
+  images(): RuntimeImageCapability;
 }
 
 const REGISTRY = {
@@ -33,18 +37,21 @@ const REGISTRY = {
     kind: "real",
     binary: CLAUDE_BINARY,
     resumeModel: () => claudeResumeModelCapability(CLAUDE_BINARY),
+    images: () => claudeImageCapability(CLAUDE_BINARY),
   },
   [CODEX_ADAPTER_ID]: {
     create: () => new CodexRuntimeAdapter(),
     kind: "real",
     binary: CODEX_BINARY,
     resumeModel: () => codexResumeModelCapability(CODEX_BINARY),
+    images: () => codexImageCapability(CODEX_BINARY),
   },
   [FAKE_ADAPTER_ID]: {
     create: () => new FakeRuntimeAdapter(),
     kind: "simulated",
     binary: null,
     resumeModel: () => ({ status: "supported" }),
+    images: () => ({ status: "supported", standalone: true }),
   },
 } as const satisfies Record<string, RuntimeRegistration>;
 
@@ -74,6 +81,10 @@ export function describeRuntimeResumeModelCapability(
   id: KnownRuntimeId,
 ): RuntimeResumeModelCapability {
   return REGISTRY[id].resumeModel();
+}
+
+export function describeRuntimeImageCapability(id: KnownRuntimeId): RuntimeImageCapability {
+  return REGISTRY[id].images();
 }
 
 /** Validates a runtime id and refuses an unavailable one (missing CLI binary, or the fake outside tests/dev) without touching state. */
@@ -117,6 +128,7 @@ export function listRuntimeDescriptors(env: NodeJS.ProcessEnv = process.env): Ru
         capabilities: {
           ...adapter.capabilities,
           resume_model: describeRuntimeResumeModelCapability(id),
+          images: describeRuntimeImageCapability(id),
         },
         availability: describeRuntimeAvailability(id, env),
       };

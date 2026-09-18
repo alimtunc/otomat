@@ -40,6 +40,7 @@ function descriptor(id: string, kind: RuntimeKind = "real"): RuntimeDescriptor {
       resume: true,
       permissions: false,
       diff_hints: false,
+      images: { status: "supported", standalone: true },
     },
     availability: { status: "available", version: null },
   };

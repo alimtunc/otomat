@@ -35,19 +35,19 @@ async function take(count: number): Promise<LiveInputItem[]> {
 }
 
 it("hands the worker every message in the order the daemon appended them", async () => {
-  appendLiveInput(dir, { kind: "message", id: "c1", body: "first" });
-  appendLiveInput(dir, { kind: "message", id: "c2", body: "second" });
+  appendLiveInput(dir, { kind: "message", id: "c1", body: "first", images: [] });
+  appendLiveInput(dir, { kind: "message", id: "c2", body: "second", images: [] });
 
   expect(await take(2)).toEqual([
-    { kind: "message", id: "c1", body: "first" },
-    { kind: "message", id: "c2", body: "second" },
+    { kind: "message", id: "c1", body: "first", images: [] },
+    { kind: "message", id: "c2", body: "second", images: [] },
   ]);
 });
 
 it("yields a message appended after the turn started, without replaying the ones before it", async () => {
-  appendLiveInput(dir, { kind: "message", id: "c1", body: "first" });
+  appendLiveInput(dir, { kind: "message", id: "c1", body: "first", images: [] });
   const reader = take(2);
-  appendLiveInput(dir, { kind: "message", id: "c2", body: "second" });
+  appendLiveInput(dir, { kind: "message", id: "c2", body: "second", images: [] });
 
   expect((await reader).map((message) => message.id)).toEqual(["c1", "c2"]);
 });
@@ -59,8 +59,8 @@ it("reads an untouched channel as empty rather than broken", () => {
 
 it("records what stdin did with each message, accepted or refused", () => {
   const channel = createLiveInputChannel(dir);
-  appendLiveInput(dir, { kind: "message", id: "c1", body: "first" });
-  appendLiveInput(dir, { kind: "message", id: "c2", body: "second" });
+  appendLiveInput(dir, { kind: "message", id: "c1", body: "first", images: [] });
+  appendLiveInput(dir, { kind: "message", id: "c2", body: "second", images: [] });
 
   channel.wrote("c1", null);
   channel.wrote("c2", "write after end");
@@ -75,12 +75,12 @@ it("records what stdin did with each message, accepted or refused", () => {
 });
 
 it("drops the previous turn's channel so the next one never replays it", async () => {
-  appendLiveInput(dir, { kind: "message", id: "c1", body: "first" });
+  appendLiveInput(dir, { kind: "message", id: "c1", body: "first", images: [] });
   createLiveInputChannel(dir).wrote("c1", null);
 
   clearLiveInput(dir);
-  appendLiveInput(dir, { kind: "message", id: "c2", body: "second" });
+  appendLiveInput(dir, { kind: "message", id: "c2", body: "second", images: [] });
 
   expect(liveInputReceipts(dir)).toEqual(new Map());
-  expect(await take(1)).toEqual([{ kind: "message", id: "c2", body: "second" }]);
+  expect(await take(1)).toEqual([{ kind: "message", id: "c2", body: "second", images: [] }]);
 });

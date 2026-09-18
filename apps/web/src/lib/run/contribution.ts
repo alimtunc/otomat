@@ -10,6 +10,7 @@ import {
   type RunDetail,
   type ResolvedAgentConfig,
   type RuntimeDescriptor,
+  type RuntimeImageCapability,
   type StepContributionRoute,
   type StepRunContract,
 } from "@otomat/domain";
@@ -51,6 +52,8 @@ export interface ContributionGate {
   queues: boolean;
   targetAgentSessionId: string | null;
   targetConfig: ResolvedAgentConfig | null;
+  /** What the runtime announced for images; `null` while nothing can be sent at all. */
+  images: RuntimeImageCapability | null;
 }
 
 const RESTING_NOTE = "Resumes this step's agent session as a new turn.";
@@ -82,6 +85,7 @@ function blocked(note: string): ContributionGate {
     queues: false,
     targetAgentSessionId: null,
     targetConfig: null,
+    images: null,
   };
 }
 
@@ -160,6 +164,7 @@ export function resolveContributionGate(
     stepName: target.step.name,
     targetAgentSessionId: session?.id ?? null,
     targetConfig: config,
+    images: runtime.capabilities.images,
   };
   if (target.route === "first_turn") {
     return { ...routed, note: FIRST_TURN_NOTE, queues: true };

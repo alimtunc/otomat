@@ -1,19 +1,21 @@
 /**
- * Strict CSP for the packaged renderer. `connect-src` must include every daemon origin the cockpit
- * can switch to without a reload — the local daemon and the tunnel's local end — so it can call
- * the API and open the SSE stream cross-origin; everything else is locked to the app scheme
- * (`'self'`). `style-src` allows inline styles because component libraries inject them; scripts
- * stay `'self'` only (no inline/eval — the Vite production build needs neither).
+ * Strict CSP for the packaged renderer. `connect-src` and `img-src` must include every daemon
+ * origin the cockpit can switch to without a reload — the local daemon and the tunnel's local
+ * end — so it can call the API, open the SSE stream and show a message's images cross-origin;
+ * everything else is locked to the app scheme (`'self'`). `style-src` allows inline styles
+ * because component libraries inject them; scripts stay `'self'` only (no inline/eval — the Vite
+ * production build needs neither).
  */
 function buildCsp(daemonOrigins: readonly string[]): string {
+  const origins = daemonOrigins.join(" ");
   return [
     "default-src 'none'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    `img-src 'self' data: blob: https: ${origins}`.trimEnd(),
     "media-src 'self' data: blob: https:",
     "font-src 'self' data:",
-    `connect-src 'self' ${daemonOrigins.join(" ")}`.trimEnd(),
+    `connect-src 'self' ${origins}`.trimEnd(),
     "base-uri 'self'",
     "form-action 'self'",
     "object-src 'none'",

@@ -47,6 +47,7 @@ it("freezes a queued message before a later next-turn model change", async () =>
     active.id,
     queuedConfig.config_hash,
     "use the faster model",
+    [],
   );
 
   supervisor.setNextTurnModel(
@@ -109,6 +110,7 @@ it("keeps a pending model revision across a supervisor restart", async () => {
     session.id,
     pending.config_hash,
     "continue after restart",
+    [],
   );
   await restarted.supervisor.settle();
 

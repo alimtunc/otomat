@@ -116,6 +116,7 @@ export function toRun(row: RunRow): RunContract {
 export function toRunContribution(row: RunContributionRow): RunContributionContract {
   return runContributionContractSchema.parse({
     ...row,
+    images: row.images_json,
     target_config: row.target_config_json,
     created_at: sqliteToIso(row.created_at),
     delivered_at: toIsoInstant(row.delivered_at),

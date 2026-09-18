@@ -4,7 +4,13 @@ import { join } from "node:path";
 import { runtimeInteractionAnswerSchema } from "@otomat/domain";
 
 import { readCompleteLinesFrom, type TailRead } from "#events";
-import { asString, parseJsonRecord, type LiveInputChannel, type LiveInputItem } from "#runtime";
+import {
+  asString,
+  parseJsonRecord,
+  runtimeImageFilesSchema,
+  type LiveInputChannel,
+  type LiveInputItem,
+} from "#runtime";
 
 import { delay } from "./delay.js";
 import { errorCode } from "./start-gate.js";
@@ -50,7 +56,9 @@ function toItem(line: string): LiveInputItem | null {
     return { kind: "interaction_answer", id, request_id: requestId, answer: answer.data };
   }
   const body = asString(record["body"]);
-  return body === null ? null : { kind: "message", id, body };
+  const images = runtimeImageFilesSchema.safeParse(record["images"]);
+  if (body === null || !images.success) return null;
+  return { kind: "message", id, body, images: images.data };
 }
 
 /** Drops the previous turn's channel so a new one never replays messages an earlier turn already took. */

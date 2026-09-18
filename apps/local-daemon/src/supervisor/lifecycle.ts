@@ -16,6 +16,7 @@ import {
   claimStepContributions,
   resolveCarriedContributions,
 } from "./contribution/carry.js";
+import { contributionImageFiles } from "./contribution/images.js";
 import { withCarriedContributions } from "./contribution/prompt.js";
 import { failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
@@ -180,7 +181,13 @@ export async function spawnTurn(
     );
     // The selection is already rendered into `prompt`; a job is serialized into the worker's env, so it must not carry it twice.
     const { kind: _kind, contextSelection: _frozen, carryContributionIds: _carried, ...turn } = ctx;
-    proc = state.spawn({ ...turn, prompt, mode, providerSessionId });
+    proc = state.spawn({
+      ...turn,
+      prompt,
+      images: contributionImageFiles(state.dataDir, carried),
+      mode,
+      providerSessionId,
+    });
     state.starting.set(ctx.agentSessionId, {
       runId: ctx.runId,
       proc,

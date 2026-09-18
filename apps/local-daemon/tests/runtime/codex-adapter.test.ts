@@ -145,7 +145,7 @@ describe("CodexRuntimeAdapter", () => {
 
     const final = await adapter.resume(
       session,
-      { prompt: "follow up", run_dir: worktree, cwd: worktree },
+      { prompt: "follow up", images: [], run_dir: worktree, cwd: worktree },
       sink,
       new AbortController().signal,
     );
@@ -166,7 +166,7 @@ describe("CodexRuntimeAdapter", () => {
     await expect(
       adapter.resume(
         { ...session, provider_session_id: null },
-        { prompt: "follow up", run_dir: worktree, cwd: worktree },
+        { prompt: "follow up", images: [], run_dir: worktree, cwd: worktree },
         sink,
         new AbortController().signal,
       ),
@@ -196,7 +196,7 @@ describe("CodexRuntimeAdapter", () => {
 
     await adapter.resume(
       runtimeSessionRef("thread-codex-1"),
-      { prompt: "follow up", run_dir: worktree, cwd: worktree, model: "gpt-5.6-sol" },
+      { prompt: "follow up", images: [], run_dir: worktree, cwd: worktree, model: "gpt-5.6-sol" },
       new MemorySink(),
       new AbortController().signal,
     );
@@ -229,7 +229,14 @@ describe("CodexRuntimeAdapter", () => {
 
     await adapter.resume(
       runtimeSessionRef("thread-codex-1"),
-      { prompt: "follow up", run_dir: worktree, cwd: worktree, options, model: "gpt-5.6-sol" },
+      {
+        prompt: "follow up",
+        images: [],
+        run_dir: worktree,
+        cwd: worktree,
+        options,
+        model: "gpt-5.6-sol",
+      },
       new MemorySink(),
       new AbortController().signal,
     );

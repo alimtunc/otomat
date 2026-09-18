@@ -57,6 +57,7 @@ const CONTRIBUTION = {
   step_run_id: "step-1",
   seq: 0,
   body: "keep going",
+  images: [],
   status: "queued",
   agent_session_id: null,
   target_agent_session_id: "session-1",
@@ -114,6 +115,7 @@ it("parses the runtime catalog with kind and availability", async () => {
       abort: true,
       resume: true,
       resume_model: { status: "supported" },
+      images: { status: "supported", standalone: true },
       interactions: { status: "supported", kinds: ["permission"] },
       diff_hints: false,
       provider_limit: "deadline",
@@ -194,12 +196,16 @@ it("posts a message to the run's contributions endpoint and parses its queued st
     return jsonResponse(CONTRIBUTION, 201);
   };
   const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
-  const result = await client.createRunContribution("run-1", {
-    step_run_id: "step-1",
-    target_agent_session_id: "session-1",
-    target_config_hash: "config-1",
-    body: "keep going",
-  });
+  const result = await client.createRunContribution(
+    "run-1",
+    {
+      step_run_id: "step-1",
+      target_agent_session_id: "session-1",
+      target_config_hash: "config-1",
+      body: "keep going",
+    },
+    [],
+  );
   expect(calledUrl).toBe("http://localhost:4319/api/runs/run-1/contributions");
   expect(captured.method).toBe("POST");
   expect(JSON.parse(String(captured.body))).toEqual({
@@ -243,6 +249,38 @@ it("cancels one contribution through its own endpoint", async () => {
   );
   expect(method).toBe("POST");
   expect(result.status).toBe("canceled");
+});
+
+it("posts a message with images as multipart, the request riding as one JSON part", async () => {
+  let captured: CapturedRequest = {};
+  const fetchMock: typeof fetch = async (_input, init) => {
+    captured = { method: init?.method, body: init?.body };
+    return jsonResponse(
+      { ...CONTRIBUTION, images: [{ id: "img-1", media_type: "image/png", size_bytes: 3 }] },
+      201,
+    );
+  };
+  const client = createDaemonClient({ baseUrl: "http://localhost:4319", fetch: fetchMock });
+  const request = {
+    step_run_id: "step-1",
+    target_agent_session_id: "session-1",
+    target_config_hash: "config-1",
+    body: "",
+  };
+
+  const result = await client.createRunContribution("run-1", request, [
+    new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" }),
+  ]);
+
+  expect(captured.method).toBe("POST");
+  const form = captured.body;
+  if (!(form instanceof FormData)) throw new Error("expected a multipart body");
+  expect(JSON.parse(String(form.get("request")))).toEqual(request);
+  expect(form.getAll("images")).toHaveLength(1);
+  expect(result.images.map((image) => image.id)).toEqual(["img-1"]);
+  expect(client.runContributionImageUrl("run-1", "c 1", "img-1")).toBe(
+    "http://localhost:4319/api/runs/run-1/contributions/c%201/images/img-1",
+  );
 });
 
 it("lists a run's contributions in send order", async () => {

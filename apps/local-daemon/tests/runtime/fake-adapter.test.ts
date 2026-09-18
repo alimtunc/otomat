@@ -163,7 +163,7 @@ describe("FakeRuntimeAdapter.run", () => {
     const resumeSink = new MemorySink();
     await stepped.resume(
       sessionRef(),
-      { prompt: "follow up", run_dir: dir, cwd: cwd() },
+      { prompt: "follow up", images: [], run_dir: dir, cwd: cwd() },
       resumeSink,
       liveSignal(),
     );
@@ -218,7 +218,7 @@ describe("FakeRuntimeAdapter.run", () => {
     );
     await new FakeRuntimeAdapter(fixedClock, null, "worker-b").resume(
       sessionRef(),
-      { prompt: "resume", run_dir: dir, cwd: cwd() },
+      { prompt: "resume", images: [], run_dir: dir, cwd: cwd() },
       resumedTurn,
       liveSignal(),
     );
@@ -269,7 +269,7 @@ describe("FakeRuntimeAdapter.resume", () => {
     const sink = new MemorySink();
     const final = await adapter.resume(
       sessionRef(),
-      { prompt: "follow up", run_dir: dir, cwd: cwd() },
+      { prompt: "follow up", images: [], run_dir: dir, cwd: cwd() },
       sink,
       liveSignal(),
     );
@@ -289,7 +289,7 @@ describe("FakeRuntimeAdapter.resume", () => {
     const second = new JsonlEventSink(path);
     await adapter.resume(
       sessionRef(),
-      { prompt: "more", run_dir: dir, cwd: cwd() },
+      { prompt: "more", images: [], run_dir: dir, cwd: cwd() },
       second,
       liveSignal(),
     );

@@ -101,6 +101,7 @@ vi.mock("@web/api/daemon/queries", () => ({
           resume_model: { status: "supported" },
           permissions: false,
           diff_hints: false,
+          images: { status: "supported", standalone: true },
         },
         availability: { status: "available", version: null },
       } satisfies RuntimeDescriptor,

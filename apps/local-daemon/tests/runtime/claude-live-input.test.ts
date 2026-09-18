@@ -56,8 +56,8 @@ it("writes the prompt and every live message as ordered user frames on one invoc
   process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
   process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
   const channel = channelOf([
-    { kind: "message", id: "c1", body: "also update the changelog" },
-    { kind: "message", id: "c2", body: "and bump the version" },
+    { kind: "message", id: "c1", body: "also update the changelog", images: [] },
+    { kind: "message", id: "c2", body: "and bump the version", images: [] },
   ]);
   const sink = new MemorySink();
 
@@ -87,7 +87,7 @@ it("writes the prompt and every live message as ordered user frames on one invoc
 });
 
 it("sums each loop's usage but keeps the invocation's running cost total", async () => {
-  const channel = channelOf([{ kind: "message", id: "c1", body: "one more thing" }]);
+  const channel = channelOf([{ kind: "message", id: "c1", body: "one more thing", images: [] }]);
 
   const final = await new ClaudeRuntimeAdapter(STUB_BIN).run(
     runtimeRunInput({ run_dir: worktree, cwd: worktree, prompt: "do the work" }),
@@ -122,8 +122,8 @@ it("keeps a plain turn on the same streaming input, closing stdin with no channe
 
 it("receipts the refusal and stops the pump when a live write fails", async () => {
   const channel = channelOf([
-    { kind: "message", id: "c1", body: "steer" },
-    { kind: "message", id: "c2", body: "more" },
+    { kind: "message", id: "c1", body: "steer", images: [] },
+    { kind: "message", id: "c2", body: "more", images: [] },
   ]);
 
   await new ClaudeLiveInput(channel).stream(
@@ -135,7 +135,7 @@ it("receipts the refusal and stops the pump when a live write fails", async () =
 });
 
 it("keeps stdin open across a result that answers a live message, closing on the next", async () => {
-  const channel = channelOf([{ kind: "message", id: "c1", body: "steer" }]);
+  const channel = channelOf([{ kind: "message", id: "c1", body: "steer", images: [] }]);
   const live = new ClaudeLiveInput(channel);
   const written: string[] = [];
 
@@ -154,6 +154,6 @@ it("keeps stdin open across a result that answers a live message, closing on the
 
   live.onResult();
   await stream;
-  expect(written).toEqual([claudeUserFrame("steer")]);
+  expect(written).toEqual([claudeUserFrame("steer", [])]);
   expect(channel.receipts).toEqual([{ id: "c1", error: null }]);
 });

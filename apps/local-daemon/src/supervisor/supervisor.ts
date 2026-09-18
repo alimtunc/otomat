@@ -10,6 +10,7 @@ import {
   cancelRunContribution,
   cancelUndeliverableContributions,
   contributeToRun,
+  contributionImageContent,
   deliverQueuedContributions,
   reconcileContributionClaims,
   retryRunContribution,
@@ -66,8 +67,10 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     abandon: (runId) => abandonWorkspace(state, runId),
     workspaceClosure: (runId) => workspaceClosureFacts(state, runId),
     appendStep: (runId, input) => appendRunStep(state, runId, input),
-    contribute: (runId, stepRunId, targetSessionId, targetConfigHash, body) =>
-      contributeToRun(state, runId, stepRunId, targetSessionId, targetConfigHash, body),
+    contribute: (runId, stepRunId, targetSessionId, targetConfigHash, body, uploads) =>
+      contributeToRun(state, runId, stepRunId, targetSessionId, targetConfigHash, body, uploads),
+    contributionImage: (runId, contributionId, imageId) =>
+      contributionImageContent(state, runId, contributionId, imageId),
     retryContribution: (runId, contributionId) =>
       retryRunContribution(state, runId, contributionId),
     cancelContribution: (runId, contributionId) =>
