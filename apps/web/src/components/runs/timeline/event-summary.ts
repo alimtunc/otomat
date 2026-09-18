@@ -1,4 +1,5 @@
 import type { EventEnvelope } from "@otomat/domain";
+import { plural } from "@web/lib/plural";
 
 function lifecycleSummary(event: EventEnvelope): string | null {
   const runStatus = event.payload["run_status"];
@@ -12,8 +13,11 @@ function lifecycleSummary(event: EventEnvelope): string | null {
 function contributionSummary(event: EventEnvelope): string | null {
   const status = event.payload["status"];
   const body = event.payload["body"];
+  const imageCount = event.payload["image_count"];
   if (typeof status !== "string" || typeof body !== "string") return null;
-  return `your message (${status}) · ${body}`;
+  const images =
+    typeof imageCount === "number" && imageCount > 0 ? plural(imageCount, "image") : null;
+  return `your message (${status}) · ${[body, images].filter((part) => part).join(" · ")}`;
 }
 
 function commentSummary(event: EventEnvelope): string | null {

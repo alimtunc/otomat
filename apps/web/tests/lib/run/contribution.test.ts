@@ -91,6 +91,7 @@ const CLAUDE: RuntimeDescriptor = {
     resume_model: { status: "supported" },
     interactions: { status: "unsupported", reason: "no channel" },
     diff_hints: false,
+    images: { status: "supported", standalone: true },
   },
   availability: { status: "available", version: null },
 };
@@ -112,6 +113,7 @@ it("sends straight away on a resting run with a resumable session", () => {
     targetConfig: CONFIG,
     queues: false,
     note: "Resumes this step's agent session as a new turn.",
+    images: { status: "supported", standalone: true },
   });
 });
 

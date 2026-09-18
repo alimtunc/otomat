@@ -5,6 +5,7 @@ import {
   type RunContributionContract,
 } from "@otomat/domain";
 import { Button, Markdown, RelativeTime, RunContributionStatusChip } from "@otomat/ui";
+import { daemon } from "@web/api/client";
 import { useCancelRunContribution, useRetryRunContribution } from "@web/api/runs/mutations";
 import { participantLabel } from "@web/lib/execution/labels";
 
@@ -33,10 +34,26 @@ export function ConversationMessage({
           size="sm"
         />
       </div>
-      <Markdown
-        value={contribution.body}
-        className="rounded-lg border border-border-subtle bg-card px-3 py-2 text-sm"
-      />
+      {contribution.body.length === 0 ? null : (
+        <Markdown
+          value={contribution.body}
+          className="rounded-lg border border-border-subtle bg-card px-3 py-2 text-sm"
+        />
+      )}
+      {contribution.images.length === 0 ? null : (
+        <ul aria-label="Attached images" className="flex flex-wrap gap-2">
+          {contribution.images.map((image, index) => (
+            <li key={image.id}>
+              <img
+                src={daemon.runContributionImageUrl(runId, contribution.id, image.id)}
+                alt={`Attachment ${index + 1}`}
+                loading="lazy"
+                className="max-h-48 max-w-xs rounded-lg border border-border-subtle object-contain"
+              />
+            </li>
+          ))}
+        </ul>
+      )}
       {contribution.target_config ? (
         <p className="text-micro text-text-tertiary">
           To {participantLabel(contribution.target_config)}

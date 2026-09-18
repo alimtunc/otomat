@@ -49,6 +49,7 @@ vi.mock("@web/api/daemon/queries", () => ({
           resume_model: capability,
           permissions: false,
           diff_hints: false,
+          images: { status: "supported", standalone: true },
           provider_limit: "deadline",
         },
         availability: { status: "available", version: null },

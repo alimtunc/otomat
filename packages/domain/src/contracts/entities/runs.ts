@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { runContributionImageSchema } from "../contribution-image.js";
 import {
   AGENT_SESSION_STATES,
   COMPETE_GROUP_STATES,
@@ -38,7 +39,9 @@ export const runContributionContractSchema = z.object({
   step_run_id: z.string(),
   /** FIFO position within the run; a batched turn carries its messages in ascending order. */
   seq: z.number().int().nonnegative(),
-  body: z.string().min(1),
+  /** Empty only when `images` carry the whole message. */
+  body: z.string(),
+  images: z.array(runContributionImageSchema),
   status: z.enum(RUN_CONTRIBUTION_STATES),
   /** Agent session the delivering turn resumes; stamped when the delivery is claimed. */
   agent_session_id: z.string().nullable(),

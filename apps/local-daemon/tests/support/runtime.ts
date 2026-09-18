@@ -12,6 +12,7 @@ export function runtimeRunInput(
     step_run_id: "step-1",
     agent_session_id: "sess-1",
     prompt: "create hello.txt",
+    images: [],
     ...overrides,
   };
 }
@@ -27,10 +28,15 @@ export function runtimeSessionRef(provider_session_id: string | null): RuntimeSe
 }
 
 /** Puts a runtime shim on PATH so agent resolution stops gating what a suite is really asserting; answers the restore. */
-export function stubRuntimeOnPath(dataDir: string, runtime: string): () => void {
+export function stubRuntimeOnPath(
+  dataDir: string,
+  runtime: string,
+  helpFixture?: string,
+): () => void {
   const binDir = join(dataDir, "runtime-bin");
   mkdirSync(binDir, { recursive: true });
-  writeFileSync(join(binDir, runtime), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  const script = helpFixture === undefined ? "exit 0" : `cat ${JSON.stringify(helpFixture)}`;
+  writeFileSync(join(binDir, runtime), `#!/bin/sh\n${script}\n`, { mode: 0o755 });
   const restore = process.env.PATH;
   process.env.PATH = `${binDir}${delimiter}${restore ?? ""}`;
   return () => {

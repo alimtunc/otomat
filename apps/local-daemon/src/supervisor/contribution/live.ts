@@ -12,6 +12,7 @@ import { awaitLiveInputReceipts, appendLiveInput, liveInputIds } from "../live-i
 import type { SupervisorState } from "../state.js";
 import { assertContributionTransitions } from "../transitions.js";
 import { emitContributionEvents } from "./events.js";
+import { contributionImageFiles } from "./images.js";
 
 /** The turn a live delivery writes into: its own worker still owns the provider process. */
 export interface LiveTarget {
@@ -49,7 +50,13 @@ export async function deliverLiveContributions(
   const inboxed = liveInputIds(dir);
   // The channel is written before the ledger is told about it: a failed event must not cost the worker its message.
   for (const row of batch) {
-    if (!inboxed.has(row.id)) appendLiveInput(dir, { kind: "message", id: row.id, body: row.body });
+    if (inboxed.has(row.id)) continue;
+    appendLiveInput(dir, {
+      kind: "message",
+      id: row.id,
+      body: row.body,
+      images: contributionImageFiles(state.dataDir, [row]),
+    });
   }
   emitContributionEvents(state, ids);
 

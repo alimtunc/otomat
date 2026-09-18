@@ -352,6 +352,7 @@ describe("runtime availability contract", () => {
         abort: true,
         resume: true,
         resume_model: { status: "supported" },
+        images: { status: "supported", standalone: true },
         interactions: { status: "supported", kinds: ["permission"] },
         diff_hints: false,
         provider_limit: "deadline",

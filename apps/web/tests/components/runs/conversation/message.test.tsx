@@ -84,3 +84,28 @@ it("offers neither once a turn is carrying the message", async () => {
   expect(buttonLabelled("Cancel message")).toBeUndefined();
   expect(buttonLabelled("Retry delivery")).toBeUndefined();
 });
+
+it("shows a message's images from the daemon next to its text, and alone when there is no text", async () => {
+  await renderMessage({
+    body: "what is wrong here",
+    images: [
+      { id: "img-1", media_type: "image/png", size_bytes: 10 },
+      { id: "img-2", media_type: "image/jpeg", size_bytes: 20 },
+    ],
+  });
+
+  const images = [...document.querySelectorAll<HTMLImageElement>("img")];
+  expect(images.map((img) => img.alt)).toEqual(["Attachment 1", "Attachment 2"]);
+  expect(images.map((img) => img.getAttribute("src"))).toEqual([
+    "/api/runs/run-1/contributions/c1/images/img-1",
+    "/api/runs/run-1/contributions/c1/images/img-2",
+  ]);
+  expect(document.body.textContent).toContain("what is wrong here");
+
+  document.body.replaceChildren();
+  await renderMessage({
+    body: "",
+    images: [{ id: "img-3", media_type: "image/png", size_bytes: 10 }],
+  });
+  expect(document.querySelectorAll("img")).toHaveLength(1);
+});

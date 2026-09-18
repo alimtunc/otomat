@@ -33,6 +33,7 @@ function job(): SupervisedJob {
     stepRunId: "step-gate",
     agentSessionId: "session-gate",
     prompt: "do not run before release",
+    images: [],
     agentSessionDir,
     worktreePath: "/tmp/otomat-test-worktree",
     runtime: "fake",

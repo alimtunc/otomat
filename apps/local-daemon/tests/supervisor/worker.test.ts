@@ -24,6 +24,7 @@ function job(mode: "run" | "resume", worktreePath = join(dir, "missing-worktree"
     stepRunId: "s1",
     agentSessionId: "a1",
     prompt: "do the thing",
+    images: [],
     agentSessionDir: dir,
     worktreePath,
     runtime: "fake",

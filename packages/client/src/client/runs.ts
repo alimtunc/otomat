@@ -28,7 +28,17 @@ import {
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, postJson, queryString } from "./http.js";
+import { getJson, postForm, postJson, queryString, resolveUrl } from "./http.js";
+
+function contributionForm(
+  request: CreateRunContributionRequest,
+  images: readonly Blob[],
+): FormData {
+  const form = new FormData();
+  form.set("request", JSON.stringify(request));
+  for (const image of images) form.append("images", image);
+  return form;
+}
 
 export function createRunsClient(config: DaemonClientConfig) {
   return {
@@ -91,9 +101,22 @@ export function createRunsClient(config: DaemonClientConfig) {
         await getJson(config, `/api/runs/${encodeURIComponent(id)}/contributions`),
       );
     },
-    async createRunContribution(id: string, request: CreateRunContributionRequest) {
+    async createRunContribution(
+      id: string,
+      request: CreateRunContributionRequest,
+      images: readonly Blob[],
+    ) {
+      const path = `/api/runs/${encodeURIComponent(id)}/contributions`;
       return runContributionContractSchema.parse(
-        await postJson(config, `/api/runs/${encodeURIComponent(id)}/contributions`, request),
+        images.length === 0
+          ? await postJson(config, path, request)
+          : await postForm(config, path, contributionForm(request, images)),
+      );
+    },
+    runContributionImageUrl(id: string, contributionId: string, imageId: string) {
+      return resolveUrl(
+        config,
+        `/api/runs/${encodeURIComponent(id)}/contributions/${encodeURIComponent(contributionId)}/images/${encodeURIComponent(imageId)}`,
       );
     },
     async deliverRunContributions(id: string) {

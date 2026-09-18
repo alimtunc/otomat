@@ -113,6 +113,7 @@ export function contributionRow(
     step_run_id: `${runId}-step`,
     seq: 0,
     body: "keep going",
+    images_json: [],
     target_agent_session_id: `${runId}-session`,
     target_config_json: null,
     status: "queued",
@@ -194,6 +195,7 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
       throw new Error("abandon stub not configured");
     },
     workspaceClosure: () => null,
+    contributionImage: () => null,
     workspaces: () => ({
       entries: [],
       counts: { active: 0, cleanup_required: 0, stale: 0, missing: 0, unmanaged: 0 },

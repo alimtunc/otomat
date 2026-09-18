@@ -25,6 +25,7 @@ import type { RuntimeSink } from "#runtime/sinks";
 
 import { codexApprovalArgs } from "./approval.js";
 import { CodexFrameMapper } from "./frames.js";
+import { codexImageArgs, withoutImagePaths } from "./images.js";
 import { codexModelSupport } from "./models.js";
 import { CODEX_DEFAULT_SANDBOX, codexOptionSupport } from "./options.js";
 import { CodexSandboxUnavailableError, probeCodexSandbox } from "./sandbox.js";
@@ -112,7 +113,7 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
         model: input.model ?? null,
       });
     }
-    const args = ["exec", ...this.execArgs(input), "-"];
+    const args = ["exec", ...this.execArgs(input), ...codexImageArgs(input.images), "-"];
     return runCliTurn(this.spec(args, input, input), sink, signal);
   }
 
@@ -129,7 +130,15 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
         model: input.model ?? null,
       });
     }
-    const args = ["exec", ...this.execArgs(input), "resume", requireProviderSession(session), "-"];
+    // `--image` belongs to the `resume` subcommand, so it follows that word rather than the exec flags.
+    const args = [
+      "exec",
+      ...this.execArgs(input),
+      "resume",
+      ...codexImageArgs(input.images),
+      requireProviderSession(session),
+      "-",
+    ];
     return runCliTurn(this.spec(args, input, session), sink, signal);
   }
 
@@ -156,7 +165,7 @@ export class CodexRuntimeAdapter implements RuntimeAdapter {
       command: this.binary,
       args,
       prompt: input.prompt,
-      startMessage: `Arguments sent to Codex: ${JSON.stringify(args)}. Effective permissions are not reported by exec JSONL.`,
+      startMessage: `Arguments sent to Codex: ${JSON.stringify(withoutImagePaths(args))}. Effective permissions are not reported by exec JSONL.`,
       cwd: input.cwd,
       ref,
       createMapper: (emitter) => new CodexFrameMapper(emitter),

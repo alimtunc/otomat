@@ -1,6 +1,7 @@
 import type {
   RunInteractionKind,
   RuntimeCapabilities,
+  RuntimeImageCapability,
   RuntimeInteractionCapability,
   RuntimeProviderLimitMode,
   RuntimeSteeringMode,
@@ -35,6 +36,13 @@ const INTERACTION_KIND_LABELS = {
   questionnaire: "questionnaires",
 } satisfies Record<RunInteractionKind, string>;
 
+function imageLabel(capability: RuntimeImageCapability): string {
+  if (capability.status === "unsupported") return "Images in messages";
+  return capability.standalone
+    ? "Images in messages, alone or with text"
+    : "Images with a text message";
+}
+
 function interactionLabel(capability: RuntimeInteractionCapability): string {
   if (capability.status === "unsupported") return "Interactive answers";
   return `Interactive ${capability.kinds.map((kind) => INTERACTION_KIND_LABELS[kind]).join(" · ")}`;
@@ -43,6 +51,7 @@ function interactionLabel(capability: RuntimeInteractionCapability): string {
 /** The `satisfies` makes a capability added to the schema fail the build here instead of vanishing from the list. */
 export function capabilityEntries(capabilities: RuntimeCapabilities): CapabilityEntry[] {
   const resumeModel = capabilities.resume_model;
+  const images = capabilities.images;
   const interactions = capabilities.interactions;
   return Object.values({
     steering: {
@@ -59,6 +68,12 @@ export function capabilityEntries(capabilities: RuntimeCapabilities): Capability
       label: "Model override on resume",
       supported: resumeModel.status === "supported",
       hint: resumeModel.status === "unsupported" ? resumeModel.reason : null,
+    },
+    images: {
+      key: "images",
+      label: imageLabel(images),
+      supported: images.status === "supported",
+      hint: images.status === "unsupported" ? images.reason : null,
     },
     interactions: {
       key: "interactions",

@@ -22,6 +22,7 @@ export * from "./source-control.js";
 export * from "./execution-host.js";
 export * from "./review-inbox.js";
 export * from "./run-events.js";
+export * from "./contribution-image.js";
 export * from "./interaction.js";
 export * from "./run-plan.js";
 export * from "./step-commands.js";

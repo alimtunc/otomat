@@ -13,6 +13,7 @@ export interface AppendRunContribution {
   run_id: string;
   step_run_id: string;
   body: string;
+  images_json: RunContributionRow["images_json"];
   target_agent_session_id: string | null;
   target_config_json: RunContributionRow["target_config_json"];
 }

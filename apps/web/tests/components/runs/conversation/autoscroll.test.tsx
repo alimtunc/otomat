@@ -85,6 +85,7 @@ function claudeDescriptor(): RuntimeDescriptor {
       resume_model: { status: "supported" },
       permissions: false,
       diff_hints: false,
+      images: { status: "supported", standalone: true },
     },
     availability: { status: "available", version: null },
     provider_options: [],
@@ -398,10 +399,13 @@ describe("run conversation autoscroll", () => {
 
     expect(mutate).toHaveBeenCalledWith(
       {
-        step_run_id: "s1",
-        target_agent_session_id: "as1",
-        target_config_hash: "config-1",
-        body: "please rebase",
+        request: {
+          step_run_id: "s1",
+          target_agent_session_id: "as1",
+          target_config_hash: "config-1",
+          body: "please rebase",
+        },
+        images: [],
       },
       expect.anything(),
     );

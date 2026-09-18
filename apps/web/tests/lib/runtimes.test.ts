@@ -18,6 +18,7 @@ function descriptor(
       resume: true,
       permissions: false,
       diff_hints: false,
+      images: { status: "supported", standalone: true },
       provider_limit: "unsupported",
     },
     availability,

@@ -9,6 +9,7 @@ it("names every reachable daemon origin and skips the ones not there yet", () =>
   const csp = new RendererCsp(() => [LOCAL, null, ""]);
 
   expect(csp.headerFor(true)).toContain(`connect-src 'self' ${LOCAL};`);
+  expect(csp.headerFor(true)).toContain(`img-src 'self' data: blob: https: ${LOCAL};`);
   expect(csp.headerFor(true)).not.toContain("null");
 });
 

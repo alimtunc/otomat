@@ -10,6 +10,7 @@ const CLAUDE: RuntimeCapabilities = {
   resume_model: { status: "supported" },
   interactions: { status: "supported", kinds: ["permission"] },
   diff_hints: false,
+  images: { status: "supported", standalone: true },
   provider_limit: "deadline",
 };
 

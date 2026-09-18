@@ -2,6 +2,7 @@ import type {
   AgentSessionKind,
   AgentSessionState,
   CompeteGroupState,
+  RunContributionImage,
   RunContributionState,
   RunInteractionKind,
   RunInteractionState,
@@ -137,6 +138,10 @@ export const runContributions = sqliteTable(
     // FIFO order of the conversation; created_at has second granularity, so it cannot rank a burst.
     seq: integer("seq").notNull(),
     body: text("body").notNull(),
+    images_json: text("images_json", { mode: "json" })
+      .$type<RunContributionImage[]>()
+      .notNull()
+      .default(sql`'[]'`),
     status: text("status").$type<RunContributionState>().notNull().default("queued"),
     target_agent_session_id: text("target_agent_session_id").references(() => agentSessions.id),
     target_config_json: text("target_config_json", { mode: "json" }).$type<ResolvedAgentConfig>(),

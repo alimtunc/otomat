@@ -26,6 +26,7 @@ export function emitContributionEvent(state: SupervisorState, row: RunContributi
         seq: row.seq,
         status: row.status,
         body: row.body,
+        image_count: row.images_json.length,
         error: row.error,
         target_agent_session_id: row.target_agent_session_id,
         target_config_hash: row.target_config_json?.config_hash ?? null,

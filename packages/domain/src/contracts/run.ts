@@ -215,13 +215,13 @@ export const providerResumeScheduleErrorSchema = z.object({
   message: z.string(),
 });
 
-/** Post one user message to a step's conversation; it is persisted as `queued` whatever the run is doing. */
+/** Post one user message to a step's conversation; it is persisted as `queued` whatever the run is doing. An empty `body` is accepted only next to uploaded images. */
 export const createRunContributionRequestSchema = z
   .object({
     step_run_id: z.string().min(1),
     target_agent_session_id: z.string().min(1).nullable(),
     target_config_hash: z.string().min(1),
-    body: z.string().trim().min(1),
+    body: z.string().trim(),
   })
   .strict();
 export type CreateRunContributionRequest = z.infer<typeof createRunContributionRequestSchema>;

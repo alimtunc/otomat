@@ -1,16 +1,29 @@
 import type { RuntimeInteractionAnswer } from "@otomat/domain";
 
-import type { LiveInputChannel, LiveInputItem } from "#runtime/contract";
+import type { LiveInputChannel, LiveInputItem, RuntimeImageFile } from "#runtime/contract";
 import { errorMessage } from "#runtime/errors";
+import { readRuntimeImage } from "#runtime/image-file";
 
 import { claudeAnsweredInput } from "./questions.js";
 
-/** Claude Code's streaming-input frame: one user message per line on stdin. */
-export function claudeUserFrame(body: string): string {
-  return `${JSON.stringify({
-    type: "user",
-    message: { role: "user", content: [{ type: "text", text: body }] },
-  })}\n`;
+function claudeImageBlock(image: RuntimeImageFile) {
+  return {
+    type: "image",
+    source: {
+      type: "base64",
+      media_type: image.media_type,
+      data: readRuntimeImage(image).toString("base64"),
+    },
+  };
+}
+
+/** Claude Code's streaming-input frame: one user message per line on stdin. Images precede the text, and an empty text block is never sent because the API refuses one. */
+export function claudeUserFrame(body: string, images: readonly RuntimeImageFile[]): string {
+  const content = [
+    ...images.map(claudeImageBlock),
+    ...(body.length === 0 ? [] : [{ type: "text", text: body }]),
+  ];
+  return `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`;
 }
 
 /**
@@ -99,7 +112,7 @@ export class ClaudeLiveInput {
   };
 
   private frameFor(item: LiveInputItem): string | { error: string } {
-    if (item.kind === "message") return claudeUserFrame(item.body);
+    if (item.kind === "message") return claudeUserFrame(item.body, item.images);
     if (!this.pendingInput.has(item.request_id)) {
       return { error: `no open Claude request ${item.request_id} on this turn` };
     }
