@@ -18,6 +18,7 @@ import {
   isStepSettled,
   readyPlanWork,
   latestSessionForStep,
+  stepRunMachine,
   type RunPlanCompetitor,
   type RunPlanStep,
   type ReadyPlanWork,
@@ -67,11 +68,13 @@ function reopen(db: Db, run: RunRow, step: ResumableStep): ResumeAction {
   return { kind: "native", session: latest, step: resolvedStep };
 }
 
-/** The earliest step that stopped without succeeding: a fail-fast cascade cancels everything after the real failure, and recovery starts at the failure. Compete candidates reopen as a group or not at all. */
+/** The earliest step that stopped without succeeding — never a withdrawn one, which is final: a fail-fast cascade cancels everything after the real failure, and recovery starts at the failure. Compete candidates reopen as a group or not at all. */
 function stoppedStep(steps: readonly StepRunRow[]): StepRunRow | undefined {
   return steps.find(
     (step) =>
-      step.compete_group_id === null && isStepSettled(step.status) && step.status !== "succeeded",
+      step.compete_group_id === null &&
+      isStepSettled(step.status) &&
+      !stepRunMachine.isTerminal(step.status),
   );
 }
 
@@ -145,9 +148,12 @@ export function resolveResumeAction(state: SupervisorState, run: RunRow): Resume
     }
     return reopen(db, run, node);
   }
-  const ready = readyPlanWork(run.plan_json, stepStatuses(steps), competeGroupStatuses(groups));
+  const statuses = stepStatuses(steps);
+  const ready = readyPlanWork(run.plan_json, statuses, competeGroupStatuses(groups));
   if (ready) return { kind: "next_step", work: ready };
-  const last = executableSteps(run.plan_json).at(-1);
+  const last = executableSteps(run.plan_json).findLast(
+    (step) => statuses.get(step.id) !== "withdrawn",
+  );
   if (!last) return { kind: "unavailable", reason: "This run's plan has no step to resume" };
   return reopen(db, run, last);
 }

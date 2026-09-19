@@ -11,16 +11,17 @@ export const STEP_RUN_STATES = [
   "failed",
   "canceled",
   "stale",
+  "withdrawn",
 ] as const;
 
 export type StepRunState = (typeof STEP_RUN_STATES)[number];
 
-/** A step that stopped without succeeding requeues on resume — its work is still owed; only `succeeded` is final, since reopening it would replay delivered work. */
+/** A step that stopped without succeeding requeues on resume — its work is still owed. Two states are final: `succeeded`, since reopening it would replay delivered work, and `withdrawn`, the operator's cancel of a step that never started, which no resume owes back. */
 export const stepRunMachine = defineMachine<StepRunState>({
   name: "step_run",
   initial: "queued",
   transitions: {
-    queued: ["starting", "canceled"],
+    queued: ["starting", "canceled", "withdrawn"],
     starting: ["running", "failed", "canceled", "stale"],
     running: [
       "awaiting_permission",
@@ -39,6 +40,7 @@ export const stepRunMachine = defineMachine<StepRunState>({
     failed: ["queued"],
     canceled: ["queued"],
     stale: ["queued"],
+    withdrawn: [],
   },
 });
 
@@ -48,6 +50,7 @@ export const STEP_RUN_SETTLED_STATES = [
   "failed",
   "canceled",
   "stale",
+  "withdrawn",
 ] as const satisfies readonly StepRunState[];
 export type StepRunSettledState = (typeof STEP_RUN_SETTLED_STATES)[number];
 

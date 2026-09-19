@@ -1,11 +1,35 @@
-import type { EventEnvelope, RunDetail, RunPlan } from "@otomat/domain";
+import {
+  unreachablePlanNodes,
+  type EventEnvelope,
+  type RunDetail,
+  type RunPlan,
+} from "@otomat/domain";
+
+function dependencyNames(
+  plan: RunPlan,
+  stepId: string,
+  keep: (dependencyId: string) => boolean,
+): string[] {
+  const step = plan.steps.find((candidate) => candidate.id === stepId);
+  if (!step) return [];
+  const nameById = new Map(plan.steps.map((node) => [node.id, node.name]));
+  return step.depends_on.filter(keep).map((dependency) => nameById.get(dependency) ?? dependency);
+}
 
 /** A plan step id is also its step_run id. */
 export function stepDependencyNames(plan: RunPlan, stepId: string): string[] {
-  const nameById = new Map(plan.steps.map((step) => [step.id, step.name]));
-  const step = plan.steps.find((candidate) => candidate.id === stepId);
-  if (!step) return [];
-  return step.depends_on.map((dependency) => nameById.get(dependency) ?? dependency);
+  return dependencyNames(plan, stepId, () => true);
+}
+
+/** Dependencies of a step that will never run — a canceled step or work stuck behind one — so the row explains a block instead of a wait. */
+export function blockedDependencyNames(detail: RunDetail, stepId: string): string[] {
+  const plan = detail.run.plan_json;
+  const unreachable = unreachablePlanNodes(
+    plan,
+    new Map(detail.steps.map((step) => [step.id, step.status])),
+    new Map(detail.compete_groups.map((group) => [group.id, group.status])),
+  );
+  return dependencyNames(plan, stepId, (dependency) => unreachable.has(dependency));
 }
 
 /** The step the ledger last carried an event for: the one the cockpit is following. */

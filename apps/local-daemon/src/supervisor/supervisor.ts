@@ -4,6 +4,7 @@ import { abandonWorkspace } from "./abandon.js";
 import { abortRun } from "./abort.js";
 import { advanceRun } from "./advance.js";
 import { appendRunStep } from "./append-step.js";
+import { cancelQueuedStep } from "./cancel-step.js";
 import { agentCapacity, runWait, setAgentCapacity } from "./capacity.js";
 import { resumeRun, startRun } from "./commands.js";
 import {
@@ -58,6 +59,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     setNextTurnModel: (runId, stepRunId, sessionId, currentConfigHash, model, options) =>
       setNextTurnModel(state, runId, stepRunId, sessionId, currentConfigHash, model, options),
     stopStep: (runId, stepRunId) => stopStepTurn(state, runId, stepRunId),
+    cancelStep: (runId, stepRunId) => cancelQueuedStep(state, runId, stepRunId),
     overrideStepDelivery: (runId, stepRunId, note) =>
       overrideStepDelivery(state, runId, stepRunId, note),
     resume: (runId) => resumeRun(state, runId),

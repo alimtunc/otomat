@@ -11,6 +11,7 @@ import {
 } from "@otomat/ui";
 import { useRuntimes } from "@web/api/daemon/queries";
 import { useStopRunStep } from "@web/api/runs/step-mutations";
+import { CancelStepButton } from "@web/components/runs/cockpit/steps/cancel-step-button";
 import { CodexPermissions } from "@web/components/runs/conversation/codex-permissions";
 import { NextTurnModelDialog } from "@web/components/runs/conversation/next-turn/dialog";
 import { agentLabel, modelLabel } from "@web/lib/execution/labels";
@@ -37,6 +38,7 @@ export function ConversationHeader({
     step.status === "starting" ||
     step.status === "running" ||
     step.status === "awaiting_permission";
+  const cancelable = step.status === "queued" && step.compete_group_id === null;
   const runtime = runtimes.data?.find(
     (descriptor) => descriptor.id === (launched?.agent_id ?? current.runtime),
   );
@@ -89,13 +91,16 @@ export function ConversationHeader({
           Stop step
         </Button>
       ) : null}
+      {cancelable ? (
+        <CancelStepButton runId={detail.run.id} stepId={stepRunId} className="ml-auto" />
+      ) : null}
       <Popover>
         <PopoverTrigger
           render={
             <IconButton
               label="Session details"
               icon={<Icon name="info" aria-hidden />}
-              className={live ? undefined : "ml-auto"}
+              className={live || cancelable ? undefined : "ml-auto"}
             />
           }
         />

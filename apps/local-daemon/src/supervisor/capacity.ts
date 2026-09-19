@@ -1,9 +1,4 @@
-import {
-  getRun,
-  listCompeteGroupsForRun,
-  listStepRunsForRun,
-  writeMaxConcurrentSessions,
-} from "@otomat/db";
+import { getRun, writeMaxConcurrentSessions } from "@otomat/db";
 import {
   blockingPlanDependencies,
   isRunSettled,
@@ -12,7 +7,7 @@ import {
   type RunWait,
 } from "@otomat/domain";
 
-import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
+import { planStatuses } from "./settle/context.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
 
 export function agentCapacity(state: SupervisorState): AgentCapacity {
@@ -52,11 +47,8 @@ export function runWait(state: SupervisorState, runId: string): RunWait | null {
   if (queued !== null) return { kind: "concurrency_limit", ...queued };
   if (hasRunActivity(state, runId)) return null;
 
-  const blockers = blockingPlanDependencies(
-    run.plan_json,
-    stepStatuses(listStepRunsForRun(state.db, runId)),
-    competeGroupStatuses(listCompeteGroupsForRun(state.db, runId)),
-  );
+  const { statuses, groups } = planStatuses(state.db, runId);
+  const blockers = blockingPlanDependencies(run.plan_json, statuses, groups);
   if (blockers.length === 0) return null;
   return { kind: "workflow_dependency", blocked_by: blockers.map((node) => node.name) };
 }

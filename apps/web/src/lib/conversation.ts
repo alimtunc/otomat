@@ -6,6 +6,7 @@ import type {
 
 const MILESTONE_TYPES: ReadonlySet<EventEnvelope["type"]> = new Set([
   "run.lifecycle",
+  "step.lifecycle",
   "git.diff_updated",
   "pr.created",
   "pr.updated",

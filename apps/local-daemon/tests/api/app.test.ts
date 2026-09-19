@@ -20,6 +20,7 @@ import {
   RunContributionStepClosedError,
   RunNotResumableError,
   RunWorkspaceClosedError,
+  StepCancelRefusedError,
   StepStopRefusedError,
   DeliveryOverrideRefusedError,
   WorkspaceAbandonRefusedError,
@@ -34,6 +35,7 @@ import {
   request,
   runRow,
   runRowWithStep,
+  stepRunRow,
   stubSupervisor,
 } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
@@ -731,19 +733,7 @@ it("stops a live step over the API and maps a stop refusal to its own status", a
     supervisor: stubSupervisor({
       stopStep: async (id, stepRunId) => {
         received = { id, stepRunId };
-        return {
-          id: stepRunId,
-          run_id: id,
-          idx: 0,
-          name: "Implement",
-          status: "awaiting_human",
-          compete_group_id: null,
-          worktree_id: null,
-          provider_wait_json: null,
-          next_turn_config_json: null,
-          created_at: "2026-01-01T00:00:00.000Z",
-          updated_at: "2026-01-01T00:00:00.000Z",
-        };
+        return stepRunRow({ id: stepRunId, run_id: id, status: "awaiting_human" });
       },
     }),
   });
@@ -767,6 +757,41 @@ it("stops a live step over the API and maps a stop refusal to its own status", a
   expect((await json<{ error: string }>(conflict)).error).toBe("step_not_active");
 });
 
+it("cancels a queued step over the API and maps a cancel refusal to its own status", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  let received: { id: string; stepRunId: string } | null = null;
+  const app = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      cancelStep: (id, stepRunId) => {
+        received = { id, stepRunId };
+        return stepRunRow({
+          id: stepRunId,
+          run_id: id,
+          idx: 1,
+          name: "Follow up",
+          status: "withdrawn",
+        });
+      },
+    }),
+  });
+  const res = await post(app, `/api/runs/${runId}/steps/step-2/cancel`, {});
+  expect(res.status).toBe(200);
+  expect(received).toEqual({ id: runId, stepRunId: "step-2" });
+  expect(await json<{ status: string }>(res)).toMatchObject({ id: "step-2", status: "withdrawn" });
+
+  const refused = makeApiApp(t, {
+    supervisor: stubSupervisor({
+      cancelStep: () => {
+        throw new StepCancelRefusedError("step_not_queued", "Follow up is running");
+      },
+    }),
+  });
+  const conflict = await post(refused, `/api/runs/${runId}/steps/step-2/cancel`, {});
+  expect(conflict.status).toBe(409);
+  expect((await json<{ error: string }>(conflict)).error).toBe("step_not_queued");
+});
+
 it("accepts a held step over the API with the operator's note, and maps a refusal", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);
@@ -775,19 +800,7 @@ it("accepts a held step over the API with the operator's note, and maps a refusa
     supervisor: stubSupervisor({
       overrideStepDelivery: (id, stepRunId, note) => {
         received = { id, stepRunId, note };
-        return {
-          id: stepRunId,
-          run_id: id,
-          idx: 0,
-          name: "Implement",
-          status: "succeeded",
-          compete_group_id: null,
-          worktree_id: null,
-          provider_wait_json: null,
-          next_turn_config_json: null,
-          created_at: "2026-01-01T00:00:00.000Z",
-          updated_at: "2026-01-01T00:00:00.000Z",
-        };
+        return stepRunRow({ id: stepRunId, run_id: id, status: "succeeded" });
       },
     }),
   });

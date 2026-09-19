@@ -11,6 +11,8 @@ import {
   isStepActive,
   planOutcome,
   readyPlanWork,
+  unreachablePlanNodes,
+  withdrawalEmptiesPlan,
 } from "#domain/plan/schedule";
 import type { StepRunState } from "#domain/state-machines/step-run";
 
@@ -307,5 +309,75 @@ describe("planOutcome", () => {
         new Map([["implementation", "awaiting_selection"]]),
       ),
     ).toBe("running");
+  });
+});
+
+describe("a withdrawn step", () => {
+  const chain = plan([
+    { id: "implement" },
+    { id: "review", depends_on: ["implement"] },
+    { id: "polish", depends_on: ["review"] },
+  ]);
+
+  it("is never startable and never halts the plan", () => {
+    const withdrawn = statuses({ implement: "succeeded", review: "withdrawn" });
+    expect(readyPlanWork(chain, withdrawn, new Map())).toBeNull();
+    expect(haltedPlanOutcome(chain, withdrawn)).toBeNull();
+    expect(hasActiveStep(chain, withdrawn)).toBe(false);
+  });
+
+  it("takes its dependents out of reach, so the delivered work stands as succeeded", () => {
+    const withdrawn = statuses({ implement: "succeeded", review: "withdrawn" });
+    expect([...unreachablePlanNodes(chain, withdrawn, new Map())]).toEqual(["review", "polish"]);
+    expect(allStepsSucceeded(chain, withdrawn)).toBe(true);
+    expect(planOutcome(chain, withdrawn)).toBe("succeeded");
+    expect(blockingPlanDependencies(chain, withdrawn, new Map())).toEqual([]);
+  });
+
+  it("does not stand for delivery on its own", () => {
+    expect(allStepsSucceeded(chain, statuses({ implement: "withdrawn" }))).toBe(false);
+    expect(allStepsSucceeded(chain, statuses({ implement: "running", review: "withdrawn" }))).toBe(
+      false,
+    );
+  });
+
+  it("reopens the path to its dependents once a replacement succeeds, not before", () => {
+    const replaced = plan([
+      { id: "implement" },
+      { id: "review", depends_on: ["implement"] },
+      { id: "polish", depends_on: ["review"] },
+      { id: "review-again", depends_on: ["implement"], replaces: "review" },
+    ]);
+    const pending = statuses({ implement: "succeeded", review: "withdrawn" });
+    expect(unreachablePlanNodes(replaced, pending, new Map()).size).toBe(0);
+    expect(readyStep(replaced, { implement: "succeeded", review: "withdrawn" })?.id).toBe(
+      "review-again",
+    );
+    expect(
+      readyStep(replaced, {
+        implement: "succeeded",
+        review: "withdrawn",
+        "review-again": "succeeded",
+      })?.id,
+    ).toBe("polish");
+  });
+
+  it("recovers nothing when it was itself the replacement", () => {
+    const recovered = plan([{ id: "implement" }, { id: "retry", replaces: "implement" }]);
+    const abandonedRetry = statuses({ implement: "failed", retry: "withdrawn" });
+    expect(effectiveStepStatuses(recovered, abandonedRetry).get("implement")).toBe("failed");
+    expect(haltedPlanOutcome(recovered, abandonedRetry)).toBe("failed");
+  });
+
+  it("empties the plan only when nothing delivered and nothing else can start", () => {
+    expect(withdrawalEmptiesPlan(chain, statuses({}), new Map(), "implement")).toBe(true);
+    expect(
+      withdrawalEmptiesPlan(chain, statuses({ implement: "succeeded" }), new Map(), "review"),
+    ).toBe(false);
+    expect(
+      withdrawalEmptiesPlan(chain, statuses({ implement: "awaiting_human" }), new Map(), "review"),
+    ).toBe(false);
+    const parallel = plan([{ id: "a" }, { id: "b" }]);
+    expect(withdrawalEmptiesPlan(parallel, statuses({}), new Map(), "a")).toBe(false);
   });
 });
