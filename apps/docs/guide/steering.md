@@ -32,6 +32,13 @@ attachment before sending when the selected runtime cannot take images, when a f
 an image, or when it exceeds the limits, and says why. No OCR runs and nothing is sent to a third
 party.
 
+## QR codes
+
+A QR code an agent prints in the conversation as block characters (`█ ▀ ▄`, as `qrencode` or
+`qrcode-terminal` emit it) renders as a scannable black-on-white grid with its quiet zone, in either
+theme, and scales down with the pane instead of scrolling. **Copy code** still copies the text the
+agent sent. A block that does not carry a complete QR symbol stays an ordinary code block.
+
 ## Questions and permissions
 
 An agent that stops on a permission it cannot settle itself, a choice, or a written question
