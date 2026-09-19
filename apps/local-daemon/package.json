@@ -49,13 +49,13 @@
     "@otomat/db": "workspace:*",
     "@otomat/domain": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.13.7",
-    "zod": "^4.6.2"
+    "hono": "^4.13.8",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
     "tsdown": "^0.23.0",
     "tsx": "^4.23.13",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.1"
   }
 }
