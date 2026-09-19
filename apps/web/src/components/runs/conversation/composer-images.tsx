@@ -10,7 +10,8 @@ export function ComposerImages({
   onRemove: (index: number) => void;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    // Containing block: the sr-only status otherwise inflates ancestor scroll height.
+    <div className="relative flex flex-col gap-1.5">
       <span role="status" aria-live="polite" className="sr-only">
         {images.length === 0
           ? "No image attached."

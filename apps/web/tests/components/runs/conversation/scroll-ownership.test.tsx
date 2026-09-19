@@ -175,6 +175,18 @@ async function layOut(contentHeight: number): Promise<ScrollControl> {
   return scroll;
 }
 
+function unanchoredHiddenLabels(root: HTMLElement): string[] {
+  return [...root.querySelectorAll<HTMLElement>(".sr-only")]
+    .filter((label) => {
+      for (let element = label.parentElement; element !== null; element = element.parentElement) {
+        if (isContainingBlock(element)) return false;
+        if (element === root) return true;
+      }
+      return true;
+    })
+    .map((label) => label.textContent ?? "");
+}
+
 function expectsSoleScroller(): HTMLElement {
   const viewport = messageViewport();
   expect(scrollersWithin(threadRoot())).toEqual([viewport]);
@@ -206,6 +218,12 @@ describe.each([
     expectsSoleScroller();
     expect(scroll.top()).toBe(0);
     expect(scrolledAncestors(messageViewport())).toEqual([]);
+  });
+
+  it("anchors every hidden label to a containing block inside the conversation column", async () => {
+    mounted = await render();
+
+    expect(unanchoredHiddenLabels(threadRoot())).toEqual([]);
   });
 
   it("scrolls a window longer than the viewport without moving anything above it", async () => {
