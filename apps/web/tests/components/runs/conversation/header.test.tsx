@@ -29,9 +29,11 @@ const PENDING: ResolvedAgentConfig = {
 let capability: RuntimeDescriptor["capabilities"]["resume_model"] = { status: "supported" };
 
 const stopStep = vi.fn();
+const cancelStep = vi.fn();
 
 vi.mock("@web/api/runs/step-mutations", () => ({
   useStopRunStep: () => ({ mutate: stopStep, isPending: false }),
+  useCancelRunStep: () => ({ mutate: cancelStep, isPending: false }),
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({
@@ -200,5 +202,27 @@ it("offers Stop step only while the step's turn is live, wired to the step id", 
   if (!button) throw new Error("expected a Stop step action on a live step");
   button.click();
   expect(stopStep).toHaveBeenCalledWith("step-1");
+  await view.cleanup();
+});
+
+it("offers Cancel step only while the step is still queued, wired to the step id", async () => {
+  const idle = await mount(<ConversationHeader detail={DETAIL} stepRunId="step-1" />);
+  expect(idle.container.textContent).not.toContain("Cancel step");
+  await idle.cleanup();
+
+  const queued: RunDetail = {
+    ...DETAIL,
+    run: { ...DETAIL.run, status: "review_ready" },
+    steps: [{ ...DETAIL.steps[0]!, status: "queued" }],
+    sessions: [],
+  };
+  const view = await mount(<ConversationHeader detail={queued} stepRunId="step-1" />);
+  expect(view.container.textContent).not.toContain("Stop step");
+  const button = [...view.container.querySelectorAll("button")].find((candidate) =>
+    candidate.textContent.includes("Cancel step"),
+  );
+  if (!button) throw new Error("expected a Cancel step action on a queued step");
+  button.click();
+  expect(cancelStep).toHaveBeenCalledWith("step-1");
   await view.cleanup();
 });

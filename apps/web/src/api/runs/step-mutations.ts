@@ -54,19 +54,34 @@ export function useSetNextTurnModel(runId: string, stepId: string) {
   });
 }
 
-export function useOverrideStepDelivery(runId: string) {
+function useStepCommand<Variables>(
+  runId: string,
+  command: (variables: Variables) => Promise<StepRunContract>,
+  message: { success: (step: StepRunContract) => string; failure: string },
+) {
   const keys = useQueryKeys();
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (variables: { stepId: string; note: string }) =>
-      daemon.overrideStepDelivery(runId, variables.stepId, { note: variables.note }),
+    mutationFn: command,
     onSuccess: (step) => {
       seedStepRow(client, keys, runId, step);
       invalidateRunCycleCaches(client, keys, runId);
-      toast.success(`${step.name} accepted — the run history records the override.`);
+      toast.success(message.success(step));
     },
-    onError: (error) => toast.error(stepCommandErrorMessage(error, "Could not accept this step")),
+    onError: (error) => toast.error(stepCommandErrorMessage(error, message.failure)),
   });
+}
+
+export function useOverrideStepDelivery(runId: string) {
+  return useStepCommand(
+    runId,
+    (variables: { stepId: string; note: string }) =>
+      daemon.overrideStepDelivery(runId, variables.stepId, { note: variables.note }),
+    {
+      success: (step) => `${step.name} accepted — the run history records the override.`,
+      failure: "Could not accept this step",
+    },
+  );
 }
 
 function stepCommandErrorMessage(error: unknown, fallback: string): string {
@@ -85,15 +100,15 @@ function stepCommandErrorMessage(error: unknown, fallback: string): string {
 }
 
 export function useStopRunStep(runId: string) {
-  const keys = useQueryKeys();
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (stepId: string) => daemon.stopRunStep(runId, stepId),
-    onSuccess: (step) => {
-      seedStepRow(client, keys, runId, step);
-      invalidateRunCycleCaches(client, keys, runId);
-      toast.success("Step stopped — your next message resumes the same session.");
-    },
-    onError: (error) => toast.error(stepCommandErrorMessage(error, "Could not stop this step")),
+  return useStepCommand(runId, (stepId: string) => daemon.stopRunStep(runId, stepId), {
+    success: () => "Step stopped — your next message resumes the same session.",
+    failure: "Could not stop this step",
+  });
+}
+
+export function useCancelRunStep(runId: string) {
+  return useStepCommand(runId, (stepId: string) => daemon.cancelRunStep(runId, stepId), {
+    success: (step) => `${step.name} canceled — it will not run.`,
+    failure: "Could not cancel this step",
   });
 }

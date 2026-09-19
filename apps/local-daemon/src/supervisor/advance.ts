@@ -2,6 +2,7 @@ import {
   attachStepWorktree,
   getCompeteGroup,
   getRun,
+  getStepRun,
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
   listStepRunsForRun,
@@ -114,6 +115,10 @@ export async function startNextReadyStep(state: SupervisorState, run: RunRow): P
 
   const ctx = insertTurn(state, run, next.step, canonicalWorktreePath(state, run));
   await spawnTurn(state, ctx, "run", null);
+  const spawned = getStepRun(state.db, next.step.id);
+  if (!spawned) throw new Error(`step ${next.step.id} vanished immediately after spawn`);
+  // A cancel that landed during the slot wait withdrew the step and unqueued this turn; the pass still owes the plan its next node.
+  if (spawned.status === "withdrawn") return startNextReadyStep(state, run);
   return true;
 }
 

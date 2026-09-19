@@ -68,7 +68,7 @@ function replacementIds(plan: RunPlan): Map<string, string> {
   return byReplaced;
 }
 
-/** Statuses once recoveries are resolved: a replaced step reads the outcome of the step that replaced it, so an addressed failure stops standing. */
+/** Statuses once recoveries are resolved: a replaced step reads the outcome of the step that replaced it, so an addressed failure stops standing. A withdrawn replacement never ran, so it recovers nothing. */
 export function effectiveStepStatuses(plan: RunPlan, statuses: PlanStepStatuses): PlanStepStatuses {
   const byReplaced = replacementIds(plan);
   if (byReplaced.size === 0) return statuses;
@@ -76,9 +76,52 @@ export function effectiveStepStatuses(plan: RunPlan, statuses: PlanStepStatuses)
   for (const step of executableSteps(plan).toReversed()) {
     const replacement = byReplaced.get(step.id);
     const recovered = replacement === undefined ? undefined : effective.get(replacement);
-    effective.set(step.id, recovered ?? statusOf(statuses, step.id));
+    effective.set(
+      step.id,
+      recovered === undefined || recovered === "withdrawn"
+        ? statusOf(statuses, step.id)
+        : recovered,
+    );
   }
   return effective;
+}
+
+function isNodePending(
+  node: RunPlanNode,
+  statuses: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses,
+): boolean {
+  return isRunPlanCompeteGroup(node)
+    ? (groupStatuses.get(node.id) ?? "queued") === "queued"
+    : statusOf(statuses, node.id) === "queued";
+}
+
+/** Nodes no scheduler pass will ever start — a withdrawn step and, transitively, every pending node waiting on one; they neither hold the run's delivery nor halt it. */
+export function unreachablePlanNodes(
+  plan: RunPlan,
+  statuses: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses,
+): ReadonlySet<string> {
+  const effective = effectiveStepStatuses(plan, statuses);
+  const unreachable = new Set<string>();
+  for (const node of planExecutionOrder(plan)) {
+    const withdrawn = !isRunPlanCompeteGroup(node) && statusOf(effective, node.id) === "withdrawn";
+    const blocked =
+      isNodePending(node, statuses, groupStatuses) &&
+      node.depends_on.some((dependency) => unreachable.has(dependency));
+    if (withdrawn || blocked) unreachable.add(node.id);
+  }
+  return unreachable;
+}
+
+function nodeSucceeded(
+  node: RunPlanNode,
+  effective: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses,
+): boolean {
+  return isRunPlanCompeteGroup(node)
+    ? groupStatuses.get(node.id) === "selected"
+    : statusOf(effective, node.id) === "succeeded";
 }
 
 function dependencySucceeded(
@@ -88,10 +131,7 @@ function dependencySucceeded(
   groupStatuses: PlanCompeteGroupStatuses,
 ): boolean {
   const dependency = plan.steps.find((node) => node.id === dependencyId);
-  if (!dependency) return false;
-  return isRunPlanCompeteGroup(dependency)
-    ? groupStatuses.get(dependency.id) === "selected"
-    : statusOf(effective, dependency.id) === "succeeded";
+  return dependency !== undefined && nodeSucceeded(dependency, effective, groupStatuses);
 }
 
 export type ReadyPlanWork =
@@ -130,19 +170,30 @@ export function readyPlanWork(
   return null;
 }
 
-/** Plan nodes that still-queued work waits on, in plan order; empty when no unfinished dependency holds it back. */
+/** Whether withdrawing this step leaves the plan with nothing reachable at all: that is a run cancel, which stays the operator's explicit decision. */
+export function withdrawalEmptiesPlan(
+  plan: RunPlan,
+  statuses: PlanStepStatuses,
+  groupStatuses: PlanCompeteGroupStatuses,
+  stepId: string,
+): boolean {
+  const after = new Map(statuses);
+  after.set(stepId, "withdrawn");
+  const unreachable = unreachablePlanNodes(plan, after, groupStatuses);
+  return plan.steps.every((node) => unreachable.has(node.id));
+}
+
+/** Plan nodes that still-queued work waits on, in plan order; empty when no unfinished dependency holds it back. Work nothing will ever start is not waiting. */
 export function blockingPlanDependencies(
   plan: RunPlan,
   statuses: PlanStepStatuses,
   groupStatuses: PlanCompeteGroupStatuses,
 ): RunPlanNode[] {
   const effective = effectiveStepStatuses(plan, statuses);
+  const unreachable = unreachablePlanNodes(plan, statuses, groupStatuses);
   const blocking = new Set<string>();
   for (const node of plan.steps) {
-    const pending = isRunPlanCompeteGroup(node)
-      ? (groupStatuses.get(node.id) ?? "queued") === "queued"
-      : statusOf(statuses, node.id) === "queued";
-    if (!pending) continue;
+    if (unreachable.has(node.id) || !isNodePending(node, statuses, groupStatuses)) continue;
     for (const dependency of node.depends_on) {
       if (!dependencySucceeded(plan, dependency, effective, groupStatuses))
         blocking.add(dependency);
@@ -151,17 +202,16 @@ export function blockingPlanDependencies(
   return plan.steps.filter((node) => blocking.has(node.id));
 }
 
+/** Every node the plan can still reach has delivered, and at least one has: a plan left with nothing reachable delivered nothing. */
 export function allStepsSucceeded(
   plan: RunPlan,
   statuses: PlanStepStatuses,
   groupStatuses: PlanCompeteGroupStatuses = new Map(),
 ): boolean {
   const effective = effectiveStepStatuses(plan, statuses);
-  return plan.steps.every((node) =>
-    isRunPlanCompeteGroup(node)
-      ? groupStatuses.get(node.id) === "selected"
-      : statusOf(effective, node.id) === "succeeded",
-  );
+  const unreachable = unreachablePlanNodes(plan, statuses, groupStatuses);
+  const owed = plan.steps.filter((node) => !unreachable.has(node.id));
+  return owed.length > 0 && owed.every((node) => nodeSucceeded(node, effective, groupStatuses));
 }
 
 /** How the plan's own steps stand once recoveries are resolved: `failed` outranks `canceled`, `null` means nothing is halted. Compete candidates answer through their group instead. */

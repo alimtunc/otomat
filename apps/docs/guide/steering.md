@@ -65,6 +65,14 @@ step instead.
 
 - **Stop step** (conversation header) interrupts the live turn. Nothing is closed: the step lands
   _interrupted_ and its queued messages are held until you send a message or resume.
+- **Cancel step** (_Steps & sessions_, or the header of a step that has not started) withdraws a
+  queued step at once, even while another session runs or its dependency is still open. It stays
+  in the plan as _canceled_ with the moment and reason in the history, and it never runs — not
+  after a resume, not after a restart. Nothing else changes: the run, its other steps, the branch
+  and the worktree stay as they are, and **Add follow-up step** stays available. A step that
+  waited on the canceled one stays blocked and says so; cancel it too, or add a step that
+  replaces the canceled one. Canceling the last work a run could do is refused: that is
+  **Cancel run**.
 - **Cancel run** (run actions menu, `⋯`) stops every unfinished step. The branch, the worktree and
   the diff stay exactly as they are.
 - A stopped run is **resumed** by sending a message: Otomat reattaches the provider's own session

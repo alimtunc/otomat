@@ -144,6 +144,8 @@ export interface Supervisor {
   ): StepRunRow;
   /** Interrupt the step's live turn without settling the run or starting dependents; the step lands `awaiting_human`, resumable on the same provider session. */
   stopStep(runId: string, stepRunId: string): Promise<StepRunRow>;
+  /** Withdraw a step that has not started: it never runs, its dependents stay blocked, and the run, its other steps and its worktree are untouched. */
+  cancelStep(runId: string, stepRunId: string): StepRunRow;
   /** Close a step the delivery guard holds, on the operator's explicit decision; journaled as an override, never as a verified delivery. */
   overrideStepDelivery(runId: string, stepRunId: string, note: string): StepRunRow;
   /** Resume a resting or stopped run on an explicit action — never auto-runs. */

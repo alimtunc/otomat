@@ -247,13 +247,21 @@ describe("RUN_RESUMABLE_STATES", () => {
 });
 
 describe("STEP_RUN_SETTLED_STATES", () => {
-  it("requeues every stopped step but never a succeeded one", () => {
+  it("requeues every stopped step but never a succeeded or withdrawn one", () => {
     for (const state of STEP_RUN_SETTLED_STATES) expect(isStepSettled(state)).toBe(true);
     expect(stepRunMachine.states.filter((state) => stepRunMachine.isTerminal(state))).toEqual([
       "succeeded",
+      "withdrawn",
     ]);
     for (const state of ["failed", "canceled", "stale"] as const) {
       expect(stepRunMachine.canTransition(state, "queued")).toBe(true);
+    }
+  });
+
+  it("withdraws a step from queued only", () => {
+    expect(stepRunMachine.canTransition("queued", "withdrawn")).toBe(true);
+    for (const state of stepRunMachine.states) {
+      if (state !== "queued") expect(stepRunMachine.canTransition(state, "withdrawn")).toBe(false);
     }
   });
 });

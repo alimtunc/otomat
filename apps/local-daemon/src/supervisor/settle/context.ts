@@ -1,4 +1,12 @@
-import type { AgentSessionRow, CompeteGroupRow, Db, RunRow, StepRunRow } from "@otomat/db";
+import {
+  listCompeteGroupsForRun,
+  listStepRunsForRun,
+  type AgentSessionRow,
+  type CompeteGroupRow,
+  type Db,
+  type RunRow,
+  type StepRunRow,
+} from "@otomat/db";
 import {
   agentSessionMachine,
   type CompeteGroupState,
@@ -54,6 +62,13 @@ export function competeGroupStatuses(
   groups: readonly CompeteGroupRow[],
 ): Map<string, CompeteGroupState> {
   return new Map(groups.map((group) => [group.id, group.status]));
+}
+
+export function planStatuses(db: Db, runId: string) {
+  return {
+    statuses: stepStatuses(listStepRunsForRun(db, runId)),
+    groups: competeGroupStatuses(listCompeteGroupsForRun(db, runId)),
+  };
 }
 
 /** The turn being settled: the one session the single-flight supervisor still has open. */

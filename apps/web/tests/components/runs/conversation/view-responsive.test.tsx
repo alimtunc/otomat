@@ -99,6 +99,10 @@ vi.mock("@web/api/runs/mutations", () => ({
   useAbandonWorkspace: () => ({ mutate: () => {}, isPending: false }),
 }));
 
+vi.mock("@web/api/runs/step-mutations", () => ({
+  useCancelRunStep: () => ({ mutate: () => {}, isPending: false }),
+}));
+
 vi.mock("@web/components/runs/conversation/step-thread", () => ({
   StepConversationThread: ({ stepRunId }: { stepRunId: string }) => (
     <div data-testid="step-thread">{stepRunId}</div>

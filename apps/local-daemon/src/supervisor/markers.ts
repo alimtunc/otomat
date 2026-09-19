@@ -123,6 +123,30 @@ export function buildRunReopenedEvent(
   );
 }
 
+/** The operator withdrew a step before it started; the step row says `withdrawn`, this says when and why. */
+export function buildStepWithdrawnEvent(
+  runId: string,
+  stepRunId: string,
+  stepName: string,
+  occurredAt: string,
+): RuntimeEvent {
+  return buildRuntimeEvent({
+    runId,
+    stepRunId,
+    agentSessionId: null,
+    kind: "withdrawn",
+    type: "step.lifecycle",
+    source: "otomat",
+    adapter: SUPERVISOR_ADAPTER,
+    occurredAt,
+    payload: {
+      status: "withdrawn",
+      step_name: stepName,
+      reason: "canceled by the operator before it started",
+    },
+  });
+}
+
 /** Audit trail of the one manual closure: the cycle ends here, and the branch it names stays on disk. */
 export function buildAbandonedEvent(
   runId: string,

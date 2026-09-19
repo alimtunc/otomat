@@ -1,6 +1,6 @@
 import { dirname, join } from "node:path";
 
-import type { RunContributionRow, RunInteractionRow, RunRow } from "@otomat/db";
+import type { RunContributionRow, RunInteractionRow, RunRow, StepRunRow } from "@otomat/db";
 import type { Hono } from "hono";
 
 import { createApiApp } from "#api/app";
@@ -69,6 +69,23 @@ export function runRow(id: string, overrides: Partial<RunRow> = {}): RunRow {
     started_at: null,
     completed_at: null,
     abandoned_at: null,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+export function stepRunRow(
+  overrides: Partial<StepRunRow> & Pick<StepRunRow, "id" | "run_id">,
+): StepRunRow {
+  return {
+    idx: 0,
+    name: "Implement",
+    status: "queued",
+    compete_group_id: null,
+    worktree_id: null,
+    provider_wait_json: null,
+    next_turn_config_json: null,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -186,6 +203,9 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
     },
     stopStep: async () => {
       throw new Error("stopStep stub not configured");
+    },
+    cancelStep: () => {
+      throw new Error("cancelStep stub not configured");
     },
     resume: async () => {
       throw new Error("resume stub not configured");

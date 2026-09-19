@@ -10,6 +10,14 @@ function lifecycleSummary(event: EventEnvelope): string | null {
   return typeof finalStatus === "string" ? `turn ${finalStatus}` : null;
 }
 
+function stepLifecycleSummary(event: EventEnvelope): string | null {
+  if (event.payload["status"] !== "withdrawn") return null;
+  const stepName = event.payload["step_name"];
+  const reason = event.payload["reason"];
+  if (typeof stepName !== "string" || typeof reason !== "string") return null;
+  return `${stepName} canceled · ${reason}`;
+}
+
 function contributionSummary(event: EventEnvelope): string | null {
   const status = event.payload["status"];
   const body = event.payload["body"];
@@ -31,6 +39,8 @@ function typedSummary(event: EventEnvelope): string | null {
   switch (event.type) {
     case "run.lifecycle":
       return lifecycleSummary(event);
+    case "step.lifecycle":
+      return stepLifecycleSummary(event);
     case "run.contribution":
       return contributionSummary(event);
     case "git.diff_updated":

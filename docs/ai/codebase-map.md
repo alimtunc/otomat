@@ -919,6 +919,26 @@ refused (`workspace_busy`) while a turn is in flight, so the fix step is always
 the workspace's next settlement and settle can credit it with the stamped
 comments.
 
+A queued step the operator no longer wants is **withdrawn** (`supervisor/cancel-step.ts`,
+`POST /api/runs/:id/steps/:stepId/cancel`), a step state distinct from `canceled`
+because the two differ in resumability: `canceled` is what a stop leaves on every
+unfinished step and an explicit resume requeues it, while `withdrawn` is terminal —
+`requeueCanceledSteps`, `stoppedStep` and the resume fallback all leave it alone, so
+neither a resume nor a restart resurrects it. The command reads and writes
+`queued → withdrawn` synchronously, so no scheduler pass interleaves with it; a turn of
+that step still waiting for a session slot is unqueued (`slots.cancel`) and
+`startNextReadyStep` re-reads the plan when the step it spawned was withdrawn during the
+wait, which is what makes the transition atomic with the scheduler. The plan reading treats a withdrawn step and,
+transitively, every pending node behind it as **unreachable** (`unreachablePlanNodes`):
+`allStepsSucceeded` ignores those nodes, so the run rests on what it delivered rather
+than landing `canceled`, `haltedPlanOutcome` never counts them, and
+`blockingPlanDependencies` stops reporting them as a wait — the cockpit's blocked note
+explains them instead. A replacement (`replaces`) that succeeds reopens the path, since
+dependents read the withdrawn step's effective status; a withdrawn replacement recovers
+nothing. Withdrawing the last reachable work of a plan is refused (`step_last_work`):
+that is a run cancel, which stays explicit. The step's journal carries one
+`step.lifecycle` event with the reason and the instant.
+
 ## Reconciling and Cleaning Workspaces
 
 A worktree outlives its run, a restart and a merge, so the daemon reads the real

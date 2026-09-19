@@ -14,15 +14,11 @@ import {
   runLaunchResponseSchema,
   runUsageResponseSchema,
   sessionContextResponseSchema,
-  stepEventWindowSchema,
-  stepRunContractSchema,
   workspaceClosureSummarySchema,
   type AppendRunStepRequest,
   type AnswerRunInteractionRequest,
   type CreateRunContributionRequest,
   type ScheduleProviderResumeRequest,
-  type OverrideStepDeliveryRequest,
-  type SetNextTurnModelRequest,
   type SelectCompeteWinnerRequest,
   type StartRunRequest,
 } from "@otomat/domain";
@@ -189,49 +185,6 @@ export function createRunsClient(config: DaemonClientConfig) {
       });
       return runEventWindowSchema.parse(
         await getJson(config, `/api/runs/${encodeURIComponent(id)}/events/window${query}`),
-      );
-    },
-    async getStepEventWindow(
-      id: string,
-      stepId: string,
-      params: { before?: number; limit?: number } = {},
-    ) {
-      const query = queryString({
-        before: params.before?.toString(),
-        limit: params.limit?.toString(),
-      });
-      return stepEventWindowSchema.parse(
-        await getJson(
-          config,
-          `/api/runs/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}/events/window${query}`,
-        ),
-      );
-    },
-    async stopRunStep(id: string, stepId: string) {
-      return stepRunContractSchema.parse(
-        await postJson(
-          config,
-          `/api/runs/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}/stop`,
-          {},
-        ),
-      );
-    },
-    async overrideStepDelivery(id: string, stepId: string, request: OverrideStepDeliveryRequest) {
-      return stepRunContractSchema.parse(
-        await postJson(
-          config,
-          `/api/runs/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}/override-delivery`,
-          request,
-        ),
-      );
-    },
-    async setNextTurnModel(id: string, stepId: string, request: SetNextTurnModelRequest) {
-      return stepRunContractSchema.parse(
-        await postJson(
-          config,
-          `/api/runs/${encodeURIComponent(id)}/steps/${encodeURIComponent(stepId)}/model`,
-          request,
-        ),
       );
     },
     async getRunUsage(id: string) {

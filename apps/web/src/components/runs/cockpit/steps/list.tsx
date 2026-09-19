@@ -1,7 +1,9 @@
 import { isRunPlanCompeteGroup, type RunDetail } from "@otomat/domain";
 import { CompeteGroupRow } from "@web/components/runs/cockpit/compete-group-row";
-import { stepDependencyNames } from "@web/lib/run/plan";
+import { blockedDependencyNames, stepDependencyNames } from "@web/lib/run/plan";
 
+import { StepBlockedNote } from "./blocked-note";
+import { CancelStepButton } from "./cancel-step-button";
 import { DependencyNote } from "./dependency-note";
 import { StepRow } from "./row";
 
@@ -53,6 +55,12 @@ export function StepsList({
               names={dependencies}
               className="mb-2 ml-9 truncate text-xs text-text-tertiary"
             />
+            {step.status === "queued" ? (
+              <div className="mb-2 ml-9 flex flex-col items-start gap-1">
+                <StepBlockedNote names={blockedDependencyNames(detail, step.id)} />
+                <CancelStepButton runId={detail.run.id} stepId={step.id} />
+              </div>
+            ) : null}
           </div>
         );
       })}

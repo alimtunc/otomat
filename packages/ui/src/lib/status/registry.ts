@@ -94,6 +94,8 @@ const STEP_STATUS: StatusMap<StepRunState> = {
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
   canceled: { tone: "neutral", icon: Ban, label: "Canceled" },
   stale: { tone: "stale", icon: AlertTriangle, label: "Stale" },
+  // The operator's own cancel of a step that never started; it differs from `canceled` in resumability, not in what it says.
+  withdrawn: { tone: "neutral", icon: Ban, label: "Canceled" },
 };
 
 const SESSION_STATUS: StatusMap<AgentSessionState> = {
