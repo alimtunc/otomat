@@ -2237,7 +2237,12 @@ Every destination, image included, passes the `lib/markdown/href.ts` allowlist
 through `MarkdownLink`; an image renders as a link because Linear's uploads need
 credentials the cockpit does not send. `lib/markdown/open-fence.ts` is the one
 thing a compiler cannot tell us — it sees a finished document — so an unclosed
-fence can be labelled as still arriving.
+fence can be labelled as still arriving. `lib/markdown/qr-modules.ts` recovers a
+QR symbol from block-character art (`█ ▀ ▄`) only when three finder patterns
+frame it, in either polarity since terminal generators paint dark modules as
+spaces; `MarkdownCodeBlock` then draws it through `QrCode` in literal black on
+white — a phone camera needs the contrast, not the theme — and any other fence
+stays a code block.
 
 Secondary icon actions use `IconButton`, which supplies the accessible name and
 a shared tooltip on hover or keyboard focus. `CopyButton` requires a label naming
