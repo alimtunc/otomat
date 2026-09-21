@@ -23,13 +23,23 @@ export function WorkspaceActionsCell({ row }: TableCellProps<WorkspaceRow, unkno
   const [cleaning, setCleaning] = useState(false);
   const workspace = row.original;
   const cleanable = isWorkspaceForceCleanable(workspace);
+  const removable = workspace.state === "unmanaged" && cleanable;
   const openable = desktopBridge() !== null;
   return (
     <span className="inline-flex items-center">
+      {removable ? (
+        <IconButton
+          ref={trigger}
+          label="Remove worktree"
+          size="sm"
+          icon={<Icon name="trash-2" aria-hidden />}
+          onClick={() => setCleaning(true)}
+        />
+      ) : null}
       <CopyButton value={workspace.path} label="Copy Worktree path" />
       <DropdownMenu>
         <DropdownMenuTrigger
-          ref={trigger}
+          ref={removable ? undefined : trigger}
           render={
             <IconButton
               label="Workspace actions"
@@ -46,7 +56,7 @@ export function WorkspaceActionsCell({ row }: TableCellProps<WorkspaceRow, unkno
               {workspace.branch ?? "detached"}
             </DropdownMenuLabel>
             {openable ? <WorkspaceOpenMenuItems entry={workspace} host={workspace.host} /> : null}
-            {cleanable ? (
+            {cleanable && !removable ? (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setCleaning(true)}>

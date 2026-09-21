@@ -65,7 +65,6 @@ export function WorkspacesSection() {
           </form.Field>
         </div>
         <WorkspaceHostGroup
-          projectId={projectId}
           host={host}
           status={host.kind === "local" ? null : (snapshot.data?.remote_status ?? null)}
           inventory={workspaces}
@@ -82,13 +81,13 @@ export function WorkspacesSection() {
         <PopoverTrigger
           render={
             <Button size="xs" variant="ghost" className="mb-3">
-              How reconciliation works
+              How cleanup works
             </Button>
           }
         />
         <PopoverContent className="max-w-sm p-3 text-xs">
-          Each repository is one project on one host. Reconciliation reads the host’s git worktrees
-          and pull requests; automatic deletion follows each project’s setting.
+          Each repository is one project on one host. A worktree goes when its merged pull request
+          closes the cycle with auto-delete on, or when you confirm a deletion here.
         </PopoverContent>
       </Popover>
       <ProjectQueryBoundary query={projects}>{content}</ProjectQueryBoundary>

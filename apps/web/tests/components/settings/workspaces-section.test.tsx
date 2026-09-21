@@ -76,6 +76,23 @@ async function renderSection(entries: WorkspaceEntry[]) {
   return mounted;
 }
 
+function external(path: string, over: Partial<WorkspaceEntry> = {}): WorkspaceEntry {
+  return entry({
+    id: path,
+    path,
+    branch: "by-hand",
+    state: "unmanaged",
+    provenance: "external_worktree",
+    issue_id: null,
+    issue_identifier: null,
+    issue_title: null,
+    run_id: null,
+    reason:
+      "Git registers this worktree but Otomat did not create it; removing it leaves its branch alone.",
+    ...over,
+  });
+}
+
 it("asks its host for the selected project's worktrees, and for no others", async () => {
   await renderSection([entry({ id: "a" })]);
 
@@ -93,16 +110,10 @@ it("asks for nothing while no project is selected", async () => {
 it("counts the maintenance states and says why each workspace is where it is", async () => {
   await renderSection([
     entry({ id: "a" }),
-    entry({
-      id: "b",
-      state: "unmanaged",
-      provenance: "external_worktree",
-      blocker: "unmanaged_worktree",
-      issue_id: null,
-      issue_identifier: null,
-      issue_title: null,
-      reason:
-        "Git does not hold this worktree under Otomat's worktrees root, so nothing here may delete it.",
+    external("/tmp/worktrees/b", {
+      blocker: "worktree_dirty",
+      uncommitted_files: 2,
+      reason: "Uncommitted changes are still in this worktree.",
     }),
   ]);
 
@@ -113,7 +124,7 @@ it("counts the maintenance states and says why each workspace is where it is", a
     stateChips.some((chip) =>
       chip
         .getAttribute("aria-label")
-        ?.includes("nothing here may delete it. Remove it yourself if you no longer need it."),
+        ?.includes("still in this worktree. Commit or discard the changes in the worktree first."),
     ),
   ).toBe(true);
 });
@@ -139,17 +150,12 @@ it("keeps paths copyable in the actions menu without a permanent column", async 
   expect(document.body.querySelector("table")?.className).toContain("table-fixed");
 });
 
-it("offers a deletion for the workspaces Otomat still holds, and none for the rest", async () => {
+it("offers a menu deletion for the workspaces Otomat holds, and a row action for an unmanaged one", async () => {
   await renderSection([
     entry({ id: "a" }),
     entry({ id: "b", state: "active", blocker: "cycle_open" }),
     entry({ id: "c", state: "stale", present: false }),
-    entry({
-      id: "d",
-      state: "unmanaged",
-      provenance: "external_worktree",
-      blocker: "unmanaged_worktree",
-    }),
+    external("/tmp/worktrees/d"),
   ]);
 
   const actions = [
@@ -166,19 +172,25 @@ it("offers a deletion for the workspaces Otomat still holds, and none for the re
     });
   }
   expect(offered).toEqual([true, false, true, false]);
+  expect(document.body.querySelectorAll('[aria-label="Remove worktree"]')).toHaveLength(1);
 });
 
-it("says what a reconciliation does before it is clicked", async () => {
+it("says what a refresh does before it is clicked, and that it deletes nothing", async () => {
   await renderSection([entry({ id: "a" })]);
+  const refresh = findButton("Refresh worktrees");
 
-  const described = findButton("Reconcile worktrees")?.getAttribute("aria-describedby");
-  expect(described).toBeTruthy();
+  const described = refresh?.getAttribute("aria-describedby");
   expect(document.getElementById(described ?? "")?.textContent).toContain(
-    "Auto-delete is on: clean worktrees from merged PRs may be removed.",
+    "Refresh re-reads git worktree list and this host’s pull requests, then updates the states shown here.",
+  );
+  await act(async () => refresh?.focus());
+
+  expect(document.body.textContent).toContain(
+    "Rescan Git worktrees and refresh this list. Does not delete or change any worktree.",
   );
 });
 
-it("offers in one click only what a merge already made safe", async () => {
+it("names the merged cleanup and lists its targets before asking for the confirmation", async () => {
   await renderSection([
     entry({ id: "a", pull_request: { number: 7, url: null, merged: true } }),
     entry({ id: "unmerged" }),
@@ -195,10 +207,94 @@ it("offers in one click only what a merge already made safe", async () => {
     "1 worktree has a merged pull request and is safe to delete.",
   );
   await act(async () => {
-    findButton("Select the 1 safe to delete")?.click();
+    findButton("Clean up merged worktrees")?.click();
   });
 
-  expect(findButton("Clean up 1")).toBeDefined();
+  const dialog = document.body.querySelector('[role="dialog"]');
+  expect(dialog?.textContent).toContain("#7 merged");
+  expect(dialog?.textContent).not.toContain("otomat/run/unmerged");
+  expect(findButton("Delete 1 clean workspace")).toBeDefined();
+  expect(cleanupWorkspace).not.toHaveBeenCalled();
+});
+
+it("removes a clean unmanaged worktree from its row after one confirmation", async () => {
+  cleanupWorkspace.mockResolvedValue({
+    outcome: "cleaned",
+    blocker: null,
+    message: "Removed /tmp/worktrees/by-hand; its branch was left alone.",
+    entry: null,
+  });
+  await renderSection([external("/tmp/worktrees/by-hand")]);
+
+  await act(async () => {
+    findLabelled("Remove worktree")?.click();
+  });
+  expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain("by-hand");
+  await act(async () => {
+    findButton("Delete 1 clean workspace")?.click();
+  });
+
+  expect(cleanupWorkspace).toHaveBeenCalledWith("/tmp/worktrees/by-hand", false);
+  expect(document.body.textContent).toContain("1 cleaned");
+});
+
+it("removes a dirty unmanaged worktree only after the operator confirms the branch, path and loss", async () => {
+  cleanupWorkspace.mockResolvedValue({
+    outcome: "cleaned",
+    blocker: null,
+    message: "Removed /tmp/worktrees/by-hand; its branch was left alone.",
+    entry: null,
+  });
+  await renderSection([
+    external("/tmp/worktrees/by-hand", { blocker: "worktree_dirty", uncommitted_files: 3 }),
+  ]);
+
+  await act(async () => {
+    findLabelled("Remove worktree")?.click();
+  });
+  const armed = findButton("Delete 0 workspaces");
+  expect(armed?.getAttribute("disabled")).not.toBeNull();
+  expect(document.body.textContent).toContain(
+    "Discard 3 uncommitted files in this worktree. This cannot be undone.",
+  );
+  expect(document.body.textContent).toContain("by-hand · /tmp/worktrees/by-hand");
+  await act(async () => {
+    findButton("Keep them")?.click();
+  });
+  expect(cleanupWorkspace).not.toHaveBeenCalled();
+
+  await act(async () => {
+    findLabelled("Remove worktree")?.click();
+  });
+  await act(async () => {
+    findLabelled("Force delete by-hand")?.click();
+  });
+  await act(async () => {
+    findButton("Force delete 1 workspace")?.click();
+  });
+
+  expect(cleanupWorkspace).toHaveBeenCalledWith("/tmp/worktrees/by-hand", true);
+  expect(document.body.textContent).toContain("1 cleaned");
+});
+
+it("shows git's refusal of an unmanaged removal instead of a deletion it never made", async () => {
+  cleanupWorkspace.mockResolvedValue({
+    outcome: "failed",
+    blocker: null,
+    message: "fatal: cannot remove a locked working tree",
+    entry: null,
+  });
+  await renderSection([external("/tmp/worktrees/by-hand")]);
+
+  await act(async () => {
+    findLabelled("Remove worktree")?.click();
+  });
+  await act(async () => {
+    findButton("Delete 1 clean workspace")?.click();
+  });
+
+  expect(document.body.textContent).toContain("fatal: cannot remove a locked working tree");
+  expect(document.body.textContent).toContain("0 cleaned · 1 failed");
 });
 
 it("selects several rows and deletes them on the owning host in one operation", async () => {
@@ -268,16 +364,11 @@ it("keeps its receipt on screen while the refetched list drops the rows it delet
 
 it("offers no selection for a worktree no confirmation may delete", async () => {
   await renderSection([
-    entry({
-      id: "external",
-      state: "unmanaged",
-      provenance: "external_worktree",
-      blocker: "unmanaged_worktree",
-    }),
+    entry({ id: "writing", blocker: "writer_alive" }),
     entry({ id: "unreconciled", state: "unmanaged", provenance: "otomat_unreconciled" }),
   ]);
 
-  expect(findLabelled("Select otomat/run/external")).toBeUndefined();
+  expect(findLabelled("Select otomat/run/writing")).toBeUndefined();
   expect(findLabelled("Select otomat/run/unreconciled")).toBeDefined();
 });
 
@@ -293,27 +384,26 @@ it("narrows on a search over the branch, and says so when nothing is left", asyn
   expect(document.body.textContent).toContain("No workspace on Local matches these filters");
 });
 
-it("reports exactly what a reconciliation did", async () => {
+it("reports exactly what a refresh did, and never a deletion", async () => {
   const report: WorkspaceReconcileReport = {
     pull_requests_refreshed: 2,
     pruned: 1,
     converged: 1,
-    cleaned: 1,
-    skipped: 0,
-    failed: 0,
     inventory: inventory([]),
   };
   reconcileWorkspaces.mockResolvedValue(report);
   await renderSection([entry({ id: "a" })]);
 
   await act(async () => {
-    findButton("Reconcile worktrees")?.click();
+    findButton("Refresh worktrees")?.click();
   });
 
   expect(reconcileWorkspaces).toHaveBeenCalledTimes(1);
+  expect(cleanupWorkspace).not.toHaveBeenCalled();
   await vi.waitFor(() => {
-    expect(document.body.textContent).toContain("2 pull request(s) re-read");
-    expect(document.body.textContent).toContain("1 cleaned");
+    expect(document.body.textContent).toContain(
+      "2 pull requests re-read · 1 gone registration pruned · 1 record converged",
+    );
   });
 });
 
@@ -356,9 +446,6 @@ it("names the host that holds the project, and reconciles on that host alone", a
     pull_requests_refreshed: 0,
     pruned: 0,
     converged: 0,
-    cleaned: 0,
-    skipped: 0,
-    failed: 0,
     inventory: inventory([]),
   });
   await renderSection([entry({ id: "a" })]);
@@ -366,7 +453,7 @@ it("names the host that holds the project, and reconciles on that host alone", a
   const host = document.body.querySelector("section");
   expect(host?.querySelector("span")?.textContent).toBe("otomat-vps");
   await act(async () => {
-    findButton("Reconcile worktrees")?.click();
+    findButton("Refresh worktrees")?.click();
   });
 
   expect(reconcileWorkspaces).toHaveBeenCalledTimes(1);
@@ -399,13 +486,28 @@ it("deletes on the host that holds the project rather than through the bridge", 
   expect(document.body.textContent).toContain("0 cleaned · 1 failed");
 });
 
-it("keeps host-wide deletion consequences visible when this project's auto-delete is off", async () => {
-  workspaceSettings.mockResolvedValue({ auto_delete_after_merge: false });
-  await renderSection([entry({ id: "a" })]);
-  const described = findButton("Reconcile worktrees")?.getAttribute("aria-describedby");
-  expect(document.getElementById(described ?? "")?.textContent).toContain(
-    "may be removed where auto-delete is on",
-  );
-  expect(document.body.textContent).not.toContain("Reads only");
-  expect(reconcileWorkspaces).not.toHaveBeenCalled();
+it("removes an unmanaged worktree on the host that holds the project rather than through the bridge", async () => {
+  const bridge = fakeDesktopBridge({
+    executionHostId: "remote",
+    executionHostSshAlias: "otomat-vps",
+  });
+  const viaBridge = vi.spyOn(bridge.executionHost, "cleanupWorkspace");
+  window.otomat = bridge;
+  cleanupWorkspace.mockResolvedValue({
+    outcome: "cleaned",
+    blocker: null,
+    message: "Removed.",
+    entry: null,
+  });
+  await renderSection([external("/srv/by-hand")]);
+
+  await act(async () => {
+    findLabelled("Remove worktree")?.click();
+  });
+  await act(async () => {
+    findButton("Delete 1 clean workspace")?.click();
+  });
+
+  expect(cleanupWorkspace).toHaveBeenCalledWith("/srv/by-hand", false);
+  expect(viaBridge).not.toHaveBeenCalled();
 });

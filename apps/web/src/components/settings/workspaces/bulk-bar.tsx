@@ -32,32 +32,20 @@ export function WorkspaceBulkBar({ rows, selection, onSelectionChange }: Workspa
               ? `${plural(selected.length, "workspace")} selected`
               : mergedSentence(merged.length)}
           </p>
-          {selected.length === 0 ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                onSelectionChange(Object.fromEntries(merged.map((row) => [row.id, true])))
-              }
-            >
-              Select the {merged.length} safe to delete
+          {selected.length > 0 ? (
+            <Button variant="ghost" size="sm" onClick={() => onSelectionChange({})}>
+              Clear
             </Button>
-          ) : (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => onSelectionChange({})}>
-                Clear
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-                <Icon name="trash-2" aria-hidden />
-                Clean up {selected.length}
-              </Button>
-            </>
-          )}
+          ) : null}
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+            <Icon name="trash-2" aria-hidden />
+            {selected.length > 0 ? `Clean up ${selected.length}` : "Clean up merged worktrees"}
+          </Button>
         </div>
       )}
       {/* Outside the bar: a successful run empties the selection, and the receipt must outlive that. */}
       <WorkspaceCleanupDialog
-        rows={selected}
+        rows={selected.length > 0 ? selected : merged}
         open={open}
         onOpenChange={setOpen}
         onCleaned={() => onSelectionChange({})}

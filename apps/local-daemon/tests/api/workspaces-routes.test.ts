@@ -73,9 +73,6 @@ it("reports what a reconciliation actually did", async () => {
     pull_requests_refreshed: 2,
     pruned: 1,
     converged: 1,
-    cleaned: 1,
-    skipped: 0,
-    failed: 0,
     inventory: INVENTORY,
   };
   const app = makeApiApp(t, {
@@ -85,7 +82,7 @@ it("reports what a reconciliation actually did", async () => {
   const res = await request(app, "/api/workspaces/reconcile", { method: "POST" });
 
   expect(res.status).toBe(200);
-  expect(await json<WorkspaceReconcileReport>(res)).toMatchObject({ cleaned: 1, pruned: 1 });
+  expect(await json<WorkspaceReconcileReport>(res)).toMatchObject({ converged: 1, pruned: 1 });
 });
 
 it("returns the daemon's refusal verbatim rather than a fake success", async () => {

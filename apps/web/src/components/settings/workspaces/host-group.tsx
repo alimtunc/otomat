@@ -2,32 +2,22 @@ import type { ExecutionHostDescriptor, RemoteHostStatus, WorkspaceInventory } fr
 import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { useWorkspaceSettings } from "@web/api/workspaces/queries";
 import { HostRow } from "@web/components/settings/execution-host/host-row";
 import { WorkspaceBulkBar } from "@web/components/settings/workspaces/bulk-bar";
-import { ReconcileWorkspacesButton } from "@web/components/settings/workspaces/reconcile-button";
-import { WorkspaceReconciliationNote } from "@web/components/settings/workspaces/reconciliation-note";
+import { RefreshWorkspacesButton } from "@web/components/settings/workspaces/refresh-button";
 import { WorkspacesTable } from "@web/components/settings/workspaces/table";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { filterWorkspaces, type WorkspacesFilter } from "@web/lib/workspace/filter";
 import { useId, useState } from "react";
 
 export interface WorkspaceHostGroupProps {
-  projectId: string;
   host: ExecutionHostDescriptor;
   status: RemoteHostStatus | null;
   inventory: UseQueryResult<WorkspaceInventory>;
   filter: WorkspacesFilter;
 }
 
-export function WorkspaceHostGroup({
-  projectId,
-  host,
-  status,
-  inventory,
-  filter,
-}: WorkspaceHostGroupProps) {
-  const settings = useWorkspaceSettings(projectId);
+export function WorkspaceHostGroup({ host, status, inventory, filter }: WorkspaceHostGroupProps) {
   const descriptionId = useId();
   // Selection lives above the row list: an emptied or filtered list unmounts the table under it.
   const [selection, setSelection] = useState<RowSelectionState>({});
@@ -40,12 +30,12 @@ export function WorkspaceHostGroup({
         host={host}
         active
         status={status}
-        action={<ReconcileWorkspacesButton hostId={host.id} descriptionId={descriptionId} />}
+        action={<RefreshWorkspacesButton hostId={host.id} descriptionId={descriptionId} />}
       />
-      <WorkspaceReconciliationNote
-        id={descriptionId}
-        autoDelete={settings.data?.auto_delete_after_merge ?? null}
-      />
+      <p id={descriptionId} className="px-4 py-2 text-xs text-text-secondary">
+        Refresh re-reads <code>git worktree list</code> and this host’s pull requests, then updates
+        the states shown here.
+      </p>
       <WorkspaceBulkBar rows={rows} selection={selection} onSelectionChange={setSelection} />
       <QueryBoundary
         query={inventory}

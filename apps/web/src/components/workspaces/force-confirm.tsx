@@ -29,8 +29,11 @@ export function ForceConfirm({
       />
       <span id={sentenceId}>
         {loss === null
-          ? `Delete this worktree git still refuses to remove on its own.`
+          ? "Delete this worktree git still refuses to remove on its own."
           : `Discard ${loss} in this worktree. This cannot be undone.`}
+        <span className="mt-1 block break-all font-mono text-text-secondary">
+          {target.branch ?? "detached"} · {target.path}
+        </span>
       </span>
     </div>
   );

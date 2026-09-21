@@ -16,7 +16,6 @@ const WORKSPACE_CLEANUP_BLOCKERS = [
   "worktree_dirty",
   "writer_alive",
   "worktree_unreadable",
-  "unmanaged_worktree",
 ] as const;
 const workspaceCleanupBlockerSchema = z.enum(WORKSPACE_CLEANUP_BLOCKERS);
 export type WorkspaceCleanupBlocker = (typeof WORKSPACE_CLEANUP_BLOCKERS)[number];
@@ -89,9 +88,6 @@ export const workspaceReconcileReportSchema = z.object({
   pull_requests_refreshed: z.number().int().nonnegative(),
   pruned: z.number().int().nonnegative(),
   converged: z.number().int().nonnegative(),
-  cleaned: z.number().int().nonnegative(),
-  skipped: z.number().int().nonnegative(),
-  failed: z.number().int().nonnegative(),
   inventory: workspaceInventorySchema,
 });
 export type WorkspaceReconcileReport = z.infer<typeof workspaceReconcileReportSchema>;

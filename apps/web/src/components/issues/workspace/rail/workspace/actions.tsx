@@ -22,7 +22,7 @@ export function WorkspaceActions({ entry }: { entry: WorkspaceEntry }) {
         onClick={() => reconcile.mutate(host.id)}
       >
         <Icon name="refresh-cw" aria-hidden />
-        Reconcile
+        Refresh
       </Button>
       {cleanable ? (
         <>

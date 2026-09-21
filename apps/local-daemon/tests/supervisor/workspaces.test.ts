@@ -2,11 +2,11 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  getRun,
   insertProject,
   insertPullRequest,
   markRunAbandoned,
   updateIssueStatus,
-  writeAutoDeleteWorkspaces,
   type Db,
 } from "@otomat/db";
 import type { WorkspaceEntry } from "@otomat/domain";
@@ -93,8 +93,8 @@ function mergePullRequest(db: Db = fix.db, headRef = BRANCH): void {
   });
 }
 
-function entryFor(path: string): WorkspaceEntry {
-  const found = listWorkspaces(context).entries.find((entry) => entry.path === path);
+function entryFor(path: string, from: WorkspaceContext = context): WorkspaceEntry {
+  const found = listWorkspaces(from).entries.find((entry) => entry.path === path);
   if (!found) throw new Error(`no workspace entry for ${path}`);
   return found;
 }
@@ -126,13 +126,27 @@ function registeredPaths(): string[] {
   return listWorktrees(fix.repo.root).map((entry) => entry.path);
 }
 
-it("clears a merged cycle whose worktree is clean, and leaves no git registration behind", async () => {
+it("refreshes a merged, clean, auto-deletable workspace without deleting it", async () => {
   mergePullRequest();
   expect(entryFor(worktreePath)).toMatchObject({ state: "cleanup_required", blocker: null });
 
   const report = await reconcileWorkspaces(context);
 
-  expect(report.cleaned).toBe(1);
+  expect(report).toMatchObject({ pruned: 0, converged: 0 });
+  expect(existsSync(worktreePath)).toBe(true);
+  expect(registeredPaths()).toContain(worktreePath);
+  expect(report.inventory.entries.find((entry) => entry.path === worktreePath)).toMatchObject({
+    state: "cleanup_required",
+    blocker: null,
+  });
+});
+
+it("clears a merged cycle by hand, and leaves no git registration behind", () => {
+  mergePullRequest();
+
+  const result = cleanupWorkspace(context, entryFor(worktreePath));
+
+  expect(result.outcome).toBe("cleaned");
   expect(existsSync(worktreePath)).toBe(false);
   expect(registeredPaths()).not.toContain(worktreePath);
   expect(worktrees.list({ status: "removed" }).map((row) => row.id)).toContain(worktreeId);
@@ -152,55 +166,87 @@ it("prunes a directory deleted by hand and converges the record it left behind",
   expect((await reconcileWorkspaces(context)).converged).toBe(0);
 });
 
-it("keeps a dirty worktree, names why, and cleans it once the change is gone", async () => {
+it("keeps a dirty worktree, names why, and cleans it by hand once the change is gone", () => {
   mergePullRequest();
   writeFileSync(join(worktreePath, "scratch.txt"), "work in progress\n");
 
-  const blocked = await reconcileWorkspaces(context);
-
-  expect(blocked.cleaned).toBe(0);
-  expect(blocked.skipped).toBe(1);
   expect(entryFor(worktreePath)).toMatchObject({
     state: "cleanup_required",
     blocker: "worktree_dirty",
     uncommitted_files: 1,
   });
+  expect(cleanupWorkspace(context, entryFor(worktreePath)).outcome).toBe("skipped");
 
   rmSync(join(worktreePath, "scratch.txt"));
 
-  expect((await reconcileWorkspaces(context)).cleaned).toBe(1);
+  expect(cleanupWorkspace(context, entryFor(worktreePath)).outcome).toBe("cleaned");
   expect(existsSync(worktreePath)).toBe(false);
 });
 
-it("keeps a workspace whose run still has a live writer", async () => {
+it("keeps a workspace whose run still has a live writer", () => {
   mergePullRequest();
   alive = [RUN_ID];
 
-  const report = await reconcileWorkspaces(context);
-
-  expect(report.cleaned).toBe(0);
   expect(entryFor(worktreePath).blocker).toBe("writer_alive");
+  expect(cleanupWorkspace(context, entryFor(worktreePath), { force: true }).outcome).toBe(
+    "skipped",
+  );
   expect(existsSync(worktreePath)).toBe(true);
 });
 
-it("leaves a worktree created outside Otomat unmanaged and untouched", async () => {
+it("leaves a worktree created outside Otomat unmanaged, and removes it only by hand", async () => {
   const external = join(fix.dataDir, "by-hand");
   fix.repo.git("worktree", "add", "-b", "by-hand", external, "HEAD");
-  mergePullRequest();
 
   await reconcileWorkspaces(context);
 
+  expect(existsSync(external)).toBe(true);
   expect(entryFor(external)).toMatchObject({
     state: "unmanaged",
     provenance: "external_worktree",
-    blocker: "unmanaged_worktree",
+    blocker: null,
     issue_id: null,
+    run_id: null,
   });
-  expect(cleanupWorkspace(context, entryFor(external), { force: true })).toMatchObject({
+
+  const result = cleanupWorkspace(context, entryFor(external));
+
+  expect(result).toMatchObject({ outcome: "cleaned", entry: { state: "removed" } });
+  expect(existsSync(external)).toBe(false);
+  expect(registeredPaths()).not.toContain(external);
+  expect(fix.repo.git("branch", "--list", "by-hand")).toContain("by-hand");
+  expect(getRun(fix.db, RUN_ID)?.status).toBe("completed");
+  expect(existsSync(runEventsPath(fix.dataDir, RUN_ID))).toBe(false);
+});
+
+it("refuses a dirty external worktree until forced, then discards its work and nothing else", () => {
+  const external = join(fix.dataDir, "by-hand");
+  fix.repo.git("worktree", "add", "-b", "by-hand", external, "HEAD");
+  writeFileSync(join(external, "scratch.txt"), "work in progress\n");
+
+  expect(entryFor(external)).toMatchObject({ state: "unmanaged", blocker: "worktree_dirty" });
+  expect(cleanupWorkspace(context, entryFor(external))).toMatchObject({
     outcome: "skipped",
-    blocker: "unmanaged_worktree",
+    blocker: "worktree_dirty",
   });
   expect(existsSync(external)).toBe(true);
+
+  expect(cleanupWorkspace(context, entryFor(external), { force: true }).outcome).toBe("cleaned");
+  expect(existsSync(external)).toBe(false);
+  expect(fix.repo.git("branch", "--list", "by-hand")).toContain("by-hand");
+});
+
+it("reports git's own refusal of an external worktree instead of a deletion it never made", () => {
+  const external = join(fix.dataDir, "by-hand");
+  fix.repo.git("worktree", "add", "-b", "by-hand", external, "HEAD");
+  fix.repo.git("worktree", "lock", external);
+
+  const result = cleanupWorkspace(context, entryFor(external), { force: true });
+
+  expect(result).toMatchObject({ outcome: "failed", blocker: null });
+  expect(result.message).toContain("locked");
+  expect(existsSync(external)).toBe(true);
+  expect(registeredPaths()).toContain(external);
 });
 
 it("refuses to attach a worktree that only looks like one of Otomat's", async () => {
@@ -224,22 +270,6 @@ it("refuses to attach a worktree that only looks like one of Otomat's", async ()
   expect(fix.repo.git("branch", "--list", "otomat/run/impostor")).toContain("otomat/run/impostor");
 });
 
-it("keeps the workspace when the project turned automatic deletion off, and still cleans it by hand", async () => {
-  mergePullRequest();
-  writeAutoDeleteWorkspaces(fix.db, "p1", false);
-
-  const report = await reconcileWorkspaces(context);
-
-  expect(report.cleaned).toBe(0);
-  expect(report.skipped).toBe(1);
-  expect(entryFor(worktreePath)).toMatchObject({ state: "cleanup_required", blocker: null });
-
-  const result = cleanupWorkspace(context, entryFor(worktreePath));
-
-  expect(result.outcome).toBe("cleaned");
-  expect(existsSync(worktreePath)).toBe(false);
-});
-
 it("refuses a targeted cleanup while a blocker stands, and answers null for an unknown workspace", () => {
   writeFileSync(join(worktreePath, "scratch.txt"), "work in progress\n");
 
@@ -251,9 +281,9 @@ it("refuses a targeted cleanup while a blocker stands, and answers null for an u
 });
 
 it("deletes nothing on its own while no merge stands for the branch, and still deletes it by hand", async () => {
-  const report = await reconcileWorkspaces(context);
+  await reconcileWorkspaces(context);
 
-  expect(report).toMatchObject({ cleaned: 0, skipped: 1 });
+  expect(existsSync(worktreePath)).toBe(true);
   expect(entryFor(worktreePath)).toMatchObject({ state: "cleanup_required", blocker: null });
   expect(cleanupWorkspace(context, entryFor(worktreePath)).outcome).toBe("cleaned");
   expect(existsSync(worktreePath)).toBe(false);
@@ -286,7 +316,7 @@ it("releases a canceled issue's worktree without deleting the work still in it",
   updateIssueStatus(fix.db, "i1", "canceled");
 
   expect(entryFor(path)).toMatchObject({ state: "cleanup_required", blocker: "worktree_dirty" });
-  expect((await reconcileWorkspaces(context)).cleaned).toBe(0);
+  await reconcileWorkspaces(context);
   expect(cleanupWorkspace(context, entryFor(path))).toMatchObject({
     outcome: "skipped",
     blocker: "worktree_dirty",
@@ -299,7 +329,7 @@ it("closes the cycle on an abandon and leaves its worktree for an explicit delet
   markRunAbandoned(fix.db, OPEN_RUN_ID, new Date().toISOString());
 
   expect(entryFor(path)).toMatchObject({ state: "cleanup_required", blocker: null });
-  expect((await reconcileWorkspaces(context)).cleaned).toBe(0);
+  await reconcileWorkspaces(context);
   expect(existsSync(path)).toBe(true);
   expect(cleanupWorkspace(context, entryFor(path)).outcome).toBe("cleaned");
 });
@@ -331,13 +361,14 @@ it("answers the same after a restart, and the retry that follows still cleans", 
 
   const restarted = bootContext();
 
-  expect(
-    listWorkspaces(restarted).entries.find((entry) => entry.path === worktreePath),
-  ).toMatchObject({ state: "cleanup_required", blocker: "worktree_dirty" });
+  expect(entryFor(worktreePath, restarted)).toMatchObject({
+    state: "cleanup_required",
+    blocker: "worktree_dirty",
+  });
 
   rmSync(join(worktreePath, "scratch.txt"));
 
-  expect((await reconcileWorkspaces(restarted)).cleaned).toBe(1);
+  expect(cleanupWorkspace(restarted, entryFor(worktreePath, restarted)).outcome).toBe("cleaned");
   expect(existsSync(worktreePath)).toBe(false);
 });
 
@@ -383,7 +414,7 @@ it("refuses a directory git no longer registers rather than reporting a deletion
   );
 
   expect(result.outcome).toBe("skipped");
-  expect(result.message).toContain("reconcile before deleting");
+  expect(result.message).toContain("refresh before deleting");
   expect(existsSync(worktreePath)).toBe(true);
 });
 
@@ -405,7 +436,7 @@ it("converges a record whose directory is gone instead of asking git to remove i
   expect(worktrees.list({ status: "removed" }).map((row) => row.id)).toContain(worktreeId);
 });
 
-it("refuses every path outside the worktrees root, whatever the entry claims", () => {
+it("refuses a recorded worktree whose path is outside the worktrees root", () => {
   const outside = join(fix.dataDir, "elsewhere");
   fix.repo.git("worktree", "add", "-b", "elsewhere", outside, "HEAD");
 
@@ -425,6 +456,7 @@ it("reports each target of a batch on its own, so one refusal never hides the re
   writeFileSync(join(worktreePath, "scratch.txt"), "work in progress\n");
   const external = join(fix.dataDir, "by-hand");
   fix.repo.git("worktree", "add", "-b", "by-hand", external, "HEAD");
+  writeFileSync(join(external, "scratch.txt"), "work in progress\n");
 
   const outcomes = [worktreePath, openPath, external].map(
     (path) => cleanupWorkspace(context, entryFor(path)).outcome,

@@ -18,16 +18,13 @@ it("splits a selection into what deletes, what needs a confirmation and what nev
     row("dirty", { blocker: "worktree_dirty", uncommitted_files: 1 }),
     row("gone", { state: "stale", present: false }),
     row("busy", { state: "active", blocker: "cycle_open" }),
-    row("external", {
-      state: "unmanaged",
-      provenance: "external_worktree",
-      blocker: "unmanaged_worktree",
-    }),
+    row("external", { state: "unmanaged", provenance: "external_worktree" }),
+    row("writing", { blocker: "writer_alive" }),
   ]);
 
-  expect(targets.ready.map((target) => target.id)).toEqual(["ready"]);
+  expect(targets.ready.map((target) => target.id)).toEqual(["ready", "external"]);
   expect(targets.forced.map((target) => target.id)).toEqual(["dirty", "gone"]);
-  expect(targets.refused.map((target) => target.id)).toEqual(["busy", "external"]);
+  expect(targets.refused.map((target) => target.id)).toEqual(["busy", "writing"]);
 });
 
 it("names the loss a force would cause, and says nothing when there is none", () => {
