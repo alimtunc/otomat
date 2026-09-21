@@ -21,6 +21,7 @@ function routedElement(node: ReactNode): ReactNode {
       component: () => null,
     }),
     createRoute({ getParentRoute: () => rootRoute, path: "/runs/$runId", component: () => null }),
+    createRoute({ getParentRoute: () => rootRoute, path: "/conversations", component: () => null }),
     createRoute({
       getParentRoute: () => rootRoute,
       path: "/runs/$runId/pr",

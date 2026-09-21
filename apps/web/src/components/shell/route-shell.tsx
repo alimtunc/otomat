@@ -166,6 +166,7 @@ export function RouteShell({
           hasLiveRun={shell.hasLiveRun}
           reviewCount={shell.reviewCount}
           inboxCount={shell.inboxCount}
+          conversationCount={shell.conversationCount}
         />
       }
       rightPanel={rightPanel}

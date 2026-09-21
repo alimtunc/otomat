@@ -1,6 +1,14 @@
 import type { IconName } from "@otomat/ui";
 
-export type ShellSection = "issues" | "runs" | "reviews" | "usage" | "settings" | "inbox" | "files";
+export type ShellSection =
+  | "issues"
+  | "runs"
+  | "reviews"
+  | "usage"
+  | "settings"
+  | "inbox"
+  | "conversations"
+  | "files";
 
 export interface NavItem {
   section: ShellSection;
@@ -18,6 +26,13 @@ export const WORKSPACE_NAV: NavItem[] = [
 ];
 
 export const INBOX_NAV: NavItem = { section: "inbox", icon: "inbox", label: "Inbox", to: "/inbox" };
+
+export const CONVERSATIONS_NAV: NavItem = {
+  section: "conversations",
+  icon: "message-square",
+  label: "Conversations",
+  to: "/conversations",
+};
 
 export const SETTINGS_NAV: NavItem = {
   section: "settings",

@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Otomat — Conversations inbox prototype (OTO-214)</title>
+<style>
+  :root {
+    --background: #0a0b0d; --foreground: #e7e9ee; --sidebar: #0c0d10;
+    --surface-1: #101216; --surface-2: #16181d; --surface-3: #1b1e25; --hover: #15171c;
+    --selected: rgba(240, 100, 90, 0.12); --border: #23262d; --border-subtle: #1b1e24; --border-strong: #30343d;
+    --text-secondary: #9197a3; --text-tertiary: #7a8291;
+    --iris: #f0645a; --iris-hover: #f7776e; --iris-text: #ff9b93; --iris-bg: rgba(240, 100, 90, 0.13);
+    --live: #4da3ff; --success: #3fb950; --warning: #d8a12b; --danger: #f2545b; --stale: #e0833b;
+    --live-bg: rgba(77,163,255,.13); --success-bg: rgba(63,185,80,.12); --warning-bg: rgba(216,161,43,.13);
+    --danger-bg: rgba(242,84,91,.13); --stale-bg: rgba(224,131,59,.13); --neutral-bg: rgba(145,151,163,.12);
+    --prov-claude: #c96442; --prov-codex: #10a37f;
+    --radius-md: 6px; --radius-lg: 8px;
+    --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--background); color: var(--foreground); font: 13px/1.45 var(--font-ui); display: grid; grid-template-columns: 200px 1fr; grid-template-rows: 100%; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  button:focus-visible, a:focus-visible, [tabindex]:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--iris); outline-offset: 1px; }
+  a { color: inherit; text-decoration: none; }
+  .mono { font-family: var(--font-mono); font-size: 11px; }
+  .muted { color: var(--text-secondary); }
+  .faint { color: var(--text-tertiary); }
+
+  nav { background: var(--sidebar); border-right: 1px solid var(--border-subtle); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+  nav .project { display: flex; align-items: center; gap: 8px; padding: 6px 8px 14px; font-weight: 600; }
+  nav .project .mark { width: 18px; height: 18px; border-radius: 5px; background: var(--iris); }
+  nav a { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-md); color: var(--text-secondary); }
+  nav a:hover { background: var(--hover); }
+  nav a[aria-current="page"] { background: var(--surface-2); color: var(--foreground); }
+  nav .badge { margin-left: auto; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 9px; background: var(--iris); color: #16181d; font-size: 11px; font-weight: 600; display: grid; place-items: center; }
+  nav .badge:empty { display: none; }
+  nav .group { margin-top: 10px; padding: 6px 8px 2px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); }
+  nav .hosts { margin-top: auto; padding: 8px; font-size: 11px; color: var(--text-tertiary); display: flex; flex-direction: column; gap: 4px; }
+  nav .hosts span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--success); margin-right: 6px; }
+  nav .hosts span.down::before { background: var(--stale); }
+
+  main { display: grid; grid-template-rows: auto auto 1fr; min-height: 0; }
+  header.shell { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border-subtle); }
+  header.shell h1 { font-size: 14px; margin: 0; font-weight: 600; }
+  header.shell .note { color: var(--text-tertiary); font-size: 12px; }
+  header.shell .actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .btn { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); font-size: 12px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .btn:hover { background: var(--surface-3); }
+  .btn.primary { background: var(--iris); border-color: var(--iris); color: #16181d; font-weight: 600; }
+  .btn.primary:hover { background: var(--iris-hover); }
+  .btn.ghost { background: none; border-color: transparent; color: var(--text-secondary); }
+  .btn.ghost:hover { background: var(--hover); color: var(--foreground); }
+  .btn[aria-pressed="true"] { border-color: var(--iris); color: var(--iris-text); background: var(--iris-bg); }
+  select.btn { appearance: none; color: var(--foreground); padding-right: 22px; background-image: linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%), linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%); background-position: calc(100% - 12px) 11px, calc(100% - 8px) 11px; background-size: 4px 4px; background-repeat: no-repeat; }
+  .sim { display: flex; align-items: center; gap: 6px; padding: 6px 16px; border-bottom: 1px dashed var(--border); background: var(--surface-1); font-size: 12px; flex-wrap: wrap; }
+  .sim .label { color: var(--text-tertiary); margin-right: 4px; }
+  .sim kbd { font: 11px var(--font-mono); padding: 1px 5px; border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--text-secondary); }
+
+  .panes { display: grid; grid-template-columns: minmax(340px, 38%) 1fr; min-height: 0; }
+  .list { border-right: 1px solid var(--border-subtle); display: flex; flex-direction: column; min-height: 0; }
+  .list .scroll { overflow: auto; padding: 4px 6px 12px; }
+  .stale { display: none; align-items: center; gap: 8px; padding: 6px 12px; background: var(--stale-bg); color: var(--stale); font-size: 12px; border-bottom: 1px solid var(--border-subtle); }
+  .stale.on { display: flex; }
+  .stale button { margin-left: auto; color: var(--foreground); text-decoration: underline; }
+  .section { padding: 12px 8px 4px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); display: flex; gap: 6px; }
+  .section:first-child { padding-top: 6px; }
+  .row { display: grid; grid-template-columns: 14px 1fr; gap: 0 6px; padding: 7px 8px; border-radius: var(--radius-md); cursor: pointer; border: 1px solid transparent; }
+  .row:hover { background: var(--hover); }
+  .row[aria-selected="true"] { background: var(--selected); }
+  .row.cursor { border-color: var(--border-strong); }
+  .row .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--iris); margin: 6px 0 0 3px; visibility: hidden; }
+  .row.unread .dot { visibility: visible; }
+  .row .l1, .row .l2 { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .row .l1 .id { color: var(--text-tertiary); }
+  .row .l1 .step { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row.read .l1 .step { color: var(--text-secondary); font-weight: 400; }
+  .row .l1 .time { margin-left: auto; color: var(--text-tertiary); font-size: 11px; white-space: nowrap; }
+  .row .l2 { margin-top: 2px; font-size: 12px; color: var(--text-secondary); }
+  .row .l2 .snippet { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row.unread .l2 .snippet { color: var(--foreground); }
+  .row .l2 .who { color: var(--text-tertiary); font-size: 11px; white-space: nowrap; }
+  .row.stale-host { opacity: .65; }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-radius: 9px; font-size: 11px; white-space: nowrap; background: var(--neutral-bg); color: var(--text-secondary); }
+  .chip.live { background: var(--live-bg); color: var(--live); } .chip.success { background: var(--success-bg); color: var(--success); }
+  .chip.warning { background: var(--warning-bg); color: var(--warning); } .chip.danger { background: var(--danger-bg); color: var(--danger); }
+  .chip.stale { background: var(--stale-bg); color: var(--stale); } .chip.iris { background: var(--iris-bg); color: var(--iris-text); }
+  .chip.live .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--live); animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .chip.live .pulse { animation: none; } }
+  .host { font: 11px var(--font-mono); color: var(--text-tertiary); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; height: 16px; display: inline-flex; align-items: center; }
+  .empty { padding: 40px 16px; text-align: center; color: var(--text-tertiary); }
+
+  .thread { display: grid; grid-template-rows: auto auto 1fr auto; min-height: 0; }
+  .thread .crumbs { display: flex; align-items: center; gap: 8px; padding: 10px 16px 6px; border-bottom: 1px solid var(--border-subtle); }
+  .thread .crumbs .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thread .crumbs .links { margin-left: auto; display: flex; gap: 4px; }
+  .thread .meta { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid var(--border-subtle); font-size: 12px; flex-wrap: wrap; }
+  .thread .meta .step { font-weight: 600; font-size: 13px; }
+  .thread .meta .marks { margin-left: auto; display: flex; gap: 4px; }
+  .messages { overflow: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { display: grid; grid-template-columns: 22px 1fr; gap: 8px; max-width: 760px; }
+  .msg .avatar { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 10px; font-weight: 700; color: #fff; }
+  .msg.user .avatar { background: var(--iris); color: #16181d; } .msg.agent .avatar { background: var(--prov-claude); } .msg.codex .avatar { background: var(--prov-codex); }
+  .msg .head { display: flex; gap: 8px; align-items: baseline; font-size: 11px; color: var(--text-tertiary); margin-bottom: 2px; }
+  .msg .head b { color: var(--text-secondary); font-weight: 600; }
+  .msg .body { white-space: pre-wrap; }
+  .msg.queued .body { color: var(--text-secondary); }
+  .activity, .milestone { color: var(--text-tertiary); font-size: 12px; padding: 2px 0 2px 30px; }
+  .milestone { border-top: 1px dashed var(--border-subtle); padding-top: 8px; }
+  .card { margin-left: 30px; max-width: 730px; border: 1px solid var(--warning); border-radius: var(--radius-lg); background: var(--surface-1); padding: 10px 12px; }
+  .card .q { font-weight: 500; margin-bottom: 4px; } .card .r { color: var(--text-secondary); font-size: 12px; margin-bottom: 8px; }
+  .card .a { display: flex; gap: 6px; }
+  .composer { border-top: 1px solid var(--border-subtle); padding: 8px 16px 12px; display: grid; gap: 6px; }
+  .composer .to { font-size: 12px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; }
+  .composer .to b { color: var(--foreground); font-weight: 500; }
+  .composer .to .why { color: var(--text-tertiary); }
+  .composer textarea { width: 100%; min-height: 56px; resize: vertical; background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-md); color: inherit; font: inherit; padding: 8px 10px; }
+  .composer .send { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
+  .composer .blocked { color: var(--text-secondary); font-size: 12px; display: flex; gap: 8px; align-items: center; }
+  .toast { position: fixed; right: 16px; bottom: 16px; background: var(--surface-3); border: 1px solid var(--border); border-left: 3px solid var(--danger); padding: 8px 12px; border-radius: var(--radius-md); font-size: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; transition: opacity 140ms ease-out; pointer-events: none; }
+  .toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<nav aria-label="Workspace">
+  <div class="project"><span class="mark"></span>Otomat</div>
+  <a href="/issues">▤ Issues</a>
+  <a href="/files">▦ Files</a>
+  <a href="/runs">▲ Runs</a>
+  <a href="/reviews">⑂ Reviews</a>
+  <a href="/usage">▮ Usage</a>
+  <div class="group">Across projects</div>
+  <a href="/conversations" aria-current="page">☰ Conversations <span class="badge" id="badge"></span></a>
+  <a href="/inbox">✉ Inbox <span class="badge">2</span></a>
+  <div class="hosts"><span id="host-local">Local</span><span id="host-vps">vps-543f</span></div>
+</nav>
+
+<main>
+  <header class="shell">
+    <h1>Conversations</h1>
+    <span class="note">Read and answer the step conversations of every project on this host. Demands stay in the Inbox, operations in the Activity Center.</span>
+    <div class="actions">
+      <select class="btn" id="filter-state" aria-label="State filter">
+        <option value="all">All states</option>
+        <option value="active">Active</option>
+        <option value="waiting">Waiting on you</option>
+        <option value="finished">Finished</option>
+      </select>
+      <button class="btn" id="filter-unread" aria-pressed="false">Unread</button>
+      <select class="btn" id="filter-project" aria-label="Project filter"><option value="all">All projects</option></select>
+    </div>
+  </header>
+  <div class="sim" aria-label="Simulation">
+    <span class="label">Simulate</span>
+    <button class="btn ghost" data-sim="reply" title="A non-thinking runtime.message on OTO-209 · Implement">Agent replies · OTO-209 Implement</button>
+    <button class="btn ghost" data-sim="tool" title="runtime.tool_call + thinking on OTO-209 · Implement: the row's verb moves, nothing becomes unread">Tool call · OTO-209 Implement</button>
+    <button class="btn ghost" data-sim="permission" title="runtime.interaction_requested on OTO-214 · Plan + Implement">Permission asked · OTO-214 Plan</button>
+    <button class="btn ghost" data-sim="finish" title="step.lifecycle → succeeded on OTO-209 · Implement">Step finishes · OTO-209 Implement</button>
+    <button class="btn ghost" data-sim="vps" id="sim-vps">Disconnect vps-543f</button>
+    <span class="label" style="margin-left:auto"><kbd>↑</kbd><kbd>↓</kbd> move · <kbd>Enter</kbd> open · <kbd>u</kbd> unread · <kbd>e</kbd> archive</span>
+  </div>
+  <div class="panes">
+    <section class="list" aria-label="Conversations">
+      <div class="stale" id="stale"><span>vps-543f stopped answering · showing what it last reported</span><button type="button" data-sim="vps">Retry</button></div>
+      <div class="scroll" id="rows" role="listbox" aria-label="Threads" tabindex="0"></div>
+    </section>
+    <section class="thread" id="thread"></section>
+  </div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// Fixture times are anchored so persisted marks survive a reload.
+const BASE = Date.parse("2026-09-19T12:00:00Z");
+const LOADED = Date.now();
+const now = () => BASE + (Date.now() - LOADED);
+const nowIso = () => new Date(now()).toISOString();
+const ago = (m) => new Date(BASE - m * 60_000).toISOString();
+const rel = (iso) => {
+  const s = Math.max(0, Math.round((now() - Date.parse(iso)) / 1000));
+  if (s < 60) return "now"; if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`; return `${Math.floor(s / 86400)}d`;
+};
+
+const HOSTS = { local: { label: "Local", up: true }, vps: { label: "vps-543f", up: true } };
+const ISSUES = {
+  "OTO-214": { title: "Concevoir une inbox de conversations pour naviguer entre les runs actives", project: "otomat" },
+  "OTO-201": { title: "Publish the user documentation site", project: "otomat" },
+  "OTO-209": { title: "Restore the issue conversation height and scroll", project: "otomat" },
+  "OTO-203": { title: "Attach images to messages sent to agents", project: "docs-site" },
+};
+const PROJECTS = { otomat: "Otomat", "docs-site": "Docs site" };
+const RUNS = {
+  r1: { issue: "OTO-214", host: "local" },
+  r2: { issue: "OTO-201", host: "vps" },
+  r3: { issue: "OTO-209", host: "vps" },
+  r4: { issue: "OTO-203", host: "local" },
+};
+const CLAUDE = { runtime: "Claude Code", agent: "Implementer", model: "opus", effort: "high", kind: "agent" };
+const CODEX = { runtime: "Codex", agent: "Reviewer", model: "gpt-5-codex", effort: "medium", kind: "codex" };
+const STEPS = [
+  { id: "s1", run: "r1", name: "Plan + Implement", status: "running", participant: CLAUDE, updated_at: ago(4),
+    items: [
+      { kind: "user", at: ago(38), text: "Run /ticket --auto for the attached issue." },
+      { kind: "activity", at: ago(30), text: "12 tools · 4 reasoning" },
+      { kind: "agent", at: ago(4), text: "Recommendation: a dedicated /conversations view, cross-project on the active host, master–detail. The Inbox stays the demand list.\n\nWriting the state model next." },
+    ] },
+  { id: "s2", run: "r2", name: "Implement", status: "succeeded", participant: CLAUDE, updated_at: ago(63),
+    items: [
+      { kind: "agent", at: ago(70), text: "VitePress site scaffolded under apps/docs; internal links are checked at build." },
+      { kind: "milestone", at: ago(63), text: "Step succeeded · 14 files changed" },
+    ] },
+  { id: "s3", run: "r2", name: "Review", status: "awaiting_permission", participant: CODEX, updated_at: ago(2),
+    interaction: { tool: "Bash(pnpm check)", reason: "Run the full gate before reporting." },
+    items: [
+      { kind: "activity", at: ago(9), text: "6 tools · 2 reasoning" },
+      { kind: "agent", at: ago(3), text: "Two findings so far: a dead anchor in guide/review.md and a missing alt text. Running the gate to confirm the build." },
+    ] },
+  { id: "s4", run: "r3", name: "Plan", status: "succeeded", participant: CLAUDE, updated_at: ago(25),
+    items: [
+      { kind: "agent", at: ago(27), text: "Root cause: the sr-only composer status escaped to the initial containing block. Plan: `relative` on the wrapper, one test." },
+      { kind: "milestone", at: ago(25), text: "Step succeeded" },
+    ] },
+  { id: "s5", run: "r3", name: "Implement", status: "running", participant: CLAUDE, updated_at: ago(11), verb: "Working · 3 tools · 1 reasoning",
+    items: [
+      { kind: "user", at: ago(14), text: "Keep the fix to the wrapper; do not touch the thread." },
+      { kind: "activity", at: ago(11), text: "3 tools · 1 reasoning" },
+    ] },
+  { id: "s6", run: "r4", name: "Implement", status: "succeeded", participant: CLAUDE, updated_at: ago(300),
+    items: [ { kind: "agent", at: ago(305), text: "Multipart POST wired; images are sniffed and named by the daemon." }, { kind: "milestone", at: ago(300), text: "Step succeeded" } ] },
+  { id: "s7", run: "r4", name: "Review", status: "succeeded", participant: CODEX, updated_at: ago(180),
+    items: [ { kind: "agent", at: ago(184), text: "No blocking finding. One nit on the refusal copy, fixed in place." }, { kind: "milestone", at: ago(180), text: "Step succeeded · run completed" } ] },
+];
+
+const TONE = { queued: "neutral", starting: "live", running: "live", awaiting_permission: "warning", awaiting_human: "warning", waiting_for_provider: "warning", succeeded: "success", failed: "danger", canceled: "neutral", stale: "stale" };
+const LABEL = { queued: "Queued", starting: "Starting", running: "Running", awaiting_permission: "Awaiting permission", awaiting_human: "Awaiting human", waiting_for_provider: "Waiting on provider", succeeded: "Succeeded", failed: "Failed", canceled: "Canceled", stale: "Stale" };
+const SETTLED = new Set(["succeeded", "failed", "canceled", "stale"]);
+const WAITING = new Set(["awaiting_permission", "awaiting_human", "waiting_for_provider"]);
+
+// Keyed like inbox_marks: the operator's reading is never a step field.
+const MARKS_KEY = "otomat.proto.conversation-marks";
+const marks = JSON.parse(localStorage.getItem(MARKS_KEY) ?? "null") ?? {
+  "conversation:s2": { read: true, archived: false, evidence_updated_at: ago(63) },
+  "conversation:s6": { read: true, archived: false, evidence_updated_at: ago(300) },
+  "conversation:s7": { read: true, archived: false, evidence_updated_at: ago(180) },
+};
+const stepById = (id) => STEPS.find((s) => s.id === id);
+const selectedStep = () => stepById(selection().step);
+const markOf = (step) => {
+  const m = marks[`conversation:${step.id}`];
+  const current = m !== undefined && m.evidence_updated_at >= step.updated_at;
+  return { read: current && m.read, archived: current && m.archived };
+};
+const writeMark = (step, patch) => {
+  if (!HOSTS[RUNS[step.run].host].up) { toast(`Could not update — ${HOSTS[RUNS[step.run].host].label} is not answering.`); return false; }
+  const cur = markOf(step);
+  marks[`conversation:${step.id}`] = { read: patch.read ?? cur.read, archived: patch.archived ?? cur.archived, evidence_updated_at: step.updated_at };
+  localStorage.setItem(MARKS_KEY, JSON.stringify(marks));
+  return true;
+};
+
+const lastLine = (s) => {
+  if (s.interaction) return `Permission: ${s.interaction.tool}`;
+  const queued = s.items.filter((i) => i.kind === "user" && i.queued).length;
+  if (queued > 0) return `${queued} message${queued > 1 ? "s" : ""} queued · delivers on the next turn`;
+  if (s.verb && !SETTLED.has(s.status)) return s.verb;
+  const last = [...s.items].reverse().find((i) => i.kind === "agent" || i.kind === "milestone" || i.kind === "user");
+  return last ? last.text.split("\n")[0] : "No message yet";
+};
+const entries = () => STEPS.map((s) => ({ ...s, ...markOf(s), issue: ISSUES[RUNS[s.run].issue], issueId: RUNS[s.run].issue, host: HOSTS[RUNS[s.run].host], line: lastLine(s) }))
+  .sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+const isActiveRow = (e) => !SETTLED.has(e.status) || !e.read;
+
+const state = { filter: "all", unread: false, project: "all", cursor: null };
+const selection = () => { const p = new URLSearchParams(location.hash.slice(1)); return { run: p.get("run"), step: p.get("step") }; };
+const select = (step) => { history.replaceState(null, "", `#run=${step.run}&step=${step.id}`); onSelect(); };
+const onSelect = () => {
+  const s = selectedStep();
+  if (s && !markOf(s).read && document.visibilityState === "visible") writeMark(s, { read: true });
+  state.cursor = s ? s.id : state.cursor;
+  render();
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (t) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const chip = (status) => `<span class="chip ${TONE[status]}">${status === "running" ? '<span class="pulse"></span>' : ""}${LABEL[status]}</span>`;
+
+const renderRows = () => {
+  const { step: selected } = selection();
+  const all = entries();
+  let list = all.filter((e) => !e.archived);
+  if (state.filter === "active") list = list.filter((e) => !SETTLED.has(e.status));
+  if (state.filter === "waiting") list = list.filter((e) => WAITING.has(e.status));
+  if (state.filter === "finished") list = list.filter((e) => SETTLED.has(e.status));
+  if (state.unread) list = list.filter((e) => !e.read);
+  if (state.project !== "all") list = list.filter((e) => e.issue.project === state.project);
+  const section = (label, rows) => rows.length === 0 ? "" : `<div class="section">${label} <span class="faint">${rows.length}</span></div>` + rows.map((e) => `
+    <div class="row ${e.read ? "read" : "unread"} ${e.host.up ? "" : "stale-host"} ${state.cursor === e.id ? "cursor" : ""}" role="option" id="row-${e.id}" data-id="${e.id}" aria-selected="${selected === e.id}">
+      <span class="dot"></span>
+      <div class="l1"><span class="mono id">${e.issueId}</span><span class="step">${esc(e.name)}</span>${chip(e.status)}<span class="host">${e.host.label}</span><span class="time">${rel(e.updated_at)}</span></div>
+      <span></span>
+      <div class="l2"><span class="snippet">${esc(e.line)}</span><span class="who">${e.participant.runtime} · ${e.participant.model}</span></div>
+    </div>`).join("");
+  const html = section("Active", list.filter(isActiveRow)) + section("Recently finished", list.filter((e) => !isActiveRow(e)));
+  $("rows").innerHTML = html || `<div class="empty">No conversations match. Launch a run from an issue, or clear the filters.</div>`;
+  const cursorRow = $("rows").querySelector(".row.cursor");
+  if (cursorRow) $("rows").setAttribute("aria-activedescendant", cursorRow.id); else $("rows").removeAttribute("aria-activedescendant");
+  $("stale").classList.toggle("on", !HOSTS.vps.up); $("host-vps").classList.toggle("down", !HOSTS.vps.up);
+  $("sim-vps").textContent = HOSTS.vps.up ? "Disconnect vps-543f" : "Reconnect vps-543f";
+  const unread = all.filter((e) => !e.read && !e.archived).length;
+  $("badge").textContent = unread > 0 ? String(unread) : "";
+  document.title = `${unread > 0 ? `(${unread}) ` : ""}Conversations — Otomat prototype`;
+};
+
+const renderThread = () => {
+  const { run, step } = selection();
+  const e = entries().find((x) => x.id === step);
+  if (!e) {
+    $("thread").innerHTML = `<div class="empty" style="grid-row: 1 / -1">${step ? `<b>This thread is not on this host.</b><br>run ${esc(run ?? "?")} · step ${esc(step)}<br><br><a class="btn" href="/runs/${esc(run ?? "")}">Open run</a> <a class="btn ghost" href="#">Back to the list</a>` : "Select a conversation to read it and answer its step."}</div>`;
+    return;
+  }
+  const finished = SETTLED.has(e.status);
+  const offline = !e.host.up;
+  const items = e.items.map((i) => {
+    if (i.kind === "activity") return `<div class="activity">${esc(i.text)}</div>`;
+    if (i.kind === "milestone") return `<div class="milestone">${esc(i.text)} · ${rel(i.at)}</div>`;
+    const who = i.kind === "user" ? "You" : e.participant.runtime;
+    const cls = i.kind === "user" ? "user" : e.participant.kind;
+    return `<div class="msg ${cls} ${i.queued ? "queued" : ""}"><span class="avatar">${who[0]}</span><div><div class="head"><b>${who}</b><span>${rel(i.at)}</span>${i.queued ? '<span class="chip iris">Queued</span>' : ""}</div><div class="body">${esc(i.text)}</div></div></div>`;
+  }).join("");
+  const card = e.interaction ? `<div class="card"><div class="q">${e.participant.runtime} asks to run <span class="mono">${esc(e.interaction.tool)}</span></div><div class="r">${esc(e.interaction.reason)}</div><div class="a"><button class="btn primary" data-answer="allow">Allow</button><button class="btn" data-answer="deny">Deny</button></div></div>` : "";
+  const composer = offline
+    ? `<div class="blocked">Daemon offline — reconnect to send a message.</div>`
+    : finished
+      ? `<div class="blocked">This step is finished and its participant cannot receive another message. Add a follow-up step with a user profile to continue. <a class="btn" href="/runs/${e.run}?step=${e.id}">Open run</a></div>`
+      : `<div class="to">To: <b>${esc(e.name)}</b> · ${e.participant.agent} · ${e.participant.runtime} (${e.participant.model}) <span class="why">${e.status === "queued" ? "· queued until the step runs" : "· delivered at the next safe boundary"}</span></div>
+         <textarea id="draft" placeholder="Message this step…" aria-label="Message"></textarea>
+         <div class="send"><span class="faint">⌘↩ to send</span><button class="btn primary" id="send">Send</button></div>`;
+  $("thread").innerHTML = `
+    <div class="crumbs"><span class="mono id">${e.issueId}</span><span class="title">${esc(e.issue.title)}</span><span class="faint">· ${PROJECTS[e.issue.project]}</span>
+      <div class="links"><a class="btn ghost" href="/issues/${e.issueId}?run=${e.run}&step=${e.id}">Open issue</a><a class="btn ghost" href="/runs/${e.run}?step=${e.id}">Open run</a></div></div>
+    <div class="meta"><span class="step">${esc(e.name)}</span>${chip(e.status)}<span class="muted">${e.participant.agent} · ${e.participant.runtime}</span><span class="muted">${e.participant.model} · effort ${e.participant.effort}</span><span class="host">${e.host.label}</span>${offline ? '<span class="chip stale">stale</span>' : ""}
+      <div class="marks"><button class="btn ghost" data-mark="read">${e.read ? "Mark unread" : "Mark read"}</button><button class="btn ghost" data-mark="archive">${e.archived ? "Restore" : "Archive"}</button>${!finished && !offline ? '<button class="btn ghost">Stop step</button>' : ""}</div></div>
+    <div class="messages" id="messages">${items}${card}</div>
+    <div class="composer">${composer}</div>`;
+  $("messages").scrollTop = $("messages").scrollHeight;
+};
+
+const render = () => { renderRows(); renderThread(); };
+
+const speak = (s, item) => { s.items.push(item); s.updated_at = nowIso(); afterEvidence(s); };
+const afterEvidence = (s) => {
+  if (selectedStep() === s && document.visibilityState === "visible") writeMark(s, { read: true });
+  render();
+};
+const SIM = {
+  reply: () => { const s = stepById("s5"); for (const i of s.items) delete i.queued; speak(s, { kind: "agent", at: nowIso(), text: "Wrapper gets `relative`; the sr-only status now stays inside the pane. Running the web tests." }); },
+  tool: () => { const s = stepById("s5"); s.tools = (s.tools ?? 3) + 1; s.verb = `Working · ${s.tools} tools · 2 reasoning`; s.items.push({ kind: "activity", at: nowIso(), text: "1 tool · 1 reasoning" }); render(); },
+  permission: () => { const s = stepById("s1"); if (s.interaction) return; s.status = "awaiting_permission"; s.interaction = { tool: "Bash(pnpm check)", reason: "Verify the final diff before handoff." }; s.updated_at = nowIso(); afterEvidence(s); },
+  finish: () => { const s = stepById("s5"); if (SETTLED.has(s.status)) return; s.status = "succeeded"; speak(s, { kind: "milestone", at: nowIso(), text: "Step succeeded · 2 files changed" }); },
+  vps: () => { HOSTS.vps.up = !HOSTS.vps.up; render(); },
+};
+const answer = (s, outcome) => {
+  s.interaction = null; s.status = outcome === "allow" ? "running" : "awaiting_human";
+  s.items.push({ kind: "milestone", at: nowIso(), text: outcome === "allow" ? "Permission granted · Bash(pnpm check)" : "Permission refused · the agent is asked how to proceed" });
+  render();
+};
+const send = () => {
+  const s = selectedStep(); const text = $("draft").value.trim();
+  if (!s || text === "") return;
+  s.items.push({ kind: "user", at: nowIso(), text, queued: true });
+  render();
+};
+let toastTimer;
+const toast = (text) => { $("toast").textContent = text; $("toast").classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").classList.remove("on"), 2400); };
+
+$("rows").addEventListener("click", (ev) => { const row = ev.target.closest(".row"); if (row) select(stepById(row.dataset.id)); });
+document.addEventListener("click", (ev) => {
+  if (ev.target.closest('a[href^="/"]')) ev.preventDefault();
+  const sim = ev.target.closest("[data-sim]"); if (sim) SIM[sim.dataset.sim]();
+  const a = ev.target.closest("[data-answer]"); if (a) answer(selectedStep(), a.dataset.answer);
+  const m = ev.target.closest("[data-mark]");
+  if (m) { const s = selectedStep(); const cur = markOf(s); if (writeMark(s, m.dataset.mark === "read" ? { read: !cur.read } : { archived: !cur.archived })) render(); }
+  if (ev.target.id === "send") send();
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.target.id === "draft") { if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) send(); if (ev.key === "Escape") ev.target.blur(); return; }
+  if ((ev.key === "Enter" || ev.key === " ") && ev.target.closest("button, a, select")) return;
+  const visible = [...document.querySelectorAll(".row")].map((r) => r.dataset.id);
+  const at = visible.indexOf(state.cursor);
+  if (ev.key === "ArrowDown") { state.cursor = visible[Math.min(visible.length - 1, at + 1)] ?? state.cursor; renderRows(); ev.preventDefault(); }
+  else if (ev.key === "ArrowUp") { state.cursor = visible[Math.max(0, at - 1)] ?? state.cursor; renderRows(); ev.preventDefault(); }
+  else if (ev.key === "Enter" && state.cursor) select(stepById(state.cursor));
+  else if (ev.key === "u" && state.cursor) { const s = stepById(state.cursor); if (writeMark(s, { read: !markOf(s).read })) render(); }
+  else if (ev.key === "e" && state.cursor) { const s = stepById(state.cursor); if (writeMark(s, { archived: true })) render(); }
+});
+$("filter-state").addEventListener("change", (ev) => { state.filter = ev.target.value; render(); });
+$("filter-unread").addEventListener("click", (ev) => { state.unread = !state.unread; ev.currentTarget.setAttribute("aria-pressed", String(state.unread)); render(); });
+for (const [id, name] of Object.entries(PROJECTS)) $("filter-project").insertAdjacentHTML("beforeend", `<option value="${id}">${name}</option>`);
+$("filter-project").addEventListener("change", (ev) => { state.project = ev.target.value; render(); });
+window.addEventListener("hashchange", onSelect);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") onSelect(); });
+setInterval(renderRows, 30_000);
+onSelect();
+</script>
+</body>
+</html>

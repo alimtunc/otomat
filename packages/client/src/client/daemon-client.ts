@@ -1,6 +1,7 @@
 import { createActivityClient } from "./activity.js";
 import { createAgentsClient } from "./agents.js";
 import type { DaemonClientConfig } from "./config.js";
+import { createConversationsClient } from "./conversations.js";
 import {
   subscribeRunEvents,
   type RunEventsHandlers,
@@ -29,6 +30,7 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     ...createGitHubClient(config),
     ...createLinearClient(config),
     ...createAgentsClient(config),
+    ...createConversationsClient(config),
     ...createInboxClient(config),
     ...createIssuesClient(config),
     ...createRunsClient(config),

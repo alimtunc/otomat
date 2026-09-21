@@ -10,6 +10,7 @@
 export * from "./activity.js";
 export * from "./agent/index.js";
 export * from "./compete-groups.js";
+export * from "./conversations.js";
 export * from "./daemon-settings.js";
 export * from "./event-streams.js";
 export * from "./instants.js";

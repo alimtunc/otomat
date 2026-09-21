@@ -14,7 +14,7 @@ apps/
   web/                 # React + Vite cockpit
   local-daemon/        # Node local process — hosts the backend as internal modules
     src/
-      api/             # HTTP routes + SSE handlers (run ledger, activity snapshot)
+      api/             # HTTP routes + SSE handlers (run ledger, activity and conversations snapshots)
       context/         # declarative agent context: freeze a selection, build a session dossier, render it
       events/          # event ledger + stream-to-file tailer
       git/             # worktree/branch lifecycle + diff
@@ -1514,6 +1514,44 @@ surface and unlinked in the other. Resolving is display only: it writes nothing,
 and the reviewer still passes the row's own `issue_id` — the attachment alone —
 as the workspace the AI fix may act on.
 
+## The Conversations Inbox
+
+`/conversations` is the surface where the operator reads and answers the step
+threads of every project on the active host. It is a projection over rows that
+already exist — `step_runs`, `agent_sessions`, `run_contributions`,
+`run_interactions` and the `runtime_events` ledger — and it never merges them: one
+entry per step (`conversation:<step_run_id>`), and the thread pane composes the
+cockpit's own `ConversationHeader` and `StepConversationThread` under a
+`RunEventsProvider` for the selected run, so a message posted there targets the
+selected step exactly as it would in the cockpit.
+
+`repositories/conversations.ts` lists the steps in the Activity Center's evidence
+scope that hold a session or a message — a queued step nobody wrote to has no
+thread yet, and a withdrawn one never will — and `conversation-facts.ts` attaches
+the facts the row is built from: the newest non-thinking `runtime.message` per
+step, the pending interaction, the queued and failed contributions, and the
+latest turn's frozen configuration (the plan node's, for a step that has not
+started). `projectConversations` then derives one `updated_at` per thread from
+the moves that are worth reading — an agent answer, a step entering
+`awaiting_permission`, `awaiting_human`, `waiting_for_provider`, `succeeded`,
+`failed` or `stale`, a pending question, a failed delivery — and from nothing
+else: tool calls, reasoning, logs and the operator's own message never move a
+thread, which is why the badge counts threads and cannot tick per stream frame.
+A cancelled step and an abandoned run read as already read: they are the
+operator's act.
+
+Reading marks reuse `inbox_marks` and `POST /api/inbox/marks` unchanged; the
+projection only ever looks up its own ids, so the two projections cannot see
+each other's marks, and the stale-mark rule is the Inbox's. The view marks the
+selected thread read once per `(id, updated_at)` while the document is visible
+(`useMarkConversationSeen`); a thread that speaks again while open is read
+again, one in a hidden tab is not, and a refused mark is not retried until the
+thread moves. `GET /api/conversations/stream` is a state stream shaped like the
+activity one — no cursor, a frame only when the projection changed — mounted by
+the view alone; the sidebar badge polls the snapshot the rest of the time. The
+Inbox and the Activity Center are unchanged: a pending permission appears in all
+three on purpose, and only here is it answered in place.
+
 ## The Pull Request Reviewer
 
 `/pull-requests/:id` is a tab shell — `Overview` and `Diff` — so the header,
@@ -2067,7 +2105,8 @@ never become a project's remembered view.
 
 The Inbox is the operator's own: each projected entry carries a `read` and an
 `archived` flag from `inbox_marks`, a table keyed by the projected entry id
-(`run:<id>`, `publication:<pr>`, `pull_request:<pr>`), never by a row of its own.
+(`run:<id>`, `publication:<pr>`, `pull_request:<pr>`, and the Conversations
+view's `conversation:<step_run_id>`), never by a row of its own.
 A mark is stamped with the entry's `updated_at` at the time it was made, and
 `projectInbox` treats it as stale — the entry returns unread and unarchived — as
 soon as the evidence carries a newer `updated_at`. That one rule is what makes a

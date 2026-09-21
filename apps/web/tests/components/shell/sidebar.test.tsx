@@ -83,6 +83,7 @@ describe("Sidebar", () => {
     const targets = [...container.querySelectorAll("a")].map((link) => link.getAttribute("href"));
     expect(targets).toEqual([
       "/inbox",
+      "/conversations",
       "/issues",
       "/files",
       "/runs",
@@ -103,6 +104,16 @@ describe("Sidebar", () => {
     );
 
     expect(inbox?.textContent).toContain("3");
+  });
+
+  it("badges unread conversations on their own entry, apart from the inbox", async () => {
+    const container = await renderSidebar({ inboxCount: 0, conversationCount: 2 });
+    const links = [...container.querySelectorAll("a")];
+    const conversations = links.find((link) => link.getAttribute("href") === "/conversations");
+    const inbox = links.find((link) => link.getAttribute("href") === "/inbox");
+
+    expect(conversations?.textContent).toContain("2");
+    expect(inbox?.textContent).toBe("Inbox");
   });
 
   it("shows no inbox badge when nothing needs the operator", async () => {
