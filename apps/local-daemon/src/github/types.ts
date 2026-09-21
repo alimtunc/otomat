@@ -25,9 +25,14 @@ import type { PullRequestReviewSubmission, ViewedFilesResult, ViewedFileState } 
 import type { GitHubCli, PullRequestOverviewFacts } from "./cli/contract.js";
 import type { GenerationAgent } from "./generation/agent.js";
 import type { GenerationInput } from "./generation/input.js";
+import type { GenerationTrace } from "./generation/trace.js";
 
 export interface PullRequestGenerator {
-  generate(agent: GenerationAgent, input: GenerationInput): Promise<PullRequestProposal>;
+  generate(
+    agent: GenerationAgent,
+    input: GenerationInput,
+    trace: GenerationTrace,
+  ): Promise<PullRequestProposal>;
 }
 
 export interface CommandRequest {

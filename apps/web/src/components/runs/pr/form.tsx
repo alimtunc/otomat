@@ -101,6 +101,7 @@ export function PullRequestForm({
             publishability,
             connected,
             hasDraftChanges: isDirty,
+            generating: isGenerating,
           });
           const publishing = isPending || model.actionPending;
           const busy = publishing || isGenerating;

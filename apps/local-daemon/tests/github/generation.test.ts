@@ -1,7 +1,12 @@
 import { COMMIT_SUBJECT_MAX_LENGTH, formatCommitSubject } from "@otomat/domain";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createPullRequestGenerator, type GenerationInput } from "#github";
+import {
+  createPullRequestGenerator,
+  GenerationTrace,
+  GitHubPublicationError,
+  type GenerationInput,
+} from "#github";
 import type { CommandRequest, CommandResult } from "#github";
 import { RuntimeUnavailableError } from "#runtime";
 
@@ -37,6 +42,15 @@ const PROPOSAL = {
   delivery: "complete",
 };
 
+function generate(
+  run: (request: CommandRequest) => Promise<CommandResult>,
+  agent = AGENT,
+  input = INPUT,
+  trace = new GenerationTrace("run test"),
+) {
+  return createPullRequestGenerator(run).generate(agent, input, trace);
+}
+
 function runner(results: CommandResult[]) {
   const requests: CommandRequest[] = [];
   return {
@@ -51,6 +65,42 @@ function runner(results: CommandResult[]) {
 }
 
 describe("pull request generator", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("traces each step's duration and the provider's exit, never the prompt or the answer", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const fake = runner([{ stdout: answer(PROPOSAL), stderr: "", exitCode: 0 }]);
+    const trace = new GenerationTrace("run r-1");
+
+    await generate(fake.run, AGENT, INPUT, trace);
+    trace.finish();
+
+    expect(log).toHaveBeenCalledOnce();
+    const line = String(log.mock.calls[0]?.[0]);
+    expect(line).toMatch(
+      /^\[otomat\] pr generation for run r-1: preflight \d+ms · provider \d+ms \(claude claude-opus-5 high, prompt \d+ kchar, exit 0, stdout \d+ kchar\) · validate \d+ms · ok$/,
+    );
+    expect(line).not.toContain("je teste le vps");
+    expect(line).not.toContain(PROPOSAL.summary);
+  });
+
+  it("traces the provider's exit code and the refusal that ends a failed attempt", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const fake = runner([{ stdout: "", stderr: "", exitCode: null, errorCode: "timed_out" }]);
+    const trace = new GenerationTrace("run r-2");
+
+    await expect(generate(fake.run, AGENT, INPUT, trace)).rejects.toMatchObject({
+      code: "pr_generation_failed",
+    });
+    trace.finish(new GitHubPublicationError("pr_generation_failed", "slow"));
+
+    expect(String(log.mock.calls[0]?.[0])).toMatch(
+      /provider \d+ms \(claude claude-opus-5 high, prompt \d+ kchar, exit timed_out, stdout 0 kchar\) · failed pr_generation_failed$/,
+    );
+  });
+
   it("maps a sandbox preflight refusal before invoking the generator command", async () => {
     const fake = runner([]);
     const agent = {
@@ -64,19 +114,17 @@ describe("pull request generator", () => {
       },
     };
 
-    await expect(createPullRequestGenerator(fake.run).generate(agent, INPUT)).rejects.toMatchObject(
-      {
-        code: "pr_generator_unavailable",
-        message: "Codex sandbox unavailable on this host",
-      },
-    );
+    await expect(generate(fake.run, agent)).rejects.toMatchObject({
+      code: "pr_generator_unavailable",
+      message: "Codex sandbox unavailable on this host",
+    });
     expect(fake.requests).toEqual([]);
   });
 
   it("sends the configured model and effort, and answers one structured subject", async () => {
     const fake = runner([{ stdout: answer(PROPOSAL), stderr: "", exitCode: 0 }]);
 
-    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+    const proposal = await generate(fake.run);
 
     expect(proposal).toEqual({
       subject: { type: "feat", scope: "pr", summary: "create the pull request in one action" },
@@ -95,7 +143,7 @@ describe("pull request generator", () => {
   it("gives the generator the issue and the allowed types rather than the patch alone", async () => {
     const fake = runner([{ stdout: answer(PROPOSAL), stderr: "", exitCode: 0 }]);
 
-    await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+    await generate(fake.run);
 
     const prompt = fake.requests[0]?.stdin ?? "";
     expect(prompt).toContain("Issue OTO-81: Simplify PR creation");
@@ -108,7 +156,7 @@ describe("pull request generator", () => {
       { stdout: answer({ ...PROPOSAL, delivery: "partial" }), stderr: "", exitCode: 0 },
     ]);
 
-    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+    const proposal = await generate(fake.run);
 
     expect(proposal.body).toContain("Refs OTO-81");
     expect(proposal.body).not.toContain("Fixes OTO-81");
@@ -119,9 +167,7 @@ describe("pull request generator", () => {
       { stdout: answer({ ...PROPOSAL, type: "wip" }), stderr: "", exitCode: 0 },
     ]);
 
-    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      { code: "pr_generation_invalid" },
-    );
+    await expect(generate(fake.run)).rejects.toMatchObject({ code: "pr_generation_invalid" });
   });
 
   it("shortens an over-budget summary on whole words rather than failing the publication", async () => {
@@ -129,7 +175,7 @@ describe("pull request generator", () => {
       "create the pull request in one action and keep every field editable afterwards";
     const fake = runner([{ stdout: answer({ ...PROPOSAL, summary }), stderr: "", exitCode: 0 }]);
 
-    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+    const proposal = await generate(fake.run);
 
     expect(formatCommitSubject(proposal.subject).length).toBeLessThanOrEqual(
       COMMIT_SUBJECT_MAX_LENGTH,
@@ -146,7 +192,7 @@ describe("pull request generator", () => {
       { stdout: answer(PROPOSAL), stderr: "", exitCode: 0 },
     ]);
 
-    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+    const proposal = await generate(fake.run);
 
     expect(proposal.subject.summary).toBe("create the pull request in one action");
     expect(fake.requests).toHaveLength(2);
@@ -161,12 +207,10 @@ describe("pull request generator", () => {
       { stdout: answer(tooLong), stderr: "", exitCode: 0 },
     ]);
 
-    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      {
-        code: "pr_generation_invalid",
-        message: "The subject is 90 characters; remove 18 to stay within 72.",
-      },
-    );
+    await expect(generate(fake.run)).rejects.toMatchObject({
+      code: "pr_generation_invalid",
+      message: "The subject is 90 characters; remove 18 to stay within 72.",
+    });
     expect(fake.requests).toHaveLength(2);
   });
 
@@ -176,7 +220,7 @@ describe("pull request generator", () => {
       { stdout: answer(PROPOSAL), stderr: "", exitCode: 0 },
     ]);
 
-    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+    const proposal = await generate(fake.run);
 
     expect(proposal.subject.scope).toBe("pr");
     expect(fake.requests).toHaveLength(2);
@@ -195,9 +239,10 @@ describe("pull request generator", () => {
       { stdout: answer(scoped), stderr: "", exitCode: 0 },
     ]);
 
-    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      { code: "pr_generation_invalid", message: expect.stringContaining("stay within 72") },
-    );
+    await expect(generate(fake.run)).rejects.toMatchObject({
+      code: "pr_generation_invalid",
+      message: expect.stringContaining("stay within 72"),
+    });
     expect(fake.requests[1]?.stdin).toContain("the summary must be at most 0 characters");
   });
 
@@ -206,7 +251,7 @@ describe("pull request generator", () => {
       { stdout: answer({ ...PROPOSAL, scope: null }), stderr: "", exitCode: 0 },
     ]);
 
-    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, INPUT);
+    const proposal = await generate(fake.run);
 
     expect(proposal.subject).toEqual({
       type: "feat",
@@ -218,7 +263,7 @@ describe("pull request generator", () => {
   it("leaves an unidentified issue without a footer", async () => {
     const fake = runner([{ stdout: answer(PROPOSAL), stderr: "", exitCode: 0 }]);
 
-    const proposal = await createPullRequestGenerator(fake.run).generate(AGENT, {
+    const proposal = await generate(fake.run, AGENT, {
       ...INPUT,
       issue: { sourceIdentifier: null, title: "Local task", body: null },
     });
@@ -229,32 +274,26 @@ describe("pull request generator", () => {
   it("fails honestly when the CLI cannot run, carrying its last stderr line", async () => {
     const fake = runner([{ stdout: "", stderr: "not logged in", exitCode: 1 }]);
 
-    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      {
-        code: "pr_generation_failed",
-        message: expect.stringContaining("not logged in"),
-      },
-    );
+    await expect(generate(fake.run)).rejects.toMatchObject({
+      code: "pr_generation_failed",
+      message: expect.stringContaining("not logged in"),
+    });
   });
 
   it("bounds the invocation and names the deadline when it expires", async () => {
     const fake = runner([{ stdout: "", stderr: "", exitCode: null, errorCode: "timed_out" }]);
 
-    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      {
-        code: "pr_generation_failed",
-        message: expect.stringContaining("did not answer within"),
-      },
-    );
+    await expect(generate(fake.run)).rejects.toMatchObject({
+      code: "pr_generation_failed",
+      message: expect.stringContaining("did not answer within"),
+    });
     expect(fake.requests[0]?.timeoutMs).toBeGreaterThan(0);
   });
 
   it("rejects output without a parsable JSON answer", async () => {
     const fake = runner([{ stdout: "I could not decide.", stderr: "", exitCode: 0 }]);
 
-    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      { code: "pr_generation_invalid" },
-    );
+    await expect(generate(fake.run)).rejects.toMatchObject({ code: "pr_generation_invalid" });
   });
 
   it("rejects a branch name nothing usable survives", async () => {
@@ -262,8 +301,6 @@ describe("pull request generator", () => {
       { stdout: answer({ ...PROPOSAL, branch: "otomat/run/abc" }), stderr: "", exitCode: 0 },
     ]);
 
-    await expect(createPullRequestGenerator(fake.run).generate(AGENT, INPUT)).rejects.toMatchObject(
-      { code: "pr_generation_invalid" },
-    );
+    await expect(generate(fake.run)).rejects.toMatchObject({ code: "pr_generation_invalid" });
   });
 });

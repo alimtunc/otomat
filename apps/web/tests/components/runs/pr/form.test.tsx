@@ -260,6 +260,15 @@ describe("PullRequestForm", () => {
     );
   });
 
+  it("names the generating step and blocks a second send while the form's own generation runs", () => {
+    const { view } = render({ customize: true, isGenerating: true });
+
+    expect(view.textContent).toContain("Writing metadata");
+    expect(view.textContent).toContain("Not published");
+    expect(button("Generate title & description with AI").disabled).toBe(true);
+    expect(button("Create PR").disabled).toBe(true);
+  });
+
   it("fills the subject fields from a generation that publishes nothing", async () => {
     const { view, onSubmit } = render({ customize: true });
 

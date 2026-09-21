@@ -15,7 +15,7 @@ import {
   PULL_REQUEST_PUBLICATION_ACTIVE_STATES,
   type PullRequestProposal,
 } from "@otomat/domain";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readRunEvents } from "#events";
 import { createGitWorktreeService, type GitWorktreeService } from "#git";
@@ -96,6 +96,7 @@ describe("pull request publication as a durable operation", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     fix.cleanup();
   });
 
@@ -153,11 +154,13 @@ describe("pull request publication as a durable operation", () => {
   });
 
   it("writes the metadata and publishes it as one operation the client never drives", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
     let generations = 0;
     await withStubbedClaude(async () => {
       const github = service({
-        generate: async () => {
+        generate: async (_agent, _input, trace) => {
           generations += 1;
+          trace.step("provider", "stubbed");
           return PROPOSAL;
         },
       });
@@ -170,6 +173,13 @@ describe("pull request publication as a durable operation", () => {
     });
 
     expect(generations).toBe(1);
+    expect(log.mock.calls.map((call) => String(call[0]))).toEqual([
+      expect.stringMatching(
+        new RegExp(
+          `^\\[otomat\\] pr generation for run ${RUN_ID}: workspace \\d+ms · input \\d+ms \\(1 files\\) · provider \\d+ms \\(stubbed\\) · persist \\d+ms · ok$`,
+        ),
+      ),
+    ]);
     expect(stored()).toMatchObject({
       publication_status: "created",
       commit_subject: "feat(pr): publish in one action",

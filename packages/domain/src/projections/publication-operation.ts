@@ -21,8 +21,11 @@ export interface PullRequestPublicationFacts {
   updated_at: string;
 }
 
+/** Shared with the metadata-only generation, which is this phase run outside a publication. */
+export const PUBLICATION_GENERATING_LABEL = "Writing metadata";
+
 const PHASES = [
-  { key: "generate", label: "Writing metadata", status: "generating" },
+  { key: "generate", label: PUBLICATION_GENERATING_LABEL, status: "generating" },
   { key: "commit", label: "Committing the workspace", status: "committing" },
   { key: "push", label: "Pushing the branch", status: "pushing" },
   { key: "create", label: "Creating the pull request", status: "creating" },

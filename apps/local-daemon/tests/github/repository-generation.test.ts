@@ -5,7 +5,12 @@ import type { PullRequestProposal } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { createRepositoryResolver, sourceControlSnapshot } from "#git";
-import { createGitHubService, createPullRequestGenerator, type GitHubService } from "#github";
+import {
+  createGitHubService,
+  createPullRequestGenerator,
+  GenerationTrace,
+  type GitHubService,
+} from "#github";
 import type { PullRequestGenerator } from "#github/types";
 import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
 import { FakeGitHubCli } from "#test-support/github";
@@ -67,6 +72,7 @@ it("previews and generates committed changes without creating a branch, run, com
   expect(generate).toHaveBeenCalledWith(
     expect.objectContaining({ audit: expect.objectContaining({ runtime: "claude" }) }),
     expect.objectContaining({ issue: null, patch: expect.stringContaining("+committed") }),
+    expect.any(GenerationTrace),
   );
   expect(generate.mock.calls[0]?.[1].patch).not.toContain("unstaged secret");
   expect(fix.repo.git("rev-parse", "HEAD")).toBe(head);
@@ -129,6 +135,7 @@ it("uses the shared generation format without inventing an issue reference", asy
   const result = await generator.generate(
     { command: "claude", args: [], effort: null, audit: PROPOSAL.generator },
     { cwd: fix.repo.root, issue: null, diffStat: ["manual.txt +1 -0"], patch: "+committed" },
+    new GenerationTrace("repository test"),
   );
   expect(result.body).toBe("Project changes.");
   expect(run).toHaveBeenCalledWith(

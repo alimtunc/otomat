@@ -18,6 +18,7 @@ import { serializeByKey } from "#serialize";
 import { resolveGenerationAgent, type GenerationAgent } from "../generation/agent.js";
 import { requireGenerator } from "../generation/generator.js";
 import { buildGenerationInput } from "../generation/input.js";
+import { traced } from "../generation/trace.js";
 import type { PullRequestGenerator, PullRequestView } from "../types.js";
 import { composeSubject, issueIdentifier, resolvePublicationRequest } from "./details.js";
 import { publishOnce } from "./publish-once.js";
@@ -133,17 +134,23 @@ class PullRequestPublisher implements PullRequestPublicationService {
     return composeSubject(details.subject, issueIdentifier(this.config.db, run.issue_id)).title;
   }
 
-  private async writeProposal(
+  private writeProposal(
     run: RunRow,
     agent: GenerationAgent,
     generator: PullRequestGenerator,
   ): Promise<PullRequestProposal> {
-    // Preflighted here: a workspace that cannot publish must refuse before the generator is paid for.
-    await resolveWorkspace(this.config, run.id);
-    const proposal = await generator.generate(agent, buildGenerationInput(this.config, run));
-    const identifier = issueIdentifier(this.config.db, run.issue_id);
-    this.store.recordProposal(run, proposal, composeSubject(proposal.subject, identifier));
-    return proposal;
+    return traced(`run ${run.id}`, async (trace) => {
+      // Preflighted here: a workspace that cannot publish must refuse before the generator is paid for.
+      await resolveWorkspace(this.config, run.id);
+      trace.step("workspace");
+      const input = buildGenerationInput(this.config, run);
+      trace.step("input", `${String(input.diffStat.length)} files`);
+      const proposal = await generator.generate(agent, input, trace);
+      const identifier = issueIdentifier(this.config.db, run.issue_id);
+      this.store.recordProposal(run, proposal, composeSubject(proposal.subject, identifier));
+      trace.step("persist");
+      return proposal;
+    });
   }
 
   /** The whole operation, off the request: a failure in any phase is persisted, never thrown at nobody. */
