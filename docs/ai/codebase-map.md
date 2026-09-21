@@ -952,9 +952,10 @@ Attachment is deliberately narrow. The persisted `worktrees.path` is the primary
 evidence. The Otomat layout is accepted only as validated secondary evidence,
 when the worktree sits under this host's worktrees root **and** exactly one
 unclaimed record carries its branch; a partial or contested match stays
-`ambiguous` and anything outside the layout stays `none`. Neither is ever linked
-or deleted, which is what keeps a worktree a user created out of the daemon's
-reach.
+`ambiguous` and anything outside the layout stays `none`. Neither is ever linked,
+and neither is deleted without an operator confirming that row: an unattached
+worktree is removable only because git lists it for that repository, and the
+removal leaves its branch alone.
 
 `projectWorkspaceState` is the one interpretation of the observed facts:
 `active` while the issue's cycle still holds it, `cleanup_required` once the
@@ -972,21 +973,23 @@ an outside merge closes a cycle exactly like one Otomat made.
 
 `reconcileWorkspaces` is the whole sequence and the only one: re-read the pull
 requests still open on GitHub (injected as `refreshPullRequests`, so `#supervisor`
-never imports `#github`), `git worktree prune`, converge the records that leaves
-behind, then delete what every precondition already cleared. Startup, the bounded
-background pass (`schedule.ts`, one unref'd interval, never two passes at once)
-and `POST /api/workspaces/reconcile` all run it, so a merge made outside Otomat is
-noticed without opening a panel and a failed pass is simply retried by the next
-one. Removal is `git worktree remove` without `--force`: git's refusal is
-reported and the record is left untouched, so nothing uncommitted is ever
-discarded. `--force` stays where it belongs — the acquire rollback and the
+never imports `#github`), `git worktree prune`, then converge the records that
+leaves behind. It deletes no worktree still on disk, whatever auto-delete says:
+the only unasked deletion is the merge closure's, when the pull request refresh
+observes the merge. Startup, the bounded background pass (`schedule.ts`, one
+unref'd interval, never two passes at once) and `POST /api/workspaces/reconcile`
+all run it, so a merge made outside Otomat is noticed without opening a panel
+and a failed pass is simply retried by the next one. Removal is `git worktree
+remove` without `--force`: git's refusal is reported and the record is left
+untouched, so nothing uncommitted is ever discarded. `--force` is set only by an
+operator confirmation naming the work it discards, the acquire rollback and the
 archive, which own work they just wrote themselves.
 
 `GET /api/workspaces` is a read that prunes and deletes nothing; the two commands
 are the reconciliation and one targeted `POST /api/workspaces/:worktreeId/cleanup`
 that the settings table, the issue rail and the run cockpit all go through, so a
-destructive action has one confirmation and one code path. The host-wide
-`auto_delete_workspaces` setting gates the automatic pass alone: turned off, a
+destructive action has one confirmation and one code path. The per-project
+`auto_delete_workspaces` setting gates the merge closure alone: turned off, a
 merge still closes the issue and the workspace waits in `cleanup_required`. An
 unmerged cycle waits there too whatever the setting says, until the operator
 deletes it from its row.

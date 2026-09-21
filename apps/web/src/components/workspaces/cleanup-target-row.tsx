@@ -38,7 +38,7 @@ export function CleanupTargetRow({ target, outcome, children }: CleanupTargetRow
       <span className="flex items-center gap-2 text-xs">
         <HostTag tag={target.host.label} />
         <span className="min-w-0 flex-1 truncate font-mono text-text-secondary">
-          {target.issue_identifier ?? target.repository_name}
+          {target.issue_identifier ?? target.branch ?? target.path}
         </span>
         {outcome === "pending" ? <Spinner /> : null}
         {outcome !== undefined && outcome !== "pending" ? (

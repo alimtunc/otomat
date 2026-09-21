@@ -93,6 +93,7 @@ it("forces nothing until the operator confirms the exact work it discards", asyn
   expect(document.body.textContent).toContain(
     "Discard 4 uncommitted files and 2 commits nothing else holds in this worktree",
   );
+  expect(document.body.textContent).toContain("otomat/run/dirty · /tmp/worktrees/dirty");
 
   await act(async () => {
     armed?.click();
@@ -134,14 +135,7 @@ it("keeps the protective deletion on offer while a dirty target waits for its co
 
 it("leaves out what no confirmation may delete, and says so", async () => {
   cleanupWorkspace.mockResolvedValue(result("cleaned", "worktree removed"));
-  await renderDialog([
-    row("ok"),
-    row("external", {
-      state: "unmanaged",
-      provenance: "external_worktree",
-      blocker: "unmanaged_worktree",
-    }),
-  ]);
+  await renderDialog([row("ok"), row("writing", { blocker: "writer_alive" })]);
 
   expect(document.body.textContent).toContain("1 workspace cannot be deleted here, forced or not");
 

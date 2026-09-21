@@ -42,7 +42,7 @@ import {
 
 export function createSupervisor(config: SupervisorConfig): Supervisor {
   const state = createState(config);
-  // The background loop and a manual reconcile share one pass rather than deleting over each other.
+  // The background loop and a manual reconcile share one pass rather than pruning over each other.
   let workspacePass: Promise<WorkspaceReconcileReport> | null = null;
   const workspaces = supervisorWorkspaces(state);
   state.advance = async (runId) => {

@@ -32,10 +32,7 @@ function cleanupBlocker(facts: WorkspaceFacts): WorkspaceCleanupBlocker | null {
 }
 
 export function projectWorkspaceState(facts: WorkspaceFacts): WorkspaceVerdict {
-  if (facts.attachment === "none") {
-    return { state: "unmanaged", blocker: "unmanaged_worktree" };
-  }
-  if (facts.attachment === "ambiguous") {
+  if (facts.attachment === "none" || facts.attachment === "ambiguous") {
     return { state: "unmanaged", blocker: cleanupBlocker(facts) };
   }
   if (facts.record_status === "archived" || facts.record_status === "removed") {
@@ -88,20 +85,19 @@ const BLOCKER_REASONS = {
   worktree_dirty: "Uncommitted changes are still in this worktree.",
   writer_alive: "A session is still running here — cancel the run first.",
   worktree_unreadable: "This worktree could not be read from disk.",
-  unmanaged_worktree:
-    "Git does not hold this worktree under Otomat's worktrees root, so nothing here may delete it.",
 } satisfies Record<WorkspaceCleanupBlocker, string>;
 
 const PROVENANCE_REASONS = {
   otomat_run: "Ready to delete: the cycle is closed and the worktree is clean.",
   otomat_unreconciled:
     "An earlier Otomat worktree no record claims any more; deleting it leaves its branch alone.",
-  external_worktree: BLOCKER_REASONS.unmanaged_worktree,
-  missing_path: "The directory is gone; the git registration is pruned on the next reconcile.",
+  external_worktree:
+    "Git registers this worktree but Otomat did not create it; removing it leaves its branch alone.",
+  missing_path: "The directory is gone; the git registration is pruned on the next refresh.",
   orphan_record:
     "Otomat records this worktree but git has no registration and the directory is gone.",
   unknown:
-    "Otomat records this directory but git no longer registers it — reconcile before deleting.",
+    "Otomat records this directory but git no longer registers it — refresh before deleting.",
 } satisfies Record<WorkspaceProvenance, string>;
 
 export function describeWorkspace(

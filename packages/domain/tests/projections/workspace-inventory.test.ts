@@ -99,23 +99,24 @@ it("reads a registration with no directory as stale, and a bare record as missin
   });
 });
 
-it("never touches a worktree outside the root, and offers the unreconciled one a clean deletion", () => {
+it("offers an unattached worktree a clean deletion by hand", () => {
   const external = projectWorkspaceState(facts({ attachment: "none" }));
   const unreconciled = projectWorkspaceState(facts({ attachment: "ambiguous" }));
 
-  expect(external).toEqual({ state: "unmanaged", blocker: "unmanaged_worktree" });
-  expect(isWorkspaceCleanable(external)).toBe(false);
-  expect(isWorkspaceForceCleanable(external)).toBe(false);
+  expect(external).toEqual({ state: "unmanaged", blocker: null });
   expect(unreconciled).toEqual({ state: "unmanaged", blocker: null });
+  expect(isWorkspaceCleanable(external)).toBe(true);
   expect(isWorkspaceCleanable(unreconciled)).toBe(true);
 });
 
-it("holds an unreconciled worktree to the same work-on-disk refusals as a recorded one", async () => {
-  const dirty = projectWorkspaceState(facts({ attachment: "ambiguous", uncommitted_files: 1 }));
+it("holds an unattached worktree to the same work-on-disk refusals as a recorded one", () => {
+  for (const attachment of ["none", "ambiguous"] as const) {
+    const dirty = projectWorkspaceState(facts({ attachment, uncommitted_files: 1 }));
 
-  expect(dirty).toEqual({ state: "unmanaged", blocker: "worktree_dirty" });
-  expect(isWorkspaceCleanable(dirty)).toBe(false);
-  expect(isWorkspaceForceCleanable(dirty)).toBe(true);
+    expect(dirty).toEqual({ state: "unmanaged", blocker: "worktree_dirty" });
+    expect(isWorkspaceCleanable(dirty)).toBe(false);
+    expect(isWorkspaceForceCleanable(dirty)).toBe(true);
+  }
 });
 
 it("forces only over the work left on disk, never over a live writer or an open cycle", () => {
@@ -173,12 +174,9 @@ it("explains an unmanaged row by where it came from, not by one sentence for bot
     { state: "unmanaged", blocker: null },
     "otomat_unreconciled",
   );
-  const external = describeWorkspace(
-    { state: "unmanaged", blocker: "unmanaged_worktree" },
-    "external_worktree",
-  );
+  const external = describeWorkspace({ state: "unmanaged", blocker: null }, "external_worktree");
 
   expect(unreconciled).not.toEqual(external);
   expect(unreconciled).toContain("no record claims");
-  expect(external).toContain("worktrees root");
+  expect(external).toContain("Otomat did not create it");
 });

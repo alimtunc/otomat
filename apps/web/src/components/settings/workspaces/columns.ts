@@ -53,7 +53,7 @@ export const WORKSPACE_COLUMNS = helper.columns([
   helper.display({
     id: "actions",
     header: "",
-    meta: { headClassName: "w-16 xl:w-20", cellClassName: "text-right" },
+    meta: { headClassName: "w-22 xl:w-26", cellClassName: "text-right" },
     cell: WorkspaceActionsCell,
   }),
 ]);

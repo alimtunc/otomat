@@ -9,7 +9,9 @@ the branch you left it on.
 - _Settings → Project → Workspaces_ lists every worktree of the project on each host with its
   state: **active** while the issue's cycle holds it, **cleanup required** once the cycle closed
   with the directory still on disk, **stale** or **missing** when git and Otomat disagree, and
-  **unmanaged** for a worktree Otomat did not create — it never touches those.
+  **unmanaged** for a worktree Otomat did not create — it never deletes those on its own.
+- **Refresh worktrees** rescans `git worktree list` and the host's pull requests, then updates the
+  states shown. It deletes or changes no worktree, whatever the auto-delete setting says.
 - The run actions menu (`⋯`) and the issue header carry **Open in VS Code** and **Open in
   terminal** for the run's worktree. A remote worktree opens through VS Code's SSH remote; a
   remote terminal is a copyable `ssh` command Otomat never runs itself.
@@ -39,13 +41,21 @@ stage, commit, and publish a pull request from your own branch without any run i
 ## Clean up
 
 Otomat deletes a worktree only when the issue's cycle is closed, nothing is writing to it and the
-tree is clean; otherwise it names the blocker. Every surface goes through the same confirmation.
+tree is clean; otherwise it names the blocker. Only a blocker about the work left on disk —
+uncommitted changes, or a worktree git could not read — can be overridden: the dialog shows the
+branch, the path and what it discards, and waits for you to confirm that loss. Every surface goes
+through the same confirmation, and a git refusal is reported as such rather than as a deletion.
 
 - **Clean workspace…** in the run actions menu, or the row action in _Settings → Project →
-  Workspaces_, removes one worktree. Git's own refusal — uncommitted work — is reported and nothing
-  is forced.
+  Workspaces_, removes one worktree.
+- **Clean up merged worktrees**, above the table, lists the clean worktrees whose pull request is
+  merged and deletes them once you confirm.
+- **Remove worktree** on an **unmanaged** row asks git to remove that worktree from the repository;
+  a clean one goes after a short confirmation, a dirty one after the loss confirmation above. No
+  branch, pull request or run is touched.
 - **Automatically delete this project's workspaces after merge**, in _Settings → Project →
-  Workspaces_, lets Otomat remove the worktree of a merged pull request by itself. A merge made outside Otomat is noticed on the next reconciliation pass; unmerged cycles
+  Workspaces_, lets Otomat remove the worktree of a merged pull request by itself when the merge
+  closes the cycle. A merge made outside Otomat is noticed on the next refresh; unmerged cycles
   always wait for you.
-- Deleting a worktree never deletes a branch or a commit. Branches stay in the repository until you
-  remove them yourself.
+- Deleting a worktree never deletes a commit. The branch an Otomat cycle still owns goes with its
+  worktree; any other branch stays in the repository until you remove it yourself.

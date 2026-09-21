@@ -67,11 +67,15 @@ export function cleanupWorkspace(
   entry: WorkspaceEntry,
   options: WorkspaceCleanupOptions = { force: false },
 ): WorkspaceCleanupResult {
-  if (!isInsideRoot(context.repositories.worktreesRoot, entry.path)) {
+  // An external worktree is bounded by git listing it for this repository, not by Otomat's root.
+  if (
+    entry.provenance !== "external_worktree" &&
+    !isInsideRoot(context.repositories.worktreesRoot, entry.path)
+  ) {
     return refused(entry, `${entry.path} is outside the worktrees Otomat may delete.`);
   }
   if (entry.present && !entry.registered) {
-    return refused(entry, `Git no longer registers ${entry.path} — reconcile before deleting it.`);
+    return refused(entry, `Git no longer registers ${entry.path} — refresh before deleting it.`);
   }
   const eligible = options.force ? isWorkspaceForceCleanable(entry) : isWorkspaceCleanable(entry);
   if (!eligible) return refused(entry, entry.reason);

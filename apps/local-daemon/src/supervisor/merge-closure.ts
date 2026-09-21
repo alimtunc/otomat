@@ -55,7 +55,7 @@ function markIssueDone(config: MergeClosureConfig, issueId: string, runId: strin
   signalIssueLifecycle(config.syncIssueLifecycle, issue.id, "done", runId);
 }
 
-/** Anything refused here leaves the workspace for the next reconciliation or a manual action. */
+/** Anything refused here leaves the workspace in the inventory for an explicit cleanup. */
 function releaseWorkspace(config: MergeClosureConfig, worktreeId: string | null): void {
   if (worktreeId === null) return;
   const context = {

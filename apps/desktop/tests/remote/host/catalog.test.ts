@@ -217,10 +217,7 @@ it("reconciles and cleans on the owning host alone", async () => {
           ? {
               pull_requests_refreshed: 0,
               pruned: 0,
-              converged: 0,
-              cleaned: 1,
-              skipped: 0,
-              failed: 0,
+              converged: 1,
               inventory: EMPTY_INVENTORY,
             }
           : { outcome: "cleaned", blocker: null, message: "Deleted.", entry: null },
@@ -232,7 +229,7 @@ it("reconciles and cleans on the owning host alone", async () => {
   const reconciled = await hosts.reconcileWorkspaces("remote");
   const cleaned = await hosts.cleanupWorkspace("remote", "w-1", true);
 
-  expect(reconciled.ok && reconciled.value.cleaned).toBe(1);
+  expect(reconciled.ok && reconciled.value.converged).toBe(1);
   expect(cleaned.ok && cleaned.value.outcome).toBe("cleaned");
   expect(fetchImpl).toHaveBeenCalledWith(
     `${REMOTE_URL}/api/workspaces/reconcile`,
