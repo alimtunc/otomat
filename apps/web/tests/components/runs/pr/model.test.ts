@@ -194,6 +194,7 @@ describe("publicationModel", () => {
       publishability: PUBLISHABLE,
       connected: true,
       hasDraftChanges: false,
+      generating: false,
       ...overrides,
     });
 
@@ -239,6 +240,15 @@ describe("publicationModel", () => {
       });
     },
   );
+
+  it("names the same generating step for the form's own generation, without a publication", () => {
+    expect(model({ generating: true })).toMatchObject({
+      actionLabel: "Create PR",
+      actionPending: false,
+      status: "Not published",
+      stateLabel: "Writing metadata",
+    });
+  });
 
   it("keeps the update label while a published pull request republishes", () => {
     const row = pullRequest({

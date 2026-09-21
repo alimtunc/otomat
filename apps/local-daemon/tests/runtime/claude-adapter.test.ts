@@ -283,17 +283,26 @@ describe("ClaudeRuntimeAdapter", () => {
     expect(JSON.parse(readFileSync(argsFile, "utf8"))).not.toContain("--model");
   });
 
-  it("asks a one-shot question as text, sending the selection but no permission mode", () => {
+  it("asks a one-shot question as text without MCP servers, sending the selection but no permission mode", () => {
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
 
     expect(adapter.describeOneShot("opus", { effort: "high" })).toEqual({
       command: STUB_BIN,
-      args: ["-p", "--output-format", "text", "--effort", "high", "--model", "opus"],
+      args: [
+        "-p",
+        "--output-format",
+        "text",
+        "--strict-mcp-config",
+        "--effort",
+        "high",
+        "--model",
+        "opus",
+      ],
       effort: "high",
     });
     expect(adapter.describeOneShot(null, {})).toEqual({
       command: STUB_BIN,
-      args: ["-p", "--output-format", "text"],
+      args: ["-p", "--output-format", "text", "--strict-mcp-config"],
       effort: null,
     });
   });

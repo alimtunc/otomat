@@ -1571,7 +1571,18 @@ that only fills the fields, so the operator edits what the generator proposed
 before anything is published. That answer is what fills the form; the
 publication row it also updated is refetched without being awaited, so the
 generation settles when the daemon answers, not when the workspace has been
-described again.
+described again. While it runs, the form names the same `Writing metadata` step
+the compact operation shows, so both paths read alike.
+
+Every generation attempt — compact or metadata-only, run or repository — ends
+with one `[otomat] pr generation for …` line in the daemon log: the duration of
+each step, the provider's runtime, model, effort, exit code and output size, and
+the outcome. It never carries the diff, the prompt or the answer. The `provider`
+step is what tells a slow model apart from a blocked daemon: it dominates an
+attempt and scales with the tokens the model emits at the configured effort. The
+Claude one-shot runs with `--strict-mcp-config` because a headless first turn
+otherwise starts, and waits for, every configured MCP server — including the
+ones that fail or need auth — before asking a question that uses none of them.
 
 `publication_status` is that operation's whole record: `generating`,
 `committing`, `pushing`, `creating`, then `created`, each transition journaled as

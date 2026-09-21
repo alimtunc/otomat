@@ -18,6 +18,7 @@ import type { GenerationAgent } from "./agent.js";
 import type { GenerationInput } from "./input.js";
 import { parseGenerationOutput, type GenerationOutput } from "./parse.js";
 import { correctionPrompt, generationPrompt } from "./prompt.js";
+import { formatSize, type GenerationTrace } from "./trace.js";
 
 const GENERATION_TIMEOUT_MS = 180_000;
 
@@ -74,6 +75,7 @@ export function createPullRequestGenerator(run: CommandRunner): PullRequestGener
     agent: GenerationAgent,
     cwd: string,
     prompt: string,
+    trace: GenerationTrace,
   ): Promise<GenerationOutput> => {
     const result = await run({
       command: agent.command,
@@ -82,6 +84,10 @@ export function createPullRequestGenerator(run: CommandRunner): PullRequestGener
       stdin: prompt,
       timeoutMs: GENERATION_TIMEOUT_MS,
     });
+    trace.step(
+      "provider",
+      `${agent.audit.runtime} ${agent.audit.model ?? "default"} ${agent.audit.effort ?? "default"}, prompt ${formatSize(prompt.length)}, exit ${result.errorCode ?? String(result.exitCode)}, stdout ${formatSize(result.stdout.length)}`,
+    );
     if (result.errorCode === "timed_out") {
       throw new GitHubPublicationError(
         "pr_generation_failed",
@@ -95,11 +101,17 @@ export function createPullRequestGenerator(run: CommandRunner): PullRequestGener
         `The ${agent.audit.runtime} CLI could not write the pull request${detail === "" ? "." : ` (${detail.slice(0, 200)})`}`,
       );
     }
-    return parseGenerationOutput(result.stdout);
+    const output = parseGenerationOutput(result.stdout);
+    trace.step("validate");
+    return output;
   };
 
   return {
-    async generate(agent: GenerationAgent, input: GenerationInput): Promise<PullRequestProposal> {
+    async generate(
+      agent: GenerationAgent,
+      input: GenerationInput,
+      trace: GenerationTrace,
+    ): Promise<PullRequestProposal> {
       try {
         agent.preflight?.(input.cwd);
       } catch (error) {
@@ -108,12 +120,18 @@ export function createPullRequestGenerator(run: CommandRunner): PullRequestGener
         }
         throw error;
       }
-      const first = await invoke(agent, input.cwd, generationPrompt(input));
+      trace.step("preflight");
+      const first = await invoke(agent, input.cwd, generationPrompt(input), trace);
       const proposed = proposedSubject(first);
       const repaired = acceptedSubject(proposed);
       if (typeof repaired !== "string") return compose(first, repaired, input, agent);
 
-      const retried = await invoke(agent, input.cwd, correctionPrompt(input, proposed, repaired));
+      const retried = await invoke(
+        agent,
+        input.cwd,
+        correctionPrompt(input, proposed, repaired),
+        trace,
+      );
       const accepted = acceptedSubject(proposedSubject(retried));
       if (typeof accepted === "string") {
         throw new GitHubPublicationError(PR_GENERATION_INVALID_CODE, accepted);

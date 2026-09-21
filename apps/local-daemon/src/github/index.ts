@@ -3,6 +3,7 @@ export { createGitHubConnectionService } from "./connection.js";
 export { commitMessage, pullRequestBody, pullRequestTitle } from "./conventions/compose.js";
 export { createPullRequestGenerator } from "./generation/generator.js";
 export type { GenerationInput } from "./generation/input.js";
+export { GenerationTrace } from "./generation/trace.js";
 export { createDeviceAuthorization } from "./device-flow.js";
 export type { DeviceAuthorization, DeviceAuthorizationStart } from "./device-flow.js";
 export { parseGitHubRemoteUrl } from "./parse.js";

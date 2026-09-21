@@ -1,7 +1,8 @@
-import type {
-  OperationContract,
-  PullRequestContract,
-  PullRequestPublishability,
+import {
+  PUBLICATION_GENERATING_LABEL,
+  type OperationContract,
+  type PullRequestContract,
+  type PullRequestPublishability,
 } from "@otomat/domain";
 
 export interface PublicationModel {
@@ -20,6 +21,7 @@ export interface PublicationModelInput {
   publishability: PullRequestPublishability;
   connected: boolean;
   hasDraftChanges: boolean;
+  generating: boolean;
 }
 
 const CREATE_LABEL = "Create PR";
@@ -113,5 +115,9 @@ export function publicationModel(input: PublicationModelInput): PublicationModel
     ? "Published"
     : "Not published";
   if (action.actionPending) status = "Publishing";
-  return { ...action, status };
+  return {
+    ...action,
+    stateLabel: input.generating ? PUBLICATION_GENERATING_LABEL : action.stateLabel,
+    status,
+  };
 }

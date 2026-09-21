@@ -76,11 +76,17 @@ export class ClaudeRuntimeAdapter implements RuntimeAdapter {
     return claudeOptionSupport(this.binary);
   }
 
-  /** No permission mode is sent: `-p` then refuses every write the model attempts, which is what a read-only question wants. */
+  /** No permission mode is sent: `-p` then refuses every write the model attempts, which a read-only question wants; no MCP server is started either: a headless first turn otherwise waits for every configured one, failing or not, before it asks. */
   describeOneShot(model: string | null, options: ProviderOptions): RuntimeOneShot {
     return {
       command: this.binary,
-      args: ["-p", "--output-format", "text", ...this.tuningArgs(model, options)],
+      args: [
+        "-p",
+        "--output-format",
+        "text",
+        "--strict-mcp-config",
+        ...this.tuningArgs(model, options),
+      ],
       effort: options.effort ?? null,
     };
   }
