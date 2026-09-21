@@ -55,11 +55,6 @@ export function ConversationRow({ entry, selected, pending, onMark }: Conversati
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex min-w-0 items-center gap-1.5">
-            {entry.issue.identifier === null ? null : (
-              <span className="shrink-0 font-mono text-xs text-text-tertiary">
-                {entry.issue.identifier}
-              </span>
-            )}
             <span
               className={cn(
                 "min-w-0 truncate text-sm",
@@ -68,7 +63,7 @@ export function ConversationRow({ entry, selected, pending, onMark }: Conversati
             >
               {entry.step_name}
             </span>
-            <StepStatusChip status={entry.step_status} />
+            <StepStatusChip status={entry.step_status} showLabel={false} />
             <span className="ml-auto shrink-0 text-xs text-text-tertiary">
               <RelativeTime date={entry.updated_at} addSuffix={false} />
             </span>

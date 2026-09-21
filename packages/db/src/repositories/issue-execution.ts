@@ -10,9 +10,11 @@ import type { Db } from "../client.js";
 import { issues, pullRequests, runs, stepRuns, worktrees } from "../schema/index.js";
 
 /** Evidence for the per-issue execution projection; `issue_id` groups the rows the domain reducer consumes. */
-export type IssueExecutionEvidenceRow = IssueExecutionEvidence & { issue_id: string };
+type IssueExecutionEvidenceRow = IssueExecutionEvidence & { issue_id: string };
 
-function scopeFilters(options: { projectId?: string; issueId?: string }): SQL[] {
+type IssueExecutionScope = { projectId?: string; issueId?: string };
+
+function scopeFilters(options: IssueExecutionScope): SQL[] {
   const filters: SQL[] = [];
   if (options.issueId) filters.push(eq(runs.issue_id, options.issueId));
   if (options.projectId) filters.push(eq(issues.project_id, options.projectId));
@@ -61,7 +63,7 @@ function adoptedPullRequests(db: Db, filters: SQL[]): Map<string, PullRequestSta
  */
 export function listIssueExecutionEvidence(
   db: Db,
-  options: { projectId?: string; issueId?: string } = {},
+  options: IssueExecutionScope = {},
 ): IssueExecutionEvidenceRow[] {
   const filters = scopeFilters(options);
   const halted = lastHaltedSteps(db, filters);
@@ -90,4 +92,17 @@ export function listIssueExecutionEvidence(
       halted_step: halted.get(row.run_id) ?? null,
       adopted_pr_status: adopted.get(row.issue_id) ?? null,
     }));
+}
+
+export function listIssueExecutionEvidenceByIssue(
+  db: Db,
+  options: IssueExecutionScope = {},
+): Map<string, IssueExecutionEvidence[]> {
+  const byIssue = new Map<string, IssueExecutionEvidence[]>();
+  for (const { issue_id, ...evidence } of listIssueExecutionEvidence(db, options)) {
+    const bucket = byIssue.get(issue_id);
+    if (bucket) bucket.push(evidence);
+    else byIssue.set(issue_id, [evidence]);
+  }
+  return byIssue;
 }

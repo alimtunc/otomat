@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { ISSUE_EXECUTION_STATES } from "./entities/issue-execution.js";
 import { RUN_INTERACTION_KINDS, RUN_STATES, STEP_RUN_STATES } from "./entity-states.js";
 
 const conversationParticipantSchema = z.object({
@@ -19,6 +20,8 @@ export const conversationEntrySchema = z.object({
     id: z.string().min(1),
     identifier: z.string().nullable(),
     title: z.string(),
+    /** What the issue's open cycle is doing while its threads are followed; null once nothing is left to follow. */
+    cycle: z.enum(ISSUE_EXECUTION_STATES).exclude(["none"]).nullable(),
   }),
   run_id: z.string().min(1),
   run_status: z.enum(RUN_STATES),

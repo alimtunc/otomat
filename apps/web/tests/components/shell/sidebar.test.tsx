@@ -83,10 +83,10 @@ describe("Sidebar", () => {
     const targets = [...container.querySelectorAll("a")].map((link) => link.getAttribute("href"));
     expect(targets).toEqual([
       "/inbox",
-      "/conversations",
       "/issues",
       "/files",
       "/runs",
+      "/conversations",
       "/reviews",
       "/usage",
       "/settings",
@@ -106,13 +106,15 @@ describe("Sidebar", () => {
     expect(inbox?.textContent).toContain("3");
   });
 
-  it("badges unread conversations on their own entry, apart from the inbox", async () => {
+  it("badges unread conversations on their Workspace entry, apart from the inbox", async () => {
     const container = await renderSidebar({ inboxCount: 0, conversationCount: 2 });
     const links = [...container.querySelectorAll("a")];
     const conversations = links.find((link) => link.getAttribute("href") === "/conversations");
     const inbox = links.find((link) => link.getAttribute("href") === "/inbox");
+    const workspace = container.querySelector('nav[aria-label="Workspace"]');
 
     expect(conversations?.textContent).toContain("2");
+    expect(workspace?.contains(conversations ?? null)).toBe(true);
     expect(inbox?.textContent).toBe("Inbox");
   });
 

@@ -1,28 +1,9 @@
 import { expect, it } from "vitest";
 
-import type { IssueExecutionEvidence } from "#domain/projections/evidence";
 import { projectIssueWorkspace } from "#domain/projections/issue-workspace";
-
-// Runs are inserted without an explicit timestamp, so the stored shape is SQLite's CURRENT_TIMESTAMP, not ISO-8601.
-const AT = (day: string) => `2026-01-0${day} 00:00:00`;
+import { AT, issueExecutionEvidence as ev } from "#test-support/issue-execution-evidence";
 
 const CLOSED = { state: "closed", run_id: null, branch: null, run_status: null, busy: false };
-
-function ev(over: Partial<IssueExecutionEvidence> & { run_id: string }): IssueExecutionEvidence {
-  return {
-    issue_status: "ready",
-    run_status: "review_ready",
-    run_created_at: AT("1"),
-    run_branch: `otomat/run/${over.run_id}`,
-    run_abandoned_at: null,
-    worktree_status: "active",
-    halted_step: null,
-    pr_status: null,
-    adopted_pr_status: null,
-    pr_publication: null,
-    ...over,
-  };
-}
 
 it("projects closed when there is no evidence", () => {
   expect(projectIssueWorkspace([])).toEqual(CLOSED);

@@ -16,7 +16,7 @@ export interface IssuePrimaryStateInput {
 export type OpenCycleExecution = Exclude<IssueExecution, { state: "none" }>;
 
 export function projectOpenCycleExecution(
-  issue: IssuePrimaryStateInput,
+  issue: Pick<IssuePrimaryStateInput, "execution" | "workspace">,
 ): OpenCycleExecution | null {
   if (issue.workspace.state === "closed" || issue.execution.state === "none") return null;
   return issue.execution;

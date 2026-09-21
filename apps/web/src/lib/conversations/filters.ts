@@ -1,4 +1,5 @@
-import { isStepSettled, type ConversationEntry } from "@otomat/domain";
+import type { ConversationEntry } from "@otomat/domain";
+import { sectionOf } from "@web/lib/conversations/sections";
 
 const STATES = ["all", "active", "waiting", "finished"] as const;
 export type ConversationStateFilter = (typeof STATES)[number];
@@ -40,12 +41,11 @@ function inState(entry: ConversationEntry, state: ConversationStateFilter): bool
   switch (state) {
     case "all":
       return true;
-    case "active":
-      return !isStepSettled(entry.step_status);
     case "waiting":
       return isWaitingOnOperator(entry);
+    case "active":
     case "finished":
-      return isStepSettled(entry.step_status);
+      return sectionOf(entry) === state;
   }
 }
 

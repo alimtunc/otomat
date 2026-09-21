@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import {
   getRun,
   listAgentSessionsForRun,
-  listIssueExecutionEvidence,
+  listIssueExecutionEvidenceByIssue,
   listRepositories,
   type Db,
   type RepositoryRow,
@@ -104,14 +104,8 @@ function toEntry(
 
 /** Read once per inventory so classifying a worktree never queries the cycle again. */
 export function cycleHolders(db: Db): Map<string, string> {
-  const byIssue = new Map<string, ReturnType<typeof listIssueExecutionEvidence>>();
-  for (const row of listIssueExecutionEvidence(db)) {
-    const rows = byIssue.get(row.issue_id) ?? [];
-    rows.push(row);
-    byIssue.set(row.issue_id, rows);
-  }
   const holders = new Map<string, string>();
-  for (const [issueId, rows] of byIssue) {
+  for (const [issueId, rows] of listIssueExecutionEvidenceByIssue(db)) {
     const workspace = projectIssueWorkspace(rows);
     if (workspace.state === "open") holders.set(issueId, workspace.run_id);
   }
