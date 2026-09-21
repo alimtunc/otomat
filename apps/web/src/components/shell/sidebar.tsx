@@ -8,6 +8,7 @@ import {
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import {
+  CONVERSATIONS_NAV,
   INBOX_NAV,
   SETTINGS_NAV,
   WORKSPACE_NAV,
@@ -28,6 +29,7 @@ interface SidebarProps {
   hasLiveRun?: boolean;
   reviewCount?: number;
   inboxCount?: number;
+  conversationCount?: number;
 }
 
 function navRender(to: string) {
@@ -60,6 +62,7 @@ export function Sidebar({
   hasLiveRun = false,
   reviewCount = 0,
   inboxCount = 0,
+  conversationCount = 0,
 }: SidebarProps) {
   const collapsed = useSidebarCollapsed();
   const projectSwitcher = (
@@ -107,6 +110,14 @@ export function Sidebar({
           active={active === INBOX_NAV.section}
           badgeCount={inboxCount > 0 ? inboxCount : undefined}
           render={navRender(INBOX_NAV.to)}
+          collapsed={collapsed}
+        />
+        <SidebarNavItem
+          icon={CONVERSATIONS_NAV.icon}
+          label={CONVERSATIONS_NAV.label}
+          active={active === CONVERSATIONS_NAV.section}
+          badgeCount={conversationCount > 0 ? conversationCount : undefined}
+          render={navRender(CONVERSATIONS_NAV.to)}
           collapsed={collapsed}
         />
       </nav>

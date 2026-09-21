@@ -1,4 +1,4 @@
-import { EmptyState } from "@otomat/ui";
+import { EmptyState, Icon } from "@otomat/ui";
 import { useProjectIssueSummaries } from "@web/api/issues/queries";
 import { useProjectRuns } from "@web/api/runs/queries";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
@@ -6,6 +6,7 @@ import { RunsTable } from "@web/components/runs/list/table";
 import { RunsToolbar } from "@web/components/runs/list/toolbar";
 import { useRunsView } from "@web/components/runs/list/use-runs-view";
 import { CenteredState } from "@web/components/shell/centered-state";
+import { IconLink } from "@web/components/shell/icon-link";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
@@ -33,11 +34,18 @@ export function RunsView() {
       titleIcon="activity"
       breadcrumbs={[{ label: "Runs", current: true }]}
       actions={
-        <RunsToolbar
-          config={view.config}
-          hidden={{ runs: visible.hiddenRuns, groups: visible.hiddenGroups }}
-          onChange={view.update}
-        />
+        <div className="flex items-center gap-1">
+          <IconLink
+            to="/conversations"
+            label="Conversations"
+            icon={<Icon name="message-square" aria-hidden />}
+          />
+          <RunsToolbar
+            config={view.config}
+            hidden={{ runs: visible.hiddenRuns, groups: visible.hiddenGroups }}
+            onChange={view.update}
+          />
+        </div>
       }
     >
       <div className="flex h-full min-h-0 flex-col">

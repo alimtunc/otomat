@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AgentsRouteImport } from './routes/agents'
+import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ReviewsRouteImport } from './routes/reviews'
@@ -60,6 +61,11 @@ const IndexRoute = IndexRouteImport.update({
 const AgentsRoute = AgentsRouteImport.update({
   id: '/agents',
   path: '/agents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConversationsRoute = ConversationsRouteImport.update({
+  id: '/conversations',
+  path: '/conversations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FilesRoute = FilesRouteImport.update({
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/agents': typeof AgentsRouteWithChildren
+  '/conversations': typeof ConversationsRoute
   '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/conversations': typeof ConversationsRoute
   '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
@@ -357,6 +365,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/agents': typeof AgentsRouteWithChildren
+  '/conversations': typeof ConversationsRoute
   '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
@@ -403,6 +412,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/agents'
+    | '/conversations'
     | '/files'
     | '/inbox'
     | '/reviews'
@@ -445,6 +455,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/conversations'
     | '/files'
     | '/inbox'
     | '/reviews'
@@ -487,6 +498,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/agents'
+    | '/conversations'
     | '/files'
     | '/inbox'
     | '/reviews'
@@ -532,6 +544,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
   AgentsRoute: typeof AgentsRouteWithChildren
+  ConversationsRoute: typeof ConversationsRoute
   FilesRoute: typeof FilesRoute
   InboxRoute: typeof InboxRoute
   ReviewsRoute: typeof ReviewsRoute
@@ -558,6 +571,13 @@ declare module '@tanstack/react-router' {
       path: '/agents'
       fullPath: '/agents'
       preLoaderRoute: typeof AgentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/conversations': {
+      id: '/conversations'
+      path: '/conversations'
+      fullPath: '/conversations'
+      preLoaderRoute: typeof ConversationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/files': {
@@ -947,6 +967,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
   AgentsRoute: AgentsRouteWithChildren,
+  ConversationsRoute: ConversationsRoute,
   FilesRoute: FilesRoute,
   InboxRoute: InboxRoute,
   ReviewsRoute: ReviewsRoute,

@@ -3,17 +3,7 @@ import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { useQueryKeys } from "@web/api/use-query-keys";
-
-function applyMarks(snapshot: InboxSnapshot, request: MarkInboxRequest): InboxSnapshot {
-  const marks = new Map(request.marks.map((mark) => [mark.entry_id, mark]));
-  return {
-    ...snapshot,
-    entries: snapshot.entries.map((entry) => {
-      const mark = marks.get(entry.id);
-      return mark === undefined ? entry : { ...entry, read: mark.read, archived: mark.archived };
-    }),
-  };
-}
+import { applyInboxMarks } from "@web/lib/inbox/marks";
 
 export function useMarkInbox() {
   const client = useQueryClient();
@@ -24,7 +14,7 @@ export function useMarkInbox() {
       await client.cancelQueries({ queryKey: keys.inbox });
       const previous = client.getQueryData<InboxSnapshot>(keys.inbox);
       client.setQueryData<InboxSnapshot>(keys.inbox, (current) =>
-        current === undefined ? current : applyMarks(current, request),
+        current === undefined ? current : applyInboxMarks(current, request),
       );
       return { previous };
     },

@@ -27,6 +27,7 @@ export function hostKeys(host: ExecutionHostId) {
     host: [host] as const,
     health: [host, "health"] as const,
     activity: [host, "activity"] as const,
+    conversations: [host, "conversations"] as const,
     inbox: [host, "inbox"] as const,
     daemonLogExcerpt: (correlationId: string | null) =>
       [host, "diagnostics", "logs", correlationId] as const,

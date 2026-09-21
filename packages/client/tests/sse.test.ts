@@ -153,3 +153,44 @@ it("routes a malformed activity frame to onParseError instead of throwing", () =
 
   expect(parseErrors).toBe(1);
 });
+
+const CONVERSATION_SNAPSHOT = {
+  entries: [
+    {
+      id: "conversation:step-1",
+      project: { id: "project-1", name: "Otomat" },
+      issue: { id: "issue-1", identifier: "ABC-1", title: "Ship it" },
+      run_id: "run-1",
+      run_status: "running",
+      step_run_id: "step-1",
+      step_name: "Implement",
+      step_status: "running",
+      participant: { runtime: "claude", profile_name: null, model: "opus", effort: null },
+      last: { kind: "agent", text: "Done.", at: "2026-01-01T00:00:00.000Z" },
+      pending_interaction: null,
+      queued_contributions: 0,
+      updated_at: "2026-01-01T00:00:00.000Z",
+      read: false,
+      archived: false,
+    },
+  ],
+  observed_at: "2026-01-01T00:00:00.000Z",
+};
+
+it("delivers each conversations snapshot the host pushes and closes with the subscription", () => {
+  const { sources, client } = captureEventSource();
+
+  const received: string[][] = [];
+  const sub = client.subscribeConversations({
+    onSnapshot: (snapshot) => received.push(snapshot.entries.map((entry) => entry.id)),
+  });
+
+  const source = sources[0];
+  expect(source.url).toBe("/api/conversations/stream");
+  source.emit("snapshot", JSON.stringify(CONVERSATION_SNAPSHOT));
+  source.emit("snapshot", JSON.stringify({ ...CONVERSATION_SNAPSHOT, entries: [] }));
+
+  expect(received).toEqual([["conversation:step-1"], []]);
+  sub.close();
+  expect(source.closed).toBe(true);
+});

@@ -12,6 +12,7 @@ import { createActivityRoutes } from "./routes/activity.js";
 import { createAgentProfileRoutes } from "./routes/agent-profiles.js";
 import { createCatalogRoutes } from "./routes/catalog.js";
 import { createCompeteRoutes } from "./routes/compete.js";
+import { createConversationRoutes } from "./routes/conversations.js";
 import { createDiagnosticsRoutes } from "./routes/diagnostics.js";
 import { createGitHubRoutes } from "./routes/github.js";
 import { createHealthRoutes } from "./routes/health.js";
@@ -58,6 +59,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api", createGitHubRoutes(deps));
   app.route("/api", createCatalogRoutes(deps));
   app.route("/api/activity", createActivityRoutes(deps));
+  app.route("/api/conversations", createConversationRoutes(deps));
   app.route("/api/inbox", createInboxRoutes(deps));
   app.route("/api/linear", createLinearRoutes(deps));
   app.route("/api/settings", createSettingsRoutes(deps));

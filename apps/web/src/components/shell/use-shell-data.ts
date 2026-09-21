@@ -1,4 +1,9 @@
-import { countActionablePullRequestInboxEntries, countUnreadInboxEntries } from "@otomat/domain";
+import {
+  countActionablePullRequestInboxEntries,
+  countUnreadConversations,
+  countUnreadInboxEntries,
+} from "@otomat/domain";
+import { useConversations } from "@web/api/conversations/queries";
 import { useDaemonStatus } from "@web/api/daemon/queries";
 import { useInbox } from "@web/api/inbox/queries";
 import { usePullRequestInbox } from "@web/api/reviews/queries";
@@ -14,6 +19,7 @@ export function useShellData() {
   const runs = useProjectRuns(switcher.currentProjectId);
   const reviewInbox = usePullRequestInbox(switcher.currentProjectId);
   const inbox = useInbox();
+  const conversations = useConversations();
   const remote = useRemoteSession();
 
   return {
@@ -29,5 +35,6 @@ export function useShellData() {
     hasLiveRun: (runs.data ?? []).some(isRunning),
     reviewCount: countActionablePullRequestInboxEntries(reviewInbox.data?.entries ?? []),
     inboxCount: countUnreadInboxEntries(inbox.data?.entries ?? []),
+    conversationCount: countUnreadConversations(conversations.data?.entries ?? []),
   };
 }

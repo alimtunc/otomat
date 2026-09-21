@@ -30,6 +30,7 @@ export default defineConfig({
           items: [
             { text: "Launch a run", link: "/guide/runs" },
             { text: "Steer a run", link: "/guide/steering" },
+            { text: "Conversations", link: "/guide/conversations" },
             { text: "Review and publish", link: "/guide/review" },
             { text: "Workspaces and files", link: "/guide/workspaces" },
             { text: "Notifications and Inbox", link: "/guide/notifications" },
