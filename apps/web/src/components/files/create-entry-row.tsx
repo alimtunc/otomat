@@ -5,7 +5,7 @@ import { useCreateEntry } from "@web/api/files/mutations";
 import { entryNameError } from "@web/components/files/entry-name";
 import { joinPath } from "@web/components/files/tree/path";
 import { fieldErrorProps } from "@web/lib/form";
-import { worktreeFileMessage } from "@web/lib/run/file-refusal";
+import { worktreeFileMessage, worktreeFileRefusal } from "@web/lib/run/file-refusal";
 
 export interface CreateEntryRowProps {
   target: CheckoutTarget;
@@ -13,6 +13,7 @@ export interface CreateEntryRowProps {
   directory: string;
   entries: readonly WorktreeFileEntry[];
   onCreated: (entry: WorktreeFileEntry) => void;
+  onExisting: (path: string) => void;
   onCancel: () => void;
 }
 
@@ -22,6 +23,7 @@ export function CreateEntryRow({
   directory,
   entries,
   onCreated,
+  onExisting,
   onCancel,
 }: CreateEntryRowProps) {
   const create = useCreateEntry(target);
@@ -29,12 +31,17 @@ export function CreateEntryRow({
   const form = useForm({
     defaultValues: { name: "" },
     onSubmit: ({ value }) => {
-      if (!create.isPending) {
-        create.mutate(
-          { path: joinPath(directory, value.name.trim()), kind },
-          { onSuccess: onCreated },
-        );
-      }
+      if (create.isPending) return;
+      const path = joinPath(directory, value.name.trim());
+      create.mutate(
+        { path, kind },
+        {
+          onSuccess: onCreated,
+          onError: (error) => {
+            if (kind === "file" && worktreeFileRefusal(error) === "path_exists") onExisting(path);
+          },
+        },
+      );
     },
   });
   return (

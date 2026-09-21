@@ -57,7 +57,7 @@ export function hostKeys(host: ExecutionHostId) {
       [host, "source-control", "repository", repositoryId, "pr", baseRef, revision] as const,
     checkoutFiles: (target: CheckoutTarget) =>
       target.kind === "run" ? runFiles(target.id) : repositoryTree(target.id),
-    checkoutFile: (target: CheckoutTarget, path: string) =>
+    checkoutFile: (target: CheckoutTarget, path: string | null) =>
       target.kind === "run"
         ? ([host, "run", target.id, "files", "content", path] as const)
         : ([host, "repositories", target.id, "tree", "content", path] as const),

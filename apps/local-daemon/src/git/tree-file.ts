@@ -66,7 +66,7 @@ export function listTreeFiles(gitCwd: string, tree: string): WorktreeFileEntry[]
   for (const record of out.split("\0")) {
     const entry = record === "" ? null : parseTreeRecord(record);
     if (entry === null || entry.type === "tree") continue;
-    entries.push({ path: entry.path, kind: entryKind(entry), size: entry.size });
+    entries.push({ path: entry.path, kind: entryKind(entry), size: entry.size, ignored: false });
   }
   return entries;
 }

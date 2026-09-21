@@ -10,6 +10,8 @@ export const worktreeFileEntrySchema = z.object({
   path: z.string(),
   kind: z.enum(WORKTREE_FILE_KINDS),
   size: z.number().int().nonnegative(),
+  /** Git excludes it from the tree, the diff and a PR; a listing never carries one, a creation reports it. */
+  ignored: z.boolean(),
 });
 export type WorktreeFileEntry = z.infer<typeof worktreeFileEntrySchema>;
 
@@ -36,6 +38,7 @@ export const worktreeFileContentSchema = z.discriminatedUnion("kind", [
     revision: z.string(),
     bytes: z.number().int().nonnegative(),
     text: z.string(),
+    ignored: z.boolean(),
   }),
   z.object({
     kind: z.literal("media"),
@@ -78,7 +81,6 @@ export const WORKTREE_FILE_ERRORS = [
   "file_revision_stale",
   "path_exists",
   "parent_not_found",
-  "path_ignored",
 ] as const;
 export type WorktreeFileError = (typeof WORKTREE_FILE_ERRORS)[number];
 

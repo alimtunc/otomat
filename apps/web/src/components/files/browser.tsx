@@ -21,6 +21,7 @@ export interface FileBrowserProps {
   entries: readonly WorktreeFileEntry[];
   activePath: string | null;
   onSelect: (path: string, openInChanges?: boolean) => void;
+  onCreated: (entry: WorktreeFileEntry) => void;
   scope?: string;
   changes?: SourceControlResponse;
 }
@@ -31,6 +32,7 @@ export function FileBrowser({
   entries,
   activePath,
   onSelect,
+  onCreated,
   scope,
   changes,
 }: FileBrowserProps) {
@@ -131,7 +133,13 @@ export function FileBrowser({
                               onCreated={(entry) => {
                                 setCreating(null);
                                 setDirectory(entry.kind === "directory" ? entry.path : null);
+                                onCreated(entry);
                                 if (entry.kind === "file") onSelect(entry.path);
+                              }}
+                              onExisting={(path) => {
+                                setCreating(null);
+                                setDirectory(null);
+                                onSelect(path);
                               }}
                             />
                           ),

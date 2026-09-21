@@ -1,9 +1,11 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type {
   ReviewDiffResponse,
   WorktreeFileContent,
+  WorktreeFileError,
   WorktreeFileSaved,
   WorktreeFilesResponse,
 } from "@otomat/domain";
@@ -93,6 +95,72 @@ it("refuses traversal, absolute paths, binaries and oversized files", async () =
     text: "",
   });
   expect(escaped.status).toBe(400);
+});
+
+it("opens and saves an existing ignored file that stays out of the tree and the diff", async () => {
+  writeFileSync(join(fix.worktree, ".gitignore"), ".env\n");
+  writeFileSync(join(fix.worktree, ".env"), "SECRET=1\n");
+  const opened = await openText(".env");
+  expect(opened).toMatchObject({ text: "SECRET=1\n", bytes: 9, ignored: true });
+  expect((await openText("src/app.ts")).ignored).toBe(false);
+
+  const saved = await put(fix.app, `/api/runs/${RUN_ID}/files/content`, {
+    path: ".env",
+    revision: opened.revision,
+    text: "SECRET=2\n",
+  });
+  expect(saved.status).toBe(200);
+  expect((await openText(".env")).text).toBe("SECRET=2\n");
+  const stale = await put(fix.app, `/api/runs/${RUN_ID}/files/content`, {
+    path: ".env",
+    revision: opened.revision,
+    text: "SECRET=3\n",
+  });
+  expect(await stale.json()).toMatchObject({ error: "file_revision_stale" });
+
+  const listed = await json<WorktreeFilesResponse>(
+    await request(fix.app, `/api/runs/${RUN_ID}/files`),
+  );
+  expect(listed.entries.map((entry) => entry.path)).toEqual([
+    ".gitignore",
+    "README.md",
+    "assets/pixel.png",
+    "src/app.ts",
+  ]);
+  const diff = await json<ReviewDiffResponse>(await request(fix.app, `/api/runs/${RUN_ID}/diff`));
+  expect(diff.diff?.files.map((file) => file.path)).toEqual([".gitignore"]);
+});
+
+it("guards an ignored read like a tree read: symlinks, binaries, size, Git internals", async () => {
+  const content = `/api/runs/${RUN_ID}/files/content`;
+  writeFileSync(join(fix.worktree, ".gitignore"), "ignored/\n*.local\n");
+  mkdirSync(join(fix.worktree, "ignored"));
+  symlinkSync(tmpdir(), join(fix.worktree, "ignored/escape"));
+  symlinkSync("src", join(fix.worktree, "alias"));
+  symlinkSync("/etc/hostname", join(fix.worktree, "host.local"));
+  mkdirSync(join(fix.worktree, "nested/.git"), { recursive: true });
+  writeFileSync(join(fix.worktree, "nested/secret.local"), "x");
+  writeFileSync(join(fix.worktree, "ignored/blob.bin"), Buffer.alloc(3));
+  writeFileSync(join(fix.worktree, "ignored/pixel.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0]));
+  writeFileSync(join(fix.worktree, "ignored/huge.txt"), "x".repeat(1024 * 1024 + 1));
+  const refusals = {
+    "ignored/escape/hostname": "file_symlink",
+    "alias/app.ts": "file_symlink",
+    "host.local": "file_symlink",
+    "nested/secret.local": "file_not_found",
+    "ignored/blob.bin": "file_binary",
+    "ignored/pixel.png": "file_binary",
+    "ignored/huge.txt": "file_too_large",
+    ignored: "file_not_found",
+    ".git/config": "file_not_found",
+    "missing.local": "file_not_found",
+  } satisfies Record<string, WorktreeFileError>;
+  for (const [path, error] of Object.entries(refusals)) {
+    const res = await request(fix.app, `${content}?path=${path}`);
+    expect(await res.json(), path).toMatchObject({ error });
+  }
+  fix.service.archive(RUN_ID);
+  expect((await request(fix.app, `${content}?path=ignored/huge.txt`)).status).toBe(404);
 });
 
 it("keeps an archived branch readable but never writable", async () => {

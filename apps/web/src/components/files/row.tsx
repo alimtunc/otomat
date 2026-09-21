@@ -35,10 +35,16 @@ export function FileBrowserRow({ entry, active, indent, onSelect }: FileBrowserR
           "min-w-0 flex-1 truncate text-left",
           status?.className,
           entry.status === "deleted" && "line-through",
+          entry.ignored && "text-text-tertiary",
         )}
       >
         {baseName(entry.path)}
       </span>
+      {entry.ignored ? (
+        <span className="shrink-0 text-micro text-text-tertiary" title="Ignored by Git">
+          Ignored
+        </span>
+      ) : null}
       {status === undefined ? null : (
         <span
           className={cn("shrink-0 font-mono text-micro", status.className)}

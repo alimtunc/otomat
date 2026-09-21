@@ -7,7 +7,6 @@ import {
   type WorktreeFileSaved,
   type SaveWorktreeFileRequest,
   type CreateWorktreeEntryRequest,
-  type WorktreeFileEntry,
 } from "@otomat/domain";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -18,6 +17,7 @@ import {
   normalizeRepositoryPath,
   writeWorktreeFile,
   createWorktreeEntry,
+  readIgnoredFile,
   type WorktreeTree,
 } from "#git";
 
@@ -34,7 +34,6 @@ const REFUSALS = {
   file_revision_stale: [409, "This file changed since it was opened."],
   path_exists: [409, "A file or folder already exists at this path."],
   parent_not_found: [409, "The parent folder does not exist."],
-  path_ignored: [409, "This path is ignored by Git. Choose a path visible in the explorer."],
 } satisfies Record<WorktreeFileError, [ContentfulStatusCode, string]>;
 
 export function refuseFile(c: Context, error: WorktreeFileError) {
@@ -45,9 +44,8 @@ export function refuseFile(c: Context, error: WorktreeFileError) {
 export function createEntryResponse(c: Context, cwd: string, request: CreateWorktreeEntryRequest) {
   const path = normalizeRepositoryPath(request.path);
   if (!isCreatableRepositoryPath(path)) return refuseFile(c, "path_invalid");
-  const error = createWorktreeEntry(cwd, { ...request, path });
-  if (error !== null) return refuseFile(c, error);
-  return c.json({ path, kind: request.kind, size: 0 } satisfies WorktreeFileEntry, 201);
+  const created = createWorktreeEntry(cwd, { ...request, path });
+  return typeof created === "string" ? refuseFile(c, created) : c.json(created, 201);
 }
 
 export function saveFileResponse(c: Context, cwd: string, request: SaveWorktreeFileRequest) {
@@ -70,9 +68,12 @@ export function saveFileResponse(c: Context, cwd: string, request: SaveWorktreeF
 
 export function fileContentResponse(c: Context, tree: WorktreeTree, path: string) {
   const mediaType = diffMediaTypeForPath(path);
-  const read = tree.readFile(path, {
+  const captured = tree.readFile(path, {
     maxBytes: mediaType === null ? WORKTREE_FILE_MAX_BYTES : MEDIA_BLOB_MAX_BYTES,
   });
+  const live = captured.kind === "missing" ? tree.worktreePath : null;
+  const read =
+    live === null ? captured : readIgnoredFile(live, path, { maxBytes: WORKTREE_FILE_MAX_BYTES });
   switch (read.kind) {
     case "text":
       return c.json({
@@ -81,9 +82,10 @@ export function fileContentResponse(c: Context, tree: WorktreeTree, path: string
         revision: read.oid,
         bytes: read.bytes,
         text: read.text,
+        ignored: live !== null,
       } satisfies WorktreeFileContent);
     case "binary":
-      if (mediaType === null) return refuseFile(c, "file_binary");
+      if (mediaType === null || live !== null) return refuseFile(c, "file_binary");
       return c.json({
         kind: "media",
         path,

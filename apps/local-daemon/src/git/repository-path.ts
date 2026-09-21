@@ -7,11 +7,14 @@ export function isRepositoryRelative(path: string): boolean {
   return !path.split(/[\\/]/).includes("..");
 }
 
+/** Case-folded: a case-insensitive checkout resolves `.GIT/config` to the repository's own metadata. */
+export function namesGitDirectory(path: string): boolean {
+  return path.split("/").some((part) => part.toLowerCase() === ".git");
+}
+
 export function isCreatableRepositoryPath(path: string): boolean {
-  if (!isRepositoryRelative(path) || /[\\\0]/.test(path)) return false;
-  return !path
-    .split("/")
-    .some((part) => part === "" || part === "." || part.toLowerCase() === ".git");
+  if (!isRepositoryRelative(path) || /[\\\0]/.test(path) || namesGitDirectory(path)) return false;
+  return !path.split("/").some((part) => part === "" || part === ".");
 }
 
 /** Strips the segments a picker adds without changing which file is named. */
