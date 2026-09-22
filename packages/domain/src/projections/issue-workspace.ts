@@ -6,11 +6,14 @@ import { isIssueClosed } from "../state-machines/issue.js";
 import { isRunBusy } from "../state-machines/run.js";
 import type { IssueExecutionEvidence } from "./evidence.js";
 
-/** Only an explicit closure ends a cycle — a confirmed merge (`completed`), an abandon stamp, or a closed issue once its run is at rest — and a workspace must never point at a worktree that is gone. */
+/** Only an explicit closure ends a cycle — a confirmed merge (`completed`), an abandon stamp, or a closed issue once its run is at rest. */
+export function isCycleClosed(row: IssueExecutionEvidence): boolean {
+  if (isIssueClosed(row.issue_status) && !isRunBusy(row.run_status)) return true;
+  return row.run_abandoned_at !== null || row.run_status === "completed";
+}
+
 export function holdsWorkspace(row: IssueExecutionEvidence): boolean {
-  if (row.worktree_status !== "active") return false;
-  if (isIssueClosed(row.issue_status) && !isRunBusy(row.run_status)) return false;
-  return row.run_abandoned_at === null && row.run_status !== "completed";
+  return row.worktree_status === "active" && !isCycleClosed(row);
 }
 
 function outranks(candidate: IssueExecutionEvidence, best: IssueExecutionEvidence): boolean {

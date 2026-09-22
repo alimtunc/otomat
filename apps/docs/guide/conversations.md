@@ -1,15 +1,22 @@
 # Conversations
 
-**Conversations**, in the sidebar next to the Inbox, lists every step conversation of every
+**Conversations**, in the sidebar's Workspace section, lists every step conversation of every
 project on the active host — the threads the run cockpit already shows, gathered in one place so
 you can find the one that spoke last and answer it without opening the right run first.
 
 ## The list
 
-One row per step that has a session or a message, newest activity first, in two sections:
-**Active** holds the steps still working or waiting, plus any finished thread you have not read
-yet; **Recently finished** holds the settled threads of the last day once you have read them.
-Each row names the issue, the step, its state, the last line of the thread — a pending
+One row per step that has a session or a message, grouped by issue, newest activity first, in
+two sections. **Active** holds the issues whose cycle is still open: a run queued, working or
+waiting on a permission, an answer or a provider quota; a run awaiting your review or with an
+open pull request; a stopped run you can still resume. **Recently finished** holds the issues
+with nothing left to follow — merged, abandoned, closed at the tracker, or a stop whose workspace
+is gone — for the threads that moved in the last day, ten issues at most. A finished thread you
+have not read keeps its unread dot there; it never holds an issue in Active.
+
+Each group names the issue and shows its cycle as the icon the board uses for it; click the
+heading to fold or unfold its threads — the open thread stays open. Each row names the step,
+its state as an icon (hover it for the word), the last line of the thread — a pending
 permission or question first, then a message waiting to be delivered, then the last thing said —
 its runtime and model, and how long ago it moved.
 

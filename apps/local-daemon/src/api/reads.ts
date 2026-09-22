@@ -9,6 +9,7 @@ import {
   listAgentSessionsForRun,
   listCompeteGroupsForRun,
   listIssueExecutionEvidence,
+  listIssueExecutionEvidenceByIssue,
   listIssues,
   listProjects,
   listRepositories,
@@ -20,7 +21,6 @@ import {
   listWorkflowPresets,
   getProject,
   type Db,
-  type IssueExecutionEvidenceRow,
   type RepositoryRow,
   type StepRunRow,
 } from "@otomat/db";
@@ -37,7 +37,6 @@ import {
   supervisionSessionIds,
   type AgentProfileContract,
   type IssueContract,
-  type IssueExecutionEvidence,
   type ProjectContract,
   type RepositoryContract,
   type RunContract,
@@ -117,21 +116,8 @@ export function readRepositories(db: Db, projectId?: string): RepositoryContract
   return listRepositories(db, { projectId }).map((row) => repositoryContract(db, row));
 }
 
-/** Groups the flat evidence rows by issue so each issue gets one deterministic projection. */
-function groupExecutionEvidence(
-  rows: IssueExecutionEvidenceRow[],
-): Map<string, IssueExecutionEvidence[]> {
-  const byIssue = new Map<string, IssueExecutionEvidence[]>();
-  for (const { issue_id, ...evidence } of rows) {
-    const bucket = byIssue.get(issue_id);
-    if (bucket) bucket.push(evidence);
-    else byIssue.set(issue_id, [evidence]);
-  }
-  return byIssue;
-}
-
 export function readIssues(db: Db, projectId?: string, includeBody = true): IssueContract[] {
-  const evidence = groupExecutionEvidence(listIssueExecutionEvidence(db, { projectId }));
+  const evidence = listIssueExecutionEvidenceByIssue(db, { projectId });
   return listIssues(db, { projectId, includeBody }).map((row) => {
     const rows = evidence.get(row.id) ?? [];
     return toIssue(row, projectIssueExecution(rows), projectIssueWorkspace(rows));

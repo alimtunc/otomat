@@ -4,6 +4,10 @@ import type { InboxMark } from "../contracts/inbox.js";
 import type { RunInteractionKind } from "../state-machines/run-interaction.js";
 import type { RunState } from "../state-machines/run.js";
 import type { StepRunState } from "../state-machines/step-run.js";
+import type { IssueExecutionEvidence } from "./evidence.js";
+import { projectIssueExecution } from "./issue-execution.js";
+import { isCycleClosed, projectIssueWorkspace } from "./issue-workspace.js";
+import { projectOpenCycleExecution, type OpenCycleExecution } from "./primary-state.js";
 
 export interface ConversationMessageEvidence {
   text: string;
@@ -91,9 +95,23 @@ function readingOf(
   return { read: silenced || (current && mark.read), archived: current && mark.archived };
 }
 
+/** A live run is followed before `preparing` creates the worktree that would open its cycle. */
+export function projectFollowedCycle(
+  rows: readonly IssueExecutionEvidence[],
+): OpenCycleExecution | null {
+  const execution = projectIssueExecution(rows);
+  const open = projectOpenCycleExecution({ execution, workspace: projectIssueWorkspace(rows) });
+  if (open !== null || execution.state !== "running") return open;
+  const run = rows.find((row) => row.run_id === execution.run_id);
+  return run !== undefined && !isCycleClosed(run) ? execution : null;
+}
+
+export type ConversationCycles = ReadonlyMap<string, OpenCycleExecution>;
+
 export function projectConversations(
   evidence: readonly ConversationEvidence[],
   marks: readonly InboxMark[],
+  cycles: ConversationCycles,
 ): ConversationEntry[] {
   const markById = new Map(marks.map((mark) => [mark.entry_id, mark]));
   return evidence
@@ -103,7 +121,12 @@ export function projectConversations(
       return {
         id,
         project: { id: row.project_id, name: row.project_name },
-        issue: { id: row.issue_id, identifier: row.issue_identifier, title: row.issue_title },
+        issue: {
+          id: row.issue_id,
+          identifier: row.issue_identifier,
+          title: row.issue_title,
+          cycle: cycles.get(row.issue_id)?.state ?? null,
+        },
         run_id: row.run_id,
         run_status: row.run_status,
         step_run_id: row.step_run_id,

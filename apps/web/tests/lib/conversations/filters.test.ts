@@ -21,6 +21,7 @@ const entries = [
     id: "conversation:step-4",
     step_run_id: "step-4",
     step_status: "succeeded",
+    issue: { id: "issue-2", identifier: null, title: "Done", cycle: null },
     project: { id: "p2", name: "Docs" },
   }),
   conversationEntry({ id: "conversation:step-5", step_run_id: "step-5", archived: true }),
@@ -42,6 +43,9 @@ describe("applyConversationFilters", () => {
     expect(
       ids(applyConversationFilters(entries, { ...NO_CONVERSATION_FILTERS, state: "waiting" })),
     ).toEqual(["step-3"]);
+    expect(
+      ids(applyConversationFilters(entries, { ...NO_CONVERSATION_FILTERS, state: "active" })),
+    ).toEqual(["step-1", "step-2", "step-3"]);
     expect(
       ids(applyConversationFilters(entries, { ...NO_CONVERSATION_FILTERS, state: "finished" })),
     ).toEqual(["step-4"]);

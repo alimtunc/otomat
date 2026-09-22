@@ -6,7 +6,7 @@ export function conversationEntry(overrides: Partial<ConversationEntry> = {}): C
   return {
     id: "conversation:step-1",
     project: { id: "p1", name: "Otomat" },
-    issue: { id: "issue-1", identifier: "OTO-1", title: "Ship it" },
+    issue: { id: "issue-1", identifier: "OTO-1", title: "Ship it", cycle: "running" },
     run_id: "run-1",
     run_status: "running",
     step_run_id: "step-1",

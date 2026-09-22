@@ -1,5 +1,5 @@
-import { ISSUE_CLOSED_STATES, RUN_SETTLED_STATES, type ConversationEvidence } from "@otomat/domain";
-import { and, eq, exists, gte, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import type { ConversationEvidence } from "@otomat/domain";
+import { and, eq, exists, gte, inArray, ne, or, sql } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import {
@@ -19,10 +19,15 @@ import {
 } from "./conversation-facts.js";
 import { isoToSqlite, sqliteToIso } from "./instants.js";
 
-/** One row per step in the activity scope that has a session or a message: a queued step nobody wrote to has no thread yet. */
-function listThreadRows(db: Db, since: string) {
-  const bound = isoToSqlite(since);
-  const open = and(isNull(runs.abandoned_at), notInArray(issues.status, [...ISSUE_CLOSED_STATES]));
+/** A followed run's threads are listed at any age; any other run's only while it moved after `since`. */
+interface ConversationScope {
+  followed_run_ids: readonly string[];
+  since: string;
+}
+
+/** One row per step in scope that has a session or a message: a queued step nobody wrote to has no thread yet. */
+function listThreadRows(db: Db, scope: ConversationScope) {
+  const bound = isoToSqlite(scope.since);
   const hasSession = exists(
     db
       .select({ one: sql`1` })
@@ -58,11 +63,7 @@ function listThreadRows(db: Db, since: string) {
     .innerJoin(projects, eq(issues.project_id, projects.id))
     .where(
       and(
-        or(
-          notInArray(runs.status, [...RUN_SETTLED_STATES]),
-          and(eq(runs.status, "failed"), open),
-          gte(runs.updated_at, bound),
-        ),
+        or(inArray(runs.id, [...scope.followed_run_ids]), gte(runs.updated_at, bound)),
         ne(stepRuns.status, "withdrawn"),
         or(hasSession, hasMessage),
       ),
@@ -70,9 +71,8 @@ function listThreadRows(db: Db, since: string) {
     .all();
 }
 
-/** `since` bounds only settled runs: a live thread stays listed at any age, like the Activity Center's evidence. */
-export function listConversationEvidence(db: Db, since: string): ConversationEvidence[] {
-  const rows = listThreadRows(db, since);
+export function listConversationEvidence(db: Db, scope: ConversationScope): ConversationEvidence[] {
+  const rows = listThreadRows(db, scope);
   if (rows.length === 0) return [];
   const runIds = [...new Set(rows.map((row) => row.run_id))];
   const messages = latestAgentMessages(db, runIds);

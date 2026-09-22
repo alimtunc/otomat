@@ -8,7 +8,6 @@ import {
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import {
-  CONVERSATIONS_NAV,
   INBOX_NAV,
   SETTINGS_NAV,
   WORKSPACE_NAV,
@@ -65,6 +64,10 @@ export function Sidebar({
   conversationCount = 0,
 }: SidebarProps) {
   const collapsed = useSidebarCollapsed();
+  const badges = new Map<ShellSection, number>([
+    ["reviews", reviewCount],
+    ["conversations", conversationCount],
+  ]);
   const projectSwitcher = (
     <ProjectSwitcher
       projects={projects}
@@ -112,28 +115,23 @@ export function Sidebar({
           render={navRender(INBOX_NAV.to)}
           collapsed={collapsed}
         />
-        <SidebarNavItem
-          icon={CONVERSATIONS_NAV.icon}
-          label={CONVERSATIONS_NAV.label}
-          active={active === CONVERSATIONS_NAV.section}
-          badgeCount={conversationCount > 0 ? conversationCount : undefined}
-          render={navRender(CONVERSATIONS_NAV.to)}
-          collapsed={collapsed}
-        />
       </nav>
       <NavSection label="Workspace" collapsed={collapsed}>
-        {WORKSPACE_NAV.map((item) => (
-          <SidebarNavItem
-            key={item.section}
-            icon={item.icon}
-            label={item.label}
-            active={active === item.section}
-            live={item.section === "runs" && hasLiveRun}
-            badgeCount={item.section === "reviews" && reviewCount > 0 ? reviewCount : undefined}
-            render={navRender(item.to)}
-            collapsed={collapsed}
-          />
-        ))}
+        {WORKSPACE_NAV.map((item) => {
+          const count = badges.get(item.section) ?? 0;
+          return (
+            <SidebarNavItem
+              key={item.section}
+              icon={item.icon}
+              label={item.label}
+              active={active === item.section}
+              live={item.section === "runs" && hasLiveRun}
+              badgeCount={count > 0 ? count : undefined}
+              render={navRender(item.to)}
+              collapsed={collapsed}
+            />
+          );
+        })}
       </NavSection>
     </AppSidebar>
   );

@@ -1525,20 +1525,32 @@ cockpit's own `ConversationHeader` and `StepConversationThread` under a
 `RunEventsProvider` for the selected run, so a message posted there targets the
 selected step exactly as it would in the cockpit.
 
-`repositories/conversations.ts` lists the steps in the Activity Center's evidence
-scope that hold a session or a message — a queued step nobody wrote to has no
-thread yet, and a withdrawn one never will — and `conversation-facts.ts` attaches
-the facts the row is built from: the newest non-thinking `runtime.message` per
-step, the pending interaction, the queued and failed contributions, and the
-latest turn's frozen configuration (the plan node's, for a step that has not
-started). `projectConversations` then derives one `updated_at` per thread from
-the moves that are worth reading — an agent answer, a step entering
-`awaiting_permission`, `awaiting_human`, `waiting_for_provider`, `succeeded`,
-`failed` or `stale`, a pending question, a failed delivery — and from nothing
-else: tool calls, reasoning, logs and the operator's own message never move a
-thread, which is why the badge counts threads and cannot tick per stream frame.
-A cancelled step and an abandoned run read as already read: they are the
-operator's act.
+**Which threads are listed, and which are active, is the issue cycle's call, not
+the step's.** `readConversations` first reduces every issue's execution evidence
+(`listIssueExecutionEvidenceByIssue`) through `projectFollowedCycle`: the open
+cycle `projectOpenCycleExecution` already gives the board —
+a busy run, a quota wait, a review or a pull request awaiting its verdict, a stop
+the operator can still resume — plus a live run whose worktree does not exist yet,
+since only `preparing` creates the one that opens the cycle. The followed runs'
+threads are fetched at any age; every other thread only while its run moved in
+the last day. `repositories/conversations.ts` lists the steps in that scope that
+hold a session or a message — a queued step nobody wrote to has no thread yet,
+and a withdrawn one never will — and `conversation-facts.ts` attaches the facts
+the row is built from: the newest non-thinking `runtime.message` per step, the
+pending interaction, the queued and failed contributions, and the latest turn's
+frozen configuration (the plan node's, for a step that has not started).
+`projectConversations` stamps each entry with its issue's followed cycle
+(`issue.cycle`, null once nothing is left to follow) and derives one `updated_at`
+per thread from the moves that are worth reading — an agent answer, a step
+entering `awaiting_permission`, `awaiting_human`, `waiting_for_provider`,
+`succeeded`, `failed` or `stale`, a pending question, a failed delivery — and
+from nothing else: tool calls, reasoning, logs and the operator's own message
+never move a thread, which is why the badge counts threads and cannot tick per
+stream frame. A cancelled step and an abandoned run read as already read: they
+are the operator's act. The web groups entries by issue and sections the groups
+by `issue.cycle` alone — an unread finished thread sits in *Recently finished*
+with its dot, never in *Active* — and the state filter reads `sectionOf`, so a
+filter and a section cannot disagree.
 
 Reading marks reuse `inbox_marks` and `POST /api/inbox/marks` unchanged; the
 projection only ever looks up its own ids, so the two projections cannot see
@@ -1997,8 +2009,8 @@ not render.
 
 ## Settings and Global Agents
 
-The sidebar carries work only — Issues, Runs, Reviews, Usage, plus the Inbox and
-the two quick actions. Everything that configures Otomat or documents it is
+The sidebar carries work only — Issues, Files, Runs, Conversations, Reviews,
+Usage, plus the Inbox and the two quick actions. Everything that configures Otomat or documents it is
 reached from the project switcher, which is where the operator already goes to
 change what they are working on. `nav-items.ts` therefore holds one workspace
 list and a single `SETTINGS_NAV` entry the switcher and the palette share; there

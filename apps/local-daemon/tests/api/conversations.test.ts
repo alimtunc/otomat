@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { RuntimeEvent } from "#runtime";
 
 import { json, makeApiApp, post, request } from "../support/api.js";
-import { setupTestDb, type TestDb } from "../support/db.js";
+import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { appendEvents } from "../support/ledger.js";
 import { makeEvent } from "../support/run-event-fixtures.js";
 import { seedRun, seedWorkflowRun, type SeededRun } from "../support/seed.js";
@@ -192,7 +192,13 @@ describe("GET /api/conversations", () => {
     });
   });
 
-  it("drops a finished run that settled before the window, keeps a live one at any age", async () => {
+  it("drops a settled run past the window and a closed issue's review, keeps a followed run at any age", async () => {
+    seedRepository(t.db);
+    t.db.insert(schema.issues).values({ id: "i2", project_id: "p1", title: "Two" }).run();
+    t.db
+      .insert(schema.issues)
+      .values({ id: "i3", project_id: "p1", title: "Three", status: "done" })
+      .run();
     seedRun(t.db, {
       runId: "run-old",
       runStatus: "completed",
@@ -201,11 +207,19 @@ describe("GET /api/conversations", () => {
     });
     seedRun(t.db, {
       runId: "run-live",
-      runStatus: "running",
-      stepStatus: "running",
-      sessionStatus: "active",
+      issueId: "i2",
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
     });
-    for (const runId of ["run-old", "run-live"]) {
+    seedRun(t.db, {
+      runId: "run-closed",
+      issueId: "i3",
+      runStatus: "review_ready",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    for (const runId of ["run-old", "run-live", "run-closed"]) {
       t.db
         .update(schema.runs)
         .set({ updated_at: "2020-01-01 00:00:00" })
@@ -215,6 +229,30 @@ describe("GET /api/conversations", () => {
 
     const snapshot = await readSnapshot();
 
-    expect(snapshot.entries.map((entry) => entry.run_id)).toEqual(["run-live"]);
+    expect(snapshot.entries.map((entry) => [entry.run_id, entry.issue.cycle])).toEqual([
+      ["run-live", "reviewing"],
+    ]);
+  });
+
+  it("stops following a thread on the read after its cycle closes", async () => {
+    seedRun(t.db, {
+      runId: "run-5",
+      runStatus: "running",
+      stepStatus: "running",
+      sessionStatus: "active",
+    });
+    expect((await readSnapshot()).entries[0]?.issue.cycle).toBe("running");
+
+    t.db.update(schema.runs).set({ status: "completed" }).where(eq(schema.runs.id, "run-5")).run();
+    t.db
+      .update(schema.stepRuns)
+      .set({ status: "succeeded" })
+      .where(eq(schema.stepRuns.run_id, "run-5"))
+      .run();
+
+    expect((await readSnapshot()).entries[0]).toMatchObject({
+      step_status: "succeeded",
+      issue: { cycle: null },
+    });
   });
 });

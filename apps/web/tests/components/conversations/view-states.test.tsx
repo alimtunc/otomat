@@ -148,3 +148,30 @@ it("does not read a thread that is already read, nor one the host does not list"
   expect(mutate).not.toHaveBeenCalled();
   await foreign.cleanup();
 });
+
+it("moves an issue out of Active on the frame that closes its cycle", async () => {
+  conversations = {
+    data: snapshot([conversationEntry()]),
+    dataUpdatedAt: Date.now(),
+    refetch: vi.fn(),
+  };
+  const { container, rerender, cleanup } = await mount(<ConversationsView />);
+  const sectionOf = () =>
+    [...container.querySelectorAll("h2")].map((heading) => heading.textContent);
+  expect(sectionOf()).toEqual(["Active1"]);
+
+  conversations = {
+    data: snapshot([
+      conversationEntry({
+        step_status: "succeeded",
+        issue: { id: "issue-1", identifier: "OTO-1", title: "Ship it", cycle: null },
+      }),
+    ]),
+    dataUpdatedAt: Date.now(),
+    refetch: vi.fn(),
+  };
+  await rerender(<ConversationsView />);
+
+  expect(sectionOf()).toEqual(["Recently finished1"]);
+  await cleanup();
+});

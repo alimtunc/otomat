@@ -23,12 +23,13 @@ function control(label: string): HTMLElement {
 }
 
 describe("ConversationRow", () => {
-  it("names the issue, the step, its state, the last line and the participant", async () => {
+  it("names the step, its state as an icon, the last line and the participant", async () => {
     const { container, cleanup } = await render();
 
-    expect(container.textContent).toContain("OTO-1");
+    expect(container.textContent).not.toContain("OTO-1");
     expect(container.textContent).toContain("Implement");
-    expect(container.textContent).toContain("Running");
+    expect(container.textContent).not.toContain("Running");
+    expect(container.querySelector('[aria-label="Running"][title="Running"]')).not.toBeNull();
     expect(container.textContent).toContain("Root cause found.");
     expect(container.textContent).toContain("claude · opus");
     expect(container.textContent).toContain("Unread");
