@@ -2,16 +2,21 @@ import {
   chmodSync,
   constants,
   closeSync,
+  existsSync,
   lstatSync,
   openSync,
   readFileSync,
   renameSync,
   writeFileSync,
+  type Stats,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
+import type { WorktreeFileError } from "@otomat/domain";
+
 import { runGit } from "./git-cli.js";
 import { isInsideRoot } from "./probe.js";
+import { namesGitDirectory } from "./repository-path.js";
 
 export type WorktreeWriteResult =
   | { kind: "written"; revision: string }
@@ -20,7 +25,7 @@ export type WorktreeWriteResult =
   | { kind: "symlink" };
 
 /** Git's own blob id for `content` at `path`, clean filters included, so it equals what a captured tree records. */
-function blobRevision(worktreePath: string, path: string, content: Buffer): string {
+export function blobRevision(worktreePath: string, path: string, content: Buffer): string {
   return runGit(["hash-object", "--path", path, "--stdin"], {
     cwd: worktreePath,
     input: content,
@@ -36,7 +41,29 @@ export function isPathAbsent(error: unknown): boolean {
   );
 }
 
-function readWithoutFollowing(target: string): Buffer {
+export function lstatIfPresent(target: string): Stats | null {
+  try {
+    return lstatSync(target);
+  } catch (error) {
+    if (isPathAbsent(error)) return null;
+    throw error;
+  }
+}
+
+export function parentRefusal(cwd: string, path: string): WorktreeFileError | null {
+  let parent = cwd;
+  for (const part of path.split("/").slice(0, -1)) {
+    parent = join(parent, part);
+    const stat = lstatIfPresent(parent);
+    if (stat === null) return "parent_not_found";
+    if (stat.isSymbolicLink()) return "file_symlink";
+    if (!stat.isDirectory()) return "parent_not_found";
+    if (existsSync(join(parent, ".git"))) return "path_invalid";
+  }
+  return null;
+}
+
+export function readWithoutFollowing(target: string): Buffer {
   const fd = openSync(target, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     return readFileSync(fd);
@@ -52,16 +79,11 @@ export function writeWorktreeFile(
   expectedRevision: string,
   text: string,
 ): WorktreeWriteResult {
-  if (path.split("/").includes(".git")) return { kind: "missing" };
+  if (namesGitDirectory(path)) return { kind: "missing" };
   const target = join(worktreePath, path);
   if (!isInsideRoot(worktreePath, target)) return { kind: "symlink" };
-  let stat;
-  try {
-    stat = lstatSync(target);
-  } catch (error) {
-    if (isPathAbsent(error)) return { kind: "missing" };
-    throw error;
-  }
+  const stat = lstatIfPresent(target);
+  if (stat === null) return { kind: "missing" };
   if (stat.isSymbolicLink()) return { kind: "symlink" };
   if (!stat.isFile()) return { kind: "missing" };
 

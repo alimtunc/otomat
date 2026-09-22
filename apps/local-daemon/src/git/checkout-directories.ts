@@ -17,7 +17,7 @@ export function checkoutDirectories(cwd: string): WorktreeFileEntry[] {
     if (!isInsideRoot(cwd, target)) return;
     const stat = lstatSync(target);
     if (!stat.isDirectory() || stat.isSymbolicLink() || existsSync(join(target, ".git"))) return;
-    entries.push({ path, kind: "directory", size: 0 });
+    entries.push({ path, kind: "directory", size: 0, ignored: false });
     const children = readdirSync(target, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => `${path}/${entry.name}`);

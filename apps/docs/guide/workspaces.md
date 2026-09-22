@@ -25,6 +25,10 @@ ignored files excluded — and opens any text file in an editor with find, foldi
 cursors and the command palette (`F1`). `⌘P` jumps to a file by name. Git status decorates names
 and folders; a deleted path stays listed and opens its diff.
 
+A path `.gitignore` covers, such as `.env`, can still be created and edited: it opens with an
+**Ignored by Git** notice, stays listed in the explorer while the Files tab is open, and never
+reaches the diff or a pull request. Naming an existing ignored file in **New file** opens it.
+
 Saving checks that the file on disk is still the one you opened: a save over a file an agent
 changed meanwhile is refused with a **Reload** that discards your edit, never a silent overwrite.
 An archived worktree opens read-only. Saving writes the file and refreshes the diff; it starts no

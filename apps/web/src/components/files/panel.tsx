@@ -1,6 +1,6 @@
-import type { CheckoutTarget } from "@otomat/domain";
+import type { CheckoutTarget, WorktreeFileContent } from "@otomat/domain";
 import { ErrorState, Spinner } from "@otomat/ui";
-import { useFile } from "@web/api/files/queries";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { FileEditor } from "@web/components/files/editor";
 import { MediaBlob } from "@web/components/runs/diff/files/media-blob";
 import { CenteredState } from "@web/components/shell/centered-state";
@@ -10,11 +10,11 @@ import { worktreeFileMessage } from "@web/lib/run/file-refusal";
 export interface FilePanelProps {
   target: CheckoutTarget;
   path: string;
+  file: UseQueryResult<WorktreeFileContent>;
   editable: boolean;
 }
 
-export function FilePanel({ target, path, editable }: FilePanelProps) {
-  const file = useFile(target, path);
+export function FilePanel({ target, path, file, editable }: FilePanelProps) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <QueryBoundary

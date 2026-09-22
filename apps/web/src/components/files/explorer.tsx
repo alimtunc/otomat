@@ -7,6 +7,7 @@ import {
   SidePanel,
   usePanelGroupLayout,
 } from "@otomat/ui";
+import { useFile } from "@web/api/files/queries";
 import { useSourceControl } from "@web/api/source-control/queries";
 import { FileBrowser } from "@web/components/files/browser";
 import { FilePanel } from "@web/components/files/panel";
@@ -14,7 +15,7 @@ import { FILES_SURFACE } from "@web/components/files/surface";
 import { useFileSelection } from "@web/components/files/use-file-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
-import type { ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 export interface FilesExplorerProps {
   target: CheckoutTarget;
@@ -27,7 +28,19 @@ export function FilesExplorer({ target, entries, editable, notice }: FilesExplor
   const surface = FILES_SURFACE[target.kind];
   const changes = useSourceControl(target, editable);
   const active = useFileSelection(target);
+  const file = useFile(target, active.path);
   const layout = usePanelGroupLayout(surface.layout);
+  const [ignored, setIgnored] = useState<readonly WorktreeFileEntry[]>([]);
+  const remember = (entry: WorktreeFileEntry): void => {
+    if (entry.ignored && !ignored.some((known) => known.path === entry.path))
+      setIgnored([...ignored, entry]);
+  };
+  if (file.data?.kind === "text" && file.data.ignored)
+    remember({ path: file.data.path, kind: "file", size: file.data.bytes, ignored: true });
+  const listed = useMemo(() => {
+    const paths = new Set(entries.map((entry) => entry.path));
+    return [...entries, ...ignored.filter((entry) => !paths.has(entry.path))];
+  }, [entries, ignored]);
   return (
     <div className="flex h-full min-h-0 flex-col">
       {notice}
@@ -60,10 +73,11 @@ export function FilesExplorer({ target, entries, editable, notice }: FilesExplor
             target={target}
             editable={editable}
             scope={active.scope}
-            entries={entries}
+            entries={listed}
             changes={changes.data}
             activePath={active.path}
             onSelect={active.select}
+            onCreated={remember}
           />
         </SidePanel>
         <ResizablePanel id={surface.file} minSize="40%">
@@ -72,7 +86,7 @@ export function FilesExplorer({ target, entries, editable, notice }: FilesExplor
               <EmptyState icon="file-text" title="No file open" description={surface.empty} />
             </CenteredState>
           ) : (
-            <FilePanel target={target} path={active.path} editable={editable} />
+            <FilePanel target={target} path={active.path} file={file} editable={editable} />
           )}
         </ResizablePanel>
       </ResizablePanelGroup>

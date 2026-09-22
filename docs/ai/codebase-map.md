@@ -1851,20 +1851,32 @@ project files through the same revision-checked writer as run files.
 
 `POST /api/repositories/:id/tree` and `POST /api/runs/:id/files` create an empty
 file or folder in the selected checkout. Creation requires an existing parent,
-never overwrites an entry, and refuses ignored paths, Git internals, nested
-repositories and symlinked parents. Archived worktrees remain read-only.
+never overwrites an entry, and refuses Git internals, nested repositories and
+symlinked parents; an ignored path is created and the entry answers
+`ignored: true`. Archived worktrees remain read-only.
 Live listings supplement the captured Git tree with untracked directory entries,
 including empty folders: Git selects the visible roots and ignore rules prune
 the directory walk, which never follows symlinks or reads file contents.
 
-File-content reads never touch the filesystem. `GET /api/runs/:id/files/content?path=` goes
-through `readTreeFile`, so a symlink, a binary, a directory, an absent path or a
-file past `WORKTREE_FILE_MAX_BYTES` is refused by kind (`file_symlink`,
-`file_binary`, `file_not_found`, `file_too_large`) rather than approximated, and a
-path that is absolute or carries `..` is refused before git is asked
-(`path_invalid`, via `isRepositoryRelative`). A media file is served as base64 the
-way the diff's expanded blobs are. Every text answer carries `revision`: git's
-own blob id for the content, which is what a save must present back.
+`GET /api/runs/:id/files/content?path=` goes through `readTreeFile`, so a
+symlink, a binary, a directory, an absent path or a file past
+`WORKTREE_FILE_MAX_BYTES` is refused by kind (`file_symlink`, `file_binary`,
+`file_not_found`, `file_too_large`) rather than approximated, and a path that is
+absolute or carries `..` is refused before git is asked (`path_invalid`, via
+`isRepositoryRelative`). A media file is served as base64 the way the diff's
+expanded blobs are. Every text answer carries `revision`: git's own blob id for
+the content, which is what a save must present back. The captured tree never
+holds a gitignored file, so a path it misses on a live checkout falls back to
+`readIgnoredFile` (`git/ignored-file.ts`): the only filesystem read on the
+content path, allowed solely when `git check-ignore` claims the path, guarded
+like the writer (`isInsideRoot`, `lstat` without following, size limit, NUL
+sniff) plus the creator's parent walk (`parentRefusal`: a symlinked parent is
+`file_symlink`, a nested repository is not found), since `check-ignore` dies on
+a pathspec beyond a symlink, and hashed with the same `hash-object --path` so
+the save's revision check holds unchanged. The answer carries `ignored: true`; an ignored binary is
+`file_binary` because media blobs are served from the object store. The web
+explorer keeps ignored entries it created or opened listed for the component's
+lifetime, since no listing will ever return them.
 
 `PUT /api/runs/:id/files/content` writes run files. Both verbs resolve the run
 through the same `worktreeTree`, so a workspace the list reports as read-only

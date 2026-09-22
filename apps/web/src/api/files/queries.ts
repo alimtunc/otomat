@@ -4,11 +4,11 @@ import { daemon } from "@web/api/client";
 import { retryTransportOnly } from "@web/api/query-client";
 import { useQueryKeys } from "@web/api/use-query-keys";
 
-export function useFile(target: CheckoutTarget, path: string) {
+export function useFile(target: CheckoutTarget, path: string | null) {
   const keys = useQueryKeys();
   return useQuery({
     queryKey: keys.checkoutFile(target, path),
-    queryFn: () => daemon.getCheckoutFile(target, path),
+    queryFn: path === null ? skipToken : () => daemon.getCheckoutFile(target, path),
     retry: retryTransportOnly,
   });
 }

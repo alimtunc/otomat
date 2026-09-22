@@ -29,13 +29,18 @@ it.each([
     const listing = await request(fix.app, endpoint);
     expect(await listing.json()).toMatchObject({
       entries: expect.arrayContaining([
-        { path: "empty", kind: "directory", size: 0 },
-        { path: "empty/nested", kind: "directory", size: 0 },
+        { path: "empty", kind: "directory", size: 0, ignored: false },
+        { path: "empty/nested", kind: "directory", size: 0, ignored: false },
       ]),
     });
-    expect(
-      (await post(fix.app, endpoint, { path: "empty/nested/file.ts", kind: "file" })).status,
-    ).toBe(201);
+    const created = await post(fix.app, endpoint, { path: "empty/nested/file.ts", kind: "file" });
+    expect(created.status).toBe(201);
+    expect(await created.json()).toEqual({
+      path: "empty/nested/file.ts",
+      kind: "file",
+      size: 0,
+      ignored: false,
+    });
     expect(readFileSync(join(root, "empty/nested/file.ts"), "utf8")).toBe("");
     expect(existsSync(join(other, "empty"))).toBe(false);
     expect(fix.repo.git("diff", "--cached")).toBe(before);
@@ -49,7 +54,7 @@ it.each([
   },
 );
 
-it("refuses existing paths, missing parents, traversal, Git internals and ignored entries", async () => {
+it("refuses existing paths, missing parents, traversal and Git internals", async () => {
   const endpoint = "/api/repositories/repo-1/tree";
   for (const path of [
     "../escape",
@@ -67,15 +72,34 @@ it("refuses existing paths, missing parents, traversal, Git internals and ignore
   expect((await post(fix.app, endpoint, { path: "missing/file.ts", kind: "file" })).status).toBe(
     409,
   );
-  fix.repo.write(".gitignore", "ignored/\n*.secret\n");
+});
+
+it("creates ignored entries, reports them as ignored and keeps them out of the tree", async () => {
+  const endpoint = "/api/repositories/repo-1/tree";
+  fix.repo.write(".gitignore", "ignored/\n.env\n");
+  fix.repo.commitAll("ignore");
   for (const entry of [
     { path: "ignored", kind: "directory" },
-    { path: "key.secret", kind: "file" },
+    { path: "ignored/.env", kind: "file" },
+    { path: ".env", kind: "file" },
   ]) {
     const response = await post(fix.app, endpoint, entry);
-    expect(await response.json()).toMatchObject({ error: "path_ignored" });
-    expect(existsSync(join(fix.repo.root, entry.path))).toBe(false);
+    expect(response.status, entry.path).toBe(201);
+    expect(await response.json()).toEqual({ ...entry, size: 0, ignored: true });
   }
+  expect(readFileSync(join(fix.repo.root, ".env"), "utf8")).toBe("");
+  expect((await post(fix.app, endpoint, { path: ".env", kind: "file" })).status).toBe(409);
+  expect(await (await request(fix.app, `${endpoint}/content?path=.env`)).json()).toMatchObject({
+    kind: "text",
+    text: "",
+    ignored: true,
+  });
+  const listing = repositoryTreeResponseSchema.parse(
+    await (await request(fix.app, endpoint)).json(),
+  );
+  expect(listing.entries.map((entry) => entry.path)).not.toContain(".env");
+  expect(listing.entries.map((entry) => entry.path)).not.toContain("ignored");
+  expect(fix.repo.git("status", "--porcelain")).toBe("");
 });
 
 it("never creates through symlinks or inside a nested repository", async () => {
@@ -99,7 +123,12 @@ it("does not expose ignored folders or symlink targets, and refuses archived wor
   symlinkSync(fix.worktree, join(fix.repo.root, "empty/escape"));
   const listing = await request(fix.app, "/api/repositories/repo-1/tree");
   const body = repositoryTreeResponseSchema.parse(await listing.json());
-  expect(body.entries).toContainEqual({ path: "empty/visible", kind: "directory", size: 0 });
+  expect(body.entries).toContainEqual({
+    path: "empty/visible",
+    kind: "directory",
+    size: 0,
+    ignored: false,
+  });
   expect(body.entries).not.toContainEqual(expect.objectContaining({ path: "empty/ignored" }));
   expect(body.entries).not.toContainEqual(expect.objectContaining({ path: "empty/escape/src" }));
   fix.service.archive("run-files");

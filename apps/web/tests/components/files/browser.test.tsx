@@ -10,10 +10,10 @@ import { mountWithQuery } from "#support/mount";
 
 const TARGET = { kind: "repository", id: "repo" } as const;
 const ENTRIES: WorktreeFileEntry[] = [
-  { path: "README.md", kind: "file", size: 10 },
-  { path: "src/app.ts", kind: "file", size: 20 },
-  { path: "src/lib/util.ts", kind: "file", size: 30 },
-  { path: "host-link", kind: "symlink", size: 0 },
+  { path: "README.md", kind: "file", size: 10, ignored: false },
+  { path: "src/app.ts", kind: "file", size: 20, ignored: false },
+  { path: "src/lib/util.ts", kind: "file", size: 30, ignored: false },
+  { path: "host-link", kind: "symlink", size: 0, ignored: false },
 ];
 
 function Harness({ initialPath = null }: { initialPath?: string | null }) {
@@ -25,6 +25,7 @@ function Harness({ initialPath = null }: { initialPath?: string | null }) {
       entries={ENTRIES}
       activePath={activePath}
       onSelect={setActivePath}
+      onCreated={vi.fn()}
     />
   );
 }
@@ -43,6 +44,7 @@ describe("FileBrowser", () => {
         entries={ENTRIES}
         activePath={null}
         onSelect={onSelect}
+        onCreated={vi.fn()}
         changes={{
           branch: "main",
           revision: "revision",
@@ -73,6 +75,26 @@ describe("FileBrowser", () => {
     await mounted.cleanup();
   });
 
+  it("lists an ignored entry dimmed with an Ignored marker", async () => {
+    const mounted = await mountWithQuery(
+      <FileBrowser
+        target={TARGET}
+        editable
+        entries={[...ENTRIES, { path: ".env", kind: "file", size: 4, ignored: true }]}
+        activePath={null}
+        onSelect={vi.fn()}
+        onCreated={vi.fn()}
+      />,
+    );
+    const row = mounted.container.querySelector('button[title=".env"]');
+    expect(row?.querySelector('[title="Ignored by Git"]')?.textContent).toBe("Ignored");
+    expect(row?.querySelector(".text-text-tertiary.truncate")).not.toBeNull();
+    expect(
+      mounted.container.querySelector('button[title="README.md"] [title="Ignored by Git"]'),
+    ).toBeNull();
+    await mounted.cleanup();
+  });
+
   it("starts with every folder collapsed and opens one on click", async () => {
     const mounted = await mountWithQuery(<Harness />);
     expect(rowNames(mounted.container)).toEqual(["src", "host-link", "README.md"]);
@@ -94,6 +116,7 @@ describe("FileBrowser", () => {
       entries: ENTRIES,
       activePath: "src/app.ts",
       onSelect,
+      onCreated: vi.fn(),
       scope: "fold-all-test",
     };
     const mounted = await mountWithQuery(<FileBrowser {...props} />);

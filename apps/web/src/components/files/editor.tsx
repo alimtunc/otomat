@@ -85,6 +85,12 @@ export function FileEditor({ target, content, editable, refreshing, onReload }: 
           ) : null}
         </span>
       </div>
+      {content.ignored ? (
+        <p className="border-b border-border-subtle bg-surface-2 px-3 py-1.5 text-xs text-text-secondary">
+          Ignored by Git: this file stays local to the worktree and never appears in the diff or a
+          pull request.
+        </p>
+      ) : null}
       {conflict ? (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle bg-warning-bg px-3 py-1.5 text-xs text-foreground">
           <p>
