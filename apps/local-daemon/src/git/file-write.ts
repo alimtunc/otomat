@@ -8,6 +8,7 @@ import {
   readFileSync,
   renameSync,
   writeFileSync,
+  type Stats,
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
@@ -40,17 +41,21 @@ export function isPathAbsent(error: unknown): boolean {
   );
 }
 
+export function lstatIfPresent(target: string): Stats | null {
+  try {
+    return lstatSync(target);
+  } catch (error) {
+    if (isPathAbsent(error)) return null;
+    throw error;
+  }
+}
+
 export function parentRefusal(cwd: string, path: string): WorktreeFileError | null {
   let parent = cwd;
   for (const part of path.split("/").slice(0, -1)) {
     parent = join(parent, part);
-    let stat;
-    try {
-      stat = lstatSync(parent);
-    } catch (error) {
-      if (isPathAbsent(error)) return "parent_not_found";
-      throw error;
-    }
+    const stat = lstatIfPresent(parent);
+    if (stat === null) return "parent_not_found";
     if (stat.isSymbolicLink()) return "file_symlink";
     if (!stat.isDirectory()) return "parent_not_found";
     if (existsSync(join(parent, ".git"))) return "path_invalid";
@@ -77,13 +82,8 @@ export function writeWorktreeFile(
   if (namesGitDirectory(path)) return { kind: "missing" };
   const target = join(worktreePath, path);
   if (!isInsideRoot(worktreePath, target)) return { kind: "symlink" };
-  let stat;
-  try {
-    stat = lstatSync(target);
-  } catch (error) {
-    if (isPathAbsent(error)) return { kind: "missing" };
-    throw error;
-  }
+  const stat = lstatIfPresent(target);
+  if (stat === null) return { kind: "missing" };
   if (stat.isSymbolicLink()) return { kind: "symlink" };
   if (!stat.isFile()) return { kind: "missing" };
 

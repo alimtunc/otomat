@@ -1,8 +1,7 @@
-import { lstatSync } from "node:fs";
 import { join } from "node:path";
 
 import { GitCommandError } from "./errors.js";
-import { blobRevision, isPathAbsent, parentRefusal, readWithoutFollowing } from "./file-write.js";
+import { blobRevision, lstatIfPresent, parentRefusal, readWithoutFollowing } from "./file-write.js";
 import { runGit } from "./git-cli.js";
 import { isInsideRoot } from "./probe.js";
 import { namesGitDirectory } from "./repository-path.js";
@@ -23,19 +22,12 @@ export function readIgnoredFile(
   path: string,
   limits: TreeFileLimits,
 ): TreeFileRead {
-  if (namesGitDirectory(path)) return { kind: "missing" };
-  const parent = parentRefusal(worktreePath, path);
-  if (parent === "file_symlink") return { kind: "symlink" };
-  if (parent !== null) return { kind: "missing" };
   const target = join(worktreePath, path);
-  if (!isInsideRoot(worktreePath, target)) return { kind: "symlink" };
-  let stat;
-  try {
-    stat = lstatSync(target);
-  } catch (error) {
-    if (isPathAbsent(error)) return { kind: "missing" };
-    throw error;
-  }
+  const parent = parentRefusal(worktreePath, path);
+  if (parent === "file_symlink" || !isInsideRoot(worktreePath, target)) return { kind: "symlink" };
+  if (parent !== null || namesGitDirectory(path)) return { kind: "missing" };
+  const stat = lstatIfPresent(target);
+  if (stat === null) return { kind: "missing" };
   if (stat.isSymbolicLink()) return { kind: "symlink" };
   if (stat.isDirectory()) return { kind: "directory" };
   if (!stat.isFile() || !isIgnored(worktreePath, path)) return { kind: "missing" };
