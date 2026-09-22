@@ -45,10 +45,10 @@ function reload(config: ImportStoreConfig, id: string): PullRequestRow {
 }
 
 /** The provider's own state is the initial one; no state machine may pretend it walked there. */
-export function insertMirroredPullRequest(
+export async function insertMirroredPullRequest(
   config: ImportStoreConfig,
   input: MirrorInput,
-): PullRequestRow {
+): Promise<PullRequestRow> {
   const id = config.idFactory();
   const adoption =
     input.evidence === null
@@ -90,11 +90,11 @@ export interface ProviderStateInput {
 }
 
 /** Mirrors what GitHub answers now, head sha included: a refreshed head is what re-pins the review. */
-export function applyProviderState(
+export async function applyProviderState(
   config: ImportStoreConfig,
   row: PullRequestRow,
   input: ProviderStateInput,
-): PullRequestRow {
+): Promise<PullRequestRow> {
   const patch: PullRequestPatch = {
     provenance: input.provenance,
     ...mirroredColumns(input.provider),
@@ -116,8 +116,12 @@ export function applyProviderState(
 }
 
 /** A confirmed merge closes the issue's cycle here too; a close leaves the cycle alone and only ends the review projection. */
-function settleLifecycle(config: ImportStoreConfig, row: PullRequestRow): PullRequestRow {
-  if (row.status === "merged" && row.issue_id !== null) closeMergedIssue(config, row.issue_id);
+async function settleLifecycle(
+  config: ImportStoreConfig,
+  row: PullRequestRow,
+): Promise<PullRequestRow> {
+  if (row.status === "merged" && row.issue_id !== null)
+    await closeMergedIssue(config, row.issue_id);
   return reload(config, row.id);
 }
 
@@ -138,7 +142,10 @@ export interface MirrorTarget {
 }
 
 /** Mirrors what GitHub shows for a pull request into its row, inserting one when none exists; never an adoption. */
-export function mirrorPullRequest(config: ImportStoreConfig, target: MirrorTarget): PullRequestRow {
+export async function mirrorPullRequest(
+  config: ImportStoreConfig,
+  target: MirrorTarget,
+): Promise<PullRequestRow> {
   const { provenance } = classifyPullRequest(config.db, target);
   const state = { provider: target.provider, provenance, trees: null, syncedAt: target.syncedAt };
   const existing = findPullRequestByNumber(config.db, target.repositoryId, target.provider.number);

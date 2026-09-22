@@ -26,14 +26,17 @@ export type ContextFreezer = (
   references: readonly ContextReference[],
   note: string | null,
   reviewComments?: readonly ContextReviewComment[],
-) => ContextSelection;
+) => Promise<ContextSelection>;
 
 interface ResolvedReferences {
   issues: ContextIssue[];
   files: ContextFile[];
 }
 
-function resolve(input: ContextFreezerInput, references: readonly ContextReference[]) {
+async function resolve(
+  input: ContextFreezerInput,
+  references: readonly ContextReference[],
+): Promise<ResolvedReferences> {
   const own =
     input.issue === null ? [] : [contextReferenceKey({ kind: "issue", issue_id: input.issue.id })];
   const seen = new Set(own);
@@ -50,7 +53,7 @@ function resolve(input: ContextFreezerInput, references: readonly ContextReferen
     resolved.files.push(
       input.snapshot === null
         ? { state: "unavailable", path: reference.path, reason: "unreadable" }
-        : readContextFile(input.snapshot, reference.path),
+        : await readContextFile(input.snapshot, reference.path),
     );
   }
   return resolved;
@@ -58,12 +61,13 @@ function resolve(input: ContextFreezerInput, references: readonly ContextReferen
 
 /** One freezer per launch or revision: every node reads the same captured tree, so a plan cannot mix two instants of the repository. */
 export function createContextFreezer(input: ContextFreezerInput): ContextFreezer {
-  const byReferences = new Map<string, ResolvedReferences>();
+  const byReferences = new Map<string, Promise<ResolvedReferences>>();
   const issue = input.issue === null ? null : issueContext(input.issue);
-  return (references, note, reviewComments) => {
+  return async (references, note, reviewComments) => {
     const key = references.map(contextReferenceKey).join("|");
-    const cached = byReferences.get(key) ?? resolve(input, references);
-    byReferences.set(key, cached);
+    const pending = byReferences.get(key) ?? resolve(input, references);
+    byReferences.set(key, pending);
+    const cached = await pending;
     return {
       captured_at: input.capturedAt,
       issue,

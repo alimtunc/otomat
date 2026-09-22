@@ -1,10 +1,10 @@
 import type { CheckoutTarget, WorktreeFileContent } from "@otomat/domain";
-import { Button, Kbd, Spinner } from "@otomat/ui";
+import { Button, Kbd } from "@otomat/ui";
 import { useBlocker } from "@tanstack/react-router";
 import { useSaveFile } from "@web/api/files/mutations";
 import type { CodeEditorHandle } from "@web/components/files/code-editor";
 import { CopyablePath } from "@web/components/runs/copyable-path";
-import { CenteredState } from "@web/components/shell/centered-state";
+import { LinesSkeleton } from "@web/components/shell/lines-skeleton";
 import { worktreeFileRefusal } from "@web/lib/run/file-refusal";
 import { lazy, Suspense, useRef, useState } from "react";
 
@@ -102,13 +102,7 @@ export function FileEditor({ target, content, editable, refreshing, onReload }: 
           </Button>
         </div>
       ) : null}
-      <Suspense
-        fallback={
-          <CenteredState fill="flex">
-            <Spinner label="Loading the editor" />
-          </CenteredState>
-        }
-      >
+      <Suspense fallback={<LinesSkeleton lines={14} className="flex-1" />}>
         <CodeEditor
           ref={editor}
           path={content.path}

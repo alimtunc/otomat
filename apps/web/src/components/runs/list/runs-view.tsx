@@ -30,7 +30,6 @@ export function RunsView() {
 
   return (
     <RouteShell
-      active="runs"
       titleIcon="activity"
       breadcrumbs={[{ label: "Runs", current: true }]}
       actions={
@@ -57,10 +56,10 @@ export function RunsView() {
           />
         ) : null}
         <div className="min-h-0 flex-1 overflow-auto">
-          <ProjectQueryBoundary query={selectedProject.projects}>
+          <ProjectQueryBoundary query={selectedProject.projects} unselectedIcon="activity">
             <QueryList
               query={runs}
-              pending={<ListSkeleton rows={3} height={40} />}
+              pending={<ListSkeleton rows={12} height={40} header />}
               error={
                 <ErrorReport
                   error={runs.error}

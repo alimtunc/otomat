@@ -55,9 +55,12 @@ export const issueContractSchema = z.discriminatedUnion("source", [
 ]);
 export type IssueContract = z.infer<typeof issueContractSchema>;
 
+// A list row never links out or matches on the tracker's internal id, and they weigh a quarter of a large catalog.
+const SUMMARY_OMITS = { body: true, source_url: true, source_external_id: true } as const;
+
 export const issueSummarySchema = z.discriminatedUnion("source", [
-  issueContractSchema.options[0].omit({ body: true }),
-  issueContractSchema.options[1].omit({ body: true }),
+  issueContractSchema.options[0].omit(SUMMARY_OMITS),
+  issueContractSchema.options[1].omit(SUMMARY_OMITS),
 ]);
 export type IssueSummary = z.infer<typeof issueSummarySchema>;
 

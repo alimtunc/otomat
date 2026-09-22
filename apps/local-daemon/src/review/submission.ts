@@ -8,6 +8,7 @@ import {
 } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
+import type { CanonicalDiff } from "#git";
 
 import { computeDiff } from "./diff.js";
 import {
@@ -55,8 +56,7 @@ function drive(
 }
 
 /** A comment whose file moved would make GitHub refuse the whole review, so it is refused here by name. */
-function assertAnchored(subject: ReviewSubject, comments: readonly ReviewCommentRow[]): void {
-  const diff = computeDiff(subject);
+function assertAnchored(diff: CanonicalDiff | null, comments: readonly ReviewCommentRow[]): void {
   for (const comment of comments) {
     const file = diff?.files.find((candidate) => candidate.path === comment.file_path);
     if (file === undefined || file.sha !== comment.diff_sha) {
@@ -144,13 +144,14 @@ export async function submitReview(
     comments: pending.length,
   });
   if (refusal !== null) throw new ReviewSubmissionEmptyError(refusal);
-  assertAnchored(subject, pending);
 
   if (inFlight.has(pullRequest.id)) {
     throw new ReviewSubmissionBusyError("This review is already being submitted.");
   }
+  // Claimed before the diff is read, so a second submission is refused rather than racing this one.
   inFlight.add(pullRequest.id);
   try {
+    assertAnchored(await computeDiff(subject), pending);
     await deliver(ctx, subject, pullRequest.id, commitSha, pending, request);
   } finally {
     inFlight.delete(pullRequest.id);

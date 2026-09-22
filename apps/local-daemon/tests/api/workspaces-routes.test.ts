@@ -53,7 +53,7 @@ it("answers the inventory without touching git, and narrows it to one run or pro
   const scopes: unknown[] = [];
   const app = makeApiApp(t, {
     supervisor: stubSupervisor({
-      workspaces: (scope) => {
+      workspaces: async (scope) => {
         scopes.push(scope);
         return INVENTORY;
       },
@@ -93,7 +93,7 @@ it("returns the daemon's refusal verbatim rather than a fake success", async () 
     entry: { ...ENTRY, blocker: "worktree_dirty" },
   };
   const app = makeApiApp(t, {
-    supervisor: stubSupervisor({ cleanupWorkspace: () => skipped }),
+    supervisor: stubSupervisor({ cleanupWorkspace: async () => skipped }),
   });
 
   const res = await request(app, "/api/workspaces/wt-1/cleanup", {
@@ -113,7 +113,7 @@ it("forwards the operator's force decision, and stays protective when the body o
   const forced: boolean[] = [];
   const app = makeApiApp(t, {
     supervisor: stubSupervisor({
-      cleanupWorkspace: (_workspaceId, force) => {
+      cleanupWorkspace: async (_workspaceId, force) => {
         forced.push(force);
         return { outcome: "cleaned", blocker: null, message: "Removed.", entry: ENTRY };
       },
@@ -133,7 +133,7 @@ it("forwards the operator's force decision, and stays protective when the body o
 });
 
 it("404s a cleanup of a workspace no record holds", async () => {
-  const app = makeApiApp(t, { supervisor: stubSupervisor({ cleanupWorkspace: () => null }) });
+  const app = makeApiApp(t, { supervisor: stubSupervisor({ cleanupWorkspace: async () => null }) });
 
   const res = await request(app, "/api/workspaces/wt-gone/cleanup", {
     method: "POST",

@@ -45,7 +45,7 @@ function diffProducingNodes(ctx: ReviewContext, run: RunRow): string[] {
 }
 
 /** Freezes the fix context of every eligible agent comment; mutates nothing. */
-function prepareFix(ctx: ReviewContext, run: RunRow): FixPreparation {
+async function prepareFix(ctx: ReviewContext, run: RunRow): Promise<FixPreparation> {
   const eligible = listReviewCommentsForSubject(ctx.db, run.id).filter(isAgentFixEligible);
   if (eligible.length === 0) {
     throw new CommentsNotFixableError(
@@ -60,15 +60,15 @@ function prepareFix(ctx: ReviewContext, run: RunRow): FixPreparation {
   // One captured snapshot: every "current file" comes from the same tree, and a commented path
   // that is a symlink stays the symlink's target text, never a host file.
   const binding = ctx.repositories.forRun(run.id);
-  const snapshot = binding === null ? null : diffSnapshotOrNull(binding.service, run.id);
-  const comments: ContextReviewComment[] = eligible.map((comment) =>
-    reviewCommentContext(
-      comment,
+  const snapshot = binding === null ? null : await diffSnapshotOrNull(binding.service, run.id);
+  const comments: ContextReviewComment[] = [];
+  for (const comment of eligible) {
+    const current =
       snapshot === null
         ? null
-        : snapshot.fileBlobs({ path: comment.file_path, oldPath: null }).head,
-    ),
-  );
+        : (await snapshot.fileBlobs({ path: comment.file_path, oldPath: null })).head;
+    comments.push(reviewCommentContext(comment, current));
+  }
   return { comments, dependsOn: diffProducingNodes(ctx, run) };
 }
 
@@ -100,7 +100,7 @@ export async function requestFix(
   run: RunRow,
   request: FixRequest,
 ): Promise<RunRow> {
-  const preparation = prepareFix(ctx, run);
+  const preparation = await prepareFix(ctx, run);
   const updated = await ctx.appendRunStep(run.id, {
     name: FIX_REVIEW_COMMENTS_STEP_NAME,
     note: request.note,

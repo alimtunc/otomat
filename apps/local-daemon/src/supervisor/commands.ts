@@ -30,7 +30,7 @@ import { scheduleWorktreeInit } from "./worktree-init.js";
  */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   requireLaunchable(state);
-  const runId = prepareRun(state, request);
+  const runId = await prepareRun(state, request);
   const run = requireRunRow(state.db, runId, "spawn");
   signalIssueLifecycle(state.syncIssueLifecycle, run.issue_id, "in_progress", runId);
   const initCommands = repositoryInitCommands(state.db, run.repository_id);
@@ -104,7 +104,7 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   } catch (error) {
     // A reopened run that never reached a worker must not be left resting in `preparing`.
     if (run.status !== stopped.status) {
-      failIdleRun(state, runId, `resume failed: ${failureReason(error)}`);
+      await failIdleRun(state, runId, `resume failed: ${failureReason(error)}`);
     }
     throw error;
   }

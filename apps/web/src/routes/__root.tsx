@@ -2,6 +2,7 @@ import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { useActivityStream } from "@web/api/activity/use-activity-stream";
 import { PreviewStatusBar } from "@web/components/preview/status-bar";
 import { useActivityNotices } from "@web/components/shell/activity/use-notices";
+import { AppFrame } from "@web/components/shell/app-frame";
 import { useDesktopNotifications } from "@web/components/shell/notifications/use-desktop-notifications";
 import { useOpenHostInboxes } from "@web/components/shell/project-tabs/use-open-host-inboxes";
 import { RemoteSessionProvider } from "@web/components/shell/remote-session/provider";
@@ -18,7 +19,9 @@ function RootLayout() {
   useDesktopNotifications();
   return (
     <RemoteSessionProvider>
-      <Outlet />
+      <AppFrame>
+        <Outlet />
+      </AppFrame>
       <PreviewStatusBar />
     </RemoteSessionProvider>
   );

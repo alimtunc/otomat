@@ -1,5 +1,5 @@
 import type { ReviewDiffContract, RunDiffScope, RunDiffScopeSelector } from "@otomat/domain";
-import { EmptyState, ErrorState } from "@otomat/ui";
+import { cn, EmptyState, ErrorState, STALE_CONTENT_CLASS } from "@otomat/ui";
 import { useReviewDetail, useReviewDiff } from "@web/api/reviews/queries";
 import {
   ReviewWorkbench,
@@ -7,7 +7,7 @@ import {
 } from "@web/components/runs/diff/review-workbench";
 import { DiffScopeUnavailable } from "@web/components/runs/diff/scope/unavailable";
 import { CenteredState } from "@web/components/shell/centered-state";
-import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
+import { SplitSkeleton } from "@web/components/shell/split-skeleton";
 import { StaleNotice } from "@web/components/shell/stale-notice";
 import type { ReactNode } from "react";
 
@@ -34,7 +34,8 @@ export function ReviewDiffView({
     void reviewQuery.refetch();
   };
 
-  if (diffQuery.isPending || reviewQuery.isPending) return <DetailSkeleton blocks={2} />;
+  if (diffQuery.isPending || reviewQuery.isPending) return <SplitSkeleton side={264} />;
+  const retained = diffQuery.isPlaceholderData;
   const review = reviewQuery.data;
   // Two queries share this view, so QueryBoundary's ladder is applied by hand: block only when a failing query has nothing retained.
   if (diffQuery.data === undefined || review === undefined) {
@@ -64,23 +65,25 @@ export function ReviewDiffView({
 
   const refreshFailed = diffQuery.isError || reviewQuery.isError;
   return (
-    <ReviewWorkbench
-      target={target}
-      workspace={workspace}
-      scope={scope}
-      answered={answered}
-      scopeControl={control}
-      diff={diff}
-      review={review}
-      notice={
-        refreshFailed ? (
-          <StaleNotice
-            dataUpdatedAt={Math.min(diffQuery.dataUpdatedAt, reviewQuery.dataUpdatedAt)}
-            refreshing={diffQuery.isFetching || reviewQuery.isFetching}
-            onRetry={retryBoth}
-          />
-        ) : null
-      }
-    />
+    <div inert={retained} className={cn("h-full", retained && STALE_CONTENT_CLASS)}>
+      <ReviewWorkbench
+        target={target}
+        workspace={workspace}
+        scope={diffQuery.data.requested}
+        answered={answered}
+        scopeControl={control}
+        diff={diff}
+        review={review}
+        notice={
+          refreshFailed ? (
+            <StaleNotice
+              dataUpdatedAt={Math.min(diffQuery.dataUpdatedAt, reviewQuery.dataUpdatedAt)}
+              refreshing={diffQuery.isFetching || reviewQuery.isFetching}
+              onRetry={retryBoth}
+            />
+          ) : null
+        }
+      />
+    </div>
   );
 }

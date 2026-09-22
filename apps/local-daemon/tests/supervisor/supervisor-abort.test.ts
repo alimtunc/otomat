@@ -121,7 +121,7 @@ it("never releases a spawned worker when abort lands during durable startup", as
   });
 
   const run = await supervisor.start({ prompt: "abort in the start gate" });
-  if (!aborting) throw new Error("abort did not start during spawn");
+  expect(await waitFor(() => aborting !== null)).toBe(true);
   await aborting;
   // The launch answered before the spawn, so the kill path is still pending work.
   await supervisor.settle();

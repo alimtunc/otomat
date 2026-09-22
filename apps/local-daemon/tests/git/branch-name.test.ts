@@ -17,9 +17,9 @@ it.each([
   expect(sanitizeBranchName(raw)).toBe(expected);
 });
 
-it("keeps a free name and avoids local, tracked remote and nested branch collisions", () => {
+it("keeps a free name and avoids local, tracked remote and nested branch collisions", async () => {
   repo = setupTestRepo();
-  expect(availableBranchName(repo.root, "feat/export", "12345678")).toBe("feat/export");
+  expect(await availableBranchName(repo.root, "feat/export", "12345678")).toBe("feat/export");
   for (const ref of [
     "refs/heads/feat/local",
     "refs/remotes/origin/feat/remote",
@@ -27,7 +27,7 @@ it("keeps a free name and avoids local, tracked remote and nested branch collisi
   ])
     repo.git("update-ref", ref, "HEAD");
   for (const name of ["local", "remote", "nested"]) {
-    expect(availableBranchName(repo.root, `feat/${name}`, "12345678")).toBe(
+    expect(await availableBranchName(repo.root, `feat/${name}`, "12345678")).toBe(
       `feat/${name}-12345678`,
     );
   }

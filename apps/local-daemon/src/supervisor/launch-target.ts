@@ -67,7 +67,10 @@ function resolveProjectId(
 }
 
 /** Distinguishes "this project never had a repository" from "its repository is no longer on disk". */
-function requireBinding(state: SupervisorState, projectId: string): RepositoryBinding {
+async function requireBinding(
+  state: SupervisorState,
+  projectId: string,
+): Promise<RepositoryBinding> {
   const binding = state.repositories.forProject(projectId);
   if (!binding) {
     const registered = listRepositories(state.db, { projectId }).length > 0;
@@ -81,7 +84,7 @@ function requireBinding(state: SupervisorState, projectId: string): RepositoryBi
           `project ${projectId} has no repository to run in`,
         );
   }
-  if (!isRepositoryRoot(binding.rootPath)) {
+  if (!(await isRepositoryRoot(binding.rootPath))) {
     throw new LaunchRefusedError(
       "repository_unavailable",
       `${binding.rootPath} is no longer a git repository; re-register it to launch here`,
@@ -105,9 +108,13 @@ function refuseSecondWorkspace(state: SupervisorState, issue: IssueRow): void {
   );
 }
 
-function launchBaseSha(rootPath: string, baseRef: string, request: StartRunRequest): string {
+async function launchBaseSha(
+  rootPath: string,
+  baseRef: string,
+  request: StartRunRequest,
+): Promise<string> {
   try {
-    return resolveBaseSha(rootPath, baseRef, request.local_base === true);
+    return await resolveBaseSha(rootPath, baseRef, request.local_base === true);
   } catch (error) {
     if (!(error instanceof RemoteBaseError)) throw error;
     throw new LaunchRefusedError("base_remote_unavailable", error.message, {
@@ -118,16 +125,16 @@ function launchBaseSha(rootPath: string, baseRef: string, request: StartRunReque
 }
 
 /** Every refusal is a typed `LaunchRefusedError` thrown before the launch writes any row. */
-export function resolveLaunchTarget(
+export async function resolveLaunchTarget(
   state: SupervisorState,
   request: StartRunRequest,
   issue: IssueRow | undefined,
-): LaunchTarget {
+): Promise<LaunchTarget> {
   if (issue) refuseSecondWorkspace(state, issue);
   const projectId = resolveProjectId(state.db, state.defaultProjectId, request, issue);
-  const binding = requireBinding(state, projectId);
+  const binding = await requireBinding(state, projectId);
   const baseRef = request.base_branch ?? binding.defaultBranch;
-  if (!branchExists(binding.rootPath, baseRef)) {
+  if (!(await branchExists(binding.rootPath, baseRef))) {
     throw new LaunchRefusedError(
       "base_branch_not_found",
       `branch "${baseRef}" does not exist in ${binding.rootPath}`,
@@ -137,6 +144,6 @@ export function resolveLaunchTarget(
     projectId,
     binding,
     baseRef,
-    baseSha: launchBaseSha(binding.rootPath, baseRef, request),
+    baseSha: await launchBaseSha(binding.rootPath, baseRef, request),
   };
 }

@@ -1,9 +1,9 @@
 import { Skeleton } from "@otomat/ui";
 import { ProjectHealthPanel } from "@web/components/settings/project/health/panel";
-import { NoProjectSelectedState } from "@web/components/settings/project/no-project-selected-state";
 import { ProjectRepositoryPanel } from "@web/components/settings/project/repository-panel";
 import { ProjectSourcesPanel } from "@web/components/settings/project/sources-panel";
 import { SectionHeading } from "@web/components/settings/section-heading";
+import { NoProjectSelectedState } from "@web/components/shell/project-selection/no-project-selected-state";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import type { ReactNode } from "react";

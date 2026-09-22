@@ -855,8 +855,10 @@ the operator's checkout: `resolveBaseSha` (`git/remote-base.ts`) reads the branc
 own `branch.<b>.remote`/`.merge` configuration — or the single remote when it has
 none, refusing a branch that tracks the repository itself — fetches it and returns
 the sha it just fetched, which `prepareRun` uses both to freeze the plan's context
-tree and to create the worktree. The whole launch path is synchronous, so nothing
-can move that base between the fetch and `worktree add`.
+tree and to create the worktree. The fetch lands on a ref of its own
+(`refs/otomat/launch/<id>`, deleted once read) rather than `FETCH_HEAD`, and launches
+into one project are chained, so no other fetch or launch can move that base
+between the fetch and `worktree add`.
 A remote that cannot be read refuses the launch with `base_remote_unavailable`
 rather than silently forking from a stale local branch; only a branch the remote
 never had, or a repository with no remote plus an explicit `local_base: true`,
@@ -926,7 +928,10 @@ still runs them in order, so an empty list has never meant "concurrently". The
 operator's explicit choice is a separate node flag, `parallel: true`, frozen at
 append and refused alongside a dependency: `appendRunStep` spawns that step at
 once, live turn or not, and nothing else ever puts a second writer in the
-workspace. Settle then reads siblings before the plan (`resolveRunTarget`): while
+workspace. A queued append normally leaves its start to the live turn's advance,
+but that turn's settle may already have rested the run before the step landed, so
+`startAfterLiveTurns` waits for the turn to end and starts the step itself when
+nothing else did. Settle then reads siblings before the plan (`resolveRunTarget`): while
 another step's turn is still live the settling turn lands only its own step and
 session and the run stays `running`; when the last one settles, the plan is
 judged as a whole with `resolveIdleRun`. Boot settles every open session in turn
@@ -1969,7 +1974,8 @@ modified text files; additions, deletions, renames and binary changes use whole
 files. Partial actions preserve mode changes. Paths are literal Git pathspecs,
 parent symlinks and Git internals are refused, and unresolved merges disable
 actions. Submodule changes require an external Git client. Validation is
-best-effort against external processes racing the synchronous Git command.
+best-effort against external processes; the daemon's own changes to one checkout
+run one at a time (`git/lock.ts`).
 
 Discard requires confirmation in the UI, restores the index version and keeps
 staged work; discarding an untracked file deletes it. Both single and bulk discard
@@ -2206,8 +2212,8 @@ things the reload used to conflate:
 ## Issue And Run Catalogs
 
 Issues and Runs use project-scoped catalogs (`/api/issues/catalog` and
-`/api/runs/catalog`) without issue bodies or frozen run plans. Detail reads keep
-the complete contracts. On a daemon that returns 404 for a catalog or search
+`/api/runs/catalog`) without issue bodies, tracker URLs and external ids, or
+frozen run plans. Detail reads keep the complete contracts. On a daemon that returns 404 for a catalog or search
 endpoint, the renderer shares its cached legacy project read between the
 catalog and searches; other failures remain visible. A fallback is refused if
 the selected host changed during the first request.
@@ -2219,7 +2225,7 @@ the host, project and view configuration; measured geometry is retained across
 route changes. The cache snapshot persists summaries rather than legacy full
 lists or search results, saves after successful reads or removals rather than
 observer changes, and fits the most recent whole queries into a
-four-million-character budget. Evicted snapshots do not evict the
+twenty-four-million-character budget. Evicted snapshots do not evict the
 session's live query data. A successful Linear sync with no imported or updated
 issues leaves the catalog fresh; a failed partial sync still invalidates it.
 Reviews waits for its inbox freshness and running state before starting an
@@ -2405,10 +2411,57 @@ the truth about freshness.
 
 ## Offline-First Direction
 
-For V1, the local daemon is the offline cache: it mirrors external state into
-SQLite, serves last-known state without network, and streams local updates to the
-web app over SSE. The frontend uses TanStack Query + SSE. There is no IndexedDB
-replica and no `frontend/store` package.
+The local daemon is the offline cache: it mirrors external state into SQLite,
+serves last-known state without network, and streams local updates to the web
+app over SSE. The frontend uses TanStack Query + SSE and keeps no replica and no
+`frontend/store` package. What it does keep is a snapshot of the reads
+navigation reopens — catalogs, issue and run detail, an issue's runs,
+conversations, pull-request overviews, the Linear panes, usage and workspaces —
+in IndexedDB (`api/snapshot-store.ts`). localStorage was dropped for it: the
+issue catalog alone nearly filled its per-origin quota and each write blocked the
+main thread. `main.tsx` restores the snapshot before the first paint, bounded so
+a slow database never holds the window, and every restored entry is invalidated
+so it revalidates behind what it already shows. A run's git-backed subtree
+(files, diffs, report) and its event windows are never stored: they are
+recomputed from the worktree or replayed from the ledger.
+
+## Navigation Without Waiting
+
+Moving between screens repaints what is already known rather than a loader:
+
+- **One frame.** The root route renders `AppFrame` — sidebar, project tabs,
+  palette and dialogs — once; a route renders only its `RouteShell`
+  (`AppShellMain`: page bar, banner, right panel, content). The sidebar's active
+  section is derived from the URL (`sectionForPath`), not handed up by the route.
+- **Intent preload.** The router preloads on hover and focus
+  (`defaultPreload: "intent"`). The issue, run, pull-request and conversation
+  loaders call `api/route-prefetch.ts`, which warms the same query options the
+  views read and returns nothing, because a loader's returned promise would hold
+  the navigation. A run prefetch also warms each step's event window, so
+  switching step never reloads the thread.
+- **Seeded headers.** The run cockpit names its issue and status from the
+  project's run catalog the shell keeps warm, and the pull-request reviewer names
+  itself from its review inbox entry, before their own reads land.
+- **Retained content.** Changing diff scope or opening another file keeps the
+  previous content on screen, dimmed and `inert`, until its replacement lands. A
+  retained diff carries the scope it was read for (`requested`), so its file
+  cards never pair its patches with the next scope's trees.
+- **Quiet placeholders.** A skeleton stays invisible for 180 ms and then fades
+  in, so a fast read shows nothing at all, and each placeholder has the shape of
+  the screen it stands for (`ListSkeleton`, `SplitSkeleton`, `LinesSkeleton`).
+- **A daemon that never freezes.** Every git call runs asynchronously, so a slow
+  diff, worktree inventory or networked fetch holds only its own request, never
+  SSE or the fast SQLite reads beside it. Sequences that read then write one
+  checkout — source-control changes, file saves, snapshot, archive, promotion,
+  acquire — are serialized per working directory; reads stay lock-free. JSON
+  responses above 1 KB are gzipped for a renderer that reaches its host through a
+  tunnel, and event streams are never encoded.
+- **No self-inflicted refetch.** Streamed log lines, messages and tool calls
+  reach the timeline through the run stream and invalidate nothing; step,
+  session and supervision events refresh only the run's own detail and report.
+  While its stream is open a run's detail polls every 5 s, only to catch
+  scheduler-side waits, and a refused read stops the poll. Per-file diff blobs
+  are keyed outside the diff prefix: they are addressed by sha and never change.
 
 ## Anti-Slop Lint Rules
 

@@ -1,5 +1,5 @@
 import { isRunSettled, type RunDetail } from "@otomat/domain";
-import { EmptyState, ErrorState, Skeleton } from "@otomat/ui";
+import { EmptyState, ErrorState } from "@otomat/ui";
 import { useRunContributions, useRunInteractions } from "@web/api/runs/queries";
 import type { RunEventStream } from "@web/api/runs/run-event-stream";
 import { RunClosureBar } from "@web/components/runs/conversation/closure-bar";
@@ -11,15 +11,11 @@ import { useLoadOlder } from "@web/components/runs/conversation/use-load-older";
 import { useThreadAutoscroll } from "@web/components/runs/conversation/use-thread-autoscroll";
 import { WorkingRow } from "@web/components/runs/conversation/working-row";
 import { EarlierActivity } from "@web/components/runs/timeline/earlier-activity";
+import { LinesSkeleton } from "@web/components/shell/lines-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { buildConversation } from "@web/lib/conversation";
 
-const LOADING = (
-  <div className="flex flex-col gap-2 p-6">
-    <Skeleton height={14} width="55%" />
-    <Skeleton height={14} width="35%" />
-  </div>
-);
+const LOADING = <LinesSkeleton lines={6} />;
 
 function loadErrorState(onRetry: () => void) {
   return <ErrorState variant="inline" title="Couldn’t load this conversation" onRetry={onRetry} />;

@@ -63,6 +63,7 @@ export function useFileBlobs(
     queryKey: keys.reviewDiffFileBlobs(target, file.path, file.sha, scope),
     queryFn: () => daemon.getDiffFileBlobs(target, file.path, file.sha, scope),
     enabled: (requested && !file.binary) || (autoload && file.binary && mediaSupported),
+    staleTime: Infinity,
     retry: retryTransportOnly,
   });
 

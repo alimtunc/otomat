@@ -28,51 +28,58 @@ function advanceRemote(): string {
   return sha;
 }
 
-it("resolves the remote head when the local base branch is behind", () => {
+it("resolves the remote head when the local base branch is behind", async () => {
   const published = advanceRemote();
 
-  expect(resolveBaseSha(repo.root, "main", false)).toBe(published);
+  expect(await resolveBaseSha(repo.root, "main", false)).toBe(published);
 });
 
-it("ignores a local base branch that is ahead of its remote", () => {
+it("reads the fetched tip from a ref of its own and leaves none behind", async () => {
+  const published = advanceRemote();
+
+  expect(await resolveBaseSha(repo.root, "main", false)).toBe(published);
+  expect(repo.git("for-each-ref", "refs/otomat/launch")).toBe("");
+});
+
+it("ignores a local base branch that is ahead of its remote", async () => {
   const remoteHead = repo.git("rev-parse", "main").trim();
   repo.write("local-only.md", "not published\n");
   const local = repo.commitAll("local work");
 
-  expect(resolveBaseSha(repo.root, "main", false)).toBe(remoteHead);
-  expect(resolveBaseSha(repo.root, "main", false)).not.toBe(local);
+  expect(await resolveBaseSha(repo.root, "main", false)).toBe(remoteHead);
+  expect(await resolveBaseSha(repo.root, "main", false)).not.toBe(local);
 });
 
-it("ignores uncommitted work in the checkout and leaves it untouched", () => {
+it("ignores uncommitted work in the checkout and leaves it untouched", async () => {
   const published = advanceRemote();
   writeFileSync(join(repo.root, "scratch.md"), "work in progress\n");
 
-  expect(resolveBaseSha(repo.root, "main", false)).toBe(published);
+  expect(await resolveBaseSha(repo.root, "main", false)).toBe(published);
   expect(repo.git("status", "--porcelain")).toContain("scratch.md");
 });
 
-it("reads the branch's own configured remote ref rather than assuming the branch name", () => {
+it("reads the branch's own configured remote ref rather than assuming the branch name", async () => {
   repo.write("on-trunk.md", "trunk work\n");
   const trunk = repo.commitAll("trunk moves");
   repo.git("push", "--quiet", "origin", "main:refs/heads/trunk");
   repo.git("reset", "--hard", "HEAD~1");
   repo.git("config", "branch.main.merge", "refs/heads/trunk");
 
-  expect(resolveBaseSha(repo.root, "main", false)).toBe(trunk);
+  expect(await resolveBaseSha(repo.root, "main", false)).toBe(trunk);
 });
 
-it("keeps a branch the remote never had on its own local head", () => {
+it("keeps a branch the remote never had on its own local head", async () => {
   repo.git("checkout", "-b", "local-only");
   repo.write("feature.md", "unpublished branch\n");
   const head = repo.commitAll("local branch work");
 
-  expect(resolveBaseSha(repo.root, "local-only", false)).toBe(head);
+  expect(await resolveBaseSha(repo.root, "local-only", false)).toBe(head);
 });
 
-it("refuses rather than falling back when the remote cannot be read", () => {
+it("refuses rather than falling back when the remote cannot be read", async () => {
   repo.git("remote", "set-url", "origin", join(repo.root, "..", "gone.git"));
 
-  expect(() => resolveBaseSha(repo.root, "main", false)).toThrow(
+  await expect(resolveBaseSha(repo.root, "main", false)).rejects.toThrow(
     expect.objectContaining({
       name: "RemoteBaseError",
       message:
@@ -85,10 +92,10 @@ it("refuses rather than falling back when the remote cannot be read", () => {
   );
 });
 
-it("names an unresolvable host as a network failure and keeps what git said out of the message", () => {
+it("names an unresolvable host as a network failure and keeps what git said out of the message", async () => {
   repo.git("remote", "set-url", "origin", "https://otomat-unreachable.invalid/x/y.git");
 
-  expect(() => resolveBaseSha(repo.root, "main", false)).toThrow(
+  await expect(resolveBaseSha(repo.root, "main", false)).rejects.toThrow(
     expect.objectContaining({
       message:
         '"origin" could not be reached to read "main"; check this host\'s network connection and DNS, then retry.',
@@ -120,7 +127,7 @@ it("fails a remote that wants credentials instead of waiting on a prompt", async
   });
   repo.git("remote", "set-url", "origin", `http://127.0.0.1:${port}/x/y.git`);
 
-  expect(() => resolveBaseSha(repo.root, "main", false)).toThrow(
+  await expect(resolveBaseSha(repo.root, "main", false)).rejects.toThrow(
     expect.objectContaining({
       message: expect.stringContaining("refused access"),
       remote: {
@@ -154,25 +161,27 @@ it("classifies what ssh, curl and git print for a failed fetch", () => {
   expect(classifyRemoteFailure("fatal: early EOF")).toBe("unclassified");
 });
 
-it("refuses a repository with no remote until the caller asks for the local base", () => {
+it("refuses a repository with no remote until the caller asks for the local base", async () => {
   const bare = setupTestRepo({ withoutRemote: true });
   try {
-    expect(() => resolveBaseSha(bare.root, "main", false)).toThrow(RemoteBaseError);
-    expect(resolveBaseSha(bare.root, "main", true)).toBe(bare.git("rev-parse", "main").trim());
+    await expect(resolveBaseSha(bare.root, "main", false)).rejects.toThrow(RemoteBaseError);
+    expect(await resolveBaseSha(bare.root, "main", true)).toBe(
+      bare.git("rev-parse", "main").trim(),
+    );
   } finally {
     bare.cleanup();
   }
 });
 
-it("refuses a branch that tracks the local repository instead of a real remote", () => {
+it("refuses a branch that tracks the local repository instead of a real remote", async () => {
   repo.git("config", "branch.main.remote", ".");
 
-  expect(() => resolveBaseSha(repo.root, "main", false)).toThrow(RemoteBaseError);
+  await expect(resolveBaseSha(repo.root, "main", false)).rejects.toThrow(RemoteBaseError);
 });
 
-it("refuses to guess between several remotes when the branch has no upstream", () => {
+it("refuses to guess between several remotes when the branch has no upstream", async () => {
   repo.git("remote", "add", "mirror", repo.root);
   repo.git("config", "--unset", "branch.main.remote");
 
-  expect(() => resolveBaseSha(repo.root, "main", false)).toThrow(RemoteBaseError);
+  await expect(resolveBaseSha(repo.root, "main", false)).rejects.toThrow(RemoteBaseError);
 });

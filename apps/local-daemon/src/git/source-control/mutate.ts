@@ -10,11 +10,12 @@ import {
 } from "@otomat/domain";
 
 import { runGit } from "../git-cli.js";
+import { inCheckout } from "../lock.js";
 import { lsTree } from "../tree-file.js";
 import { SourceControlError } from "./errors.js";
 import { assertChangePath } from "./paths.js";
 import { selectedPatch } from "./selection.js";
-import { sourceControlSnapshot, type CheckoutSnapshot } from "./snapshot.js";
+import { readCheckoutSnapshot, type CheckoutSnapshot } from "./snapshot.js";
 
 function changePaths(files: DiffFileContract[]): string[] {
   return [
@@ -26,15 +27,15 @@ function changePaths(files: DiffFileContract[]): string[] {
   ];
 }
 
-function assertFileChanges(
+async function assertFileChanges(
   cwd: string,
   snapshot: Extract<CheckoutSnapshot, { conflicted: false }>,
   paths: string[],
-): void {
+): Promise<void> {
   for (const path of paths) {
     assertChangePath(cwd, path);
     for (const tree of [snapshot.head, snapshot.index, snapshot.tree]) {
-      const entry = lsTree(cwd, tree, path);
+      const entry = await lsTree(cwd, tree, path);
       if (entry !== null && entry.type !== "blob")
         throw new SourceControlError(
           "change_unavailable",
@@ -44,12 +45,12 @@ function assertFileChanges(
   }
 }
 
-function applySelection(
+async function applySelection(
   cwd: string,
   file: DiffFileContract,
   action: SourceControlAction,
   selection: ChangeSelection,
-): void {
+): Promise<void> {
   if (!changeSupportsSelection(file))
     throw new SourceControlError(
       "selection_unavailable",
@@ -63,33 +64,40 @@ function applySelection(
     ...(reverse ? ["--reverse"] : []),
     ...(action === "discard" ? [] : ["--cached"]),
   ];
-  const check = runGit([...args, "--check"], { cwd, input: patch, allowFailure: true });
+  const check = await runGit([...args, "--check"], { cwd, input: patch, allowFailure: true });
   if (check.exitCode !== 0)
     throw new SourceControlError(
       "selection_unavailable",
       "This selection no longer applies cleanly. Refresh or select the whole change block.",
     );
-  runGit(args, { cwd, input: patch });
+  await runGit(args, { cwd, input: patch });
 }
 
-function discardPaths(cwd: string, index: string, paths: string[]): void {
-  // A failed lookup must throw here: an untracked verdict deletes the file from disk.
-  const tracked = paths.filter(
-    (path) =>
-      runGit(["--literal-pathspecs", "ls-tree", "-z", index, "--", path], { cwd }).stdout !== "",
-  );
+async function discardPaths(cwd: string, index: string, paths: string[]): Promise<void> {
+  const tracked: string[] = [];
+  for (const path of paths) {
+    // A failed lookup must throw here: an untracked verdict deletes the file from disk.
+    const listed = await runGit(["--literal-pathspecs", "ls-tree", "-z", index, "--", path], {
+      cwd,
+    });
+    if (listed.stdout !== "") tracked.push(path);
+  }
   for (const path of paths.filter((candidate) => !tracked.includes(candidate)))
     unlinkSync(join(cwd, path));
   if (tracked.length > 0)
-    runGit(
+    await runGit(
       ["--literal-pathspecs", "restore", "--worktree", `--source=${index}`, "--", ...tracked],
       { cwd },
     );
 }
 
-export function changeCheckoutFiles(cwd: string, request: ChangeFilesRequest): void {
+export function changeCheckoutFiles(cwd: string, request: ChangeFilesRequest): Promise<void> {
+  return inCheckout(cwd, () => applyChange(cwd, request));
+}
+
+async function applyChange(cwd: string, request: ChangeFilesRequest): Promise<void> {
   if (request.path !== undefined) assertChangePath(cwd, request.path);
-  const snapshot = sourceControlSnapshot(cwd);
+  const snapshot = await readCheckoutSnapshot(cwd);
   if (snapshot.conflicted)
     throw new SourceControlError(
       "checkout_conflicted",
@@ -110,17 +118,17 @@ export function changeCheckoutFiles(cwd: string, request: ChangeFilesRequest): v
       "This file has no change in the selected section.",
     );
   const paths = changePaths(files);
-  assertFileChanges(cwd, snapshot, paths);
+  await assertFileChanges(cwd, snapshot, paths);
   if (request.selection !== undefined) {
-    applySelection(cwd, file, request.action, request.selection);
+    await applySelection(cwd, file, request.action, request.selection);
   } else if (request.action === "stage") {
-    runGit(["--literal-pathspecs", "add", "-A", "--", ...paths], { cwd });
+    await runGit(["--literal-pathspecs", "add", "-A", "--", ...paths], { cwd });
   } else if (request.action === "unstage") {
-    runGit(
+    await runGit(
       ["--literal-pathspecs", "restore", "--staged", `--source=${snapshot.head}`, "--", ...paths],
       { cwd },
     );
   } else {
-    discardPaths(cwd, snapshot.index, paths);
+    await discardPaths(cwd, snapshot.index, paths);
   }
 }

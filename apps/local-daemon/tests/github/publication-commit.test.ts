@@ -27,7 +27,7 @@ describe("the publication commit", () => {
   let cli: FakeGitHubCli;
   let github: GitHubService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     fix = setupDaemonDb();
     repo = fix.repo;
     worktrees = createGitWorktreeService({
@@ -37,7 +37,7 @@ describe("the publication commit", () => {
       defaultBranch: repo.defaultBranch,
       worktreesRoot: join(fix.dataDir, "worktrees"),
     });
-    const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+    const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
     worktreePath = acquired.path;
     seedRun(fix.db, {
       runId: RUN_ID,

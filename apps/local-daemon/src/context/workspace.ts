@@ -42,20 +42,20 @@ export interface WorkspaceContextInput {
 }
 
 /** Where the cycle's work lives right now, read from git at capture time; a vanished worktree says so instead of reporting a clean tree. */
-export function workspaceContext(input: WorkspaceContextInput): ContextWorkspace {
+export async function workspaceContext(input: WorkspaceContextInput): Promise<ContextWorkspace> {
   const { run, binding } = input;
   const worktree = binding?.service.get(input.owner);
   const live = worktree !== undefined && existsSync(worktree.path);
   const base = worktree?.baseRef === "" ? null : (worktree?.baseRef ?? null);
-  const uncommitted = live ? uncommittedPaths(worktree.path) : [];
+  const uncommitted = live ? await uncommittedPaths(worktree.path) : [];
   // An archived worktree still diffs from the main repository; only an active one whose directory is gone has nowhere to read.
   const diff =
     binding === null || worktree === undefined || (worktree.status === "active" && !live)
       ? null
-      : diffOrNull(binding.service, input.owner);
+      : await diffOrNull(binding.service, input.owner);
   const commits =
     live && diff !== null
-      ? commitsSince(worktree.path, diff.base, "HEAD").slice(0, CONTEXT_MAX_COMMITS)
+      ? (await commitsSince(worktree.path, diff.base, "HEAD")).slice(0, CONTEXT_MAX_COMMITS)
       : [];
   return {
     repository: binding?.rootPath ?? "",

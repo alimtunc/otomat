@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
 import { retryTransportOnly } from "@web/api/query-client";
+import type { HostQueryKeys } from "@web/api/query-keys";
 import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useGitHubConnection() {
@@ -28,12 +29,16 @@ export function useIssuePullRequests(issueId: string) {
   });
 }
 
-export function usePullRequestReviewContext(pullRequestId: string) {
-  const keys = useQueryKeys();
-  return useQuery({
+export function pullRequestReviewContextOptions(keys: HostQueryKeys, pullRequestId: string) {
+  return queryOptions({
     queryKey: keys.pullRequest(pullRequestId),
     queryFn: () => daemon.getPullRequestReviewContext(pullRequestId),
   });
+}
+
+export function usePullRequestReviewContext(pullRequestId: string) {
+  const keys = useQueryKeys();
+  return useQuery(pullRequestReviewContextOptions(keys, pullRequestId));
 }
 
 export function usePullRequestOverview(pullRequestId: string) {

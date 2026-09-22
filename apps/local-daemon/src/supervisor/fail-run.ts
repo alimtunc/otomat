@@ -18,7 +18,11 @@ export function failureReason(error: unknown): string {
  * is the only place the operator can read why; a run that meanwhile went terminal or
  * found activity is left alone rather than overwritten by a late scheduling error.
  */
-export function failIdleRun(state: SupervisorState, runId: string, reason: string): void {
+export async function failIdleRun(
+  state: SupervisorState,
+  runId: string,
+  reason: string,
+): Promise<void> {
   const current = getRun(state.db, runId);
   if (!current || isRunSettled(current.status) || hasRunActivity(state, runId)) return;
   const now = new Date().toISOString();
@@ -31,7 +35,7 @@ export function failIdleRun(state: SupervisorState, runId: string, reason: strin
     runId,
     buildTerminalMarker(ref, "failed", null, null, 0, now),
   );
-  finishSettle(state, {
+  await finishSettle(state, {
     runId,
     stepRunId: null,
     agentSessionId: null,

@@ -30,10 +30,10 @@ export function generationInput(
   };
 }
 
-export function buildGenerationInput(
+export async function buildGenerationInput(
   config: { db: Db; repositories: RepositoryResolver },
   run: RunRow,
-): GenerationInput {
+): Promise<GenerationInput> {
   const binding = config.repositories.forRun(run.id);
   const worktree = binding?.service.get(run.id);
   if (!binding || !worktree) {
@@ -42,7 +42,7 @@ export function buildGenerationInput(
       "The run has no repository worktree to describe.",
     );
   }
-  const diff = binding.service.diff(run.id);
+  const diff = await binding.service.diff(run.id);
   if (diff.files.length === 0) {
     throw new GitHubPublicationError("diff_empty", "The run has no changes to describe.");
   }

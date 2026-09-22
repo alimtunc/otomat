@@ -17,7 +17,7 @@ import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import type { ReactNode, Ref } from "react";
 
 interface SidebarProps {
-  active: ShellSection;
+  active: ShellSection | null;
   projectTriggerRef?: Ref<HTMLButtonElement>;
   projects: ProjectSummary[];
   currentProjectId?: string;

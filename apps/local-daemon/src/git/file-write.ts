@@ -15,6 +15,7 @@ import { basename, dirname, join } from "node:path";
 import type { WorktreeFileError } from "@otomat/domain";
 
 import { runGit } from "./git-cli.js";
+import { inCheckout } from "./lock.js";
 import { isInsideRoot } from "./probe.js";
 import { namesGitDirectory } from "./repository-path.js";
 
@@ -25,11 +26,16 @@ export type WorktreeWriteResult =
   | { kind: "symlink" };
 
 /** Git's own blob id for `content` at `path`, clean filters included, so it equals what a captured tree records. */
-export function blobRevision(worktreePath: string, path: string, content: Buffer): string {
-  return runGit(["hash-object", "--path", path, "--stdin"], {
+export async function blobRevision(
+  worktreePath: string,
+  path: string,
+  content: Buffer,
+): Promise<string> {
+  const hashed = await runGit(["hash-object", "--path", path, "--stdin"], {
     cwd: worktreePath,
     input: content,
-  }).stdout.trim();
+  });
+  return hashed.stdout.trim();
 }
 
 /** A parent that is a file (ENOTDIR) names nothing, exactly like a missing entry; every other failure is the host's to report. */
@@ -78,22 +84,24 @@ export function writeWorktreeFile(
   path: string,
   expectedRevision: string,
   text: string,
-): WorktreeWriteResult {
-  if (namesGitDirectory(path)) return { kind: "missing" };
-  const target = join(worktreePath, path);
-  if (!isInsideRoot(worktreePath, target)) return { kind: "symlink" };
-  const stat = lstatIfPresent(target);
-  if (stat === null) return { kind: "missing" };
-  if (stat.isSymbolicLink()) return { kind: "symlink" };
-  if (!stat.isFile()) return { kind: "missing" };
+): Promise<WorktreeWriteResult> {
+  return inCheckout(worktreePath, async () => {
+    if (namesGitDirectory(path)) return { kind: "missing" };
+    const target = join(worktreePath, path);
+    if (!isInsideRoot(worktreePath, target)) return { kind: "symlink" };
+    const stat = lstatIfPresent(target);
+    if (stat === null) return { kind: "missing" };
+    if (stat.isSymbolicLink()) return { kind: "symlink" };
+    if (!stat.isFile()) return { kind: "missing" };
 
-  const current = blobRevision(worktreePath, path, readWithoutFollowing(target));
-  if (current !== expectedRevision) return { kind: "stale" };
+    const current = await blobRevision(worktreePath, path, readWithoutFollowing(target));
+    if (current !== expectedRevision) return { kind: "stale" };
 
-  const next = Buffer.from(text, "utf8");
-  const temp = join(dirname(target), `.${basename(target)}.otomat-${process.pid}.tmp`);
-  writeFileSync(temp, next, { mode: stat.mode & 0o777 });
-  chmodSync(temp, stat.mode & 0o777);
-  renameSync(temp, target);
-  return { kind: "written", revision: blobRevision(worktreePath, path, next) };
+    const next = Buffer.from(text, "utf8");
+    const temp = join(dirname(target), `.${basename(target)}.otomat-${process.pid}.tmp`);
+    writeFileSync(temp, next, { mode: stat.mode & 0o777 });
+    chmodSync(temp, stat.mode & 0o777);
+    renameSync(temp, target);
+    return { kind: "written", revision: await blobRevision(worktreePath, path, next) };
+  });
 }

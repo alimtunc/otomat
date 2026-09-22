@@ -56,10 +56,10 @@ export function createRunStepRoutes(deps: ApiDeps): Hono<RunEnv> {
     }
   });
 
-  routes.post("/:id/steps/:stepId/cancel", runGuard(deps.db), (c) => {
+  routes.post("/:id/steps/:stepId/cancel", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     try {
-      return c.json(toStepRun(deps.supervisor.cancelStep(run.id, c.req.param("stepId"))));
+      return c.json(toStepRun(await deps.supervisor.cancelStep(run.id, c.req.param("stepId"))));
     } catch (error) {
       if (error instanceof StepCancelRefusedError) return commandRefusalJson(c, error);
       console.error(`[otomat] canceling a step on run ${run.id} failed`, error);

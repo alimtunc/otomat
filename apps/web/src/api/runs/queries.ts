@@ -1,8 +1,27 @@
+import { DaemonRequestError } from "@otomat/client";
 import { isRunSettled, runSummarySchema } from "@otomat/domain";
-import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryOptions, skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { readCatalog } from "@web/api/catalog-read";
 import { daemon } from "@web/api/client";
+import type { HostQueryKeys } from "@web/api/query-keys";
+import { RunEventsContext } from "@web/api/runs/run-event-stream";
 import { useQueryKeys } from "@web/api/use-query-keys";
+import { useContext } from "react";
+
+// The run stream refreshes the detail on every structural event; the poll only covers scheduler-side waits.
+const STREAMED_POLL_MS = 5_000;
+const UNSTREAMED_POLL_MS = 1_500;
+
+export function runsForIssueOptions(keys: HostQueryKeys, issueId: string | null) {
+  return queryOptions({
+    queryKey: keys.runsForIssue(issueId),
+    queryFn: issueId === null ? skipToken : () => daemon.listRuns({ issueId }),
+  });
+}
+
+export function runDetailOptions(keys: HostQueryKeys, runId: string) {
+  return queryOptions({ queryKey: keys.run(runId), queryFn: () => daemon.getRun(runId) });
+}
 
 export function useProjectRuns(projectId: string | undefined) {
   const keys = useQueryKeys();
@@ -29,10 +48,7 @@ export function useProjectRuns(projectId: string | undefined) {
 
 export function useRunsForIssue(issueId: string | null) {
   const keys = useQueryKeys();
-  return useQuery({
-    queryKey: keys.runsForIssue(issueId),
-    queryFn: issueId === null ? skipToken : () => daemon.listRuns({ issueId }),
-  });
+  return useQuery(runsForIssueOptions(keys, issueId));
 }
 
 export function useRunCommits(runId: string, enabled: boolean) {
@@ -63,12 +79,15 @@ export function useCompeteCandidateDiff(runId: string, groupId: string, stepId: 
 
 export function useRunDetail(runId: string) {
   const keys = useQueryKeys();
+  const stream = useContext(RunEventsContext);
+  const streamed = stream?.runId === runId && stream.state === "open";
   return useQuery({
-    queryKey: keys.run(runId),
-    queryFn: () => daemon.getRun(runId),
+    ...runDetailOptions(keys, runId),
     refetchInterval: (query) => {
+      if (query.state.error instanceof DaemonRequestError) return false;
       const status = query.state.data?.run.status;
-      return status && isRunSettled(status) ? false : 1_500;
+      if (status && isRunSettled(status)) return false;
+      return streamed ? STREAMED_POLL_MS : UNSTREAMED_POLL_MS;
     },
   });
 }

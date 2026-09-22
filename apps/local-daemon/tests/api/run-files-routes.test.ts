@@ -28,8 +28,8 @@ async function openText(path: string) {
   return body;
 }
 
-beforeEach(() => {
-  fix = setupCheckoutApi();
+beforeEach(async () => {
+  fix = await setupCheckoutApi();
 });
 
 afterEach(() => fix.cleanup());
@@ -159,13 +159,13 @@ it("guards an ignored read like a tree read: symlinks, binaries, size, Git inter
     const res = await request(fix.app, `${content}?path=${path}`);
     expect(await res.json(), path).toMatchObject({ error });
   }
-  fix.service.archive(RUN_ID);
+  await fix.service.archive(RUN_ID);
   expect((await request(fix.app, `${content}?path=ignored/huge.txt`)).status).toBe(404);
 });
 
 it("keeps an archived branch readable but never writable", async () => {
   const opened = await openText("src/app.ts");
-  fix.service.archive(RUN_ID);
+  await fix.service.archive(RUN_ID);
 
   const listed = await json<WorktreeFilesResponse>(
     await request(fix.app, `/api/runs/${RUN_ID}/files`),

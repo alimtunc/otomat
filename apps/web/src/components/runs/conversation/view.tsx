@@ -2,7 +2,6 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
   SidePanel,
-  Skeleton,
   useMediaQuery,
   usePanelGroupLayout,
   ROOMY_VIEWPORT_MEDIA_QUERY,
@@ -21,6 +20,7 @@ import { ConversationHeader } from "@web/components/runs/conversation/header";
 import { StepConversationThread } from "@web/components/runs/conversation/step-thread";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { SplitSkeleton } from "@web/components/shell/split-skeleton";
 import { selectedStepRunId } from "@web/lib/run/plan";
 import { STREAM_LABEL } from "@web/lib/run/stream";
 
@@ -37,12 +37,7 @@ export function RunConversationView() {
   return (
     <QueryBoundary
       query={detail}
-      pending={
-        <div className="flex flex-col gap-2 p-6">
-          <Skeleton height={20} width="40%" />
-          <Skeleton height={14} width="64%" />
-        </div>
-      }
+      pending={<SplitSkeleton side={226} trailing={roomy ? 270 : undefined} />}
       error={
         <ErrorReport
           error={detail.error}

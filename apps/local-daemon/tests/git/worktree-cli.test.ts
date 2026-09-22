@@ -22,42 +22,46 @@ describe("worktree-cli", () => {
     repo.cleanup();
   });
 
-  it("adds a worktree on a new branch checked out from a base ref", () => {
+  it("adds a worktree on a new branch checked out from a base ref", async () => {
     const wtPath = join(wtRoot, "a");
-    addWorktree(repo.root, { worktreePath: wtPath, branch: "feat-a", baseRef: "main" });
+    await addWorktree(repo.root, { worktreePath: wtPath, branch: "feat-a", baseRef: "main" });
 
     expect(existsSync(join(wtPath, "README.md"))).toBe(true);
-    const entries = listWorktrees(repo.root);
+    const entries = await listWorktrees(repo.root);
     expect(entries.some((e) => e.branch === "feat-a")).toBe(true);
   });
 
-  it("removes a worktree and leaves no orphan entry", () => {
+  it("removes a worktree and leaves no orphan entry", async () => {
     const wtPath = join(wtRoot, "b");
-    addWorktree(repo.root, { worktreePath: wtPath, branch: "feat-b", baseRef: "main" });
-    removeWorktree(repo.root, wtPath, { force: true });
-    pruneWorktrees(repo.root);
+    await addWorktree(repo.root, { worktreePath: wtPath, branch: "feat-b", baseRef: "main" });
+    await removeWorktree(repo.root, wtPath, { force: true });
+    await pruneWorktrees(repo.root);
 
     expect(existsSync(wtPath)).toBe(false);
-    expect(listWorktrees(repo.root).some((e) => e.branch === "feat-b")).toBe(false);
+    expect((await listWorktrees(repo.root)).some((e) => e.branch === "feat-b")).toBe(false);
   });
 
-  it("rejects two worktrees on the same branch", () => {
-    addWorktree(repo.root, { worktreePath: join(wtRoot, "c1"), branch: "feat-c", baseRef: "main" });
-    expect(() =>
+  it("rejects two worktrees on the same branch", async () => {
+    await addWorktree(repo.root, {
+      worktreePath: join(wtRoot, "c1"),
+      branch: "feat-c",
+      baseRef: "main",
+    });
+    await expect(
       addWorktree(repo.root, {
         worktreePath: join(wtRoot, "c2"),
         branch: "feat-c",
         baseRef: "main",
       }),
-    ).toThrow();
+    ).rejects.toThrow();
   });
 
-  it("tolerates removing an already-removed worktree", () => {
+  it("tolerates removing an already-removed worktree", async () => {
     const wtPath = join(wtRoot, "idem");
-    addWorktree(repo.root, { worktreePath: wtPath, branch: "feat-idem", baseRef: "main" });
-    removeWorktree(repo.root, wtPath, { force: true });
-    expect(() => removeWorktree(repo.root, wtPath, { force: true })).not.toThrow();
-    pruneWorktrees(repo.root);
-    expect(listWorktrees(repo.root).some((e) => e.branch === "feat-idem")).toBe(false);
+    await addWorktree(repo.root, { worktreePath: wtPath, branch: "feat-idem", baseRef: "main" });
+    await removeWorktree(repo.root, wtPath, { force: true });
+    await expect(removeWorktree(repo.root, wtPath, { force: true })).resolves.not.toThrow();
+    await pruneWorktrees(repo.root);
+    expect((await listWorktrees(repo.root)).some((e) => e.branch === "feat-idem")).toBe(false);
   });
 });

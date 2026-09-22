@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -29,31 +29,32 @@ function sha256(text: string): string {
  * staged + unstaged + untracked, minus gitignored) relative to `baseRef`,
  * using a throwaway index so the worktree's real index is untouched.
  */
-export function worktreeStateTree(gitCwd: string, baseRef: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "otomat-git-index-"));
+export async function worktreeStateTree(gitCwd: string, baseRef: string): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), "otomat-git-index-"));
   const env = { GIT_INDEX_FILE: join(dir, "index") };
   try {
-    runGit(["read-tree", baseRef], { cwd: gitCwd, env });
-    runGit(["add", "-A"], { cwd: gitCwd, env });
-    return runGit(["write-tree"], { cwd: gitCwd, env }).stdout.trim();
+    await runGit(["read-tree", baseRef], { cwd: gitCwd, env });
+    await runGit(["add", "-A"], { cwd: gitCwd, env });
+    return (await runGit(["write-tree"], { cwd: gitCwd, env })).stdout.trim();
   } finally {
-    rmSync(dir, { recursive: true, force: true });
+    await rm(dir, { recursive: true, force: true });
   }
 }
 
 /** Structured per-file change list for `base..tree`, computed from git. */
-export function collectChangedFiles(gitCwd: string, base: string, tree: string): ChangedFile[] {
-  const nameStatus = runGit(
-    [...QUOTEPATH_OFF, "diff", "--no-color", "--find-renames", "--name-status", "-z", base, tree],
-    { cwd: gitCwd },
-  ).stdout;
-  const numstat = runGit(
-    [...QUOTEPATH_OFF, "diff", "--no-color", "--find-renames", "--numstat", "-z", base, tree],
-    { cwd: gitCwd },
-  ).stdout;
+export async function collectChangedFiles(
+  gitCwd: string,
+  base: string,
+  tree: string,
+): Promise<ChangedFile[]> {
+  const listing = (format: string) =>
+    runGit([...QUOTEPATH_OFF, "diff", "--no-color", "--find-renames", format, "-z", base, tree], {
+      cwd: gitCwd,
+    });
+  const [nameStatus, numstat] = await Promise.all([listing("--name-status"), listing("--numstat")]);
 
-  const counts = parseNumstatZ(numstat);
-  return parseNameStatusZ(nameStatus).map((entry) => {
+  const counts = parseNumstatZ(numstat.stdout);
+  return parseNameStatusZ(nameStatus.stdout).map((entry) => {
     const count = counts.get(entry.path);
     return {
       path: entry.path,
@@ -72,11 +73,18 @@ export function toDiffFileContract(file: DiffFile): DiffFileContract {
 }
 
 /** Canonical diff of `base..tree`: per-file patches, counts, and stable shas. */
-export function computeCanonicalDiff(gitCwd: string, base: string, tree: string): CanonicalDiff {
-  const changed = collectChangedFiles(gitCwd, base, tree);
-  const patch = runGit([...QUOTEPATH_OFF, "diff", "--no-color", "--find-renames", base, tree], {
-    cwd: gitCwd,
-  }).stdout;
+export async function computeCanonicalDiff(
+  gitCwd: string,
+  base: string,
+  tree: string,
+): Promise<CanonicalDiff> {
+  const [changed, diff] = await Promise.all([
+    collectChangedFiles(gitCwd, base, tree),
+    runGit([...QUOTEPATH_OFF, "diff", "--no-color", "--find-renames", base, tree], {
+      cwd: gitCwd,
+    }),
+  ]);
+  const patch = diff.stdout;
   const sections = splitPatchByFile(patch);
 
   const files: DiffFile[] = changed.map((file) => {
@@ -94,43 +102,50 @@ export function computeCanonicalDiff(gitCwd: string, base: string, tree: string)
   };
 }
 
-function readBlob(gitCwd: string, ref: string, path: string): string | null {
-  const result = runGit(["show", `${ref}:${path}`], { cwd: gitCwd, allowFailure: true });
+async function readBlob(gitCwd: string, ref: string, path: string): Promise<string | null> {
+  const result = await runGit(["show", `${ref}:${path}`], { cwd: gitCwd, allowFailure: true });
   return result.exitCode === 0 ? result.stdout : null;
 }
 
-export function readFileBlobs(
+export async function readFileBlobs(
   gitCwd: string,
   base: string,
   tree: string,
   paths: DiffFilePaths,
-): DiffFileBlobs {
+): Promise<DiffFileBlobs> {
   return {
-    base: readBlob(gitCwd, base, paths.oldPath ?? paths.path),
-    head: readBlob(gitCwd, tree, paths.path),
+    base: await readBlob(gitCwd, base, paths.oldPath ?? paths.path),
+    head: await readBlob(gitCwd, tree, paths.path),
   };
 }
 
-function readMediaBlob(gitCwd: string, ref: string, path: string): Buffer | null {
-  const result = runGitBytes(["show", `${ref}:${path}`], { cwd: gitCwd, allowFailure: true });
+async function readMediaBlob(gitCwd: string, ref: string, path: string): Promise<Buffer | null> {
+  const result = await runGitBytes(["show", `${ref}:${path}`], {
+    cwd: gitCwd,
+    allowFailure: true,
+  });
   return result.exitCode === 0 ? result.stdout : null;
 }
 
-function readMediaBlobs(
+async function readMediaBlobs(
   gitCwd: string,
   base: string,
   tree: string,
   paths: DiffFilePaths,
-): DiffFileMediaBlobs {
+): Promise<DiffFileMediaBlobs> {
   return {
-    base: readMediaBlob(gitCwd, base, paths.oldPath ?? paths.path),
-    head: readMediaBlob(gitCwd, tree, paths.path),
+    base: await readMediaBlob(gitCwd, base, paths.oldPath ?? paths.path),
+    head: await readMediaBlob(gitCwd, tree, paths.path),
   };
 }
 
-export function treeRangeSnapshot(gitCwd: string, base: string, tree: string): DiffSnapshot {
+export async function treeRangeSnapshot(
+  gitCwd: string,
+  base: string,
+  tree: string,
+): Promise<DiffSnapshot> {
   return {
-    diff: computeCanonicalDiff(gitCwd, base, tree),
+    diff: await computeCanonicalDiff(gitCwd, base, tree),
     fileBlobs: (paths) => readFileBlobs(gitCwd, base, tree, paths),
     mediaBlobs: (paths) => readMediaBlobs(gitCwd, base, tree, paths),
     readFile: (path, limits) => readTreeFile(gitCwd, tree, path, limits),

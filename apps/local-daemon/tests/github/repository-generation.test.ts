@@ -57,8 +57,11 @@ afterEach(() => {
   fix.cleanup();
 });
 
-function request() {
-  return { revision: sourceControlSnapshot(fix.repo.root).response.revision, base_ref: "main" };
+async function request() {
+  return {
+    revision: (await sourceControlSnapshot(fix.repo.root)).response.revision,
+    base_ref: "main",
+  };
 }
 
 it("previews and generates committed changes without creating a branch, run, commit or PR", async () => {
@@ -68,7 +71,9 @@ it("previews and generates committed changes without creating a branch, run, com
   expect(preview.publishability).toMatchObject({ changed_files: 1, dirty: false, blocker: null });
   expect(cli.fetchBranch).not.toHaveBeenCalled();
   expect(generate).not.toHaveBeenCalled();
-  expect(await github.generateRepositoryPullRequest(fix.repositoryId, request())).toEqual(PROPOSAL);
+  expect(await github.generateRepositoryPullRequest(fix.repositoryId, await request())).toEqual(
+    PROPOSAL,
+  );
   expect(generate).toHaveBeenCalledWith(
     expect.objectContaining({ audit: expect.objectContaining({ runtime: "claude" }) }),
     expect.objectContaining({ issue: null, patch: expect.stringContaining("+committed") }),
@@ -84,7 +89,7 @@ it("previews and generates committed changes without creating a branch, run, com
 
 it("generates and publishes in the chosen mode using the configured generator", async () => {
   const row = await github.publishRepositoryPullRequest(fix.repositoryId, {
-    ...request(),
+    ...(await request()),
     mode: "ready",
   });
   expect(generate).toHaveBeenCalledOnce();
@@ -108,7 +113,7 @@ it("refuses a changed checkout after generation before pushing or creating a bra
     return PROPOSAL;
   });
   await expect(
-    github.publishRepositoryPullRequest(fix.repositoryId, { ...request(), mode: "draft" }),
+    github.publishRepositoryPullRequest(fix.repositoryId, { ...(await request()), mode: "draft" }),
   ).rejects.toThrow("checkout changed during generation");
   expect(cli.pushCalls).toBe(0);
   expect(cli.createCalls).toBe(0);
@@ -118,7 +123,7 @@ it("refuses a changed checkout after generation before pushing or creating a bra
 it("requires a configured generator when no run supplies a runtime", async () => {
   writePullRequestGenerator(fix.db, { runtime: null, model: null, options: {} });
   await expect(
-    github.generateRepositoryPullRequest(fix.repositoryId, request()),
+    github.generateRepositoryPullRequest(fix.repositoryId, await request()),
   ).rejects.toMatchObject({ code: "pr_generator_not_configured" });
   expect(generate).not.toHaveBeenCalled();
   expect(cli.pushCalls).toBe(0);

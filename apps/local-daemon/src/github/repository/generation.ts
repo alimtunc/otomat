@@ -21,7 +21,7 @@ export function generateRepositoryProposal(
       trace,
     );
     assertCheckoutRevision(
-      sourceControlSnapshot(workspace.cwd),
+      await sourceControlSnapshot(workspace.cwd),
       workspace.snapshot.response.revision,
       "The checkout changed during generation. Refresh and generate again.",
     );

@@ -30,9 +30,9 @@ export async function reconcileWorkspaces(
 
   for (const repository of listRepositories(context.db)) {
     const binding = context.repositories.forRepository(repository.id);
-    if (!binding || !isRepositoryRoot(binding.rootPath)) continue;
-    pruned += pruneWorktrees(binding.rootPath);
-    for (const entry of repositoryInventory(context, repository, holders)) {
+    if (!binding || !(await isRepositoryRoot(binding.rootPath))) continue;
+    pruned += await pruneWorktrees(binding.rootPath);
+    for (const entry of await repositoryInventory(context, repository, holders)) {
       if (entry.state !== "missing") continue;
       updateWorktreeStatus(context.db, entry.id, { status: "removed" });
       converged += 1;
@@ -45,6 +45,6 @@ export async function reconcileWorkspaces(
     pull_requests_refreshed: refreshed,
     pruned,
     converged,
-    inventory: listWorkspaces(context),
+    inventory: await listWorkspaces(context),
   };
 }

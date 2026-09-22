@@ -17,11 +17,11 @@ import { renderRunCompletionMarkdown } from "./completion-report/markdown.js";
 import { appendReportMessages } from "./completion-report/messages.js";
 import { projectReviewEvidence } from "./completion-report/review.js";
 
-export function projectRunCompletionReport(
+export async function projectRunCompletionReport(
   db: Db,
   runId: string,
   review: ReviewService,
-): RunCompletionReportResponse | null {
+): Promise<RunCompletionReportResponse | null> {
   const run = db.select().from(schema.runs).where(eq(schema.runs.id, runId)).get();
   if (!run) return null;
 
@@ -53,7 +53,7 @@ export function projectRunCompletionReport(
     events: eventProjection.events,
     notices,
   });
-  const reviewEvidence = projectReviewEvidence({ runId: run.id, review, errors });
+  const reviewEvidence = await projectReviewEvidence({ runId: run.id, review, errors });
   const delivery = projectDelivery({ db, issueId: run.issue_id, runId: run.id, errors });
   const report: RunCompletionReport = {
     version: 1,

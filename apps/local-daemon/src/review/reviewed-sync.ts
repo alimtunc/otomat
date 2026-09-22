@@ -69,7 +69,7 @@ export async function importViewedFiles(ctx: ReviewContext, pullRequestId: strin
   const pullRequest = getPullRequest(ctx.db, pullRequestId);
   if (!pullRequest || pullRequest.number === null || pullRequest.detached_at !== null) return;
   const subject = resolveReviewSubject(ctx, pullRequestSubjectRef(pullRequest));
-  const diff = computeDiff(subject);
+  const diff = await computeDiff(subject);
   if (diff === null) return;
 
   const remote = await ctx.readViewedFiles(pullRequestId);

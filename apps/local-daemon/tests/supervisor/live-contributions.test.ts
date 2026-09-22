@@ -147,7 +147,7 @@ it("keeps a message queued for the next turn when the runtime has no live input"
   await supervisor.settle();
 });
 
-it("returns a live claim the daemon never saw receipted to the queue at boot", () => {
+it("returns a live claim the daemon never saw receipted to the queue at boot", async () => {
   const { supervisor } = makeSupervisor(fix, "live");
   const seeded = seedSteerableRun("claude");
   const row = appendRunContribution(fix.db, {
@@ -163,7 +163,7 @@ it("returns a live claim the daemon never saw receipted to the queue at boot", (
   claimRunContributions(fix.db, [row.id], seeded.agentSessionId);
   appendLiveInput(dir, { kind: "message", id: row.id, body: row.body, images: [] });
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
 
   // The worker died between the append and the write, so the message is waiting again — never delivered twice.
   expect(contributions()[0]).toMatchObject({
@@ -173,7 +173,7 @@ it("returns a live claim the daemon never saw receipted to the queue at boot", (
   });
 });
 
-it("keeps a live claim the worker receipted delivered across a restart", () => {
+it("keeps a live claim the worker receipted delivered across a restart", async () => {
   const { supervisor } = makeSupervisor(fix, "live");
   const seeded = seedSteerableRun("claude");
   const row = appendRunContribution(fix.db, {
@@ -190,7 +190,7 @@ it("keeps a live claim the worker receipted delivered across a restart", () => {
   appendLiveInput(dir, { kind: "message", id: row.id, body: row.body, images: [] });
   createLiveInputChannel(dir).wrote(row.id, null);
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
 
   expect(contributions()[0]).toMatchObject({
     status: "delivered",

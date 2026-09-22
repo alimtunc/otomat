@@ -10,7 +10,9 @@ export function useReviewDiff(
   const keys = useQueryKeys();
   return useQuery({
     queryKey: keys.reviewDiff(target, scope),
-    queryFn: () => daemon.getReviewDiff(target, scope),
+    // Carries the scope it was read for, so a retained answer is never paired with the next scope's trees.
+    queryFn: async () => ({ ...(await daemon.getReviewDiff(target, scope)), requested: scope }),
+    placeholderData: (previous) => (previous?.subject_id === target.id ? previous : undefined),
   });
 }
 

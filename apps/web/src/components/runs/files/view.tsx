@@ -5,8 +5,8 @@ import { FilesExplorer } from "@web/components/files/explorer";
 import { FilesTabs } from "@web/components/files/tabs";
 import { FilesWorkspace } from "@web/components/files/workspace";
 import { CenteredState } from "@web/components/shell/centered-state";
-import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { SplitSkeleton } from "@web/components/shell/split-skeleton";
 import { worktreeFileMessage } from "@web/lib/run/file-refusal";
 
 export function RunFilesView() {
@@ -18,7 +18,7 @@ export function RunFilesView() {
     <FilesWorkspace key={runId} target={target} tabs={<FilesTabs />}>
       <QueryBoundary
         query={files}
-        pending={<DetailSkeleton blocks={2} />}
+        pending={<SplitSkeleton side={264} />}
         error={
           <CenteredState>
             <ErrorState

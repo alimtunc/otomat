@@ -77,7 +77,7 @@ it("never releases a spawned worker when shutdown lands during durable startup",
   });
 
   const run = await supervisor.start({ prompt: "shutdown in the start gate" });
-  if (!shuttingDown) throw new Error("shutdown did not start during spawn");
+  expect(await waitFor(() => shuttingDown !== null)).toBe(true);
   await shuttingDown;
 
   expect(released).toBe(0);

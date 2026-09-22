@@ -47,6 +47,26 @@ it("keeps a step that waits on the live one queued until it succeeds, then start
   expect(getRun(fix.db, run.id)?.status).toBe("review_ready");
 });
 
+it("starts a dependent step appended while the turn it waits on is still settling", async () => {
+  let settling = false;
+  const { supervisor, spawn } = makeSupervisor(fix, ["complete", "complete"], {
+    afterSettle: async () => {
+      settling = true;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    },
+  });
+  const run = await supervisor.start({ issue_id: "i-work" });
+  expect(await waitFor(() => settling)).toBe(true);
+  const [first] = listStepRunsForRun(fix.db, run.id);
+  if (!first) throw new Error("launch seeded no step");
+
+  await supervisor.appendStep(run.id, { ...FOLLOW_UP, dependsOn: [first.id] });
+  await supervisor.settle();
+
+  expect(spawn.calls).toBe(2);
+  expect(stepStatuses(run.id)).toEqual(["succeeded", "succeeded"]);
+});
+
 it("starts a parallel step at once beside the live turn and keeps the run working", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, ["linger", "complete"]);
   const run = await supervisor.start({ issue_id: "i-work" });
@@ -95,7 +115,7 @@ it("recovers two live steps after a restart: each rests, and resume reopens them
     providerSessionEvent(seed("docs"), "ps-docs"),
   ]);
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
   expect(spawn.calls).toBe(0);
   expect(stepStatuses("twin")).toEqual(["awaiting_human", "awaiting_human"]);
   expect(getRun(fix.db, "twin")?.status).toBe("awaiting_human");

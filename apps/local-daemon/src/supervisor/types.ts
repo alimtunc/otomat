@@ -115,7 +115,7 @@ export interface SupervisorConfig {
   /** Resolves the repository a run forks its worktree from; a project without one cannot be launched on. */
   repositories: RepositoryResolver;
   /** Fires after any settle (live, abort, boot) so review anchors/diff projections can react. */
-  afterSettle?: (outcome: ReconcileOutcome) => void;
+  afterSettle?: (outcome: ReconcileOutcome) => Promise<void>;
   /** Mirrors a durably created run onto the linked tracker issue; omitted leaves the daemon tracker-silent. */
   syncIssueLifecycle?: LinearLifecycleSync;
   /** Injected so `#supervisor` never imports `#github`; answers how many rows were refreshed. */
@@ -148,7 +148,7 @@ export interface Supervisor {
   /** Interrupt the step's live turn without settling the run or starting dependents; the step lands `awaiting_human`, resumable on the same provider session. */
   stopStep(runId: string, stepRunId: string): Promise<StepRunRow>;
   /** Withdraw a step that has not started: it never runs, its dependents stay blocked, and the run, its other steps and its worktree are untouched. */
-  cancelStep(runId: string, stepRunId: string): StepRunRow;
+  cancelStep(runId: string, stepRunId: string): Promise<StepRunRow>;
   /** Close a step the delivery guard holds, on the operator's explicit decision; journaled as an override, never as a verified delivery. */
   overrideStepDelivery(runId: string, stepRunId: string, note: string): StepRunRow;
   /** Resume a resting or stopped run on an explicit action — never auto-runs. */
@@ -161,7 +161,7 @@ export interface Supervisor {
   /** Close the issue's work cycle by hand; refused while a turn is live, and it deletes nothing in git. */
   abandon(runId: string): RunRow;
   /** The branch, commits, uncommitted work and diff an abandon would leave behind; null for an unknown run. */
-  workspaceClosure(runId: string): WorkspaceClosureFacts | null;
+  workspaceClosure(runId: string): Promise<WorkspaceClosureFacts | null>;
   /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
   appendStep(runId: string, input: AppendStepInput): Promise<RunRow>;
   /** Persist one user message, with its uploaded images, on an explicitly selected step as `queued`, then deliver it if that step can take it now. */
@@ -196,13 +196,13 @@ export interface Supervisor {
   /** Kill the run's process group and write the canonical canceled state + a ledger event. No fake success. */
   abort(runId: string): Promise<void>;
   /** Boot-time pass: classify every non-terminal in-flight run from durable evidence and settle it. */
-  reconcile(): ReconcileReport;
+  reconcile(): Promise<ReconcileReport>;
   /** A read: it prunes and deletes nothing. */
-  workspaces(scope?: WorkspaceScope): WorkspaceInventory;
+  workspaces(scope?: WorkspaceScope): Promise<WorkspaceInventory>;
   /** Concurrent callers share the one running pass. */
   reconcileWorkspaces(): Promise<WorkspaceReconcileReport>;
   /** `null` when no workspace answers to that id. */
-  cleanupWorkspace(workspaceId: string, force: boolean): WorkspaceCleanupResult | null;
+  cleanupWorkspace(workspaceId: string, force: boolean): Promise<WorkspaceCleanupResult | null>;
   /** Resolve once every in-flight session process has exited (shutdown/test aid). */
   settle(): Promise<void>;
   /** Stop every in-flight worker group (SIGTERM, then SIGKILL after `graceMs`); resolves once all have exited. */

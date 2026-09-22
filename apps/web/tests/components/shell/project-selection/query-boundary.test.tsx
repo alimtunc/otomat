@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import type { ProjectContract } from "@otomat/domain";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { LOCAL_SESSION, RemoteSessionContext } from "@web/components/shell/remote-session/context";
 import { afterEach, expect, it, vi } from "vitest";
@@ -16,7 +17,7 @@ vi.mock("@web/api/client", () => ({
 }));
 
 interface FakeQueryState {
-  data?: unknown;
+  data?: ProjectContract[];
   isError?: boolean;
 }
 
@@ -47,6 +48,22 @@ async function render(query: ReturnType<typeof projectsQuery>) {
   cleanups.push(mounted.cleanup);
   return mounted.container;
 }
+
+it("says no project is selected rather than loading forever when none has a repository", async () => {
+  const mounted = await mountWithQuery(
+    <ProjectQueryBoundary
+      query={projectsQuery({
+        data: [{ id: "local-default", name: "Local", root_path: "/tmp", has_repository: false }],
+      })}
+      unselectedIcon="list-todo"
+    >
+      <p>projects-content</p>
+    </ProjectQueryBoundary>,
+  );
+  cleanups.push(mounted.cleanup);
+  expect(mounted.container.textContent).toContain("No project selected");
+  expect(mounted.container.textContent).not.toContain("projects-content");
+});
 
 it("blocks with the error report when projects never loaded", async () => {
   const container = await render(projectsQuery({ isError: true }));

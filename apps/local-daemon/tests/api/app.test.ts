@@ -423,7 +423,7 @@ it("serves what abandoning would leave behind, and refuses while the run is acti
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
     supervisor: stubSupervisor({
-      workspaceClosure: () => ({
+      workspaceClosure: async () => ({
         run_id: runId,
         branch: "otomat/run/run-detail",
         base_branch: "main",
@@ -785,7 +785,7 @@ it("cancels a queued step over the API and maps a cancel refusal to its own stat
   let received: { id: string; stepRunId: string } | null = null;
   const app = makeApiApp(t, {
     supervisor: stubSupervisor({
-      cancelStep: (id, stepRunId) => {
+      cancelStep: async (id, stepRunId) => {
         received = { id, stepRunId };
         return stepRunRow({
           id: stepRunId,
@@ -967,7 +967,7 @@ it("serves isolated candidate diff evidence and delegates explicit winner select
   const app = makeApiApp(t, {
     review: {
       ...stubReviewService(),
-      getDiff: (ref) => {
+      getDiff: async (ref) => {
         diffOwner = ref.kind === "run" ? ref.owner : undefined;
         return {
           computedAt: "2026-07-05T00:00:00.000Z",

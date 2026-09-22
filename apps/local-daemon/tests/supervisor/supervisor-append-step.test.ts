@@ -193,7 +193,9 @@ it("refuses a step once the workspace is released, leaving the plan untouched", 
 it("notifies afterSettle when an appended turn settles live", async () => {
   const outcomes: ReconcileOutcome[] = [];
   const { supervisor } = makeSupervisor(fix, ["complete", "complete"], {
-    afterSettle: (outcome) => outcomes.push(outcome),
+    afterSettle: async (outcome) => {
+      outcomes.push(outcome);
+    },
   });
   const run = await supervisor.start({ issue_id: "i-work" });
   await supervisor.settle();

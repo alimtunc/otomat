@@ -287,7 +287,7 @@ function resolverFailingWith(
   error: Error,
   shouldFail: (input: AcquireWorktreeInput) => boolean = () => true,
 ): RepositoryResolver {
-  return resolverAcquiring((real) => (input) => {
+  return resolverAcquiring((real) => async (input) => {
     if (shouldFail(input)) throw error;
     return real(input);
   });
@@ -356,7 +356,7 @@ it("launches right after a repository is registered onto a previously repo-less 
     ).rejects.toMatchObject({ code: "repository_required" });
 
     // The launch must see the registration immediately — a boot-time verdict would strand the user.
-    const registered = registerLocalRepository(fix.db, late.root, "p-late");
+    const registered = await registerLocalRepository(fix.db, late.root, "p-late");
     expect(registered.ok).toBe(true);
 
     const run = await supervisor.start({ prompt: "now it works", project_id: "p-late" });
@@ -413,7 +413,7 @@ it("writes no session when a compete group cannot acquire every competitor workt
       .filter((row) => row.status === "active" && row.branch.includes("--compete-")),
   ).toEqual([]);
   const { supervisor: rebooted } = makeSupervisor(fix, "complete");
-  expect(() => rebooted.reconcile()).not.toThrow();
+  await expect(rebooted.reconcile()).resolves.not.toThrow();
 });
 
 it("rolls a compete group back whole when writing its sessions fails", async () => {
@@ -421,8 +421,8 @@ it("rolls a compete group back whole when writing its sessions fails", async () 
   const { supervisor, spawn } = makeSupervisor(fix, "complete", {
     // The second competitor's worktree is real but reported under an id no row carries, so
     // attaching it violates the FK: it stands for any failure of the session-writing phase.
-    repositories: resolverAcquiring((real) => (input) => {
-      const worktree = real(input);
+    repositories: resolverAcquiring((real) => async (input) => {
+      const worktree = await real(input);
       if (!input.branch.includes("--compete-")) return worktree;
       competitors += 1;
       return competitors > 1 ? { ...worktree, id: "no-such-worktree" } : worktree;
@@ -439,5 +439,5 @@ it("rolls a compete group back whole when writing its sessions fails", async () 
   expect(fix.db.select().from(schema.competeGroups).all()[0]?.status).toBe("failed");
   expect(branches(fix.repo).filter((name) => name.includes("--compete-"))).toEqual([]);
   const { supervisor: rebooted } = makeSupervisor(fix, "complete");
-  expect(() => rebooted.reconcile()).not.toThrow();
+  await expect(rebooted.reconcile()).resolves.not.toThrow();
 });

@@ -15,6 +15,7 @@ interface FakePullRequestQuery {
 }
 
 let query: FakePullRequestQuery;
+let inboxEntries: unknown[];
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ pullRequestId: "pr-1" }),
@@ -24,6 +25,14 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@web/api/prs/queries", () => ({
   usePullRequestReviewContext: () => query,
+}));
+
+vi.mock("@web/api/reviews/queries", () => ({
+  usePullRequestInbox: () => ({ data: { entries: inboxEntries } }),
+}));
+
+vi.mock("@web/components/shell/project-selection/use-selected", () => ({
+  useSelectedProject: () => ({ projectId: "project-1" }),
 }));
 
 vi.mock("@web/components/pull-requests/reviewer/actions", () => ({
@@ -42,7 +51,6 @@ vi.mock("@web/components/shell/use-back-navigation", () => ({
 
 vi.mock("@web/components/shell/route-shell", () => ({
   RouteShell: ({
-    active,
     back,
     breadcrumbs,
     breadcrumbExtra,
@@ -50,7 +58,6 @@ vi.mock("@web/components/shell/route-shell", () => ({
     actions,
     children,
   }: {
-    active: string;
     back: { label: string } | null;
     breadcrumbs: BreadcrumbItem[];
     breadcrumbExtra: ReactNode;
@@ -58,7 +65,7 @@ vi.mock("@web/components/shell/route-shell", () => ({
     actions: ReactNode;
     children: ReactNode;
   }) => (
-    <div data-active-section={active}>
+    <div>
       {back === null ? null : <button type="button" aria-label={back.label} />}
       <ol data-crumbs>
         {breadcrumbs.map((item) => (
@@ -92,6 +99,7 @@ async function render() {
 
 beforeEach(() => {
   query = { data: pullRequestReviewContext(), isError: false, dataUpdatedAt: 0 };
+  inboxEntries = [];
 });
 
 afterEach(async () => {
@@ -99,12 +107,9 @@ afterEach(async () => {
 });
 
 describe("PullRequestReviewerLayout", () => {
-  it("holds both tabs inside the Otomat shell, under the Reviews section", async () => {
+  it("holds both tabs inside the Otomat shell", async () => {
     const view = await render();
 
-    expect(
-      view.container.querySelector("[data-active-section]")?.getAttribute("data-active-section"),
-    ).toBe("reviews");
     expect(view.container.querySelector('[data-testid="tabs"]')).not.toBeNull();
     expect(view.container.querySelector('[data-testid="tab-body"]')).not.toBeNull();
     expect(view.container.querySelector('[aria-label="back-stub"]')).not.toBeNull();
@@ -133,6 +138,14 @@ describe("PullRequestReviewerLayout", () => {
 
     query = { data: undefined, isError: true, dataUpdatedAt: 0 };
     expect((await render()).crumbs[1]?.label).toBe("Pull request unavailable");
+  });
+
+  it("names the pull request from its review inbox entry before the context lands", async () => {
+    query = { data: undefined, isError: false, dataUpdatedAt: 0 };
+    inboxEntries = [
+      { id: "pr-1", number: 142, url: "https://github.com/alimtunc/otomat/pull/142" },
+    ];
+    expect((await render()).crumbs[1]?.label).toBe("alimtunc/otomat#142");
   });
 
   it("names the issue a reference resolves, without claiming Otomat owns it", async () => {

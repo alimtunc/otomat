@@ -30,11 +30,11 @@ export function createReviewSurfaceRoutes(
 ): Hono<ReviewSubjectEnv> {
   const routes = new Hono<ReviewSubjectEnv>();
 
-  routes.get("/:id/diff", guard, (c) => {
+  routes.get("/:id/diff", guard, async (c) => {
     const subject = c.get("subject");
     try {
       const scope = readDiffScope(c);
-      return c.json(toReviewDiffResponse(subject.id, deps.review.getDiff(subject, scope)));
+      return c.json(toReviewDiffResponse(subject.id, await deps.review.getDiff(subject, scope)));
     } catch (error) {
       const refusal = diffScopeErrorResponse(c, error);
       if (refusal) return refusal;
@@ -43,14 +43,14 @@ export function createReviewSurfaceRoutes(
     }
   });
 
-  routes.get("/:id/diff/file", guard, (c) => {
+  routes.get("/:id/diff/file", guard, async (c) => {
     const subject = c.get("subject");
     const path = c.req.query("path") ?? "";
     const sha = c.req.query("sha") ?? "";
     try {
       const scope = readDiffScope(c);
       return c.json(
-        toDiffFileBlobsResponse(deps.review.getFileBlobs(subject, { path, sha, scope })),
+        toDiffFileBlobsResponse(await deps.review.getFileBlobs(subject, { path, sha, scope })),
       );
     } catch (error) {
       const refusal = diffScopeErrorResponse(c, error) ?? diffFileBlobsErrorResponse(c, error);
@@ -80,10 +80,11 @@ export function createReviewSurfaceRoutes(
     "/:id/review/comments",
     guard,
     validateJson(createReviewCommentRequestSchema),
-    (c) => {
+    async (c) => {
       const subject = c.get("subject");
       try {
-        return c.json(toReviewComment(deps.review.addComment(subject, c.req.valid("json"))), 201);
+        const comment = await deps.review.addComment(subject, c.req.valid("json"));
+        return c.json(toReviewComment(comment), 201);
       } catch (error) {
         if (error instanceof DiffUnavailableError)
           return c.json({ error: "diff_unavailable" }, 409);

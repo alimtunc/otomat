@@ -122,7 +122,7 @@ class DefaultPullRequestImportService implements PullRequestImportService {
       provenance: verdict.provenance,
       evidence: buildEvidence(repository.remote.repository, provider, "manual"),
       attachedBy: login,
-      trees: fetchHeadTrees(repository, provider),
+      trees: await fetchHeadTrees(repository, provider),
       syncedAt: null,
     });
   }
@@ -172,12 +172,12 @@ class DefaultPullRequestImportService implements PullRequestImportService {
     };
   }
 
-  private mirror(
+  private async mirror(
     row: PullRequestRow,
     repository: IssueRepository,
     provider: GitHubPullRequest,
     login: string | null,
-  ): PullRequestRow {
+  ): Promise<PullRequestRow> {
     const verdict = classifyPullRequest(this.config.db, {
       repositoryId: repository.binding.repositoryId,
       provider,
@@ -186,7 +186,7 @@ class DefaultPullRequestImportService implements PullRequestImportService {
     return applyProviderState(this.config, row, {
       provider,
       provenance: verdict.provenance,
-      trees: fetchHeadTrees(repository, provider),
+      trees: await fetchHeadTrees(repository, provider),
       syncedAt: null,
     });
   }

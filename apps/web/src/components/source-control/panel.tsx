@@ -10,13 +10,12 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
   SidePanel,
-  Spinner,
   usePanelGroupLayout,
 } from "@otomat/ui";
 import { useChangeFiles } from "@web/api/source-control/mutations";
 import { useSourceControl } from "@web/api/source-control/queries";
 import { useFileSelection } from "@web/components/files/use-file-selection";
-import { CenteredState } from "@web/components/shell/centered-state";
+import { LinesSkeleton } from "@web/components/shell/lines-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { CommitForm } from "@web/components/source-control/commit-form";
 import { DiscardDialog } from "@web/components/source-control/discard-dialog";
@@ -61,11 +60,7 @@ export function SourceControlPanel({ target }: SourceControlPanelProps) {
       )}
       <QueryBoundary
         query={changes}
-        pending={
-          <CenteredState fill="flex">
-            <Spinner label="Loading changes" />
-          </CenteredState>
-        }
+        pending={<LinesSkeleton lines={6} className="p-3.5" />}
         error={
           <ErrorState
             title="Could not load changes"

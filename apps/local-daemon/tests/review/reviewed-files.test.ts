@@ -33,7 +33,7 @@ let syncFailure: Error | null = null;
 let syncLogin = "octocat";
 let remote: ViewedFilesResult = { viewerLogin: "octocat", files: [] };
 
-beforeEach(() => {
+beforeEach(async () => {
   fix = setupDaemonDb();
   const repositories = createRepositoryResolver({
     db: fix.db,
@@ -61,7 +61,7 @@ beforeEach(() => {
   };
   review = createReviewService(config);
 
-  const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+  const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
   worktreePath = acquired.path;
   seedRun(fix.db, {
     runId: RUN_ID,
@@ -79,16 +79,16 @@ afterEach(() => {
   fix.cleanup();
 });
 
-function fileSha(path: string): string {
-  const file = review
-    .getDiff(RUN, BRANCH_DIFF_SCOPE)
-    .diff?.files.find((candidate) => candidate.path === path);
+async function fileSha(path: string): Promise<string> {
+  const file = (await review.getDiff(RUN, BRANCH_DIFF_SCOPE)).diff?.files.find(
+    (candidate) => candidate.path === path,
+  );
   if (!file) throw new Error(`expected ${path} in the diff`);
   return file.sha;
 }
 
-function markReviewed(path: string, reviewed = true) {
-  return review.setReviewedFile(RUN, { file_path: path, diff_sha: fileSha(path), reviewed });
+async function markReviewed(path: string, reviewed = true) {
+  return review.setReviewedFile(RUN, { file_path: path, diff_sha: await fileSha(path), reviewed });
 }
 
 function openPullRequest(): void {
@@ -107,7 +107,7 @@ function openPullRequest(): void {
 }
 
 it("keeps a mark across daemon restarts while the file reads the same", async () => {
-  const sha = fileSha("notes.md");
+  const sha = await fileSha("notes.md");
   await markReviewed("notes.md");
 
   const restarted = createReviewService(config);
@@ -122,14 +122,14 @@ it("keeps a mark across daemon restarts while the file reads the same", async ()
 });
 
 it("pins the mark to the content it was made against, leaving the other files alone", async () => {
-  const staleSha = fileSha("notes.md");
+  const staleSha = await fileSha("notes.md");
   await markReviewed("notes.md");
   await markReviewed("other.md");
 
   writeFileSync(join(worktreePath, "notes.md"), "alpha\nbeta\ndelta\n");
   const marks = review.getReviewDetail(RUN).reviewedFiles;
   const live = new Map(
-    review.getDiff(RUN, BRANCH_DIFF_SCOPE).diff?.files.map((file) => [file.path, file.sha]),
+    (await review.getDiff(RUN, BRANCH_DIFF_SCOPE)).diff?.files.map((file) => [file.path, file.sha]),
   );
 
   expect(marks.find((mark) => mark.file_path === "notes.md")?.diff_sha).toBe(staleSha);
@@ -191,7 +191,7 @@ it("imports the account's own viewed state when a pull request is detected", asy
   const marks = review.getReviewDetail(RUN).reviewedFiles;
   expect(marks.find((mark) => mark.file_path === "notes.md")).toMatchObject({
     reviewed: true,
-    diff_sha: fileSha("notes.md"),
+    diff_sha: await fileSha("notes.md"),
     sync_status: "synced",
     viewer_login: "octocat",
   });

@@ -139,7 +139,7 @@ it("reconciles a recovered plan on boot exactly as the live settle did", async (
     ],
   });
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
 
   expect(getRun(fix.db, "r-boot")?.status).toBe("review_ready");
   expect(landedStatus("r-boot")).toBe("review_ready");
@@ -158,7 +158,7 @@ it("reconciles an unrecovered plan on boot as failed, not as finished", async ()
     ],
   });
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
 
   expect(getRun(fix.db, "r-boot-failed")?.status).toBe("failed");
   expect(landedStatus("r-boot-failed")).toBe("failed");

@@ -57,7 +57,7 @@ export function ConversationsView() {
   const list = (
     <QueryBoundary
       query={conversations}
-      pending={<ListSkeleton rows={4} height={48} />}
+      pending={<ListSkeleton rows={8} height={40} />}
       error={
         <ErrorReport
           error={conversations.error}
@@ -109,7 +109,6 @@ export function ConversationsView() {
 
   return (
     <RouteShell
-      active="conversations"
       titleIcon="message-square"
       titleNote="Read and answer the step conversations of every project on this host."
       breadcrumbs={[{ label: "Conversations", current: true }]}

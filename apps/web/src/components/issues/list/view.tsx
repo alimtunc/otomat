@@ -37,7 +37,6 @@ export function IssuesView() {
 
   return (
     <RouteShell
-      active="issues"
       titleIcon="list-todo"
       breadcrumbs={[{ label: "Issues", current: true }]}
       breadcrumbExtra={
@@ -80,7 +79,7 @@ export function IssuesView() {
         />
       }
     >
-      <ProjectQueryBoundary query={selectedProject.projects}>
+      <ProjectQueryBoundary query={selectedProject.projects} unselectedIcon="list-todo">
         <IssuesContent
           key={scrollId}
           scrollId={scrollId}

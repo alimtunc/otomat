@@ -24,7 +24,7 @@ let fix: DaemonTestDb;
 let worktrees: GitWorktreeService;
 let worktreePath: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   fix = setupDaemonDb();
   worktrees = createGitWorktreeService({
     db: fix.db,
@@ -33,7 +33,7 @@ beforeEach(() => {
     defaultBranch: fix.repo.defaultBranch,
     worktreesRoot: join(fix.dataDir, "worktrees"),
   });
-  const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+  const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
   worktreePath = acquired.path;
   seedRun(fix.db, {
     runId: RUN_ID,
@@ -75,10 +75,10 @@ function config() {
   };
 }
 
-it("releases the worktree and its branch, and closes the run and its issue", () => {
+it("releases the worktree and its branch, and closes the run and its issue", async () => {
   seedMergedPullRequest();
 
-  closeMergedRun(config(), RUN_ID);
+  await closeMergedRun(config(), RUN_ID);
 
   expect(existsSync(worktreePath)).toBe(false);
   expect(branches(fix.repo)).not.toContain(BRANCH);
@@ -87,43 +87,43 @@ it("releases the worktree and its branch, and closes the run and its issue", () 
   expect(getIssue(fix.db, "i1")?.status).toBe("done");
 });
 
-it("settles again without complaining once there is nothing left to release", () => {
+it("settles again without complaining once there is nothing left to release", async () => {
   seedMergedPullRequest();
-  closeMergedRun(config(), RUN_ID);
+  await closeMergedRun(config(), RUN_ID);
 
-  expect(() => closeMergedRun(config(), RUN_ID)).not.toThrow();
+  await expect(closeMergedRun(config(), RUN_ID)).resolves.not.toThrow();
   expect(getIssue(fix.db, "i1")?.status).toBe("done");
 });
 
-it("leaves a canceled issue in the state its user chose", () => {
+it("leaves a canceled issue in the state its user chose", async () => {
   seedMergedPullRequest();
   updateIssueStatus(fix.db, "i1", "canceled");
 
-  closeMergedRun(config(), RUN_ID);
+  await closeMergedRun(config(), RUN_ID);
 
   expect(getIssue(fix.db, "i1")?.status).toBe("canceled");
   expect(existsSync(worktreePath)).toBe(false);
 });
 
-it("closes the cycle but keeps the worktree while no merged pull request stands for it", () => {
-  closeMergedRun(config(), RUN_ID);
+it("closes the cycle but keeps the worktree while no merged pull request stands for it", async () => {
+  await closeMergedRun(config(), RUN_ID);
 
   expect(getRun(fix.db, RUN_ID)?.status).toBe("completed");
   expect(existsSync(worktreePath)).toBe(true);
   expect(branches(fix.repo)).toContain(BRANCH);
 });
 
-it("keeps the worktree when the project turned automatic deletion off", () => {
+it("keeps the worktree when the project turned automatic deletion off", async () => {
   seedMergedPullRequest();
   writeAutoDeleteWorkspaces(fix.db, "p1", false);
 
-  closeMergedRun(config(), RUN_ID);
+  await closeMergedRun(config(), RUN_ID);
 
   expect(getIssue(fix.db, "i1")?.status).toBe("done");
   expect(existsSync(worktreePath)).toBe(true);
 });
 
-it("does nothing for a run that no longer exists", () => {
-  expect(() => closeMergedRun(config(), "r-gone")).not.toThrow();
+it("does nothing for a run that no longer exists", async () => {
+  await expect(closeMergedRun(config(), "r-gone")).resolves.not.toThrow();
   expect(existsSync(worktreePath)).toBe(true);
 });

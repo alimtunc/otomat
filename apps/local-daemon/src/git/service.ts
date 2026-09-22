@@ -6,6 +6,7 @@ import { deleteBranch } from "./branches.js";
 import { diffInputs, worktreeGitView } from "./diff-inputs.js";
 import { collectChangedFiles, computeCanonicalDiff, treeRangeSnapshot } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
+import { inCheckout } from "./lock.js";
 import { toRecord } from "./record.js";
 import { commitsSince, fastForward, headSha, isAncestor, revParse } from "./repo.js";
 import { boundarySnapshot, captureWorktreeState, commitScope } from "./scopes.js";
@@ -64,32 +65,32 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       return listWorktreeRows(db, { repositoryId, status: filter.status }).map(toRecord);
     },
 
-    changedFiles(owner) {
-      const { gitCwd, base, tree } = diffInputs(scope, resolve(owner));
+    async changedFiles(owner) {
+      const { gitCwd, base, tree } = await diffInputs(scope, resolve(owner));
       return collectChangedFiles(gitCwd, base, tree);
     },
 
-    diff(owner) {
-      const { gitCwd, base, tree } = diffInputs(scope, resolve(owner));
+    async diff(owner) {
+      const { gitCwd, base, tree } = await diffInputs(scope, resolve(owner));
       return computeCanonicalDiff(gitCwd, base, tree);
     },
 
-    branchDiff(owner, against) {
-      const inputs = diffInputs(scope, resolve(owner), against);
+    async branchDiff(owner, against) {
+      const inputs = await diffInputs(scope, resolve(owner), against);
       return {
         branch: inputs.branch,
         baseRef: inputs.baseRef,
-        snapshot: treeRangeSnapshot(inputs.gitCwd, inputs.base, inputs.tree),
+        snapshot: await treeRangeSnapshot(inputs.gitCwd, inputs.base, inputs.tree),
       };
     },
 
-    treeSnapshot(baseRef) {
-      const tree = revParse(repoRoot, `${baseRef}^{tree}`);
+    async treeSnapshot(baseRef) {
+      const tree = await revParse(repoRoot, `${baseRef}^{tree}`);
       return { readFile: (path, limits) => readTreeFile(repoRoot, tree, path, limits) };
     },
 
-    worktreeTree(owner) {
-      const { gitCwd, tree, live } = diffInputs(scope, resolve(owner));
+    async worktreeTree(owner) {
+      const { gitCwd, tree, live } = await diffInputs(scope, resolve(owner));
       return {
         worktreePath: live ? gitCwd : null,
         entries: () => listTreeFiles(gitCwd, tree),
@@ -98,7 +99,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       };
     },
 
-    captureState(owner) {
+    async captureState(owner) {
       const row = requireActive(owner);
       return captureWorktreeState(row.path);
     },
@@ -111,89 +112,98 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       return commitScope(repoRoot, commit);
     },
 
-    branchCommits(owner) {
-      const { gitCwd, base, ref } = worktreeGitView(scope, resolve(owner));
+    async branchCommits(owner) {
+      const { gitCwd, base, ref } = await worktreeGitView(scope, resolve(owner));
       return commitsSince(gitCwd, base, ref);
     },
 
-    commitDiff(owner, commit) {
-      const { gitCwd, base } = worktreeGitView(scope, resolve(owner));
-      return computeCanonicalDiff(gitCwd, base, revParse(gitCwd, `${commit}^{tree}`));
+    async commitDiff(owner, commit) {
+      const { gitCwd, base } = await worktreeGitView(scope, resolve(owner));
+      return computeCanonicalDiff(gitCwd, base, await revParse(gitCwd, `${commit}^{tree}`));
     },
 
-    snapshot(owner, message = snapshotSubject("snapshot", owner)) {
+    async snapshot(owner, message = snapshotSubject("snapshot", owner)) {
       const row = requireActive(owner);
-      snapshotWorktree(row.path, message);
-      const head = headSha(row.path);
-      updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
-      return toRecord({ ...row, head_sha: head });
+      return inCheckout(row.path, async () => {
+        await snapshotWorktree(row.path, message);
+        const head = await headSha(row.path);
+        updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
+        return toRecord({ ...row, head_sha: head });
+      });
     },
 
-    commitStaged(owner, request) {
+    async commitStaged(owner, request) {
       const row = requireActive(owner);
-      const result = commitCheckoutFiles(row.path, request);
+      const result = await commitCheckoutFiles(row.path, request);
       updateWorktreeStatus(db, row.id, { status: "active", head_sha: result.sha });
       return result;
     },
 
-    promote(sourceOwner, canonicalOwner, expectedBaseSha) {
+    async promote(sourceOwner, canonicalOwner, expectedBaseSha) {
       const source = requireActive(sourceOwner);
       const canonical = requireActive(canonicalOwner);
 
-      snapshotWorktree(source.path, snapshotSubject("promote", sourceOwner));
-      const sourceHead = headSha(source.path);
-      updateWorktreeStatus(db, source.id, { status: "active", head_sha: sourceHead });
+      const sourceHead = await inCheckout(source.path, async () => {
+        await snapshotWorktree(source.path, snapshotSubject("promote", sourceOwner));
+        const head = await headSha(source.path);
+        updateWorktreeStatus(db, source.id, { status: "active", head_sha: head });
+        return head;
+      });
 
-      if (!isAncestor(repoRoot, expectedBaseSha, sourceHead)) {
+      if (!(await isAncestor(repoRoot, expectedBaseSha, sourceHead))) {
         throw new WorktreeConflictError(
           `candidate ${sourceOwner} does not descend from compete base ${expectedBaseSha}`,
         );
       }
-      if (isDirty(canonical.path)) {
-        throw new WorktreeConflictError(`canonical worktree ${canonicalOwner} is dirty`);
-      }
 
-      const canonicalHead = headSha(canonical.path);
-      if (canonicalHead !== sourceHead) {
-        if (canonicalHead !== expectedBaseSha) {
-          throw new WorktreeConflictError(
-            `canonical worktree ${canonicalOwner} moved after competitors forked`,
-          );
+      const promotedHead = await inCheckout(canonical.path, async () => {
+        if (await isDirty(canonical.path)) {
+          throw new WorktreeConflictError(`canonical worktree ${canonicalOwner} is dirty`);
         }
-        fastForward(canonical.path, source.branch);
-      }
-
-      const promotedHead = headSha(canonical.path);
-      updateWorktreeStatus(db, canonical.id, { status: "active", head_sha: promotedHead });
+        const canonicalHead = await headSha(canonical.path);
+        if (canonicalHead !== sourceHead) {
+          if (canonicalHead !== expectedBaseSha) {
+            throw new WorktreeConflictError(
+              `canonical worktree ${canonicalOwner} moved after competitors forked`,
+            );
+          }
+          await fastForward(canonical.path, source.branch);
+        }
+        const head = await headSha(canonical.path);
+        updateWorktreeStatus(db, canonical.id, { status: "active", head_sha: head });
+        return head;
+      });
       return {
         source: toRecord({ ...source, head_sha: sourceHead }),
         canonical: toRecord({ ...canonical, head_sha: promotedHead }),
       };
     },
 
-    archive(owner) {
+    async archive(owner) {
       const row = requireActive(owner);
-
-      let head: string;
-      if (existsSync(row.path)) {
-        snapshotWorktree(row.path, snapshotSubject("archive", owner));
-        head = headSha(row.path);
-      } else {
-        head = revParse(repoRoot, row.branch);
-      }
-      removeWorktree(repoRoot, row.path, { force: true });
-      pruneWorktrees(repoRoot);
-      updateWorktreeStatus(db, row.id, { status: "archived", head_sha: head });
-
-      return toRecord({ ...row, status: "archived", head_sha: head });
+      return inCheckout(row.path, async () => {
+        let head: string;
+        if (existsSync(row.path)) {
+          await snapshotWorktree(row.path, snapshotSubject("archive", owner));
+          head = await headSha(row.path);
+        } else {
+          head = await revParse(repoRoot, row.branch);
+        }
+        await removeWorktree(repoRoot, row.path, { force: true });
+        await pruneWorktrees(repoRoot);
+        updateWorktreeStatus(db, row.id, { status: "archived", head_sha: head });
+        return toRecord({ ...row, status: "archived", head_sha: head });
+      });
     },
 
-    cleanup(owner, options = {}) {
+    async cleanup(owner, options = {}) {
       const row = resolve(owner);
-      removeWorktree(repoRoot, row.path, { force: true });
-      pruneWorktrees(repoRoot);
-      if (options.deleteBranch ?? true) deleteBranch(repoRoot, row.branch);
-      updateWorktreeStatus(db, row.id, { status: "removed" });
+      return inCheckout(row.path, async () => {
+        await removeWorktree(repoRoot, row.path, { force: true });
+        await pruneWorktrees(repoRoot);
+        if (options.deleteBranch ?? true) await deleteBranch(repoRoot, row.branch);
+        updateWorktreeStatus(db, row.id, { status: "removed" });
+      });
     },
   };
 }

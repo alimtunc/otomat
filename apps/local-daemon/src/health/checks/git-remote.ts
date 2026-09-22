@@ -2,8 +2,10 @@ import type { ProjectHealthOutcome } from "@otomat/domain";
 
 import { branchExists, isRepositoryRoot, probeRemoteBranch, type RepositoryBinding } from "#git";
 
-export function gitRemoteCheck(binding: RepositoryBinding | null): ProjectHealthOutcome {
-  if (binding === null || !isRepositoryRoot(binding.rootPath)) {
+export async function gitRemoteCheck(
+  binding: RepositoryBinding | null,
+): Promise<ProjectHealthOutcome> {
+  if (binding === null || !(await isRepositoryRoot(binding.rootPath))) {
     return {
       status: "unknown",
       message: "No usable repository is attached here, so no base branch could be read.",
@@ -12,7 +14,7 @@ export function gitRemoteCheck(binding: RepositoryBinding | null): ProjectHealth
   }
 
   const { rootPath, defaultBranch } = binding;
-  if (!branchExists(rootPath, defaultBranch)) {
+  if (!(await branchExists(rootPath, defaultBranch))) {
     return {
       status: "error",
       message: `The base branch "${defaultBranch}" does not exist in ${rootPath}.`,
@@ -20,7 +22,7 @@ export function gitRemoteCheck(binding: RepositoryBinding | null): ProjectHealth
     };
   }
 
-  const probe = probeRemoteBranch(rootPath, defaultBranch);
+  const probe = await probeRemoteBranch(rootPath, defaultBranch);
   switch (probe.status) {
     case "reachable":
       return {

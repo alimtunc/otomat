@@ -13,8 +13,8 @@ import {
 
 let fix: CheckoutApiFixture;
 
-beforeEach(() => {
-  fix = setupCheckoutApi();
+beforeEach(async () => {
+  fix = await setupCheckoutApi();
 });
 
 afterEach(() => fix.cleanup());
@@ -40,7 +40,7 @@ it("stages only the selected worktree, returns stale refusals, and rejects an ar
   });
   expect(stale.status).toBe(409);
   expect(await stale.json()).toMatchObject({ error: "checkout_stale" });
-  fix.service.archive(RUN_ID);
+  await fix.service.archive(RUN_ID);
   expect((await request(fix.app, path)).status).toBe(409);
 });
 

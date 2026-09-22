@@ -1,5 +1,5 @@
 import type { UsageFacetOptions } from "@otomat/domain";
-import { EmptyState, Icon, IconButton } from "@otomat/ui";
+import { EmptyState, Icon, IconButton, Skeleton } from "@otomat/ui";
 import { useUsageDashboard } from "@web/api/usage/queries";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { CenteredState } from "@web/components/shell/centered-state";
@@ -28,6 +28,14 @@ import {
   withoutUsageChip,
 } from "@web/lib/usage/facets";
 
+const USAGE_PENDING = (
+  <div className="flex flex-col gap-4.5 pt-4.5">
+    <Skeleton className="mx-4.5 h-14" />
+    <Skeleton className="mx-4.5 h-44" />
+    <ListSkeleton rows={6} height={40} header />
+  </div>
+);
+
 const NO_OPTIONS: UsageFacetOptions = { projects: [], emitters: [], issues: [] };
 
 export function UsageView() {
@@ -39,7 +47,6 @@ export function UsageView() {
 
   return (
     <RouteShell
-      active="usage"
       titleIcon="bar-chart"
       breadcrumbs={[{ label: "Usage", current: true }]}
       actions={
@@ -61,7 +68,7 @@ export function UsageView() {
     >
       <QueryBoundary
         query={usage}
-        pending={<ListSkeleton rows={4} height={52} />}
+        pending={USAGE_PENDING}
         error={
           <ErrorReport
             error={usage.error}

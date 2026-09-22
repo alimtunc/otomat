@@ -55,7 +55,7 @@ let submissions: PullRequestReviewSubmission[] = [];
 let submitFailure: Error | null = null;
 let worktreePath = "";
 
-beforeEach(() => {
+beforeEach(async () => {
   fix = setupDaemonDb();
   const repositories = createRepositoryResolver({
     db: fix.db,
@@ -87,7 +87,7 @@ beforeEach(() => {
   };
   review = createReviewService(reviewConfig);
 
-  const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+  const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
   worktreePath = acquired.path;
   seedRun(fix.db, {
     runId: RUN_ID,
@@ -122,15 +122,15 @@ async function addComment(
   return review.addComment(target, { side: "new", destination: "agent", ...input });
 }
 
-function currentAnchor() {
-  const diff = review.getDiff(runTarget(), BRANCH_DIFF_SCOPE).diff;
+async function currentAnchor() {
+  const diff = (await review.getDiff(runTarget(), BRANCH_DIFF_SCOPE)).diff;
   const file = diff?.files.find((f) => f.path === "notes.md");
   if (!file) throw new Error("expected notes.md in the diff");
   return file;
 }
 
-it("computes the real git diff for the run's worktree and null without one", () => {
-  const withWorktree = review.getDiff(runTarget(), BRANCH_DIFF_SCOPE);
+it("computes the real git diff for the run's worktree and null without one", async () => {
+  const withWorktree = await review.getDiff(runTarget(), BRANCH_DIFF_SCOPE);
   expect(withWorktree.diff?.files.map((f) => f.path)).toEqual(["notes.md"]);
   expect(withWorktree.diff?.additions).toBe(3);
 
@@ -142,11 +142,11 @@ it("computes the real git diff for the run's worktree and null without one", () 
     sessionStatus: "terminated",
   });
   const bare = getRun(fix.db, "r-bare");
-  expect(bare && review.getDiff(runTarget("r-bare"), BRANCH_DIFF_SCOPE).diff).toBeNull();
+  expect(bare && (await review.getDiff(runTarget("r-bare"), BRANCH_DIFF_SCOPE)).diff).toBeNull();
 });
 
 it("pins a comment to the live diff, snapshots its hunk, and opens the review", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
@@ -190,7 +190,7 @@ it("rejects a stale anchor and a run without a diff — no silent re-anchoring",
 });
 
 it("pins a whole-file comment without capturing a hunk snapshot", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: null,
@@ -203,10 +203,10 @@ it("pins a whole-file comment without capturing a hunk snapshot", async () => {
   expect(review.getReviewDetail(runTarget()).comments.map((c) => c.id)).toEqual([comment.id]);
 });
 
-it("serves the exact base and head blobs of a live diff file", () => {
-  const blobs = review.getFileBlobs(runTarget(), {
+it("serves the exact base and head blobs of a live diff file", async () => {
+  const blobs = await review.getFileBlobs(runTarget(), {
     path: "notes.md",
-    sha: currentAnchor().sha,
+    sha: (await currentAnchor()).sha,
     scope: BRANCH_DIFF_SCOPE,
   });
 
@@ -214,15 +214,15 @@ it("serves the exact base and head blobs of a live diff file", () => {
   expect(blobs.head).toEqual({ kind: "text", content: "alpha\nbeta\ngamma\n" });
 });
 
-it("serves supported binary media as exact bytes", () => {
+it("serves supported binary media as exact bytes", async () => {
   const bytes = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 1]);
   writeFileSync(join(worktreePath, "preview.png"), bytes);
-  const file = review
-    .getDiff(runTarget(), BRANCH_DIFF_SCOPE)
-    .diff?.files.find((candidate) => candidate.path === "preview.png");
+  const file = (await review.getDiff(runTarget(), BRANCH_DIFF_SCOPE)).diff?.files.find(
+    (candidate) => candidate.path === "preview.png",
+  );
   if (!file) throw new Error("expected preview.png in the diff");
 
-  const blobs = review.getFileBlobs(runTarget(), {
+  const blobs = await review.getFileBlobs(runTarget(), {
     path: file.path,
     sha: file.sha,
     scope: BRANCH_DIFF_SCOPE,
@@ -232,30 +232,30 @@ it("serves supported binary media as exact bytes", () => {
   expect(blobs.head).toEqual({ kind: "media", data: bytes, mediaType: "image/png" });
 });
 
-it("refuses blobs read against a moved anchor", () => {
-  expect(() =>
+it("refuses blobs read against a moved anchor", async () => {
+  await expect(
     review.getFileBlobs(runTarget(), { path: "notes.md", sha: "moved", scope: BRANCH_DIFF_SCOPE }),
-  ).toThrow(ReviewAnchorStaleError);
+  ).rejects.toThrow(ReviewAnchorStaleError);
 });
 
-it("refuses a path that is not part of the current diff", () => {
-  expect(() =>
+it("refuses a path that is not part of the current diff", async () => {
+  await expect(
     review.getFileBlobs(runTarget(), {
       path: "absent.md",
-      sha: currentAnchor().sha,
+      sha: (await currentAnchor()).sha,
       scope: BRANCH_DIFF_SCOPE,
     }),
-  ).toThrow(FileNotInDiffError);
+  ).rejects.toThrow(FileNotInDiffError);
 });
 
-it("reads a modified file's base side from the fork point, not from the worktree", () => {
+it("reads a modified file's base side from the fork point, not from the worktree", async () => {
   writeFileSync(join(worktreePath, "README.md"), "# base\nplus a line\n");
-  const file = review
-    .getDiff(runTarget(), BRANCH_DIFF_SCOPE)
-    .diff?.files.find((f) => f.path === "README.md");
+  const file = (await review.getDiff(runTarget(), BRANCH_DIFF_SCOPE)).diff?.files.find(
+    (f) => f.path === "README.md",
+  );
   if (!file) throw new Error("expected README.md in the diff");
 
-  const blobs = review.getFileBlobs(runTarget(), {
+  const blobs = await review.getFileBlobs(runTarget(), {
     path: "README.md",
     sha: file.sha,
     scope: BRANCH_DIFF_SCOPE,
@@ -265,10 +265,10 @@ it("reads a modified file's base side from the fork point, not from the worktree
   expect(blobs.head).toEqual({ kind: "text", content: "# base\nplus a line\n" });
 });
 
-it("grants fix authority only while Otomat still holds the run's worktree", () => {
+it("grants fix authority only while Otomat still holds the run's worktree", async () => {
   expect(review.getReviewDetail(runTarget()).fixAuthority.kind).toBe("otomat");
 
-  worktrees.cleanup(RUN_ID);
+  await worktrees.cleanup(RUN_ID);
 
   const authority = review.getReviewDetail(runTarget()).fixAuthority;
   expect(authority.kind).toBe("external");
@@ -276,7 +276,7 @@ it("grants fix authority only while Otomat still holds the run's worktree", () =
 });
 
 it("appends one fix step carrying comment + original hunk + current file", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
@@ -330,7 +330,7 @@ it("appends one fix step carrying comment + original hunk + current file", async
 
 it("freezes every open agent comment and leaves the ineligible ones alone", async () => {
   openPullRequest();
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const body = (text: string) => ({
     file_path: "notes.md",
     line: 2,
@@ -377,9 +377,9 @@ it("keeps a symlinked path's fix context to the link target text, never the host
   writeFileSync(secretPath, "TOP-SECRET\n");
   symlinkSync(secretPath, join(worktreePath, "leak"));
 
-  const anchor = review
-    .getDiff(runTarget(), BRANCH_DIFF_SCOPE)
-    .diff?.files.find((f) => f.path === "leak");
+  const anchor = (await review.getDiff(runTarget(), BRANCH_DIFF_SCOPE)).diff?.files.find(
+    (f) => f.path === "leak",
+  );
   if (!anchor) throw new Error("expected leak in the diff");
   await addComment(runTarget(), {
     file_path: "leak",
@@ -400,7 +400,7 @@ it("keeps a symlinked path's fix context to the link target text, never the host
 });
 
 it("stamps fix-requested comments and drives the review to changes_requested", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
@@ -419,7 +419,7 @@ it("stamps fix-requested comments and drives the review to changes_requested", a
 });
 
 it("stamps nothing when the step append fails, so the request can be retried", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
@@ -447,7 +447,7 @@ it("stamps nothing when the step append fails, so the request can be retried", a
 });
 
 it("on a completed settle: emits git.diff_updated, marks fixed comments addressed and moved anchors outdated", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const requested = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
@@ -471,7 +471,11 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
   // The "fix turn" really edits the worktree, so both anchors leave the live diff.
   appendFileSync(join(worktreePath, "notes.md"), "delta\n");
 
-  review.onRunSettled({ runId: RUN_ID, agentSessionId: SESSION_ID, classification: "completed" });
+  await review.onRunSettled({
+    runId: RUN_ID,
+    agentSessionId: SESSION_ID,
+    classification: "completed",
+  });
 
   expect(getReviewComment(fix.db, requested.id)?.status).toBe("addressed");
   expect(getReviewComment(fix.db, bystander.id)?.status).toBe("outdated");
@@ -489,7 +493,7 @@ it("on a completed settle: emits git.diff_updated, marks fixed comments addresse
 });
 
 it("keeps untouched anchors open across a completed settle", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 1,
@@ -497,13 +501,17 @@ it("keeps untouched anchors open across a completed settle", async () => {
     body: "still valid",
   });
 
-  review.onRunSettled({ runId: RUN_ID, agentSessionId: SESSION_ID, classification: "completed" });
+  await review.onRunSettled({
+    runId: RUN_ID,
+    agentSessionId: SESSION_ID,
+    classification: "completed",
+  });
   expect(getReviewComment(fix.db, comment.id)?.status).toBe("open");
   expect(getReviewForSubject(fix.db, RUN_ID)?.status).toBe("in_review");
 });
 
 it("releases pending fix requests when the turn does not complete", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
@@ -517,7 +525,11 @@ it("releases pending fix requests when the turn does not complete", async () => 
     references: [],
   });
 
-  review.onRunSettled({ runId: RUN_ID, agentSessionId: SESSION_ID, classification: "interrupted" });
+  await review.onRunSettled({
+    runId: RUN_ID,
+    agentSessionId: SESSION_ID,
+    classification: "interrupted",
+  });
 
   const row = getReviewComment(fix.db, comment.id);
   expect(row?.status).toBe("open");
@@ -540,7 +552,7 @@ function openPullRequest(headRef: string = BRANCH): void {
 }
 
 it("anchors a multi-line range and snapshots the hunk it spans", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const ranged = await addComment(runTarget(), {
     file_path: "notes.md",
     start_line: 1,
@@ -560,7 +572,7 @@ it("anchors a multi-line range and snapshots the hunk it spans", async () => {
 });
 
 it("captures a suggestion with the exact lines it replaces", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const suggested = await addComment(runTarget(), {
     file_path: "notes.md",
     start_line: 2,
@@ -575,7 +587,7 @@ it("captures a suggestion with the exact lines it replaces", async () => {
 });
 
 it("refuses a suggestion the patch cannot back, and says why", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   await expect(
     addComment(runTarget(), {
       file_path: "notes.md",
@@ -605,7 +617,7 @@ it("offers the PR destination only once a pull request carries a published head"
     addComment(runTarget(), {
       file_path: "notes.md",
       line: 2,
-      diff_sha: currentAnchor().sha,
+      diff_sha: (await currentAnchor()).sha,
       destination: "pr_review",
       body: "on the PR",
     }),
@@ -623,7 +635,7 @@ it("refuses a whole-file anchor for the pull-request destination", async () => {
     addComment(runTarget(), {
       file_path: "notes.md",
       line: null,
-      diff_sha: currentAnchor().sha,
+      diff_sha: (await currentAnchor()).sha,
       destination: "pr_review",
       body: "whole file",
     }),
@@ -632,7 +644,7 @@ it("refuses a whole-file anchor for the pull-request destination", async () => {
 
 it("keeps a whole-file agent comment out of the review a pull request receives", async () => {
   openPullRequest();
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   const whole = await addComment(runTarget(), {
     file_path: "notes.md",
     line: null,
@@ -660,7 +672,7 @@ it("carries the summary, the verdict and every pending comment in one submission
     file_path: "notes.md",
     start_line: 1,
     line: 2,
-    diff_sha: currentAnchor().sha,
+    diff_sha: (await currentAnchor()).sha,
     destination: "pr_review",
     body: "rename these",
     suggestion: "delta\nepsilon",
@@ -704,7 +716,7 @@ it("keeps every comment pending when GitHub refuses the review, and submits them
   const created = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
-    diff_sha: currentAnchor().sha,
+    diff_sha: (await currentAnchor()).sha,
     destination: "pr_review",
     body: "on the PR",
   });
@@ -737,7 +749,7 @@ it("refuses to request changes on a summary that is only whitespace", async () =
   await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
-    diff_sha: currentAnchor().sha,
+    diff_sha: (await currentAnchor()).sha,
     destination: "pr_review",
     body: "on the PR",
   });
@@ -799,7 +811,7 @@ it("leaves a resolved pull-request comment out of the review instead of blocking
   const stale = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
-    diff_sha: currentAnchor().sha,
+    diff_sha: (await currentAnchor()).sha,
     destination: "pr_review",
     body: "no longer applies",
   });
@@ -817,7 +829,7 @@ it("retries a submission the daemon was killed in the middle of", async () => {
   const comment = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
-    diff_sha: currentAnchor().sha,
+    diff_sha: (await currentAnchor()).sha,
     destination: "pr_review",
     body: "carried over",
   });
@@ -846,7 +858,7 @@ it("refuses a submission whose comment anchor moved under it", async () => {
   await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
-    diff_sha: currentAnchor().sha,
+    diff_sha: (await currentAnchor()).sha,
     destination: "pr_review",
     body: "on the PR",
   });
@@ -863,7 +875,7 @@ it("never turns a PR-review comment into an agent instruction", async () => {
   await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
-    diff_sha: currentAnchor().sha,
+    diff_sha: (await currentAnchor()).sha,
     destination: "pr_review",
     body: "on the PR",
   });
@@ -880,7 +892,7 @@ it("never turns a PR-review comment into an agent instruction", async () => {
 });
 
 it("freezes the global instruction beside the range and suggestion it constrains", async () => {
-  const anchor = currentAnchor();
+  const anchor = await currentAnchor();
   await addComment(runTarget(), {
     file_path: "notes.md",
     start_line: 2,
@@ -915,7 +927,7 @@ it("keeps a submitted comment's destination and state through the review detail 
   const created = await addComment(runTarget(), {
     file_path: "notes.md",
     line: 2,
-    diff_sha: currentAnchor().sha,
+    diff_sha: (await currentAnchor()).sha,
     destination: "pr_review",
     body: "on the PR",
   });

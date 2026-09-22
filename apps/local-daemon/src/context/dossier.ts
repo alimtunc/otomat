@@ -52,7 +52,7 @@ function dependencyReports(
   return reports;
 }
 
-export function buildSessionContext(input: SessionContextInput): SessionContext {
+export async function buildSessionContext(input: SessionContextInput): Promise<SessionContext> {
   const { db, run, stepRunId } = input;
   const binding = input.repositories.forRepository(run.repository_id);
   const steps = listStepRunsForRun(db, run.id);
@@ -64,7 +64,7 @@ export function buildSessionContext(input: SessionContextInput): SessionContext 
     version: 1,
     captured_at: input.capturedAt,
     selection: input.selection ?? emptySelection(input.capturedAt),
-    workspace: workspaceContext({ run, binding, owner }),
+    workspace: await workspaceContext({ run, binding, owner }),
     pull_request: pullRequest === undefined ? null : pullRequestContext(pullRequest),
     progress: progressContext({
       steps,

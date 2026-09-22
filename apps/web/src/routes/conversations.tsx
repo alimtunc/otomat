@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { prefetchRun } from "@web/api/route-prefetch";
 import type { ConversationsSearch } from "@web/components/conversations/search";
 import { ConversationsView } from "@web/components/conversations/view";
 
@@ -10,6 +11,10 @@ export const Route = createFileRoute("/conversations")({
       run,
       step: run !== undefined && typeof search.step === "string" ? search.step : undefined,
     };
+  },
+  loaderDeps: ({ search }) => ({ run: search.run }),
+  loader: ({ deps }) => {
+    if (deps.run !== undefined) prefetchRun(deps.run);
   },
   component: ConversationsView,
 });

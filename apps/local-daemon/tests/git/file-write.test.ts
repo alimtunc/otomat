@@ -17,7 +17,7 @@ let worktreesRoot: string;
 let service: GitWorktreeService;
 let worktree: string;
 
-beforeEach(() => {
+beforeEach(async () => {
   repo = setupTestRepo();
   repo.write("src/app.ts", "export const a = 1;\n");
   repo.commitAll("seed");
@@ -30,7 +30,7 @@ beforeEach(() => {
     defaultBranch: "main",
     worktreesRoot,
   });
-  worktree = service.acquire({ owner: OWNER, branch: "feat/files" }).path;
+  worktree = (await service.acquire({ owner: OWNER, branch: "feat/files" })).path;
 });
 
 afterEach(() => {
@@ -40,46 +40,51 @@ afterEach(() => {
 });
 
 describe("writeWorktreeFile", () => {
-  const revisionOf = (path: string): string => {
-    const read = service.worktreeTree(OWNER).readFile(path, { maxBytes: 1024 });
+  const revisionOf = async (path: string): Promise<string> => {
+    const read = await (await service.worktreeTree(OWNER)).readFile(path, { maxBytes: 1024 });
     if (read.kind !== "text") throw new Error(`expected text at ${path}, got ${read.kind}`);
     return read.oid;
   };
 
-  it("replaces the content at the presented revision and the diff sees it", () => {
-    const revision = revisionOf("src/app.ts");
-    const result = writeWorktreeFile(worktree, "src/app.ts", revision, "export const a = 42;\n");
+  it("replaces the content at the presented revision and the diff sees it", async () => {
+    const revision = await revisionOf("src/app.ts");
+    const result = await writeWorktreeFile(
+      worktree,
+      "src/app.ts",
+      revision,
+      "export const a = 42;\n",
+    );
 
     expect(result.kind).toBe("written");
     expect(readFileSync(join(worktree, "src/app.ts"), "utf8")).toBe("export const a = 42;\n");
-    expect(revisionOf("src/app.ts")).toBe(result.kind === "written" ? result.revision : "");
-    expect(service.diff(OWNER).files.map((file) => file.path)).toEqual(["src/app.ts"]);
+    expect(await revisionOf("src/app.ts")).toBe(result.kind === "written" ? result.revision : "");
+    expect((await service.diff(OWNER)).files.map((file) => file.path)).toEqual(["src/app.ts"]);
   });
 
-  it("refuses to overwrite a file another process changed since it was read", () => {
-    const revision = revisionOf("src/app.ts");
+  it("refuses to overwrite a file another process changed since it was read", async () => {
+    const revision = await revisionOf("src/app.ts");
     writeFileSync(join(worktree, "src/app.ts"), "export const a = 'agent';\n");
 
-    const result = writeWorktreeFile(worktree, "src/app.ts", revision, "mine\n");
+    const result = await writeWorktreeFile(worktree, "src/app.ts", revision, "mine\n");
 
     expect(result.kind).toBe("stale");
     expect(readFileSync(join(worktree, "src/app.ts"), "utf8")).toBe("export const a = 'agent';\n");
   });
 
-  it("refuses symlinks, symlinked parents, .git internals and absent files", () => {
+  it("refuses symlinks, symlinked parents, .git internals and absent files", async () => {
     const outside = mkdtempSync(join(tmpdir(), "otomat-outside-"));
     writeFileSync(join(outside, "target.txt"), "host\n");
     symlinkSync(join(outside, "target.txt"), join(worktree, "link.txt"));
     mkdirSync(join(worktree, "nested"));
     symlinkSync(outside, join(worktree, "nested", "escape"));
-    const revision = revisionOf("src/app.ts");
+    const revision = await revisionOf("src/app.ts");
 
-    expect(writeWorktreeFile(worktree, "link.txt", revision, "x").kind).toBe("symlink");
-    expect(writeWorktreeFile(worktree, "nested/escape/target.txt", revision, "x").kind).toBe(
-      "symlink",
-    );
-    expect(writeWorktreeFile(worktree, ".git/config", revision, "x").kind).toBe("missing");
-    expect(writeWorktreeFile(worktree, "nope.ts", revision, "x").kind).toBe("missing");
+    expect((await writeWorktreeFile(worktree, "link.txt", revision, "x")).kind).toBe("symlink");
+    expect(
+      (await writeWorktreeFile(worktree, "nested/escape/target.txt", revision, "x")).kind,
+    ).toBe("symlink");
+    expect((await writeWorktreeFile(worktree, ".git/config", revision, "x")).kind).toBe("missing");
+    expect((await writeWorktreeFile(worktree, "nope.ts", revision, "x")).kind).toBe("missing");
     expect(readFileSync(join(outside, "target.txt"), "utf8")).toBe("host\n");
     rmSync(outside, { recursive: true, force: true });
   });

@@ -11,10 +11,10 @@ import type { SupervisorState } from "./state.js";
 const MAX_LISTED_COMMITS = 20;
 
 /** What abandoning would leave behind, read from git at the moment of asking so the choice is made against the real branch. */
-export function workspaceClosureFacts(
+export async function workspaceClosureFacts(
   state: SupervisorState,
   runId: string,
-): WorkspaceClosureFacts | null {
+): Promise<WorkspaceClosureFacts | null> {
   const run = getRun(state.db, runId);
   if (!run) return null;
   const blocker = abandonBlocker(state, run);
@@ -36,12 +36,12 @@ export function workspaceClosureFacts(
     };
   }
 
-  const { live, gitCwd, base, ref } = worktreeGitView(
+  const { live, gitCwd, base, ref } = await worktreeGitView(
     { repoRoot: binding.rootPath, defaultBranch: binding.defaultBranch },
     row,
   );
-  const commits = commitsSince(gitCwd, base, ref);
-  const diff = diffOrNull(binding.service, runId);
+  const commits = await commitsSince(gitCwd, base, ref);
+  const diff = await diffOrNull(binding.service, runId);
   return {
     run_id: runId,
     branch: run.branch,
@@ -49,7 +49,7 @@ export function workspaceClosureFacts(
     worktree_path: live ? row.path : null,
     commits: commits.slice(0, MAX_LISTED_COMMITS),
     commit_count: commits.length,
-    uncommitted_files: live ? uncommittedPaths(row.path).length : 0,
+    uncommitted_files: live ? (await uncommittedPaths(row.path)).length : 0,
     changed_files: diff?.files.length ?? 0,
     additions: diff?.additions ?? 0,
     deletions: diff?.deletions ?? 0,

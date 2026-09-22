@@ -23,7 +23,7 @@ export interface CheckoutApiFixture {
   cleanup(): void;
 }
 
-export function setupCheckoutApi(): CheckoutApiFixture {
+export async function setupCheckoutApi(): Promise<CheckoutApiFixture> {
   const t = setupTestDb("otomat-run-files-api-");
   seedRepository(t.db);
   const repo = setupTestRepo();
@@ -38,7 +38,7 @@ export function setupCheckoutApi(): CheckoutApiFixture {
     defaultBranch: "main",
     worktreesRoot,
   });
-  const acquired = service.acquire({ owner: FILES_RUN_ID, branch: "feat/files" });
+  const acquired = await service.acquire({ owner: FILES_RUN_ID, branch: "feat/files" });
   seedRun(t.db, {
     runId: FILES_RUN_ID,
     repositoryId: "repo-1",

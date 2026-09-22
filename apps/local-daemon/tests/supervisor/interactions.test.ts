@@ -254,7 +254,7 @@ it("cancels a question left pending by a daemon that stopped, so no answer arriv
   // A restart loses every worker: the rows survive, the provider processes do not.
   const restarted = makeSupervisor(fix, "live-ask").supervisor;
 
-  restarted.reconcile();
+  await restarted.reconcile();
 
   expect(interactions()[0]).toMatchObject({ state: "canceled" });
   expect(getRun(fix.db, RUN)?.status).not.toBe("awaiting_permission");

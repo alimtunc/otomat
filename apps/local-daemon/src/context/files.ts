@@ -3,11 +3,14 @@ import { CONTEXT_FILE_MAX_BYTES, type ContextFile } from "@otomat/domain";
 import { isRepositoryRelative, normalizeRepositoryPath, type TreeSnapshot } from "#git";
 
 /** Refusing a symlink is what keeps an attached path from reading a host file the repository merely points at. */
-export function readContextFile(snapshot: TreeSnapshot, rawPath: string): ContextFile {
+export async function readContextFile(
+  snapshot: TreeSnapshot,
+  rawPath: string,
+): Promise<ContextFile> {
   const path = normalizeRepositoryPath(rawPath);
   if (!isRepositoryRelative(path))
     return { state: "unavailable", path, reason: "outside_repository" };
-  const read = snapshot.readFile(path, { maxBytes: CONTEXT_FILE_MAX_BYTES });
+  const read = await snapshot.readFile(path, { maxBytes: CONTEXT_FILE_MAX_BYTES });
   switch (read.kind) {
     case "text":
       return { state: "read", path, bytes: read.bytes, text: read.text };

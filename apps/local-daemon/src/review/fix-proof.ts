@@ -21,11 +21,11 @@ function unavailable(reason: string): CommentFixProof {
   return { state: "unavailable", reason };
 }
 
-export function getCommentFixProof(
+export async function getCommentFixProof(
   ctx: ReviewContext,
   runId: string,
   commentId: string,
-): CommentFixProof {
+): Promise<CommentFixProof> {
   const comment = getReviewComment(ctx.db, commentId);
   if (!comment) return unavailable("This comment is no longer recorded on the run.");
   if (comment.fixed_by_session_id === null) {
@@ -36,7 +36,7 @@ export function getCommentFixProof(
   const session = listAgentSessionsForRun(ctx.db, runId).find((row) => row.id === sessionId);
   if (!session) return unavailable("The pass that addressed this comment is no longer recorded.");
 
-  const resolved = resolveScope(
+  const resolved = await resolveScope(
     ctx,
     { kind: "run", id: runId },
     { kind: "session", session: sessionId },

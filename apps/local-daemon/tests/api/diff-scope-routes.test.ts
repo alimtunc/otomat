@@ -21,7 +21,7 @@ let asked: RunDiffScopeSelector[] = [];
 function appEchoingScope() {
   return makeApiApp(t, {
     review: stubReviewService({
-      getDiff: (_ref, scope = { kind: "branch" }) => {
+      getDiff: async (_ref, scope = { kind: "branch" }) => {
         asked.push(scope);
         return {
           computedAt: "2026-08-16T00:00:00.000Z",
@@ -110,7 +110,7 @@ it("answers 404 for a scope the run does not have", async () => {
 it("serves the branch commits a picker reads", async () => {
   const app = makeApiApp(t, {
     review: stubReviewService({
-      getBranchCommits: () => ({
+      getBranchCommits: async () => ({
         commits: [
           {
             sha: "a".repeat(40),
@@ -144,7 +144,7 @@ it("serves a comment's fix proof as the daemon computed it", async () => {
     reason: "This pass changed notes.md, but not the lines this comment anchors to.",
   };
   const app = makeApiApp(t, {
-    review: stubReviewService({ getCommentFixProof: () => proof }),
+    review: stubReviewService({ getCommentFixProof: async () => proof }),
   });
 
   const res = await request(app, `/api/runs/${RUN_ID}/review/comments/c1/fix-proof`);

@@ -49,7 +49,7 @@ export function scheduleWorktreeInit(
       })
       .catch((error: unknown) => {
         console.error(`[otomat] run ${run.id} worktree init failed`, error);
-        failIdleRun(state, run.id, failureReason(error));
+        return failIdleRun(state, run.id, failureReason(error));
       }),
   );
 }

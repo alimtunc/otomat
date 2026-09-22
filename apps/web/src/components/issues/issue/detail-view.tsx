@@ -136,7 +136,7 @@ export function IssueDetailView() {
       <div className="flex max-w-180 flex-col gap-4">
         <IssueHeader
           query={issue}
-          hasRun={followedRun !== null}
+          hasRun={runs.data === undefined && !runs.isError ? null : followedRun !== null}
           comments={
             issue.data?.source === "linear" ? (
               <LinearCommentsSection
@@ -195,7 +195,6 @@ export function IssueDetailView() {
 
   return (
     <RouteShell
-      active="issues"
       back={back}
       breadcrumbs={[
         { label: "Issues", href: "/issues" },
@@ -217,7 +216,7 @@ export function IssueDetailView() {
         </>
       }
     >
-      {followedRun ? <RunEventsProvider runId={followedRun.id}>{body}</RunEventsProvider> : body}
+      <RunEventsProvider runId={followedRun?.id ?? null}>{body}</RunEventsProvider>
     </RouteShell>
   );
 }

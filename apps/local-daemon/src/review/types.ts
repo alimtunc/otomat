@@ -44,7 +44,7 @@ export interface ReviewSubject {
   /** Run whose ledger records this review; null for an adopted pull request, which has no run and no ledger. */
   ledgerRunId: string | null;
   /** Null when the diff genuinely cannot be read — never a fabricated one. */
-  snapshot(): DiffSnapshot | null;
+  snapshot(): Promise<DiffSnapshot | null>;
   fixAuthority(): ReviewFixAuthority;
   destinations(): ReviewDestinationAvailability;
   /** The pull request a `pr_review` comment is published to; null when none exists. */
@@ -163,18 +163,18 @@ export interface RunSettledOutcome {
 
 export interface ReviewService {
   /** A run reviews its worktree (a compete candidate names its step id as owner); a pull request reviews its imported head. */
-  getDiff(ref: ReviewSubjectRef, scope: RunDiffScopeSelector): ReviewDiffResult;
-  getBranchCommits(runId: string): { commits: RunCommit[]; unavailable: string | null };
-  getCommentFixProof(runId: string, commentId: string): CommentFixProof;
+  getDiff(ref: ReviewSubjectRef, scope: RunDiffScopeSelector): Promise<ReviewDiffResult>;
+  getBranchCommits(runId: string): Promise<{ commits: RunCommit[]; unavailable: string | null }>;
+  getCommentFixProof(runId: string, commentId: string): Promise<CommentFixProof>;
   getReviewDetail(ref: ReviewSubjectRef): ReviewDetailResult;
   /** A `pr_review` comment stays pending until a review is submitted; nothing reaches GitHub on create. */
-  addComment(ref: ReviewSubjectRef, request: CreateReviewCommentRequest): ReviewCommentRow;
+  addComment(ref: ReviewSubjectRef, request: CreateReviewCommentRequest): Promise<ReviewCommentRow>;
   submitReview(ref: ReviewSubjectRef, request: SubmitReviewRequest): Promise<ReviewDetailResult>;
-  getFileBlobs(ref: ReviewSubjectRef, request: FileBlobsRequest): FileBlobsResult;
+  getFileBlobs(ref: ReviewSubjectRef, request: FileBlobsRequest): Promise<FileBlobsResult>;
   setReviewedFile(ref: ReviewSubjectRef, request: SetReviewedFileRequest): Promise<ReviewedFileRow>;
   importViewedFiles(pullRequestId: string): Promise<void>;
   /** Every open agent comment awaiting a fix becomes one appended step; refused while a turn is in flight. */
   requestFix(run: RunRow, request: FixRequest): Promise<RunRow>;
   /** Post-settle hook: refreshes the diff projection and resolves comment anchors. */
-  onRunSettled(outcome: RunSettledOutcome): void;
+  onRunSettled(outcome: RunSettledOutcome): Promise<void>;
 }

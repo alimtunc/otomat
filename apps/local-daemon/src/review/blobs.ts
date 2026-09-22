@@ -26,12 +26,12 @@ function mediaBlob(data: Buffer | null, mediaType: DiffMediaType | null): FileBl
   return data === null || mediaType === null ? null : { kind: "media", data, mediaType };
 }
 
-export function getFileBlobs(
+export async function getFileBlobs(
   ctx: ReviewContext,
   ref: ReviewSubjectRef,
   request: FileBlobsRequest,
-): FileBlobsResult {
-  const { snapshot } = resolveScope(ctx, ref, request.scope);
+): Promise<FileBlobsResult> {
+  const { snapshot } = await resolveScope(ctx, ref, request.scope);
   if (snapshot === null) throw new DiffUnavailableError(ref.id);
 
   const file = snapshot.diff.files.find((candidate) => candidate.path === request.path);
@@ -39,7 +39,7 @@ export function getFileBlobs(
   if (file.sha !== request.sha) throw new ReviewAnchorStaleError(request.path);
 
   if (!file.binary) {
-    const blobs = snapshot.fileBlobs({ path: file.path, oldPath: file.oldPath });
+    const blobs = await snapshot.fileBlobs({ path: file.path, oldPath: file.oldPath });
     const bytes = Buffer.byteLength(blobs.base ?? "") + Buffer.byteLength(blobs.head ?? "");
     if (bytes > MAX_TEXT_BLOB_BYTES) throw new FileTooLargeError(file.path);
     return { base: textBlob(blobs.base), head: textBlob(blobs.head) };
@@ -54,7 +54,7 @@ export function getFileBlobs(
     throw new FileNotExpandableError(request.path);
   }
 
-  const blobs = snapshot.mediaBlobs({ path: file.path, oldPath: file.oldPath });
+  const blobs = await snapshot.mediaBlobs({ path: file.path, oldPath: file.oldPath });
   const bytes = (blobs.base?.byteLength ?? 0) + (blobs.head?.byteLength ?? 0);
   if (bytes > MEDIA_BLOB_MAX_BYTES) throw new FileTooLargeError(file.path);
   return {

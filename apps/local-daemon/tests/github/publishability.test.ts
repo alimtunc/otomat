@@ -27,7 +27,7 @@ describe("publishing a run whose execution did not succeed", () => {
   let cli: FakeGitHubCli;
   let github: GitHubService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     fix = setupDaemonDb();
     repo = fix.repo;
     worktrees = createGitWorktreeService({
@@ -37,7 +37,7 @@ describe("publishing a run whose execution did not succeed", () => {
       defaultBranch: repo.defaultBranch,
       worktreesRoot: join(fix.dataDir, "worktrees"),
     });
-    const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+    const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
     worktreePath = acquired.path;
     seedRun(fix.db, {
       runId: RUN_ID,
@@ -117,7 +117,7 @@ describe("publishing a run whose execution did not succeed", () => {
   });
 
   it("blocks a partially staged worktree so a snapshot never commits half a selection", async () => {
-    runGit(["add", "change.txt"], { cwd: worktreePath });
+    await runGit(["add", "change.txt"], { cwd: worktreePath });
     writeFileSync(join(worktreePath, "change.txt"), "unstaged on top\n");
 
     await expect(github.publishability(RUN_ID)).resolves.toMatchObject({
@@ -126,7 +126,7 @@ describe("publishing a run whose execution did not succeed", () => {
   });
 
   it("blocks a run whose workspace is gone on the exact technical reason", async () => {
-    worktrees.archive(RUN_ID);
+    await worktrees.archive(RUN_ID);
 
     await expect(github.publishability(RUN_ID)).resolves.toMatchObject({
       blocker: { code: "worktree_missing" },

@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { redactLogText, type RemoteBaseFailure } from "@otomat/domain";
 
 import { RemoteBaseError } from "./errors.js";
@@ -9,7 +11,7 @@ interface RemoteBranch {
   ref: string;
 }
 
-/** A credential prompt would block the whole daemon: an unauthenticated remote must fail so it can be classified. */
+/** A credential prompt would never be answered: an unauthenticated remote must fail so it can be classified. */
 const NO_PROMPT_ENV = { GIT_TERMINAL_PROMPT: "0" };
 
 const UNREACHABLE =
@@ -43,14 +45,18 @@ function noUpstream(message: string): RemoteBaseError {
   return new RemoteBaseError(message, { failure: "no_upstream", detail: null });
 }
 
-function config(repoPath: string, key: string): string | null {
-  const result = runGit(["config", "--get", key], { cwd: repoPath, allowFailure: true });
+async function config(repoPath: string, key: string): Promise<string | null> {
+  const result = await runGit(["config", "--get", key], { cwd: repoPath, allowFailure: true });
   const value = result.stdout.trim();
   return result.exitCode === 0 && value !== "" ? value : null;
 }
 
-function resolveRemoteBranch(repoPath: string, branch: string, remotes: string[]): RemoteBranch {
-  const configured = config(repoPath, `branch.${branch}.remote`);
+async function resolveRemoteBranch(
+  repoPath: string,
+  branch: string,
+  remotes: string[],
+): Promise<RemoteBranch> {
+  const configured = await config(repoPath, `branch.${branch}.remote`);
   if (configured === null) {
     const [only, ...rest] = remotes;
     if (only === undefined || rest.length > 0) {
@@ -68,28 +74,37 @@ function resolveRemoteBranch(repoPath: string, branch: string, remotes: string[]
   }
   return {
     remote: configured,
-    ref: config(repoPath, `branch.${branch}.merge`) ?? `refs/heads/${branch}`,
+    ref: (await config(repoPath, `branch.${branch}.merge`)) ?? `refs/heads/${branch}`,
   };
 }
 
-export function resolveBaseSha(repoPath: string, branch: string, allowLocal: boolean): string {
-  const remotes = repositoryRemotes(repoPath);
+export async function resolveBaseSha(
+  repoPath: string,
+  branch: string,
+  allowLocal: boolean,
+): Promise<string> {
+  const remotes = await repositoryRemotes(repoPath);
   if (remotes.length === 0) {
     if (allowLocal) return revParse(repoPath, branch);
     throw noUpstream(
       `${repoPath} has no git remote to read "${branch}" from; add one, or launch from the local branch explicitly.`,
     );
   }
-  const { remote, ref } = resolveRemoteBranch(repoPath, branch, remotes);
-  const fetched = runGit(["fetch", "--no-tags", remote, ref], {
+  const { remote, ref } = await resolveRemoteBranch(repoPath, branch, remotes);
+  // Any concurrent fetch in this repository rewrites `FETCH_HEAD`, so the fetched tip lands on a ref of its own.
+  const landed = `refs/otomat/launch/${randomUUID()}`;
+  const fetched = await runGit(["fetch", "--no-tags", remote, `+${ref}:${landed}`], {
     cwd: repoPath,
     env: NO_PROMPT_ENV,
     allowFailure: true,
   });
-  // No other daemon work can move `FETCH_HEAD` before this read: the launch path is synchronous.
-  if (fetched.exitCode === 0) return revParse(repoPath, "FETCH_HEAD");
+  if (fetched.exitCode === 0) {
+    const sha = await revParse(repoPath, landed);
+    await runGit(["update-ref", "-d", landed], { cwd: repoPath });
+    return sha;
+  }
   // `--exit-code` answers 2 only for a ref the remote never advertised: local-only work.
-  const advertised = runGit(["ls-remote", "--exit-code", remote, ref], {
+  const advertised = await runGit(["ls-remote", "--exit-code", remote, ref], {
     cwd: repoPath,
     env: NO_PROMPT_ENV,
     allowFailure: true,
@@ -114,19 +129,22 @@ export type RemoteBranchProbe =
   | { status: "unreadable"; reason: string };
 
 /** Reads with `ls-remote`, never `fetch`, so a diagnostic moves no ref, and forwards no output: a remote URL can carry a credential. */
-export function probeRemoteBranch(repoPath: string, branch: string): RemoteBranchProbe {
-  const remotes = repositoryRemotes(repoPath);
+export async function probeRemoteBranch(
+  repoPath: string,
+  branch: string,
+): Promise<RemoteBranchProbe> {
+  const remotes = await repositoryRemotes(repoPath);
   if (remotes.length === 0) return { status: "no_remote" };
 
   let target: RemoteBranch;
   try {
-    target = resolveRemoteBranch(repoPath, branch, remotes);
+    target = await resolveRemoteBranch(repoPath, branch, remotes);
   } catch (error) {
     if (error instanceof RemoteBaseError) return { status: "no_upstream" };
     throw error;
   }
 
-  const advertised = runGit(["ls-remote", "--exit-code", target.remote, target.ref], {
+  const advertised = await runGit(["ls-remote", "--exit-code", target.remote, target.ref], {
     cwd: repoPath,
     env: NO_PROMPT_ENV,
     allowFailure: true,

@@ -73,7 +73,7 @@ describe("pull request publication as a durable operation", () => {
   let worktrees: GitWorktreeService;
   let cli: FakeGitHubCli;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     fix = setupDaemonDb();
     worktrees = createGitWorktreeService({
       db: fix.db,
@@ -82,7 +82,7 @@ describe("pull request publication as a durable operation", () => {
       defaultBranch: fix.repo.defaultBranch,
       worktreesRoot: join(fix.dataDir, "worktrees"),
     });
-    const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+    const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
     seedRun(fix.db, {
       runId: RUN_ID,
       worktreeId: acquired.id,

@@ -43,14 +43,14 @@ export function isInsideRoot(root: string, path: string): boolean {
  * existing directory, repository root, and attached HEAD resolving to a commit.
  * Refusable paths are returned as typed errors instead of being thrown.
  */
-export function probeLocalRepository(inputPath: string): RepositoryProbe {
+export async function probeLocalRepository(inputPath: string): Promise<RepositoryProbe> {
   if (!isAbsolute(inputPath)) return { ok: false, error: "path_not_absolute" };
 
   const canonical = tryRealpath(inputPath);
   if (canonical === null) return { ok: false, error: "path_not_found" };
   if (!statSync(canonical).isDirectory()) return { ok: false, error: "path_not_directory" };
 
-  const inside = runGit(["rev-parse", "--is-inside-work-tree"], {
+  const inside = await runGit(["rev-parse", "--is-inside-work-tree"], {
     cwd: canonical,
     allowFailure: true,
   });
@@ -58,20 +58,23 @@ export function probeLocalRepository(inputPath: string): RepositoryProbe {
     return { ok: false, error: "path_not_git_repository" };
   }
 
-  const toplevel = runGit(["rev-parse", "--show-toplevel"], { cwd: canonical, allowFailure: true });
+  const toplevel = await runGit(["rev-parse", "--show-toplevel"], {
+    cwd: canonical,
+    allowFailure: true,
+  });
   const toplevelPath = toplevel.exitCode === 0 ? tryRealpath(toplevel.stdout.trim()) : null;
   if (toplevelPath === null || toplevelPath !== canonical) {
     return { ok: false, error: "path_not_repository_root" };
   }
 
-  const branchRef = runGit(["symbolic-ref", "--short", "-q", "HEAD"], {
+  const branchRef = await runGit(["symbolic-ref", "--short", "-q", "HEAD"], {
     cwd: canonical,
     allowFailure: true,
   });
   const branch = branchRef.stdout.trim();
   if (branchRef.exitCode !== 0 || branch === "") return { ok: false, error: "head_detached" };
 
-  const verified = runGit(["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], {
+  const verified = await runGit(["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], {
     cwd: canonical,
     allowFailure: true,
   });

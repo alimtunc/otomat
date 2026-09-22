@@ -100,7 +100,7 @@ it("commits an inline title edit to the local draft", async () => {
   getLinearWriteback.mockResolvedValue({ draft: null, writes: [], lifecycle: null });
   saveLinearDraft.mockResolvedValue(DRAFT);
 
-  rendered = await mount(withQueryClient(<LinearIssueHeader issue={ISSUE} />));
+  rendered = await mount(withQueryClient(<LinearIssueHeader issue={ISSUE} hasRun={false} />));
 
   await vi.waitFor(() => {
     expect(findButton("Mirror")).toBeDefined();
@@ -142,7 +142,7 @@ it("publishes the draft from the bar and overwrites only after an explicit confl
     )
     .mockResolvedValueOnce({ draft: null, writes: [], lifecycle: null });
 
-  rendered = await mount(withQueryClient(<LinearIssueHeader issue={ISSUE} />));
+  rendered = await mount(withQueryClient(<LinearIssueHeader issue={ISSUE} hasRun={false} />));
 
   await vi.waitFor(() => {
     expect(document.body.textContent).toContain("Unpublished draft");

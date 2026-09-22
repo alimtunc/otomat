@@ -15,16 +15,16 @@ beforeEach(() => {
 
 afterEach(() => repo.cleanup());
 
-it("never lets an automatic snapshot overwrite a partial staging selection", () => {
+it("never lets an automatic snapshot overwrite a partial staging selection", async () => {
   repo.write("notes.txt", "staged\n");
-  changeCheckoutFiles(repo.root, {
+  await changeCheckoutFiles(repo.root, {
     action: "stage",
     path: "notes.txt",
-    revision: sourceControlSnapshot(repo.root).response.revision,
+    revision: (await sourceControlSnapshot(repo.root)).response.revision,
   });
   repo.write("notes.txt", "unstaged\n");
   const head = repo.git("rev-parse", "HEAD");
-  expect(() => snapshotWorktree(repo.root, "snapshot")).toThrow("staged and unstaged");
+  await expect(snapshotWorktree(repo.root, "snapshot")).rejects.toThrow("staged and unstaged");
   expect(repo.git("rev-parse", "HEAD")).toBe(head);
   expect(repo.git("show", ":notes.txt")).toBe("staged\n");
   expect(readFileSync(join(repo.root, "notes.txt"), "utf8")).toBe("unstaged\n");

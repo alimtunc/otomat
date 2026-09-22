@@ -25,12 +25,12 @@ export const UNAVAILABLE_SYNC: PullRequestSync = {
 
 async function compare(input: SyncInput): Promise<PullRequestSync> {
   const { cli, worktreePath, remote, headRef } = input;
-  const dirty = uncommittedPaths(worktreePath).length > 0;
-  const local = headSha(worktreePath);
+  const dirty = (await uncommittedPaths(worktreePath)).length > 0;
+  const local = await headSha(worktreePath);
   const remoteSha = await cli.remoteHead(worktreePath, remote, headRef);
 
   if (remoteSha === null) {
-    const ahead = commitsSince(worktreePath, input.baseRef, "HEAD");
+    const ahead = await commitsSince(worktreePath, input.baseRef, "HEAD");
     return {
       state: "ahead",
       dirty,
@@ -50,19 +50,19 @@ async function compare(input: SyncInput): Promise<PullRequestSync> {
       replaced: [],
     };
   }
-  if (!hasCommit(worktreePath, remoteSha)) {
+  if (!(await hasCommit(worktreePath, remoteSha))) {
     await cli.fetchBranch(worktreePath, remote, headRef);
-    if (!hasCommit(worktreePath, remoteSha)) {
+    if (!(await hasCommit(worktreePath, remoteSha))) {
       return { ...UNAVAILABLE_SYNC, dirty, local_head_sha: local, remote_head_sha: remoteSha };
     }
   }
-  const replaced = commitsSince(worktreePath, "HEAD", remoteSha);
+  const replaced = await commitsSince(worktreePath, "HEAD", remoteSha);
   return {
     state: replaced.length === 0 ? "ahead" : "diverged",
     dirty,
     local_head_sha: local,
     remote_head_sha: remoteSha,
-    ahead: commitsSince(worktreePath, remoteSha, "HEAD"),
+    ahead: await commitsSince(worktreePath, remoteSha, "HEAD"),
     replaced,
   };
 }

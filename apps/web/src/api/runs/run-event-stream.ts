@@ -5,6 +5,7 @@ import { createContext, useContext } from "react";
 export type RunStreamState = "connecting" | "open" | "closed" | "error";
 
 export interface RunEventStream {
+  runId: string;
   /** The loaded window in `seq` order: the ledger pages read so far, then the live tail. */
   events: EventEnvelope[];
   state: RunStreamState;

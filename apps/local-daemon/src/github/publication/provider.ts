@@ -65,7 +65,10 @@ export async function refreshExistingPullRequest(
     context.workspace.remote.repository,
     row.number,
   );
-  row = store.reconcilePublication(store.reconcileLifecycle(row, provider.lifecycle), "created");
+  row = store.reconcilePublication(
+    await store.reconcileLifecycle(row, provider.lifecycle),
+    "created",
+  );
   if (provider.lifecycle === "merged" || provider.lifecycle === "closed") {
     row = store.patch(
       row,

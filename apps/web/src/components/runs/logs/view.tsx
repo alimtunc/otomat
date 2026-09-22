@@ -1,4 +1,4 @@
-import { ErrorState, Pill, PillTabs, Skeleton } from "@otomat/ui";
+import { ErrorState, Pill, PillTabs } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunDetail } from "@web/api/runs/queries";
 import { useRunEventStream } from "@web/api/runs/run-event-stream";
@@ -7,6 +7,7 @@ import { LogList } from "@web/components/runs/logs/list";
 import { countMatching, LOG_FILTERS, type LogFilter } from "@web/components/runs/logs/log-filters";
 import { SessionsPanel } from "@web/components/runs/logs/sessions-panel";
 import { PaneHeader } from "@web/components/runs/pane-header";
+import { LinesSkeleton } from "@web/components/shell/lines-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { STREAM_LABEL } from "@web/lib/run/stream";
 import { useState } from "react";
@@ -18,12 +19,7 @@ export function RunLogsView() {
   const [filter, setFilter] = useState<LogFilter>("all");
 
   if (stream.history.status === "pending") {
-    return (
-      <div className="flex flex-col gap-2 p-6">
-        <Skeleton height={20} width="40%" />
-        <Skeleton height={14} width="64%" />
-      </div>
-    );
+    return <LinesSkeleton lines={10} />;
   }
 
   if (stream.history.status === "error") {
@@ -39,7 +35,7 @@ export function RunLogsView() {
   return (
     <QueryBoundary
       query={detail}
-      pending={<Skeleton height={20} />}
+      pending={<LinesSkeleton lines={10} />}
       error={
         <ErrorReport
           error={detail.error}

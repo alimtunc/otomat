@@ -4,8 +4,8 @@ import { usePullRequestReviewContext } from "@web/api/prs/queries";
 import { usePullRequestReconciliation } from "@web/api/prs/use-reconciliation";
 import { ReviewDiffView } from "@web/components/runs/diff/review-view";
 import { CenteredState } from "@web/components/shell/centered-state";
-import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { SplitSkeleton } from "@web/components/shell/split-skeleton";
 import { StaleNotice } from "@web/components/shell/stale-notice";
 
 const HEAD_UNREACHABLE =
@@ -22,7 +22,7 @@ export function PullRequestDiffView() {
   return (
     <QueryBoundary
       query={query}
-      pending={<DetailSkeleton blocks={2} />}
+      pending={<SplitSkeleton side={264} />}
       error={
         <CenteredState>
           <ErrorState

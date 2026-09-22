@@ -15,10 +15,10 @@ export async function createPublication(
   context: PublicationContext,
 ): Promise<PullRequestRow> {
   const { workspace, request } = context;
-  if (workspace.worktrees.diff(context.run.id).files.length === 0) {
+  if ((await workspace.worktrees.diff(context.run.id)).files.length === 0) {
     throw new GitHubPublicationError("diff_empty", "The run has no changes to publish.");
   }
-  const message = publicationCommitMessage(row, context);
+  const message = await publicationCommitMessage(row, context);
   const head = request.head_ref ?? row.head_ref ?? workspace.worktree.branch;
   row = store.transition(
     row,
@@ -27,7 +27,7 @@ export async function createPublication(
     "git",
   );
 
-  const pushed = workspace.worktrees.snapshot(context.run.id, message ?? undefined).headSha;
+  const pushed = (await workspace.worktrees.snapshot(context.run.id, message ?? undefined)).headSha;
   row = store.transition(row, "pushing", {}, "git");
   const selector = {
     cwd: workspace.worktree.path,
@@ -38,14 +38,14 @@ export async function createPublication(
   await config.cli.push(workspace.worktree.path, workspace.remote.name, head);
 
   const published = await ensureProvider(store, config.cli, row, selector, request);
-  const reconciled = store.reconcileLifecycle(published.row, published.provider.lifecycle);
+  const reconciled = await store.reconcileLifecycle(published.row, published.provider.lifecycle);
   return store.transition(
     reconciled,
     "created",
     {
       ...providerPatch(published.provider),
       published_head_sha: pushed,
-      published_diff_sha: workspace.worktrees.commitDiff(context.run.id, pushed).sha,
+      published_diff_sha: (await workspace.worktrees.commitDiff(context.run.id, pushed)).sha,
     },
     "github",
     "pr.created",

@@ -211,7 +211,7 @@ it("boot mid-step: finished steps are never replayed and the torn step resumes",
     providerSessionEvent(s2, "ps-s2"),
   ]);
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
 
   expect(spawn.calls).toBe(0);
   expect(getRun(fix.db, "wf1")?.status).toBe("awaiting_human");
@@ -246,7 +246,7 @@ it("boot between steps: progression resumes without duplicating the finished ste
     ],
   });
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
   expect(getRun(fix.db, "wf2")?.status).toBe("awaiting_human");
   expect(spawn.calls).toBe(0);
 
@@ -280,7 +280,7 @@ it("boot after a step's marker landed but before its settle: no replay of that s
     completedMarker(s1, "ps-s1"),
   ]);
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
 
   expect(getRun(fix.db, "wf3")?.status).toBe("awaiting_human");
   expect(listStepRunsForRun(fix.db, "wf3").map((step) => step.status)).toEqual([

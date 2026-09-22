@@ -1,12 +1,23 @@
 import type { CommitFilesRequest, CommitFilesResponse } from "@otomat/domain";
 
 import { runGit } from "../git-cli.js";
+import { inCheckout } from "../lock.js";
 import { headSha } from "../repo.js";
 import { SourceControlError } from "./errors.js";
-import { sourceControlSnapshot } from "./snapshot.js";
+import { readCheckoutSnapshot } from "./snapshot.js";
 
-export function commitCheckoutFiles(cwd: string, request: CommitFilesRequest): CommitFilesResponse {
-  const snapshot = sourceControlSnapshot(cwd);
+export function commitCheckoutFiles(
+  cwd: string,
+  request: CommitFilesRequest,
+): Promise<CommitFilesResponse> {
+  return inCheckout(cwd, () => commitStaged(cwd, request));
+}
+
+async function commitStaged(
+  cwd: string,
+  request: CommitFilesRequest,
+): Promise<CommitFilesResponse> {
+  const snapshot = await readCheckoutSnapshot(cwd);
   if (snapshot.conflicted)
     throw new SourceControlError(
       "checkout_conflicted",
@@ -21,7 +32,7 @@ export function commitCheckoutFiles(cwd: string, request: CommitFilesRequest): C
     throw new SourceControlError("change_unavailable", "Check out a branch before committing.");
   if (snapshot.response.staged.length === 0)
     throw new SourceControlError("change_unavailable", "Stage changes before committing.");
-  const result = runGit(["commit", "--file=-"], {
+  const result = await runGit(["commit", "--file=-"], {
     cwd,
     input: request.message,
     allowFailure: true,
@@ -32,5 +43,5 @@ export function commitCheckoutFiles(cwd: string, request: CommitFilesRequest): C
       "commit_failed",
       result.stderr.trim() || result.stdout.trim() || "Git could not create the commit.",
     );
-  return { sha: headSha(cwd) };
+  return { sha: await headSha(cwd) };
 }

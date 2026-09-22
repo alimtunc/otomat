@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 import { branchExists, deleteBranch } from "./branches.js";
 import { WorktreeConflictError } from "./errors.js";
+import { inCheckout } from "./lock.js";
 import { toRecord } from "./record.js";
 import { revParse } from "./repo.js";
 import type { AcquireWorktreeInput, GitWorktreeServiceConfig } from "./service-contract.js";
@@ -26,7 +27,18 @@ function worktreeDirName(owner: string): string {
 export type AcquireContext = GitWorktreeServiceConfig & { idFactory: () => string };
 
 /** Forks a worktree on a dedicated branch, or returns the owner's existing one when it already holds that branch. */
-export function acquireWorktree(ctx: AcquireContext, input: AcquireWorktreeInput): WorktreeRecord {
+export function acquireWorktree(
+  ctx: AcquireContext,
+  input: AcquireWorktreeInput,
+): Promise<WorktreeRecord> {
+  // The checks and the rollback below assume no other acquire can take this branch or path in between.
+  return inCheckout(ctx.repoRoot, () => forkWorktree(ctx, input));
+}
+
+async function forkWorktree(
+  ctx: AcquireContext,
+  input: AcquireWorktreeInput,
+): Promise<WorktreeRecord> {
   const { db, repoRoot } = ctx;
   const existing = findActiveByOwner(db, input.owner);
   if (existing) {
@@ -44,7 +56,7 @@ export function acquireWorktree(ctx: AcquireContext, input: AcquireWorktreeInput
       `branch ${input.branch} is already held by worktree ${branchHolder.id}`,
     );
   }
-  if (branchExists(repoRoot, input.branch)) {
+  if (await branchExists(repoRoot, input.branch)) {
     throw new WorktreeConflictError(`branch ${input.branch} already exists in the repository`);
   }
 
@@ -54,15 +66,15 @@ export function acquireWorktree(ctx: AcquireContext, input: AcquireWorktreeInput
   }
 
   const baseRef = input.baseRef ?? ctx.defaultBranch;
-  const baseSha = input.baseSha ?? revParse(repoRoot, baseRef);
+  const baseSha = input.baseSha ?? (await revParse(repoRoot, baseRef));
   mkdirSync(ctx.worktreesRoot, { recursive: true });
   try {
-    addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
+    await addWorktree(repoRoot, { worktreePath: path, branch: input.branch, baseRef: baseSha });
   } catch (error) {
     // `git worktree add -b` creates the branch before the checkout, and a registered worktree
     // makes `git branch -D` refuse; the prune stays path-scoped to spare unreachable siblings.
-    removeWorktree(repoRoot, path, { force: true });
-    deleteBranch(repoRoot, input.branch);
+    await removeWorktree(repoRoot, path, { force: true });
+    await deleteBranch(repoRoot, input.branch);
     throw error;
   }
 
@@ -80,9 +92,9 @@ export function acquireWorktree(ctx: AcquireContext, input: AcquireWorktreeInput
       status: "active",
     });
   } catch (error) {
-    removeWorktree(repoRoot, path, { force: true });
-    deleteBranch(repoRoot, input.branch);
-    pruneWorktrees(repoRoot);
+    await removeWorktree(repoRoot, path, { force: true });
+    await deleteBranch(repoRoot, input.branch);
+    await pruneWorktrees(repoRoot);
     throw error;
   }
 

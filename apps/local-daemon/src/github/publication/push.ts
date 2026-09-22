@@ -99,7 +99,9 @@ export async function pushCommits(
     workspace.remote.repository,
     number,
   );
-  const current = requireOpenPullRequest(store.reconcileLifecycle(row, provider.lifecycle)).row;
+  const current = requireOpenPullRequest(
+    await store.reconcileLifecycle(row, provider.lifecycle),
+  ).row;
   if (provider.headRef !== headRef) {
     throw new GitHubPublicationError(
       "pr_head_mismatch",
@@ -108,7 +110,7 @@ export async function pushCommits(
   }
   const reconciled = store.reconcilePublication(current, "created");
 
-  const pushed = headSha(workspace.worktree.path);
+  const pushed = await headSha(workspace.worktree.path);
   try {
     await writeBranch(config, { workspace, headRef }, request);
   } catch (error) {
@@ -119,7 +121,7 @@ export async function pushCommits(
     {
       ...providerPatch(provider),
       published_head_sha: pushed,
-      published_diff_sha: workspace.worktrees.commitDiff(runId, pushed).sha,
+      published_diff_sha: (await workspace.worktrees.commitDiff(runId, pushed)).sha,
     },
     "github",
   );

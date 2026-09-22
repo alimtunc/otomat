@@ -28,24 +28,29 @@ import type { TurnContext } from "../types.js";
 import { buildSupervisionPrompt, type SupervisionBrief } from "./prompt.js";
 
 /** Read from the repository, not the worktree: the pass may already have been superseded by the next one. */
-function stepDiff(
+async function stepDiff(
   state: SupervisorState,
   run: RunRow,
   sessions: readonly AgentSessionRow[],
-): CanonicalDiff | null {
+): Promise<CanonicalDiff | null> {
   const bounds = stepPassBounds(sessions);
   if (bounds === null) return null;
   const service = state.repositories.forRepository(run.repository_id)?.service ?? null;
-  return service?.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha)?.diff ?? null;
+  if (service === null) return null;
+  return (await service.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha))?.diff ?? null;
 }
 
-function buildBrief(state: SupervisorState, run: RunRow, step: StepRunRow): SupervisionBrief {
+async function buildBrief(
+  state: SupervisorState,
+  run: RunRow,
+  step: StepRunRow,
+): Promise<SupervisionBrief> {
   const events = readRunEvents(state.db, run.id);
   const sessions = stepSessions(listAgentSessionsForRun(state.db, run.id), step.id);
   const sessionIds = new Set(sessions.map((session) => session.id));
   return {
     step,
-    diff: stepDiff(state, run, sessions),
+    diff: await stepDiff(state, run, sessions),
     events: events.filter(
       (event) => event.agent_session_id !== null && sessionIds.has(event.agent_session_id),
     ),
@@ -67,6 +72,7 @@ export async function spawnSupervisionTurn(
   const worktreePath = requireWorktreePath(state, run);
   const runtime = ensureRuntimeAgent(state.db, supervision.config.runtime);
   preflightRuntimeConfig(runtime, supervision.config, worktreePath);
+  const prompt = buildSupervisionPrompt(await buildBrief(state, run, step));
   const agentSessionId = randomUUID();
   insertAgentSession(state.db, {
     id: agentSessionId,
@@ -81,7 +87,7 @@ export async function spawnSupervisionTurn(
     stepRunId: step.id,
     agentSessionId,
     kind: "supervision",
-    prompt: buildSupervisionPrompt(buildBrief(state, run, step)),
+    prompt,
     contextSelection: null,
     agentSessionDir: sessionDir(state.dataDir, run.id, agentSessionId),
     worktreePath,

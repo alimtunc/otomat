@@ -42,8 +42,10 @@ export function assertCheckoutRevision(
     throw new GitHubPublicationError("checkout_stale", message);
 }
 
-function assertBranchName(cwd: string, branch: string, message: string): void {
-  if (!isValidBranchName(cwd, branch)) throw new GitHubPublicationError("branch_invalid", message);
+async function assertBranchName(cwd: string, branch: string, message: string): Promise<void> {
+  if (!(await isValidBranchName(cwd, branch))) {
+    throw new GitHubPublicationError("branch_invalid", message);
+  }
 }
 
 async function repositoryPublicationWorkspace(
@@ -52,14 +54,14 @@ async function repositoryPublicationWorkspace(
   baseRef: string,
 ): Promise<RepositoryPublicationWorkspace> {
   const binding = config.repositories.forRepository(repositoryId);
-  if (binding === null || !isRepositoryRoot(binding.rootPath))
+  if (binding === null || !(await isRepositoryRoot(binding.rootPath)))
     throw new GitHubPublicationError(
       "workspace_unavailable",
       "The project checkout is unavailable.",
     );
   const cwd = binding.rootPath;
-  assertBranchName(cwd, baseRef, "Enter a valid target branch name.");
-  const snapshot = sourceControlSnapshot(cwd);
+  await assertBranchName(cwd, baseRef, "Enter a valid target branch name.");
+  const snapshot = await sourceControlSnapshot(cwd);
   if (snapshot.conflicted)
     throw new GitHubPublicationError(
       "checkout_conflicted",
@@ -74,8 +76,8 @@ async function repositoryPublicationWorkspace(
   return { cwd, defaultBranch: binding.defaultBranch, snapshot, remote };
 }
 
-function publicationDiff(cwd: string, base: string, head: string): CanonicalDiff {
-  const ancestor = mergeBase(cwd, base, head);
+async function publicationDiff(cwd: string, base: string, head: string): Promise<CanonicalDiff> {
+  const ancestor = await mergeBase(cwd, base, head);
   if (ancestor === null)
     throw new GitHubPublicationError(
       "base_unavailable",
@@ -95,14 +97,14 @@ export async function previewRepositoryPullRequest(
     baseRef,
   );
   const base =
-    verifyRef(cwd, `refs/remotes/${remote.name}/${baseRef}^{commit}`) ??
-    verifyRef(cwd, `refs/heads/${baseRef}^{commit}`);
+    (await verifyRef(cwd, `refs/remotes/${remote.name}/${baseRef}^{commit}`)) ??
+    (await verifyRef(cwd, `refs/heads/${baseRef}^{commit}`));
   if (base === null)
     throw new GitHubPublicationError(
       "base_unavailable",
       "Fetch the target branch before preparing the pull request.",
     );
-  const diff = publicationDiff(cwd, base, snapshot.head);
+  const diff = await publicationDiff(cwd, base, snapshot.head);
   return {
     revision: snapshot.response.revision,
     publishability: {
@@ -144,14 +146,14 @@ export async function prepareRepositoryPublication(
       "Connect GitHub in Settings before creating a pull request.",
     );
   await config.cli.fetchBranch(cwd, remote.name, request.base_ref);
-  const diff = publicationDiff(cwd, revParse(cwd, "FETCH_HEAD"), snapshot.head);
+  const diff = await publicationDiff(cwd, await revParse(cwd, "FETCH_HEAD"), snapshot.head);
   if (diff.files.length === 0)
     throw new GitHubPublicationError(
       "diff_empty",
       "No committed changes to publish against this base. Commit your changes first.",
     );
   assertCheckoutRevision(
-    sourceControlSnapshot(cwd),
+    await sourceControlSnapshot(cwd),
     request.revision,
     "The checkout changed during preparation. Refresh before publishing.",
   );
@@ -165,7 +167,7 @@ export async function checkoutHeadBranch(
   head: string,
 ): Promise<void> {
   const { cwd, remote, snapshot, defaultBranch } = workspace;
-  assertBranchName(cwd, head, "Enter a valid Git branch name.");
+  await assertBranchName(cwd, head, "Enter a valid Git branch name.");
   if ([request.base_ref, defaultBranch, "main", "master", "HEAD"].includes(head))
     throw new GitHubPublicationError(
       "branch_protected",
@@ -180,11 +182,11 @@ export async function checkoutHeadBranch(
   if (remoteHead !== null && (await config.cli.remoteBranchProtected(cwd, remote.repository, head)))
     throw new GitHubPublicationError("branch_protected", "Choose an unprotected source branch.");
   assertCheckoutRevision(
-    sourceControlSnapshot(cwd),
+    await sourceControlSnapshot(cwd),
     request.revision,
     "The checkout changed during preparation. Refresh before publishing.",
   );
   if (head === snapshot.response.branch) return;
-  const failure = switchToNewBranch(cwd, head);
+  const failure = await switchToNewBranch(cwd, head);
   if (failure !== null) throw new GitHubPublicationError("branch_unavailable", failure);
 }

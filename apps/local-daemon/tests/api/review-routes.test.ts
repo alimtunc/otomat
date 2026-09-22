@@ -83,7 +83,7 @@ it("returns 404 on every review surface for an unknown run", async () => {
 it("serves the canonical diff mapped to the wire contract", async () => {
   const app = makeApiApp(t, {
     review: stubReviewService({
-      getDiff: () => ({
+      getDiff: async () => ({
         computedAt: "2026-07-05T00:00:00.000Z",
         diff: DIFF,
         scope: BRANCH_SCOPE,
@@ -186,7 +186,7 @@ it("answers a refused synchronization with the persisted mark, not with a failur
 it("hands back the exact base and head blobs behind one file of the diff", async () => {
   const app = makeApiApp(t, {
     review: stubReviewService({
-      getFileBlobs: () => ({
+      getFileBlobs: async () => ({
         base: { kind: "text", content: "alpha\n" },
         head: { kind: "text", content: "alpha\nbeta\n" },
       }),
@@ -206,7 +206,7 @@ it("hands back the exact base and head blobs behind one file of the diff", async
 it("encodes media bytes without decoding them as text", async () => {
   const app = makeApiApp(t, {
     review: stubReviewService({
-      getFileBlobs: () => ({
+      getFileBlobs: async () => ({
         base: null,
         head: { kind: "media", data: Buffer.from([0, 1, 2, 255]), mediaType: "image/png" },
       }),
@@ -241,7 +241,7 @@ it("creates a pinned comment and returns 201", async () => {
   let received: unknown;
   const app = makeApiApp(t, {
     review: stubReviewService({
-      addComment: (_run, req) => {
+      addComment: async (_run, req) => {
         received = req;
         return commentRow();
       },

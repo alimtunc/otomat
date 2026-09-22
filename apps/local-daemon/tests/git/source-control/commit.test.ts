@@ -12,13 +12,13 @@ beforeEach(() => {
 });
 afterEach(() => repo.cleanup());
 
-it("commits only the index, preserving identity, unstaged edits and untracked files", () => {
+it("commits only the index, preserving identity, unstaged edits and untracked files", async () => {
   repo.write("README.md", "staged\n");
   repo.git("add", "README.md");
   repo.write("README.md", "unstaged\n");
   repo.write("new.txt", "untracked\n");
-  const result = commitCheckoutFiles(repo.root, {
-    revision: sourceControlSnapshot(repo.root).response.revision,
+  const result = await commitCheckoutFiles(repo.root, {
+    revision: (await sourceControlSnapshot(repo.root)).response.revision,
     message: "feat: manual edit",
   });
   expect(result.sha).toBe(repo.git("rev-parse", "HEAD").trim());
@@ -27,32 +27,32 @@ it("commits only the index, preserving identity, unstaged edits and untracked fi
     "Otomat Test <test@otomat.local>",
   );
   expect(readFileSync(join(repo.root, "README.md"), "utf8")).toBe("unstaged\n");
-  expect(sourceControlSnapshot(repo.root).response.unstaged).toHaveLength(2);
-  expect(() =>
+  expect((await sourceControlSnapshot(repo.root)).response.unstaged).toHaveLength(2);
+  await expect(
     commitCheckoutFiles(repo.root, {
-      revision: sourceControlSnapshot(repo.root).response.revision,
+      revision: (await sourceControlSnapshot(repo.root)).response.revision,
       message: "empty",
     }),
-  ).toThrow("Stage changes");
+  ).rejects.toThrow("Stage changes");
 });
 
-it("refuses a stale commit and respects a failing commit hook", () => {
+it("refuses a stale commit and respects a failing commit hook", async () => {
   repo.write("README.md", "staged\n");
   repo.git("add", "README.md");
-  const revision = sourceControlSnapshot(repo.root).response.revision;
+  const revision = (await sourceControlSnapshot(repo.root)).response.revision;
   repo.git("switch", "-c", "another-branch");
-  expect(() => commitCheckoutFiles(repo.root, { revision, message: "stale" })).toThrow(
+  await expect(commitCheckoutFiles(repo.root, { revision, message: "stale" })).rejects.toThrow(
     "checkout changed",
   );
   repo.write(".git/hooks/pre-commit", "#!/bin/sh\necho rejected-by-hook >&2\nexit 1\n");
   chmodSync(join(repo.root, ".git/hooks/pre-commit"), 0o755);
   const head = repo.git("rev-parse", "HEAD");
-  expect(() =>
+  await expect(
     commitCheckoutFiles(repo.root, {
-      revision: sourceControlSnapshot(repo.root).response.revision,
+      revision: (await sourceControlSnapshot(repo.root)).response.revision,
       message: "blocked",
     }),
-  ).toThrow("rejected-by-hook");
+  ).rejects.toThrow("rejected-by-hook");
   expect(repo.git("rev-parse", "HEAD")).toBe(head);
-  expect(sourceControlSnapshot(repo.root).response.staged).toHaveLength(1);
+  expect((await sourceControlSnapshot(repo.root)).response.staged).toHaveLength(1);
 });

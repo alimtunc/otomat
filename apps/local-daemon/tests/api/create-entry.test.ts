@@ -8,8 +8,8 @@ import { post, request } from "../support/api.js";
 import { setupCheckoutApi, type CheckoutApiFixture } from "../support/checkout-api.js";
 
 let fix: CheckoutApiFixture;
-beforeEach(() => {
-  fix = setupCheckoutApi();
+beforeEach(async () => {
+  fix = await setupCheckoutApi();
 });
 afterEach(() => fix.cleanup());
 
@@ -131,7 +131,7 @@ it("does not expose ignored folders or symlink targets, and refuses archived wor
   });
   expect(body.entries).not.toContainEqual(expect.objectContaining({ path: "empty/ignored" }));
   expect(body.entries).not.toContainEqual(expect.objectContaining({ path: "empty/escape/src" }));
-  fix.service.archive("run-files");
+  await fix.service.archive("run-files");
   const refused = await post(fix.app, "/api/runs/run-files/files", { path: "nope", kind: "file" });
   expect(await refused.json()).toMatchObject({ error: "workspace_read_only" });
 });

@@ -17,6 +17,7 @@ import { failIdleRun, failureReason } from "./fail-run.js";
 import { repositoryInitCommands } from "./init-commands.js";
 import { spawnTurn } from "./lifecycle.js";
 import { finishSettle } from "./pass-boundary.js";
+import { reopenSettledRun } from "./resume.js";
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
 import { settleRun } from "./settle/index.js";
 import { hasRunActivity, trackPending, type SupervisorState } from "./state.js";
@@ -50,7 +51,7 @@ async function startCompeteGroup(
   const binding = state.repositories.forRepository(run.repository_id);
   if (!binding) throw new Error(`run ${run.id} compete group requires a Git repository`);
   if (group.base_head_sha === null) {
-    updateCompeteGroupBase(state.db, group.id, binding.service.snapshot(run.id).headSha);
+    updateCompeteGroupBase(state.db, group.id, (await binding.service.snapshot(run.id)).headSha);
   }
 
   const initCommands = repositoryInitCommands(state.db, run.repository_id);
@@ -60,7 +61,7 @@ async function startCompeteGroup(
     for (const competitor of unstarted) {
       acquired.push({
         competitor,
-        worktree: binding.service.acquire({
+        worktree: await binding.service.acquire({
           owner: competitor.id,
           branch: `${run.branch}--compete-${competitor.id}`,
           baseRef: run.branch,
@@ -81,7 +82,7 @@ async function startCompeteGroup(
   } catch (error) {
     for (const { competitor } of acquired) {
       try {
-        binding.service.cleanup(competitor.id);
+        await binding.service.cleanup(competitor.id);
       } catch (cleanupError) {
         console.error(
           `[otomat] worktree rollback for competitor ${competitor.id} failed`,
@@ -100,14 +101,17 @@ async function startCompeteGroup(
   return true;
 }
 
-/** Starts the next ready plan node; a compete node schedules all candidates under the global semaphore. */
-export async function startNextReadyStep(state: SupervisorState, run: RunRow): Promise<boolean> {
-  const steps = listStepRunsForRun(state.db, run.id);
-  const next = readyPlanWork(
+function nextReadyWork(state: SupervisorState, run: RunRow) {
+  return readyPlanWork(
     run.plan_json,
-    stepStatuses(steps),
+    stepStatuses(listStepRunsForRun(state.db, run.id)),
     competeGroupStatuses(listCompeteGroupsForRun(state.db, run.id)),
   );
+}
+
+/** Starts the next ready plan node; a compete node schedules all candidates under the global semaphore. */
+export async function startNextReadyStep(state: SupervisorState, run: RunRow): Promise<boolean> {
+  const next = nextReadyWork(state, run);
   if (next === null) return false;
   if (next.kind === "compete") {
     return startCompeteGroup(state, run, next.group.id, next.competitors);
@@ -123,7 +127,7 @@ export async function startNextReadyStep(state: SupervisorState, run: RunRow): P
 }
 
 /** A working run whose plan can no longer move would keep its status until the next boot reconciliation. */
-function convergeIdleRun(state: SupervisorState, runId: string): void {
+async function convergeIdleRun(state: SupervisorState, runId: string): Promise<void> {
   const current = getRun(state.db, runId);
   if (!current || !isRunWorking(current.status) || hasRunActivity(state, runId)) return;
   // No live turn to judge: a session row an earlier settle left open must not be re-settled as this run's turn.
@@ -134,14 +138,14 @@ function convergeIdleRun(state: SupervisorState, runId: string): void {
   });
   if (outcome === null) return;
   console.log(`[otomat] run ${runId} had no step left to start; converged: ${outcome.reason}`);
-  finishSettle(state, outcome);
+  await finishSettle(state, outcome);
 }
 
 export async function startNextStepOrConverge(state: SupervisorState, run: RunRow): Promise<void> {
   // Supervision runs first: a delivered step is not a released dependency until its run's supervisor says so.
   const supervision = run.supervision_json;
   if (supervision !== null && (await advanceSupervision(state, run, supervision))) return;
-  if (!(await startNextReadyStep(state, run))) convergeIdleRun(state, run.id);
+  if (!(await startNextReadyStep(state, run))) await convergeIdleRun(state, run.id);
 }
 
 /** Background variant of `startNextStepOrConverge`: the caller never waits for a slot, and a failure fails the run. */
@@ -150,7 +154,23 @@ export function scheduleNextStep(state: SupervisorState, run: RunRow): Promise<v
     state,
     startNextStepOrConverge(state, run).catch((error: unknown) => {
       console.error(`[otomat] run ${run.id} failed to start its next step`, error);
-      failIdleRun(state, run.id, `next work failed to start: ${failureReason(error)}`);
+      return failIdleRun(state, run.id, `next work failed to start: ${failureReason(error)}`);
+    }),
+  );
+}
+
+/** The live turn's advance starts the appended work, unless its settle already rested the run — which only the turn's end can tell. */
+export function startAfterLiveTurns(state: SupervisorState, runId: string): void {
+  const monitors = [...state.inflight.values()]
+    .filter((handle) => handle.runId === runId)
+    .map((handle) => handle.monitor);
+  void trackPending(
+    state,
+    Promise.all(monitors).then(() => {
+      if (hasRunActivity(state, runId) || state.aborting.has(runId)) return;
+      const run = getRun(state.db, runId);
+      if (!run || isRunWorking(run.status) || nextReadyWork(state, run) === null) return;
+      return scheduleNextStep(state, reopenSettledRun(state, run));
     }),
   );
 }
@@ -168,7 +188,7 @@ export async function advanceRun(state: SupervisorState, runId: string): Promise
     await startNextStepOrConverge(state, run);
   } catch (error) {
     console.error(`[otomat] run ${runId} failed to start its next work`, error);
-    failIdleRun(state, runId, `next work failed to start: ${failureReason(error)}`);
+    await failIdleRun(state, runId, `next work failed to start: ${failureReason(error)}`);
   } finally {
     state.advancing.delete(runId);
   }

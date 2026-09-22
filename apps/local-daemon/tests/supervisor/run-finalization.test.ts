@@ -150,7 +150,7 @@ describe("resolveIdleRun", () => {
 });
 
 describe("boot convergence", () => {
-  it("repairs a run left running once every step is already terminal", () => {
+  it("repairs a run left running once every step is already terminal", async () => {
     const { supervisor } = makeSupervisor(fix, "complete");
     seedWorkflowRun(fix.db, {
       runId: "stuck",
@@ -161,7 +161,7 @@ describe("boot convergence", () => {
       ],
     });
 
-    const report = supervisor.reconcile();
+    const report = await supervisor.reconcile();
 
     expect(report.reconciled).toHaveLength(1);
     const repaired = getRun(fix.db, "stuck");
@@ -175,7 +175,7 @@ describe("boot convergence", () => {
     );
   });
 
-  it("stays idempotent: a second pass neither moves the run nor journals a second landing", () => {
+  it("stays idempotent: a second pass neither moves the run nor journals a second landing", async () => {
     const { supervisor } = makeSupervisor(fix, "complete");
     seedWorkflowRun(fix.db, {
       runId: "stuck",
@@ -186,9 +186,9 @@ describe("boot convergence", () => {
       ],
     });
 
-    supervisor.reconcile();
+    await supervisor.reconcile();
     const first = getRun(fix.db, "stuck");
-    const second = supervisor.reconcile();
+    const second = await supervisor.reconcile();
 
     expect(first?.status).toBe("failed");
     expect(second.reconciled).toHaveLength(0);

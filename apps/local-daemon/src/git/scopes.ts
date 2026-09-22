@@ -6,32 +6,36 @@ import type { WorktreeStateCapture } from "./types.js";
 
 // Written, not assumed: the well-known empty-tree sha is hash-algorithm specific,
 // and a root commit still needs a real object on the base side of its diff.
-function emptyTree(repoRoot: string): string {
-  return runGit(["hash-object", "-w", "-t", "tree", "/dev/null"], { cwd: repoRoot }).stdout.trim();
+async function emptyTree(repoRoot: string): Promise<string> {
+  const written = await runGit(["hash-object", "-w", "-t", "tree", "/dev/null"], {
+    cwd: repoRoot,
+  });
+  return written.stdout.trim();
 }
 
-export function captureWorktreeState(worktreePath: string): WorktreeStateCapture {
+export async function captureWorktreeState(worktreePath: string): Promise<WorktreeStateCapture> {
   // Resolved before the tree is written, so the pair can never name a head the tree was not built on.
-  const head = headSha(worktreePath);
-  return { treeSha: worktreeStateTree(worktreePath, head), headSha: head };
+  const head = await headSha(worktreePath);
+  return { treeSha: await worktreeStateTree(worktreePath, head), headSha: head };
 }
 
 /** Null when git no longer holds one of the two captured trees — a loose boundary tree is prunable. */
-export function boundarySnapshot(
+export async function boundarySnapshot(
   repoRoot: string,
   startTree: string,
   endTree: string,
-): DiffSnapshot | null {
-  if (!hasTree(repoRoot, startTree) || !hasTree(repoRoot, endTree)) return null;
+): Promise<DiffSnapshot | null> {
+  if (!(await hasTree(repoRoot, startTree)) || !(await hasTree(repoRoot, endTree))) return null;
   return treeRangeSnapshot(repoRoot, startTree, endTree);
 }
 
 /** One commit against its own parent — never against the branch's fork point, which would read as the global diff. */
-export function commitScope(repoRoot: string, ref: string): CommitScope | null {
-  const summary = commitSummary(repoRoot, ref);
+export async function commitScope(repoRoot: string, ref: string): Promise<CommitScope | null> {
+  const summary = await commitSummary(repoRoot, ref);
   if (summary === null) return null;
-  const parent = commitParent(repoRoot, summary.sha);
-  const base = parent === null ? emptyTree(repoRoot) : revParse(repoRoot, `${parent}^{tree}`);
-  const tree = revParse(repoRoot, `${summary.sha}^{tree}`);
-  return { commit: summary, parent, snapshot: treeRangeSnapshot(repoRoot, base, tree) };
+  const parent = await commitParent(repoRoot, summary.sha);
+  const base =
+    parent === null ? await emptyTree(repoRoot) : await revParse(repoRoot, `${parent}^{tree}`);
+  const tree = await revParse(repoRoot, `${summary.sha}^{tree}`);
+  return { commit: summary, parent, snapshot: await treeRangeSnapshot(repoRoot, base, tree) };
 }

@@ -1,5 +1,5 @@
 import type { IssueContract } from "@otomat/domain";
-import { Avatar } from "@otomat/ui";
+import { Avatar, Skeleton } from "@otomat/ui";
 import { IssueDescription } from "@web/components/issues/issue/description";
 import { IssueMetadata } from "@web/components/issues/issue/metadata";
 import type { ReactNode } from "react";
@@ -23,12 +23,12 @@ function assigneeName(issue: IssueContract, editing: LinearIssueEditing): string
 export function LinearIssueHeader({
   issue,
   children,
-  hasRun = false,
+  hasRun,
   comments,
 }: {
   issue: IssueContract;
   children?: ReactNode;
-  hasRun?: boolean;
+  hasRun: boolean | null;
   comments?: ReactNode;
 }) {
   const editing = useLinearIssueEditing(issue.id);
@@ -62,25 +62,29 @@ export function LinearIssueHeader({
       </div>
       <DraftBar editing={editing} />
       {children}
-      <LinearMediaProvider issueId={issue.id}>
-        <IssueDescription
-          key={`${issue.id}:${hasRun}`}
-          body={description}
-          collapsed={hasRun}
-          comments={comments}
-        >
-          <InlineTextField
-            multiline
-            value={description}
-            placeholder="Add a description…"
-            ariaLabel="Issue description"
-            disabled={!editing.canEdit}
-            className="text-sm leading-[1.65] text-foreground"
-            onCommit={(next) => editing.updateFields({ description: next })}
-          />
-          <LinearAttachmentsSection issueId={issue.id} />
-        </IssueDescription>
-      </LinearMediaProvider>
+      {hasRun === null ? (
+        <Skeleton height={64} />
+      ) : (
+        <LinearMediaProvider issueId={issue.id}>
+          <IssueDescription
+            key={`${issue.id}:${hasRun}`}
+            body={description}
+            collapsed={hasRun}
+            comments={comments}
+          >
+            <InlineTextField
+              multiline
+              value={description}
+              placeholder="Add a description…"
+              ariaLabel="Issue description"
+              disabled={!editing.canEdit}
+              className="text-sm leading-[1.65] text-foreground"
+              onCommit={(next) => editing.updateFields({ description: next })}
+            />
+            <LinearAttachmentsSection issueId={issue.id} />
+          </IssueDescription>
+        </LinearMediaProvider>
+      )}
     </div>
   );
 }

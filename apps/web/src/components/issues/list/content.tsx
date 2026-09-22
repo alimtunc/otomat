@@ -1,5 +1,5 @@
 import type { IssueSummary } from "@otomat/domain";
-import { EmptyState } from "@otomat/ui";
+import { EmptyState, Skeleton } from "@otomat/ui";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { IssuesBoard } from "@web/components/issues/list/board";
@@ -10,6 +10,14 @@ import { QueryList } from "@web/components/shell/query-list";
 import type { IssueGroup } from "@web/lib/issue/grouping";
 import type { IssuesLayout } from "@web/lib/issue/layout";
 import type { IssueOptionalColumn } from "@web/lib/issue/view-config";
+
+const BOARD_PENDING = (
+  <div className="flex h-full gap-3.5 px-4.5 py-4">
+    {[0, 1, 2].map((column) => (
+      <Skeleton key={column} className="h-full w-75 shrink-0" />
+    ))}
+  </div>
+);
 
 export interface IssuesContentProps {
   query: UseQueryResult<IssueSummary[]>;
@@ -35,7 +43,7 @@ export function IssuesContent({
   return (
     <QueryList
       query={query}
-      pending={<ListSkeleton rows={4} height={44} />}
+      pending={layout === "board" ? BOARD_PENDING : <ListSkeleton rows={14} height={40} header />}
       error={
         <ErrorReport
           error={query.error}

@@ -18,6 +18,7 @@ interface FakeIssueQuery {
 }
 
 let detail: FakeDetailQuery;
+let catalog: unknown[];
 let issue: FakeIssueQuery;
 let publication: { pull_request: { url: string; number: number } } | undefined;
 
@@ -30,6 +31,11 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@web/api/runs/queries", () => ({
   useRunDetail: () => detail,
+  useProjectRuns: () => ({ data: catalog }),
+}));
+
+vi.mock("@web/components/shell/project-selection/use-selected", () => ({
+  useSelectedProject: () => ({ projectId: "project-1" }),
 }));
 
 vi.mock("@web/api/prs/queries", () => ({
@@ -58,21 +64,19 @@ vi.mock("@web/components/shell/use-back-navigation", () => ({
 
 vi.mock("@web/components/shell/route-shell", () => ({
   RouteShell: ({
-    active,
     breadcrumbs,
     breadcrumbExtra,
     banner,
     actions,
     children,
   }: {
-    active: string;
     breadcrumbs: BreadcrumbItem[];
     breadcrumbExtra: ReactNode;
     banner: ReactNode;
     actions: ReactNode;
     children: ReactNode;
   }) => (
-    <div data-active-section={active}>
+    <div>
       <ol data-crumbs>
         {breadcrumbs.map((item) => (
           <li key={item.label} data-href={item.href ?? ""}>
@@ -113,6 +117,7 @@ async function render() {
 describe("RunCockpitLayout", () => {
   beforeEach(() => {
     publication = undefined;
+    catalog = [];
     detail = { data: { run: { issue_id: "issue-1", status: "completed" } } };
     issue = {
       isPending: false,
@@ -130,14 +135,6 @@ describe("RunCockpitLayout", () => {
     const link = view.container.querySelector('a[href="https://github.com/example/repo/pull/42"]');
     expect(link?.getAttribute("aria-label")).toBe("Open PR #42 on GitHub");
     expect(link?.getAttribute("target")).toBe("_blank");
-    await view.cleanup();
-  });
-
-  it("activates the Runs section for run routes", async () => {
-    const view = await render();
-    expect(
-      view.container.querySelector("[data-active-section]")?.getAttribute("data-active-section"),
-    ).toBe("runs");
     await view.cleanup();
   });
 
@@ -159,6 +156,14 @@ describe("RunCockpitLayout", () => {
     const crumb = view.crumbs.find((item) => item.label?.includes("OTO-57"));
     expect(crumb?.label).toBe("OTO-57 · Readable cockpit");
     expect(crumb?.href).toBe("/issues/issue-1?run=run-1&step=step-2");
+    await view.cleanup();
+  });
+
+  it("names the linked issue from the warm run catalog before the run detail lands", async () => {
+    detail = { data: undefined };
+    catalog = [{ id: "run-1", issue_id: "issue-1", status: "running" }];
+    const view = await render();
+    expect(view.crumbs.map((item) => item.label)).toContain("OTO-57 · Readable cockpit");
     await view.cleanup();
   });
 

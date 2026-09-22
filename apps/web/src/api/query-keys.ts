@@ -112,17 +112,7 @@ export function hostKeys(host: ExecutionHostId) {
       sha: string,
       scope: RunDiffScopeSelector = DEFAULT_DIFF_SCOPE,
     ) =>
-      [
-        host,
-        "review",
-        target.kind,
-        target.id,
-        "diff",
-        runDiffScopeKey(scope),
-        "file",
-        path,
-        sha,
-      ] as const,
+      [host, "review", target.kind, target.id, "blob", runDiffScopeKey(scope), path, sha] as const,
     commentFixProof: (id: string, commentId: string) =>
       [host, "run", id, "fix-proof", commentId] as const,
     runWorkspace: (id: string) => [host, "run", id, "workspace"] as const,

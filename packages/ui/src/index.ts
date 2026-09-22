@@ -10,7 +10,7 @@
 export { cn } from "./lib/utils";
 export { isEditableTarget } from "./lib/keyboard";
 export { FOCUS_RING, FOCUS_RING_INSET } from "./lib/focus";
-export { SETTLE_IN_CLASS } from "./lib/motion";
+export { SETTLE_IN_CLASS, STALE_CONTENT_CLASS } from "./lib/motion";
 export { useMediaQuery } from "./lib/use-media-query";
 export { usePanelGroupLayout, type PanelGroupLayout } from "./lib/use-panel-group-layout";
 export { useSidePanel, type SidePanelState } from "./lib/side-panel-context";
@@ -146,7 +146,12 @@ export { AgentAvatar, type AgentAvatarProps } from "./components/agent-avatar";
 export { ProviderMark, type ProviderMarkProps } from "./components/provider-mark";
 export type { ProviderMarkName } from "./lib/provider-mark-art";
 
-export { AppShell, type AppShellProps } from "./components/app-shell";
+export {
+  AppShell,
+  AppShellMain,
+  type AppShellMainProps,
+  type AppShellProps,
+} from "./components/app-shell";
 export { useSidebarCollapsed } from "./lib/sidebar-collapsed";
 
 export { AppSidebar, type AppSidebarProps } from "./components/app-sidebar";

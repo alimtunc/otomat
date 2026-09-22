@@ -58,7 +58,11 @@ function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
   }
 }
 
-function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit): void {
+async function settleLive(
+  state: SupervisorState,
+  ctx: TurnContext,
+  exit?: ProcessExit,
+): Promise<void> {
   const run = getRun(state.db, ctx.runId);
   if (!run) return;
   try {
@@ -69,7 +73,7 @@ function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit
     };
     if (exit) settle.observedExit = exit;
     const outcome = settleRun(state.db, state.dataDir, run, settle);
-    finishSettle(state, outcome);
+    await finishSettle(state, outcome);
   } catch (error) {
     console.error(`[otomat] run ${ctx.runId} settle failed`, error);
   }
@@ -95,7 +99,7 @@ function trackTurn(
       // Stopped before settling: settle owns the interaction lifecycle from here, and a pass firing mid-settle would race its state walk.
       interactions.stop();
       try {
-        if (!state.aborting.has(ctx.runId)) settleLive(state, ctx, exit);
+        if (!state.aborting.has(ctx.runId)) await settleLive(state, ctx, exit);
       } finally {
         tail.stop();
         state.inflight.delete(ctx.agentSessionId);
@@ -163,7 +167,9 @@ export async function spawnTurn(
       });
       if (!initialized) return abandon();
     }
-    capturePassStart(state, ctx);
+    await capturePassStart(state, ctx);
+    // Captured before the claim, so no await separates claiming a contribution from the spawn that carries it.
+    const context = await captureTurnContext(state, ctx, mode);
     clearWorkerStartEvidence(ctx.agentSessionDir);
     clearLiveInput(ctx.agentSessionDir);
     if (ctx.kind === "step") {
@@ -177,7 +183,7 @@ export async function spawnTurn(
     }
     const carried = carriedContributions(state, ctx.agentSessionId);
     const prompt = withCarriedContributions(
-      captureTurnContext(state, ctx, mode),
+      context,
       carried.map((row) => row.body),
     );
     // The selection is already rendered into `prompt`; a job is serialized for the worker, so it must not carry it twice.
@@ -210,7 +216,7 @@ export async function spawnTurn(
       proc.kill("SIGKILL");
       const exit = await proc.exited;
       if (readyRun && !isRunSettled(readyRun.status) && !aborting.has(ctx.runId)) {
-        settleLive(state, ctx, exit);
+        await settleLive(state, ctx, exit);
       }
       return abandon();
     }
@@ -237,7 +243,7 @@ export async function spawnTurn(
     });
     if (!aborting.has(ctx.runId)) {
       if (error instanceof WorkerSpawnError) failUnstartedTurn(state, ctx, error.message);
-      settleLive(state, ctx);
+      await settleLive(state, ctx);
     }
     throw error;
   } finally {

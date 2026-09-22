@@ -20,23 +20,23 @@ import { createReviewSurfaceRoutes } from "./review-surface.js";
 export function createReviewRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
-  routes.get("/:id/commits", runGuard(deps.db), (c) => {
+  routes.get("/:id/commits", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     try {
-      return c.json(
-        runCommitsResponseSchema.parse({ run_id: run.id, ...deps.review.getBranchCommits(run.id) }),
-      );
+      const commits = await deps.review.getBranchCommits(run.id);
+      return c.json(runCommitsResponseSchema.parse({ run_id: run.id, ...commits }));
     } catch (error) {
       console.error(`[otomat] commits for run ${run.id} failed`, error);
       return c.json({ error: "commits_failed" }, 500);
     }
   });
 
-  routes.get("/:id/review/comments/:commentId/fix-proof", runGuard(deps.db), (c) => {
+  routes.get("/:id/review/comments/:commentId/fix-proof", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     const commentId = c.req.param("commentId");
     try {
-      return c.json(commentFixProofSchema.parse(deps.review.getCommentFixProof(run.id, commentId)));
+      const proof = await deps.review.getCommentFixProof(run.id, commentId);
+      return c.json(commentFixProofSchema.parse(proof));
     } catch (error) {
       console.error(`[otomat] fix proof for comment ${commentId} on run ${run.id} failed`, error);
       return c.json({ error: "fix_proof_failed" }, 500);

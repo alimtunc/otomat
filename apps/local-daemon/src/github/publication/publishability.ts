@@ -58,7 +58,7 @@ export async function computePublishability(
     return blocked(workspaceBlocker(error));
   }
 
-  const diff = workspace.worktrees.diff(runId);
+  const diff = await workspace.worktrees.diff(runId);
   const resolved = {
     repository: workspace.remote.repository,
     base_ref: workspace.baseRef,
@@ -66,10 +66,10 @@ export async function computePublishability(
     changed_files: diff.files.length,
     additions: diff.files.reduce((total, file) => total + file.additions, 0),
     deletions: diff.files.reduce((total, file) => total + file.deletions, 0),
-    dirty: uncommittedPaths(workspace.worktree.path).length > 0,
+    dirty: (await uncommittedPaths(workspace.worktree.path)).length > 0,
   };
   // Publication commits the worktree as a whole, so a partial selection in its index would be lost or merged in.
-  if (hasPartialStaging(workspace.worktree.path)) {
+  if (await hasPartialStaging(workspace.worktree.path)) {
     return {
       ...resolved,
       blocker: {

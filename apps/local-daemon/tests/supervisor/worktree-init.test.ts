@@ -63,7 +63,7 @@ it("re-runs init on resume when the daemon died before any agent started", async
   expect(first.spawn.calls).toBe(0);
 
   const second = makeSupervisor(fix, "complete");
-  second.supervisor.reconcile();
+  await second.supervisor.reconcile();
   expect(getRun(fix.db, run.id)?.status).toBe("awaiting_human");
 
   const resumed = await second.supervisor.resume(run.id);

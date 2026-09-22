@@ -7,6 +7,9 @@ import { routeTree } from "./routeTree.gen";
 export const router = createRouter({
   routeTree,
   scrollRestoration: true,
+  defaultPreload: "intent",
+  // TanStack Query owns freshness; the router re-runs a loader on every intent and lets the cache dedupe.
+  defaultPreloadStaleTime: 0,
   // A tab reopens its remembered href, so the offset is remembered by href rather than by history entry.
   getScrollRestorationKey: (location) => location.href,
   defaultErrorComponent: RouteErrorReport,

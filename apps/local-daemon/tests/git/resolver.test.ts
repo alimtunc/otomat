@@ -25,10 +25,10 @@ afterEach(() => {
   fix.cleanup();
 });
 
-it("resolves a repository id to a working service", () => {
+it("resolves a repository id to a working service", async () => {
   const binding = resolver.forRepository("repo-1");
   expect(binding?.repositoryId).toBe("repo-1");
-  const worktree = binding?.service.acquire({ owner: "run-x", branch: "otomat/run/run-x" });
+  const worktree = await binding?.service.acquire({ owner: "run-x", branch: "otomat/run/run-x" });
   expect(worktree?.branch).toBe("otomat/run/run-x");
   // A second binding sees the same worktree: the state lives in the rows, not the service.
   expect(resolver.forRepository("repo-1")?.service.get("run-x")?.id).toBe(worktree?.id);
@@ -41,7 +41,7 @@ it("returns null for a null id, an unknown repository, and a project without rep
   expect(resolver.forProject("p2")).toBeNull();
 });
 
-it("forks from the project's current root after a registration moves it", () => {
+it("forks from the project's current root after a registration moves it", async () => {
   const moved = setupTestRepo();
   try {
     expect(resolver.forRepository("repo-1")?.rootPath).toBe(fix.repo.root);
@@ -52,7 +52,7 @@ it("forks from the project's current root after a registration moves it", () => 
     expect(after?.rootPath).toBe(moved.root);
     // The service must follow too, or the run's worktree lands in the old checkout.
     expect(
-      after?.service.acquire({ owner: "run-moved", branch: "otomat/run/run-moved" }).path,
+      (await after?.service.acquire({ owner: "run-moved", branch: "otomat/run/run-moved" }))?.path,
     ).toContain(fix.dataDir);
     expect(moved.git("branch", "--format=%(refname:short)")).toContain("otomat/run/run-moved");
   } finally {

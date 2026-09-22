@@ -21,13 +21,9 @@ const SHELL_LAYOUT_ID = "otomat.shell";
 
 export interface AppShellProps {
   sidebar: ReactNode;
-  pageBar: ReactNode;
   tabs?: ReactNode;
+  /** The route's `AppShellMain`; the frame around it stays mounted across navigations. */
   children: ReactNode;
-  rightPanel?: ReactNode;
-  connectionState?: ConnectionState;
-  /** What the shell is waiting for while reconnecting, when it knows; the generic label otherwise. */
-  connectionLabel?: string;
   density?: Density;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
@@ -39,12 +35,8 @@ export interface AppShellProps {
 
 export function AppShell({
   sidebar,
-  pageBar,
   tabs,
   children,
-  rightPanel,
-  connectionState = "online",
-  connectionLabel,
   density = "compact",
   collapsed: collapsedProp,
   onCollapsedChange,
@@ -60,7 +52,6 @@ export function AppShell({
   );
   const collapsed = controlled ? collapsedProp : (internalCollapsed ?? !wide);
   const shellLayout = usePanelGroupLayout(SHELL_LAYOUT_ID);
-  const rightLayout = usePanelGroupLayout(`${SHELL_LAYOUT_ID}.right`);
 
   const setCollapsed = useCallback(
     (next: boolean) => {
@@ -86,7 +77,55 @@ export function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleKey]);
 
-  const content = (
+  return (
+    <SidebarCollapsedContext.Provider value={collapsed}>
+      <div
+        data-density={density}
+        className={cn("flex h-screen flex-col overflow-hidden", className)}
+      >
+        {tabs}
+        <ResizablePanelGroup {...shellLayout} className="h-auto flex-1">
+          <SidePanel
+            id={SIDEBAR_PANEL_ID}
+            label="Sidebar"
+            side="left"
+            defaultSize={sidebarWidth}
+            minSize={SIDEBAR_MIN_WIDTH}
+            maxSize={SIDEBAR_MAX_WIDTH}
+            collapsedSize={railWidth}
+            collapsed={collapsed}
+            onCollapsedChange={setCollapsed}
+            rail={sidebar}
+          >
+            {sidebar}
+          </SidePanel>
+          <ResizablePanel id="main" minSize="40%">
+            {children}
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </SidebarCollapsedContext.Provider>
+  );
+}
+
+export interface AppShellMainProps {
+  pageBar: ReactNode;
+  children: ReactNode;
+  rightPanel?: ReactNode;
+  connectionState?: ConnectionState;
+  /** What the shell is waiting for while reconnecting, when it knows; the generic label otherwise. */
+  connectionLabel?: string;
+}
+
+export function AppShellMain({
+  pageBar,
+  children,
+  rightPanel,
+  connectionState = "online",
+  connectionLabel,
+}: AppShellMainProps) {
+  const rightLayout = usePanelGroupLayout(`${SHELL_LAYOUT_ID}.right`);
+  return (
     <main className="flex h-full min-h-0 min-w-0 flex-col bg-background">
       {pageBar}
       {connectionState === "reconnecting" ? (
@@ -115,35 +154,5 @@ export function AppShell({
         )}
       </div>
     </main>
-  );
-
-  return (
-    <SidebarCollapsedContext.Provider value={collapsed}>
-      <div
-        data-density={density}
-        className={cn("flex h-screen flex-col overflow-hidden", className)}
-      >
-        {tabs}
-        <ResizablePanelGroup {...shellLayout} className="h-auto flex-1">
-          <SidePanel
-            id={SIDEBAR_PANEL_ID}
-            label="Sidebar"
-            side="left"
-            defaultSize={sidebarWidth}
-            minSize={SIDEBAR_MIN_WIDTH}
-            maxSize={SIDEBAR_MAX_WIDTH}
-            collapsedSize={railWidth}
-            collapsed={collapsed}
-            onCollapsedChange={setCollapsed}
-            rail={sidebar}
-          >
-            {sidebar}
-          </SidePanel>
-          <ResizablePanel id="main" minSize="40%">
-            {content}
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-    </SidebarCollapsedContext.Provider>
   );
 }

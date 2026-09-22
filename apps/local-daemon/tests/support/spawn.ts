@@ -57,11 +57,15 @@ export type WorkerBehavior =
 
 /** Launches the real fake-worker per job and records spawned jobs; a behavior array maps one entry per call, last entry repeats. */
 export function workerSpawn(
-  behavior: WorkerBehavior | WorkerBehavior[],
+  behavior: WorkerBehavior | WorkerBehavior[] | ((job: SupervisedJob) => WorkerBehavior),
 ): SpawnSession & { calls: number; jobs: SupervisedJob[] } {
-  const behaviors = Array.isArray(behavior) ? behavior : [behavior];
+  const behaviorFor = (job: SupervisedJob): WorkerBehavior => {
+    if (typeof behavior === "function") return behavior(job);
+    const behaviors = Array.isArray(behavior) ? behavior : [behavior];
+    return behaviors[Math.min(spawnFn.calls, behaviors.length - 1)];
+  };
   const spawnFn = (job: SupervisedJob): SessionProcess => {
-    const turnBehavior = behaviors[Math.min(spawnFn.calls, behaviors.length - 1)];
+    const turnBehavior = behaviorFor(job);
     const startToken = randomUUID();
     spawnFn.calls += 1;
     spawnFn.jobs.push(job);

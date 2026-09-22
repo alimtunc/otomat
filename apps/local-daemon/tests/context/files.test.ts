@@ -16,7 +16,7 @@ let db: GitTestDb;
 let worktreesRoot: string;
 let snapshot: TreeSnapshot;
 
-beforeEach(() => {
+beforeEach(async () => {
   repo = setupTestRepo();
   db = setupGitDb();
   worktreesRoot = mkdtempSync(join(tmpdir(), "otomat-wt-root-"));
@@ -29,7 +29,7 @@ beforeEach(() => {
   symlinkSync(join(outside, "secret.txt"), join(repo.root, "leak"));
   repo.commitAll("fixtures");
 
-  snapshot = createGitWorktreeService({
+  snapshot = await createGitWorktreeService({
     db: db.client.db,
     repositoryId: db.repositoryId,
     repoRoot: repo.root,
@@ -44,8 +44,8 @@ afterEach(() => {
   repo.cleanup();
 });
 
-it("reads a tracked text file whole, from the captured tree", () => {
-  expect(readContextFile(snapshot, "src/parser.ts")).toEqual({
+it("reads a tracked text file whole, from the captured tree", async () => {
+  expect(await readContextFile(snapshot, "src/parser.ts")).toEqual({
     state: "read",
     path: "src/parser.ts",
     bytes: 30,
@@ -53,31 +53,31 @@ it("reads a tracked text file whole, from the captured tree", () => {
   });
 });
 
-it("normalizes a picker's leading ./ without changing which file is named", () => {
-  expect(readContextFile(snapshot, "./src/parser.ts")).toMatchObject({
+it("normalizes a picker's leading ./ without changing which file is named", async () => {
+  expect(await readContextFile(snapshot, "./src/parser.ts")).toMatchObject({
     state: "read",
     path: "src/parser.ts",
   });
 });
 
-it("refuses a symlink instead of following it off the repository", () => {
-  const read = readContextFile(snapshot, "leak");
+it("refuses a symlink instead of following it off the repository", async () => {
+  const read = await readContextFile(snapshot, "leak");
   expect(read).toEqual({ state: "unavailable", path: "leak", reason: "symlink" });
   expect(JSON.stringify(read)).not.toContain("TOP-SECRET");
 });
 
-it("refuses paths that could name something outside the repository", () => {
+it("refuses paths that could name something outside the repository", async () => {
   for (const path of ["/etc/passwd", "../outside.txt", "src/../../escape.ts", "~/.ssh/id_rsa"]) {
-    expect(readContextFile(snapshot, path)).toMatchObject({ reason: "outside_repository" });
+    expect(await readContextFile(snapshot, path)).toMatchObject({ reason: "outside_repository" });
   }
 });
 
-it("names a binary, an oversized and a missing file rather than attaching an approximation", () => {
-  expect(readContextFile(snapshot, "assets/logo.bin")).toMatchObject({ reason: "binary" });
-  expect(readContextFile(snapshot, "huge.txt")).toMatchObject({ reason: "too_large" });
-  expect(readContextFile(snapshot, "src/renamed.ts")).toMatchObject({ reason: "missing" });
+it("names a binary, an oversized and a missing file rather than attaching an approximation", async () => {
+  expect(await readContextFile(snapshot, "assets/logo.bin")).toMatchObject({ reason: "binary" });
+  expect(await readContextFile(snapshot, "huge.txt")).toMatchObject({ reason: "too_large" });
+  expect(await readContextFile(snapshot, "src/renamed.ts")).toMatchObject({ reason: "missing" });
 });
 
-it("refuses a directory, which has no text to attach", () => {
-  expect(readContextFile(snapshot, "src")).toMatchObject({ reason: "unreadable" });
+it("refuses a directory, which has no text to attach", async () => {
+  expect(await readContextFile(snapshot, "src")).toMatchObject({ reason: "unreadable" });
 });

@@ -16,7 +16,11 @@ void openPreviewSession().then(async () => {
   const { Cockpit } = await import("@web/cockpit");
   const { attachQuerySnapshot } = await import("@web/api/cache-snapshot");
   const { queryClient } = await import("@web/api/query-client");
-  attachQuerySnapshot(queryClient);
+  // A slow IndexedDB must never hold the first paint; a late restore still hydrates behind it.
+  await Promise.race([
+    attachQuerySnapshot(queryClient),
+    new Promise((resolve) => setTimeout(resolve, 800)),
+  ]);
   createRoot(root).render(
     <StrictMode>
       <Cockpit />

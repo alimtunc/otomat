@@ -31,6 +31,7 @@ import {
   type GitWorktreeService,
   type WorktreeRecord,
 } from "#git";
+import { serializeByKey } from "#serialize";
 
 import { issueBranchName } from "./branch-name.js";
 import { withContextBudget } from "./context-budget.js";
@@ -114,8 +115,18 @@ function insertPlanRows(db: Db, runId: string, plan: RunPlan): void {
   });
 }
 
+/** Launches into one project are prepared one at a time: the open-workspace refusal and the branch pick read what an earlier launch has not written yet. */
+export async function prepareRun(
+  state: SupervisorState,
+  request: StartRunRequest,
+): Promise<string> {
+  const issueProject = request.issue_id ? getIssue(state.db, request.issue_id)?.project_id : null;
+  const project = issueProject ?? request.project_id ?? state.defaultProjectId;
+  return serializeByKey(state.launchesByProject, project, () => prepareLaunch(state, request));
+}
+
 /** A launched run always owns a worktree: every precondition refuses before any row is written. */
-export function prepareRun(state: SupervisorState, request: StartRunRequest): string {
+async function prepareLaunch(state: SupervisorState, request: StartRunRequest): Promise<string> {
   const { db } = state;
   const runDefault = runDefaultConfig(request, readExecutionDefaults(db).runtime);
   const defaultConfig = resolveAgentConfig(
@@ -136,20 +147,20 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
   }
 
   const runId = randomUUID();
-  const { projectId, binding, baseRef, baseSha } = resolveLaunchTarget(
+  const { projectId, binding, baseRef, baseSha } = await resolveLaunchTarget(
     state,
     request,
     existingIssue,
   );
   const issue = launchIssue(projectId, request, existingIssue);
-  const branch = availableBranchName(
+  const branch = await availableBranchName(
     binding.rootPath,
     issueBranchName(issue.row, runId),
     runId.slice(0, 8),
   );
 
   // The plan freezes attached files from the base tree: the run's own worktree does not exist yet.
-  const plan = freezePlan(
+  const plan = await freezePlan(
     request,
     defaultConfig,
     configFor,
@@ -157,13 +168,13 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
       createContextFreezer({
         db,
         issue: issue.row,
-        snapshot: binding.service.treeSnapshot(baseSha),
+        snapshot: await binding.service.treeSnapshot(baseSha),
         capturedAt: new Date().toISOString(),
       }),
     ),
   );
 
-  const worktree = acquireRunWorktree(binding.service, {
+  const worktree = await acquireRunWorktree(binding.service, {
     owner: runId,
     branch,
     baseRef,
@@ -192,7 +203,7 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
     );
   } catch (error) {
     try {
-      binding.service.cleanup(runId);
+      await binding.service.cleanup(runId);
     } catch (cleanupError) {
       console.error(`[otomat] worktree rollback for aborted run ${runId} failed`, cleanupError);
     }
@@ -213,12 +224,12 @@ function isSystemError(error: unknown): boolean {
  * the reason. Anything else is a daemon bug and keeps its own stack rather than
  * being reported as a repository the caller should go repair.
  */
-function acquireRunWorktree(
+async function acquireRunWorktree(
   service: GitWorktreeService,
   input: AcquireWorktreeInput,
-): WorktreeRecord {
+): Promise<WorktreeRecord> {
   try {
-    return service.acquire(input);
+    return await service.acquire(input);
   } catch (error) {
     const actionable =
       error instanceof GitCommandError ||

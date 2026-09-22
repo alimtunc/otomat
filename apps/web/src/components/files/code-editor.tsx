@@ -1,7 +1,7 @@
 import { Editor, type OnMount } from "@monaco-editor/react";
-import { Spinner, useTheme } from "@otomat/ui";
+import { useTheme } from "@otomat/ui";
 import { EDITOR_OPTIONS, editorTheme } from "@web/components/files/monaco-setup";
-import { CenteredState } from "@web/components/shell/centered-state";
+import { LinesSkeleton } from "@web/components/shell/lines-skeleton";
 import { KeyCode, KeyMod } from "monaco-editor/editor/editor.api";
 import { useEffect, useEffectEvent, useImperativeHandle, useMemo, useState, type Ref } from "react";
 
@@ -75,11 +75,7 @@ export function CodeEditor({
         theme={themeName}
         options={{ ...EDITOR_OPTIONS, readOnly }}
         onMount={setEditor}
-        loading={
-          <CenteredState fill="flex">
-            <Spinner label="Loading the editor" />
-          </CenteredState>
-        }
+        loading={<LinesSkeleton lines={14} className="h-full w-full" />}
       />
     </div>
   );

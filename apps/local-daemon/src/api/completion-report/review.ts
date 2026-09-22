@@ -10,13 +10,13 @@ interface ReviewProjectionInput {
   runId: string;
 }
 
-function projectDiff({
+async function projectDiff({
   errors,
   review,
   runId,
-}: ReviewProjectionInput): RunCompletionReport["diff"] {
+}: ReviewProjectionInput): Promise<RunCompletionReport["diff"]> {
   try {
-    const diff = review.getDiff({ kind: "run", id: runId }, BRANCH_DIFF_SCOPE).diff;
+    const { diff } = await review.getDiff({ kind: "run", id: runId }, BRANCH_DIFF_SCOPE);
     if (diff === null) {
       return {
         state: "not_reported",
@@ -123,11 +123,11 @@ function unavailableReview(): RunCompletionReport["review"] {
   };
 }
 
-export function projectReviewEvidence(
+export async function projectReviewEvidence(
   input: ReviewProjectionInput,
-): Pick<RunCompletionReport, "diff" | "review"> {
+): Promise<Pick<RunCompletionReport, "diff" | "review">> {
   return {
-    diff: projectDiff(input),
+    diff: await projectDiff(input),
     review: projectReview(input),
   };
 }

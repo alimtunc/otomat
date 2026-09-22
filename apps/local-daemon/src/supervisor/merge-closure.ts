@@ -28,21 +28,21 @@ export interface MergeClosureConfig {
 }
 
 /** The cycle closes first, so the workspace it leaves behind is already read as closed. */
-export function closeMergedRun(config: MergeClosureConfig, runId: string): void {
+export async function closeMergedRun(config: MergeClosureConfig, runId: string): Promise<void> {
   const run = getRun(config.db, runId);
   if (!run) return;
   if (!isRunSettled(run.status)) {
     driveRunTo(config.db, runId, run.status, "completed", new Date().toISOString());
   }
   markIssueDone(config, run.issue_id, runId);
-  releaseWorkspace(config, run.worktree_id);
+  await releaseWorkspace(config, run.worktree_id);
 }
 
 /** A merge Otomat only witnessed closes the cycle like one it made: through the canonical run, or on the issue when none ran here. */
-export function closeMergedIssue(config: MergeClosureConfig, issueId: string): void {
+export async function closeMergedIssue(config: MergeClosureConfig, issueId: string): Promise<void> {
   const workspace = projectIssueWorkspace(listIssueExecutionEvidence(config.db, { issueId }));
   if (workspace.state === "open") {
-    closeMergedRun(config, workspace.run_id);
+    await closeMergedRun(config, workspace.run_id);
     return;
   }
   markIssueDone(config, issueId, null);
@@ -56,7 +56,10 @@ function markIssueDone(config: MergeClosureConfig, issueId: string, runId: strin
 }
 
 /** Anything refused here leaves the workspace in the inventory for an explicit cleanup. */
-function releaseWorkspace(config: MergeClosureConfig, worktreeId: string | null): void {
+async function releaseWorkspace(
+  config: MergeClosureConfig,
+  worktreeId: string | null,
+): Promise<void> {
   if (worktreeId === null) return;
   const context = {
     db: config.db,
@@ -65,11 +68,11 @@ function releaseWorkspace(config: MergeClosureConfig, worktreeId: string | null)
     busyRuns: () => false,
     refreshPullRequests: null,
   };
-  const entry = findWorkspaceEntry(context, worktreeId, cycleHolders(config.db));
+  const entry = await findWorkspaceEntry(context, worktreeId, cycleHolders(config.db));
   if (entry === null || entry.state === "removed" || entry.pull_request?.merged !== true) return;
   const repository = getRepository(config.db, entry.repository_id);
   if (!repository || !readAutoDeleteWorkspaces(config.db, repository.project_id)) return;
-  const result = cleanupWorkspace(context, entry);
+  const result = await cleanupWorkspace(context, entry);
   if (result.outcome !== "cleaned") {
     console.error(
       `[otomat] workspace ${worktreeId} kept after merge (${result.outcome}): ${result.message}`,

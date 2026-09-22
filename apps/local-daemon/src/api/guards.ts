@@ -101,7 +101,9 @@ export function checkoutGuard(repositories: RepositoryResolver) {
       );
     }
     const cwd = target.kind === "run" ? binding.service.get(target.id)?.path : binding.rootPath;
-    if (cwd === undefined || !isRepositoryRoot(cwd)) return refuseFile(c, "workspace_unavailable");
+    if (cwd === undefined || !(await isRepositoryRoot(cwd))) {
+      return refuseFile(c, "workspace_unavailable");
+    }
     c.set("checkout", { target, cwd, binding });
     await next();
   });

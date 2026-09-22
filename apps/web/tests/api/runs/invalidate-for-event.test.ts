@@ -102,20 +102,21 @@ it("drops no cache for a Linear event that names no issue", () => {
 it("invalidates the run, run list, conversation, issue execution, review queue and inbox caches on a lifecycle or reconcile event", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, local, "run-1", event("run.lifecycle"));
-  expect(keys).toEqual([
-    local.run("run-1"),
-    local.runs,
-    local.runContributions("run-1"),
-    local.issues,
-    local.reviews,
-    local.inbox,
-  ]);
+  expect(keys).toEqual([local.run("run-1"), local.runs, local.issues, local.reviews, local.inbox]);
 });
 
-it("invalidates the completion report for runtime evidence", () => {
+it("refetches nothing on a streamed log line, message or tool call", () => {
   const { client, keys } = fakeClient();
-  invalidateForEvent(client, local, "run-1", event("runtime.log"));
-  expect(keys).toEqual([local.runCompletionReport("run-1")]);
+  for (const type of ["runtime.log", "runtime.message", "runtime.tool_call"] as const) {
+    invalidateForEvent(client, local, "run-1", event(type));
+  }
+  expect(keys).toEqual([]);
+});
+
+it("refreshes only the run detail and its report when a step or session moves", () => {
+  const { client, keys } = fakeClient();
+  invalidateForEvent(client, local, "run-1", event("step.lifecycle"));
+  expect(keys).toEqual([local.run("run-1"), local.runCompletionReport("run-1")]);
 });
 
 it("refreshes both usage reads on a reported turn, so the run and the dashboard move together", () => {

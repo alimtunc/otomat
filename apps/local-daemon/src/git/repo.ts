@@ -2,30 +2,30 @@ import { runGit } from "./git-cli.js";
 import { tryRealpath } from "./probe.js";
 
 /** Resolves a ref (branch, tag, sha, `<ref>^{tree}`, ...) to its object id. */
-export function revParse(repoPath: string, ref: string): string {
-  return runGit(["rev-parse", ref], { cwd: repoPath }).stdout.trim();
+export async function revParse(repoPath: string, ref: string): Promise<string> {
+  return (await runGit(["rev-parse", ref], { cwd: repoPath })).stdout.trim();
 }
 
 /** Current `HEAD` commit sha of the repo or worktree at `repoPath`. */
-export function headSha(repoPath: string): string {
+export function headSha(repoPath: string): Promise<string> {
   return revParse(repoPath, "HEAD");
 }
 
 /** Short symbolic name of the checked-out branch (e.g. `main`). */
-export function currentBranch(repoPath: string): string {
-  return runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repoPath }).stdout.trim();
+export async function currentBranch(repoPath: string): Promise<string> {
+  return (await runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repoPath })).stdout.trim();
 }
 
 /** Best common ancestor of two refs, or `null` when histories are unrelated. */
-export function mergeBase(repoPath: string, a: string, b: string): string | null {
-  const res = runGit(["merge-base", a, b], { cwd: repoPath, allowFailure: true });
+export async function mergeBase(repoPath: string, a: string, b: string): Promise<string | null> {
+  const res = await runGit(["merge-base", a, b], { cwd: repoPath, allowFailure: true });
   if (res.exitCode !== 0) return null;
   const sha = res.stdout.trim();
   return sha === "" ? null : sha;
 }
 
-export function verifyRef(repoPath: string, rev: string): string | null {
-  const res = runGit(["rev-parse", "--verify", "--quiet", rev], {
+export async function verifyRef(repoPath: string, rev: string): Promise<string | null> {
+  const res = await runGit(["rev-parse", "--verify", "--quiet", rev], {
     cwd: repoPath,
     allowFailure: true,
   });
@@ -34,66 +34,74 @@ export function verifyRef(repoPath: string, rev: string): string | null {
 }
 
 /** A base branch with no tracking config still has a published side when the repo has one remote. */
-function publishedBase(repoPath: string, branch: string): string | null {
-  const remote = runGit(["config", "--get", `branch.${branch}.remote`], {
+async function publishedBase(repoPath: string, branch: string): Promise<string | null> {
+  const remote = await runGit(["config", "--get", `branch.${branch}.remote`], {
     cwd: repoPath,
     allowFailure: true,
   });
   // git writes `.` for a branch tracking a local one, which publishes nothing.
   if (remote.stdout.trim() === ".") return null;
-  const tracked = verifyRef(repoPath, `${branch}@{upstream}`);
+  const tracked = await verifyRef(repoPath, `${branch}@{upstream}`);
   if (tracked !== null) return tracked;
-  const [only, ...rest] = repositoryRemotes(repoPath);
+  const [only, ...rest] = await repositoryRemotes(repoPath);
   if (only === undefined || rest.length > 0) return null;
   return verifyRef(repoPath, `refs/remotes/${only}/${branch}`);
 }
 
 /** Later of the local and published fork points: a clone whose base branch lags the remote reports one behind. */
-export function baseBranchForkPoint(repoPath: string, branch: string, ref: string): string | null {
-  const local = mergeBase(repoPath, branch, ref);
-  const upstream = publishedBase(repoPath, branch);
+export async function baseBranchForkPoint(
+  repoPath: string,
+  branch: string,
+  ref: string,
+): Promise<string | null> {
+  const local = await mergeBase(repoPath, branch, ref);
+  const upstream = await publishedBase(repoPath, branch);
   if (upstream === null) return local;
-  const published = mergeBase(repoPath, upstream, ref);
+  const published = await mergeBase(repoPath, upstream, ref);
   if (local === null || published === null) return local ?? published;
   // A published side that already contains `ref` collapses onto it, which would read as an empty diff.
-  if (published === revParse(repoPath, ref)) return local;
-  return isAncestor(repoPath, local, published) ? published : local;
+  if (published === (await revParse(repoPath, ref))) return local;
+  return (await isAncestor(repoPath, local, published)) ? published : local;
 }
 
 /** Whether the object store already holds `sha` as a commit — a remote sha it lacks cannot be compared without fetching. */
-export function hasCommit(repoPath: string, sha: string): boolean {
-  return (
-    runGit(["cat-file", "-e", `${sha}^{commit}`], { cwd: repoPath, allowFailure: true })
-      .exitCode === 0
-  );
+export async function hasCommit(repoPath: string, sha: string): Promise<boolean> {
+  const res = await runGit(["cat-file", "-e", `${sha}^{commit}`], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  return res.exitCode === 0;
 }
 
-export function isAncestor(repoPath: string, ancestor: string, descendant: string): boolean {
-  return (
-    runGit(["merge-base", "--is-ancestor", ancestor, descendant], {
-      cwd: repoPath,
-      allowFailure: true,
-    }).exitCode === 0
-  );
+export async function isAncestor(
+  repoPath: string,
+  ancestor: string,
+  descendant: string,
+): Promise<boolean> {
+  const res = await runGit(["merge-base", "--is-ancestor", ancestor, descendant], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  return res.exitCode === 0;
 }
 
-export function fastForward(repoPath: string, ref: string): void {
-  runGit(["merge", "--ff-only", ref], { cwd: repoPath });
+export async function fastForward(repoPath: string, ref: string): Promise<void> {
+  await runGit(["merge", "--ff-only", ref], { cwd: repoPath });
 }
 
 /** The repo's current branch, or null when `repoPath` is not a git work tree or HEAD is detached. */
-export function detectDefaultBranch(repoPath: string): string | null {
-  const probe = runGit(["rev-parse", "--is-inside-work-tree"], {
+export async function detectDefaultBranch(repoPath: string): Promise<string | null> {
+  const probe = await runGit(["rev-parse", "--is-inside-work-tree"], {
     cwd: repoPath,
     allowFailure: true,
   });
   if (probe.exitCode !== 0 || probe.stdout.trim() !== "true") return null;
-  const branch = currentBranch(repoPath);
+  const branch = await currentBranch(repoPath);
   return branch === "" || branch === "HEAD" ? null : branch;
 }
 
-export function repositoryRemotes(repoPath: string): string[] {
-  const res = runGit(["remote"], { cwd: repoPath, allowFailure: true });
+export async function repositoryRemotes(repoPath: string): Promise<string[]> {
+  const res = await runGit(["remote"], { cwd: repoPath, allowFailure: true });
   if (res.exitCode !== 0) return [];
   return res.stdout
     .split("\n")
@@ -106,14 +114,14 @@ export function repositoryRemotes(repoPath: string): string[] {
  * than {@link probeLocalRepository}: forking a worktree needs a repository root,
  * not the attached HEAD that registration insists on.
  */
-export function isRepositoryRoot(repoPath: string): boolean {
+export async function isRepositoryRoot(repoPath: string): Promise<boolean> {
   const canonical = tryRealpath(repoPath);
   if (canonical === null) return false;
   // `git` cannot even be spawned in a directory that vanished or is unreadable,
   // which is the same answer as "not a repository root", not a daemon failure.
   let toplevel: string;
   try {
-    const result = runGit(["rev-parse", "--show-toplevel"], {
+    const result = await runGit(["rev-parse", "--show-toplevel"], {
       cwd: canonical,
       allowFailure: true,
     });
@@ -126,8 +134,11 @@ export function isRepositoryRoot(repoPath: string): boolean {
 }
 
 /** Commits only this branch holds, so deleting it loses them; `null` when git cannot answer. */
-export function unpushedCommitCount(repoPath: string, branch: string): number | null {
-  const res = runGit(
+export async function unpushedCommitCount(
+  repoPath: string,
+  branch: string,
+): Promise<number | null> {
+  const res = await runGit(
     ["rev-list", "--count", branch, "--not", `--exclude=${branch}`, "--branches", "--remotes"],
     {
       cwd: repoPath,
@@ -163,14 +174,18 @@ function parseCommitLines(stdout: string): CommitSummary[] {
 }
 
 /** Newest first. An unreadable range throws rather than reporting an empty branch. */
-export function commitsSince(repoPath: string, base: string, ref: string): CommitSummary[] {
+export async function commitsSince(
+  repoPath: string,
+  base: string,
+  ref: string,
+): Promise<CommitSummary[]> {
   return parseCommitLines(
-    runGit(["log", COMMIT_FORMAT, `${base}..${ref}`], { cwd: repoPath }).stdout,
+    (await runGit(["log", COMMIT_FORMAT, `${base}..${ref}`], { cwd: repoPath })).stdout,
   );
 }
 
-export function commitSummary(repoPath: string, ref: string): CommitSummary | null {
-  const res = runGit(["log", "-1", COMMIT_FORMAT, `${ref}^{commit}`], {
+export async function commitSummary(repoPath: string, ref: string): Promise<CommitSummary | null> {
+  const res = await runGit(["log", "-1", COMMIT_FORMAT, `${ref}^{commit}`], {
     cwd: repoPath,
     allowFailure: true,
   });
@@ -178,22 +193,23 @@ export function commitSummary(repoPath: string, ref: string): CommitSummary | nu
   return parseCommitLines(res.stdout)[0] ?? null;
 }
 
-export function commitParent(repoPath: string, commit: string): string | null {
+export function commitParent(repoPath: string, commit: string): Promise<string | null> {
   return verifyRef(repoPath, `${commit}^`);
 }
 
 /** A boundary tree is a loose object git may prune, so a pass's delta must check before diffing. */
-export function hasTree(repoPath: string, sha: string): boolean {
-  return (
-    runGit(["cat-file", "-e", `${sha}^{tree}`], { cwd: repoPath, allowFailure: true }).exitCode ===
-    0
-  );
+export async function hasTree(repoPath: string, sha: string): Promise<boolean> {
+  const res = await runGit(["cat-file", "-e", `${sha}^{tree}`], {
+    cwd: repoPath,
+    allowFailure: true,
+  });
+  return res.exitCode === 0;
 }
 
 /** Paths carrying uncommitted work — staged, unstaged or untracked — in the worktree at `repoPath`. */
-export function uncommittedPaths(repoPath: string): string[] {
-  return runGit(["status", "--porcelain"], { cwd: repoPath })
-    .stdout.split("\n")
+export async function uncommittedPaths(repoPath: string): Promise<string[]> {
+  return (await runGit(["--no-optional-locks", "status", "--porcelain"], { cwd: repoPath })).stdout
+    .split("\n")
     .filter((line) => line.trim() !== "")
     .map((line) => line.slice(3));
 }
@@ -204,14 +220,16 @@ export interface TrackedFileMatches {
 }
 
 /** Tracked paths containing `query` (case-insensitive), capped at `limit` with the overflow counted rather than hidden. */
-export function searchTrackedFiles(
+export async function searchTrackedFiles(
   repoPath: string,
   query: string,
   limit: number,
-): TrackedFileMatches {
+): Promise<TrackedFileMatches> {
   const needle = query.trim().toLowerCase();
-  const tracked = runGit(["-c", "core.quotepath=false", "ls-files", "-z"], { cwd: repoPath })
-    .stdout.split("\0")
+  const tracked = (
+    await runGit(["-c", "core.quotepath=false", "ls-files", "-z"], { cwd: repoPath })
+  ).stdout
+    .split("\0")
     .filter((path) => path !== "");
   const matched =
     needle === "" ? tracked : tracked.filter((path) => path.toLowerCase().includes(needle));

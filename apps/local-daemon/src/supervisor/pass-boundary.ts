@@ -29,12 +29,12 @@ interface BoundaryCapture {
 }
 
 // A boundary is evidence, never a precondition: an unreadable repository costs the pass its delta, not its turn.
-function captureBoundary(
+async function captureBoundary(
   state: SupervisorState,
   runId: string,
   stepRunId: string | null,
   agentSessionId: string,
-): BoundaryCapture {
+): Promise<BoundaryCapture> {
   const service = state.repositories.forRun(runId)?.service ?? null;
   if (service === null) {
     const error = "This run has no git repository to capture.";
@@ -42,7 +42,10 @@ function captureBoundary(
     return { capture: null, error };
   }
   try {
-    return { capture: service.captureState(passOwner(state.db, runId, stepRunId)), error: null };
+    return {
+      capture: await service.captureState(passOwner(state.db, runId, stepRunId)),
+      error: null,
+    };
   } catch (error) {
     const message = reason(error);
     recordSessionBoundaryError(state.db, agentSessionId, message);
@@ -51,8 +54,8 @@ function captureBoundary(
 }
 
 /** Taken before the provider is spawned, so Otomat's own setup work sits on the start side, not inside the agent's delta. */
-export function capturePassStart(state: SupervisorState, ctx: TurnContext): void {
-  const { capture } = captureBoundary(state, ctx.runId, ctx.stepRunId, ctx.agentSessionId);
+export async function capturePassStart(state: SupervisorState, ctx: TurnContext): Promise<void> {
+  const { capture } = await captureBoundary(state, ctx.runId, ctx.stepRunId, ctx.agentSessionId);
   if (capture !== null) recordSessionPassStart(state.db, ctx.agentSessionId, capture);
 }
 
@@ -66,10 +69,13 @@ function settledSessionKind(
 }
 
 /** Order is the invariant: review stamps addressed comments from `afterSettle`, and their fix proof reads the boundary written here. */
-export function finishSettle(state: SupervisorState, outcome: ReconcileOutcome | null): void {
+export async function finishSettle(
+  state: SupervisorState,
+  outcome: ReconcileOutcome | null,
+): Promise<void> {
   if (outcome === null) return;
   if (outcome.agentSessionId !== null) {
-    const { capture } = captureBoundary(
+    const { capture } = await captureBoundary(
       state,
       outcome.runId,
       outcome.stepRunId,
@@ -80,7 +86,7 @@ export function finishSettle(state: SupervisorState, outcome: ReconcileOutcome |
   // A supervisor's own turn judges a step; it never addressed a comment, so review must not read it as the step's pass.
   if (state.afterSettle === null || settledSessionKind(state, outcome) === "supervision") return;
   try {
-    state.afterSettle(outcome);
+    await state.afterSettle(outcome);
   } catch (error) {
     console.error(`[otomat] after-settle hook failed for run ${outcome.runId}`, error);
   }

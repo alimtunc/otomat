@@ -6,10 +6,16 @@ import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useFile(target: CheckoutTarget, path: string | null) {
   const keys = useQueryKeys();
+  const checkout = keys.checkoutFiles(target);
   return useQuery({
     queryKey: keys.checkoutFile(target, path),
     queryFn: path === null ? skipToken : () => daemon.getCheckoutFile(target, path),
     retry: retryTransportOnly,
+    // The retained file carries its own path, so the panel keeps showing it under its own name.
+    placeholderData: (previous, previousQuery) =>
+      path !== null && checkout.every((part, index) => previousQuery?.queryKey[index] === part)
+        ? previous
+        : undefined,
   });
 }
 

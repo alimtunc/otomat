@@ -143,7 +143,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
       // Preflighted here: a workspace that cannot publish must refuse before the generator is paid for.
       await resolveWorkspace(this.config, run.id);
       trace.step("workspace");
-      const input = buildGenerationInput(this.config, run);
+      const input = await buildGenerationInput(this.config, run);
       trace.step("input", `${String(input.diffStat.length)} files`);
       const proposal = await generator.generate(agent, input, trace);
       const identifier = issueIdentifier(this.config.db, run.issue_id);
@@ -194,7 +194,7 @@ class PullRequestPublisher implements PullRequestPublicationService {
     try {
       const { repository } = await this.config.cli.resolveRemote(cwd);
       const provider = await this.config.cli.viewPullRequest(cwd, repository, row.number);
-      return this.store.reconcileLifecycle(row, provider.lifecycle);
+      return await this.store.reconcileLifecycle(row, provider.lifecycle);
     } catch (error) {
       console.error(`[otomat] pull request refresh for run ${row.run_id} failed`, error);
       return row;

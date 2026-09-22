@@ -46,11 +46,11 @@ export function ensureDefaultProject(db: Db, rootPath: string): string {
  * The project's own root is the source of truth: a registration may have moved
  * it off the boot root.
  */
-export function ensureDefaultRepository(db: Db, projectId: string): void {
+export async function ensureDefaultRepository(db: Db, projectId: string): Promise<void> {
   const project = getProject(db, projectId);
   if (!project) throw new Error(`project ${projectId} disappeared during boot`);
   const canonical = project.root_path;
-  const defaultBranch = detectDefaultBranch(canonical);
+  const defaultBranch = await detectDefaultBranch(canonical);
 
   const [existing] = listRepositories(db, { projectId });
   if (existing) {
