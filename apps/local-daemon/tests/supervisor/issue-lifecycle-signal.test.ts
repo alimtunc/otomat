@@ -5,21 +5,16 @@ import type { LinearLifecycleSignal } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { createRepositoryResolver } from "#git";
-import { closeMergedRun, type AppendStepInput } from "#supervisor";
+import { closeMergedRun } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { makeSupervisor } from "../support/supervisor.js";
+import { appendStepInput, makeSupervisor } from "../support/supervisor.js";
 
-const FIX_STEP: AppendStepInput = {
+const FIX_STEP = appendStepInput({
   name: "Fix review comments",
   note: "address the review",
-  references: [],
-  selector: { kind: "runtime", runtimeId: "fake" },
-  overrides: {},
-  dependsOn: [],
-  replaces: null,
   origin: "review_fix",
-};
+});
 
 let fix: DaemonTestDb;
 let signals: (LinearLifecycleSignal & { run_status: string | undefined })[];

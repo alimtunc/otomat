@@ -2,12 +2,10 @@ import { getRun, insertPullRequest, listAgentSessionsForRun, schema } from "@oto
 import { executableSteps, sessionContextSchema } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import type { AppendStepInput } from "#supervisor";
-
 import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { firstStepOf } from "../support/seed.js";
-import { makeSupervisor } from "../support/supervisor.js";
+import { appendStepInput, makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
 
@@ -23,16 +21,7 @@ afterEach(() => {
   fix.cleanup();
 });
 
-const APPENDED: AppendStepInput = {
-  name: "Address the review",
-  note: "rename beta",
-  references: [],
-  selector: { kind: "runtime", runtimeId: "fake" },
-  overrides: {},
-  dependsOn: [],
-  replaces: null,
-  origin: "user",
-};
+const APPENDED = appendStepInput({ name: "Address the review", note: "rename beta" });
 
 const LATE_PULL_REQUEST = {
   id: "pr-late",

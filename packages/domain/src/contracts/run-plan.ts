@@ -20,6 +20,8 @@ export const runPlanStepSchema = z.object({
   depends_on: z.array(z.string()),
   /** Halted step this one was appended to recover; its outcome then reads through to this step. Null on every node frozen at launch. */
   replaces: z.string().nullish(),
+  /** Appended to start alongside the workspace's live turn instead of waiting for it; absent on every node frozen at launch. */
+  parallel: z.boolean().optional(),
 });
 export type RunPlanStep = z.infer<typeof runPlanStepSchema>;
 

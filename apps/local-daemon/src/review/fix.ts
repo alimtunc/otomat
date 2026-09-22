@@ -109,6 +109,7 @@ export async function requestFix(
     selector: request.selector,
     overrides: request.overrides,
     dependsOn: preparation.dependsOn,
+    parallel: false,
     replaces: null,
     origin: "review_fix",
   });

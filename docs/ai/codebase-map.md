@@ -919,6 +919,20 @@ refused (`workspace_busy`) while a turn is in flight, so the fix step is always
 the workspace's next settlement and settle can credit it with the stamped
 comments.
 
+A run is single-flight in its worktree: the post-turn chain starts one ready node
+at a time and an appended step queues behind the live turn, whatever its
+`depends_on` says — a launch plan whose independent nodes carry no dependency
+still runs them in order, so an empty list has never meant "concurrently". The
+operator's explicit choice is a separate node flag, `parallel: true`, frozen at
+append and refused alongside a dependency: `appendRunStep` spawns that step at
+once, live turn or not, and nothing else ever puts a second writer in the
+workspace. Settle then reads siblings before the plan (`resolveRunTarget`): while
+another step's turn is still live the settling turn lands only its own step and
+session and the run stays `running`; when the last one settles, the plan is
+judged as a whole with `resolveIdleRun`. Boot settles every open session in turn
+under that rule, and **Resume** reopens the interrupted steps one at a time, each
+on its own session.
+
 A queued step the operator no longer wants is **withdrawn** (`supervisor/cancel-step.ts`,
 `POST /api/runs/:id/steps/:stepId/cancel`), a step state distinct from `canceled`
 because the two differ in resumability: `canceled` is what a stop leaves on every

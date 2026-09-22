@@ -59,3 +59,14 @@ const stepSettledSet: ReadonlySet<string> = new Set(STEP_RUN_SETTLED_STATES);
 export function isStepSettled(status: string): status is StepRunSettledState {
   return stepSettledSet.has(status);
 }
+
+/** States whose turn is live in the workspace; blocked on a permission answer included, since the process still holds it. */
+const stepBusySet: ReadonlySet<StepRunState> = new Set([
+  "starting",
+  "running",
+  "awaiting_permission",
+]);
+
+export function isStepBusy(status: StepRunState): boolean {
+  return stepBusySet.has(status);
+}

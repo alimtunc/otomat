@@ -2,13 +2,13 @@ import { getRun, listAgentSessionsForRun, listStepRunsForRun, schema } from "@ot
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
-import { StepCancelRefusedError, type AppendStepInput } from "#supervisor";
+import { StepCancelRefusedError } from "#supervisor";
 
 import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { waitFor } from "../support/poll.js";
 import { seedWorkflowRun } from "../support/seed.js";
-import { makeSupervisor } from "../support/supervisor.js";
+import { appendStepInput, makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
 
@@ -24,16 +24,7 @@ afterEach(() => {
   fix.cleanup();
 });
 
-const FOLLOW_UP: AppendStepInput = {
-  name: "Follow up",
-  note: "one more thing",
-  references: [],
-  selector: { kind: "runtime", runtimeId: "fake" },
-  overrides: {},
-  dependsOn: [],
-  replaces: null,
-  origin: "user",
-};
+const FOLLOW_UP = appendStepInput({ note: "one more thing" });
 
 const THREE_STEPS = {
   version: 1 as const,

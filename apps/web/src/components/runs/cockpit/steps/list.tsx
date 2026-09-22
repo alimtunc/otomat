@@ -53,6 +53,7 @@ export function StepsList({
             />
             <DependencyNote
               names={dependencies}
+              parallel={node.parallel === true}
               className="mb-2 ml-9 truncate text-xs text-text-tertiary"
             />
             {step.status === "queued" ? (

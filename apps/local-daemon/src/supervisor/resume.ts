@@ -5,8 +5,6 @@ import {
   getRun,
   getStepRun,
   insertAgentSession,
-  listAgentSessionsForRun,
-  listCompeteGroupsForRun,
   listStepRunsForRun,
   type AgentSessionRow,
   type Db,
@@ -19,7 +17,6 @@ import {
   IllegalTransitionError,
   isIssueClosed,
   isRunSettled,
-  selectLatestResumableSession,
   type ResolvedAgentConfig,
 } from "@otomat/domain";
 
@@ -214,19 +211,14 @@ export function requireResumeConfigSupport(
   if (capability.status !== "supported") throw new RunNotResumableError(capability.reason);
 }
 
-/** Spawns a resume turn on the run's latest resumable session; the run row is re-read once the worker is live. */
+/** The session is the interrupted step's own, never a sibling's; the run row is re-read once the worker is live. */
 export async function spawnResumeTurn(
   state: SupervisorState,
   run: RunRow,
+  session: AgentSessionRow,
   prompt: string,
 ): Promise<RunRow> {
   const { db } = state;
-  const session = selectLatestResumableSession(
-    listAgentSessionsForRun(db, run.id),
-    listStepRunsForRun(db, run.id),
-    listCompeteGroupsForRun(db, run.id),
-  );
-  if (!session) throw new RunNotResumableError(`run ${run.id} has no provider session to resume`);
   // A revision back to the session's own configuration is nothing to consume; `spawnTurn` clears it.
   const revised = getStepRun(db, session.step_run_id)?.next_turn_config_json ?? null;
   const pending =

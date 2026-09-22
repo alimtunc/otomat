@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { isRunPlanCompeteGroup } from "@otomat/domain";
 import { StepsList } from "@web/components/runs/cockpit/steps/list";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -46,5 +47,25 @@ it("reads a withdrawn step as canceled, explains its blocked dependent, and offe
   expect(cancels).toHaveLength(1);
   cancels[0]?.click();
   expect(cancelStep).toHaveBeenCalledWith("polish");
+  await view.cleanup();
+});
+
+it("reads a parallel step as sharing the workspace instead of waiting on a node", async () => {
+  const detail = chainRunDetail({ implement: "running", review: "running" });
+  const review = detail.run.plan_json.steps[1];
+  if (!review || isRunPlanCompeteGroup(review)) throw new Error("chain seeded no review step");
+  review.depends_on = [];
+  review.parallel = true;
+  const view = await mount(
+    <StepsList
+      detail={detail}
+      selectedStepId={null}
+      onSelectStep={() => {}}
+      hasNewActivity={() => false}
+    />,
+  );
+
+  expect(view.container.textContent).toContain("in parallel — shares the workspace");
+  expect(view.container.textContent).toContain("after Step review");
   await view.cleanup();
 });

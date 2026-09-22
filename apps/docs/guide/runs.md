@@ -69,5 +69,11 @@ working_, _answer the request_, _review the diff_, _publish the pull request_.
 While an issue's work is unmerged, it owns one run, one branch and one worktree. **Launch run** on such
 an issue becomes **Add follow-up step**: the new step joins the same run and works in the same
 worktree, with the run's history as context. A second worktree is never forked for the same issue.
+The form asks when the step starts. **After a step** (the default, on the last planned step)
+queues it until that step has succeeded — a step that already succeeded makes it eligible at
+once, and it still waits for the workspace to be free. **Run in parallel** starts it right away,
+even while another session of the run is live: two agents then edit the same branch and worktree
+with nothing keeping their changes apart, so the form asks you to confirm before adding it. The
+step list shows the choice — _after Implement_ or _in parallel_.
 The cycle closes when its pull request is merged, when you **Abandon workspace…**, or when the issue
 is closed at the tracker; the next launch then starts fresh.

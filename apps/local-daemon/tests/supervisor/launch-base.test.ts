@@ -8,11 +8,10 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { createRepositoryResolver } from "#git";
 import { runGit } from "#git/git-cli";
 import { findActiveByOwner } from "#git/worktrees-store";
-import type { AppendStepInput } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { branches } from "../support/git.js";
-import { makeSupervisor } from "../support/supervisor.js";
+import { appendStepInput, makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
 
@@ -24,16 +23,11 @@ afterEach(() => {
   fix.cleanup();
 });
 
-const FOLLOW_UP: AppendStepInput = {
+const FOLLOW_UP = appendStepInput({
   name: "Address the review",
   note: "fix the comments",
-  references: [],
-  selector: { kind: "runtime", runtimeId: "fake" },
-  overrides: {},
-  dependsOn: [],
-  replaces: null,
   origin: "review_fix",
-};
+});
 
 /** Publishes a commit and rewinds the local branch, leaving `main` behind its remote. */
 function advanceRemote(name: string): string {
