@@ -17,6 +17,7 @@ import { findButton, findLabelled } from "#support/dom-queries";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
 import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
+import { chainRunDetail } from "#support/run";
 import { modelCatalogQueryResult } from "#support/runtime-models";
 import { providerOptionSetQueryResult } from "#support/runtime-options";
 
@@ -81,6 +82,14 @@ vi.mock("@web/api/runs/mutations", () => ({
 
 vi.mock("@web/api/runs/use-launch-run", () => ({
   useLaunchRun: () => ({ launch, isPending: false, baseRefusal: null }),
+}));
+
+vi.mock("@web/api/runs/queries", () => ({
+  useRunDetail: () => ({
+    data: chainRunDetail({ implement: "succeeded", review: "running" }),
+    isPending: false,
+    isError: false,
+  }),
 }));
 
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
@@ -403,8 +412,9 @@ it("refuses to append until the step is named, and never for a missing instructi
   expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(false);
 });
 
-it("appends the step on the resolved runtime and follows the run it joined", async () => {
+it("appends the step after the last planned one by default and follows the run it joined", async () => {
   await openDialog(CONTINUING);
+  expect(document.body.textContent).toContain("Queued until Step polish succeeds.");
   await act(async () => {
     setInputValue(input("Step name"), "  Address the failing test  ");
     setTextareaValue(textarea("Appended step instructions"), "  fix the parser  ");
@@ -418,12 +428,33 @@ it("appends the step on the resolved runtime and follows the run it joined", asy
       note: "fix the parser",
       runtime: "claude",
       model: { kind: "model", id: "opus" },
-      depends_on: [],
+      depends_on: ["polish"],
+      parallel: false,
     },
     expect.anything(),
   );
   expect(onLaunched).toHaveBeenCalledWith(APPENDED_RUN, "appended-step");
   expect(launch).not.toHaveBeenCalled();
+});
+
+it("runs the step in parallel only once the shared workspace is confirmed", async () => {
+  await openDialog(CONTINUING);
+  await act(async () => setInputValue(input("Step name"), "Write the docs"));
+  await click("pick opus for launch");
+  await click("Run in parallel");
+
+  expect(document.body.textContent).toContain(
+    "Two agents may edit the same workspace at the same time.",
+  );
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(true);
+  await clickLabelled("I understand two agents may edit this workspace at the same time");
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(false);
+  await click("Add follow-up step⌘↵");
+
+  expect(appendStep).toHaveBeenCalledWith(
+    expect.objectContaining({ depends_on: [], parallel: true }),
+    expect.anything(),
+  );
 });
 
 it("appends the step on a saved profile when the user picks one instead", async () => {

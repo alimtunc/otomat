@@ -23,7 +23,7 @@ const ACTIVE_STEP_STATES: ReadonlySet<StepRunState> = new Set([
   "waiting_for_provider",
 ]);
 
-function isStepHalted(status: StepRunState): boolean {
+export function isStepHalted(status: StepRunState): boolean {
   return HALTED_STEP_STATES.has(status);
 }
 
@@ -124,7 +124,7 @@ function nodeSucceeded(
     : statusOf(effective, node.id) === "succeeded";
 }
 
-function dependencySucceeded(
+export function dependencySucceeded(
   plan: RunPlan,
   dependencyId: string,
   effective: PlanStepStatuses,

@@ -3,16 +3,11 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
-import {
-  ReviewFixBusyError,
-  RunWorkspaceClosedError,
-  type AppendStepInput,
-  type ReconcileOutcome,
-} from "#supervisor";
+import { ReviewFixBusyError, RunWorkspaceClosedError, type ReconcileOutcome } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { waitFor } from "../support/poll.js";
-import { makeSupervisor } from "../support/supervisor.js";
+import { appendStepInput, makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
 
@@ -28,16 +23,11 @@ afterEach(() => {
   fix.cleanup();
 });
 
-const FIX_STEP: AppendStepInput = {
+const FIX_STEP = appendStepInput({
   name: "Fix review comments",
   note: "address the review",
-  references: [],
-  selector: { kind: "runtime", runtimeId: "fake" },
-  overrides: {},
-  dependsOn: [],
-  replaces: null,
   origin: "review_fix",
-};
+});
 
 it("runs an appended step in the run's own worktree, with no second worktree", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "complete");

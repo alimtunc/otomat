@@ -3,7 +3,12 @@ import { join } from "node:path";
 import { writeMaxConcurrentSessions } from "@otomat/db";
 
 import { createRepositoryResolver } from "#git";
-import { createSupervisor, type Supervisor, type SupervisorConfig } from "#supervisor";
+import {
+  createSupervisor,
+  type AppendStepInput,
+  type Supervisor,
+  type SupervisorConfig,
+} from "#supervisor";
 
 import type { DaemonTestDb } from "./daemon-db.js";
 import { workerSpawn, type WorkerBehavior } from "./spawn.js";
@@ -39,4 +44,19 @@ export function makeSupervisor(
     ...overrides,
   });
   return { supervisor, spawn };
+}
+
+export function appendStepInput(overrides: Partial<AppendStepInput> = {}): AppendStepInput {
+  return {
+    name: "Follow up",
+    note: null,
+    references: [],
+    selector: { kind: "runtime", runtimeId: "fake" },
+    overrides: {},
+    dependsOn: [],
+    parallel: false,
+    replaces: null,
+    origin: "user",
+    ...overrides,
+  };
 }

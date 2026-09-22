@@ -13,7 +13,7 @@ import { ProfileOptionUnsupportedError } from "#agents";
 import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { firstStepOf } from "../support/seed.js";
-import { makeSupervisor } from "../support/supervisor.js";
+import { appendStepInput, makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
 
@@ -69,16 +69,13 @@ it("gives an appended step the same frozen default as the launch", async () => {
     model: { kind: "model", id: "fake-thorough" },
   });
 
-  await supervisor.appendStep(run.id, {
-    name: "Follow up",
-    note: "keep going",
-    references: [],
-    selector: { kind: "runtime", runtimeId: "fake" },
-    overrides: { model: { kind: "model", id: "fake-thorough" } },
-    dependsOn: [],
-    replaces: null,
-    origin: "user",
-  });
+  await supervisor.appendStep(
+    run.id,
+    appendStepInput({
+      note: "keep going",
+      overrides: { model: { kind: "model", id: "fake-thorough" } },
+    }),
+  );
   await supervisor.settle();
 
   expect(frozenSteps(run.id).map((step) => step.config?.options)).toEqual([

@@ -4,9 +4,19 @@ import type {
   IssueContract,
   IssueWorkspace,
 } from "@otomat/domain";
-import { Button, DialogBody, Field, FieldControl, FieldLabel, Input, Kbd } from "@otomat/ui";
+import {
+  Button,
+  DialogBody,
+  EmptyState,
+  Field,
+  FieldControl,
+  FieldLabel,
+  Input,
+  Kbd,
+} from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
 import { useAppendRunStep } from "@web/api/runs/mutations";
+import { useRunDetail } from "@web/api/runs/queries";
 import { ContextComposer } from "@web/components/context/context-composer";
 import { ContextSourcesPanel } from "@web/components/context/context-sources-panel";
 import { useContextSources } from "@web/components/context/use-context-sources";
@@ -14,11 +24,19 @@ import { LaunchExecutionPicker } from "@web/components/execution/launch-executio
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
 import { RecoveryLinkField } from "@web/components/runs/steps/recovery-link-field";
+import { StepScheduleField } from "@web/components/runs/steps/step-schedule-field";
 import { WorkspaceReuseNote } from "@web/components/runs/steps/workspace-reuse-note";
+import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { contextRequestFields, EMPTY_CONTEXT_DRAFT } from "@web/lib/context/draft";
 import { agentSelectionFields } from "@web/lib/execution/request";
 import type { ExecutionSelection } from "@web/lib/execution/selection";
 import { fieldErrorProps, hasText, requiredTrimmed, submitOnCmdEnter } from "@web/lib/form";
+import {
+  DEFAULT_STEP_SCHEDULE,
+  scheduleCandidates,
+  scheduleReady,
+  scheduleRequestFields,
+} from "@web/lib/run/step-schedule";
 import { useState } from "react";
 
 export interface AppendStepFormProps {
@@ -42,6 +60,7 @@ export function AppendStepForm({
   const [recovers, setRecovers] = useState(true);
   const launchExecution = useLaunchExecution(execution);
   const append = useAppendRunStep(workspace.run_id);
+  const detail = useRunDetail(workspace.run_id);
   const recovered = issue.execution.state === "failed" ? issue.execution.failure.step : null;
   const sources = useContextSources({
     draft: context,
@@ -50,15 +69,15 @@ export function AppendStepForm({
     profiles: launchExecution.agents.profiles,
   });
   const form = useForm({
-    defaultValues: { name: "" },
+    defaultValues: { name: "", schedule: DEFAULT_STEP_SCHEDULE },
     onSubmit: ({ value }) => {
       const agent = agentSelectionFields(launchExecution.request);
-      if (!launchExecution.canLaunch || agent === null) return;
+      if (!launchExecution.canLaunch || agent === null || detail.data === undefined) return;
       const request: AppendRunStepRequest = {
         name: value.name.trim(),
         ...contextRequestFields(context),
         ...agent,
-        depends_on: [],
+        ...scheduleRequestFields(value.schedule, scheduleCandidates(detail.data)),
       };
       if (recovered !== null && recovers) request.replaces = recovered.id;
       append.mutate(request, {
@@ -101,6 +120,36 @@ export function AppendStepForm({
             </Field>
           )}
         </form.Field>
+        <form.Field name="schedule">
+          {(field) => (
+            <QueryBoundary
+              query={detail}
+              pending={<p className="text-xs text-text-tertiary">Loading the plan…</p>}
+              error={
+                <EmptyState
+                  variant="compact"
+                  tone="error"
+                  icon="alert-triangle"
+                  title="Couldn’t load the plan"
+                  description="The step can’t be scheduled until the daemon answers."
+                  action={
+                    <Button variant="outline" size="xs" onClick={() => void detail.refetch()}>
+                      Retry
+                    </Button>
+                  }
+                />
+              }
+            >
+              {(data) => (
+                <StepScheduleField
+                  candidates={scheduleCandidates(data)}
+                  value={field.state.value}
+                  onChange={field.handleChange}
+                />
+              )}
+            </QueryBoundary>
+          )}
+        </form.Field>
         <ContextComposer
           issue={issue}
           projectId={issue.project_id}
@@ -119,14 +168,20 @@ export function AppendStepForm({
       <IssueFormFooter
         onCancel={onCancel}
         submit={
-          <form.Subscribe selector={(state) => hasText(state.values.name)}>
-            {(filled) => (
+          <form.Subscribe
+            selector={(state) =>
+              hasText(state.values.name) &&
+              detail.data !== undefined &&
+              scheduleReady(state.values.schedule)
+            }
+          >
+            {(ready) => (
               <Button
                 type="submit"
                 variant="primary"
                 size="sm"
                 loading={append.isPending}
-                disabled={!(filled && launchExecution.canLaunch && !append.isPending)}
+                disabled={!(ready && launchExecution.canLaunch && !append.isPending)}
               >
                 Add follow-up step
                 <Kbd tone="on-accent">⌘↵</Kbd>

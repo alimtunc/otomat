@@ -180,6 +180,7 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
           selector: appendStepSelector(request),
           overrides: { model: request.model, options: request.options },
           dependsOn: request.depends_on,
+          parallel: request.parallel,
           replaces: request.replaces ?? null,
           origin: "user",
         });

@@ -4,6 +4,7 @@ import { getRepository, listStepRunsForRun, schema, type Db } from "@otomat/db";
 import type {
   AgentSessionState,
   ResolvedAgentConfig,
+  RunPlanStep,
   RunState,
   StepProviderWait,
   StepRunState,
@@ -39,6 +40,7 @@ export interface SeedWorkflowStep {
   dependsOn?: string[];
   /** Halted step this one was appended to recover. */
   replaces?: string;
+  parallel?: boolean;
   name?: string;
   prompt?: string;
   providerWait?: StepProviderWait | null;
@@ -125,15 +127,19 @@ export function seedWorkflowRun(
       branch: `otomat/run/${options.runId}`,
       plan_json: {
         version: 1,
-        steps: options.steps.map((step) => ({
-          id: step.id,
-          name: step.name ?? `Step ${step.id}`,
-          agent: step.agent ?? "fake",
-          prompt: step.prompt ?? `p-${step.id}`,
-          depends_on: step.dependsOn ?? [],
-          replaces: step.replaces ?? null,
-          config: seedConfig(step.id, step.agent ?? "fake"),
-        })),
+        steps: options.steps.map((step) => {
+          const node: RunPlanStep = {
+            id: step.id,
+            name: step.name ?? `Step ${step.id}`,
+            agent: step.agent ?? "fake",
+            prompt: step.prompt ?? `p-${step.id}`,
+            depends_on: step.dependsOn ?? [],
+            replaces: step.replaces ?? null,
+            config: seedConfig(step.id, step.agent ?? "fake"),
+          };
+          if (step.parallel) node.parallel = true;
+          return node;
+        }),
       },
     })
     .run();

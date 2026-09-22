@@ -2,12 +2,12 @@ import { getRun, listStepRunsForRun, schema } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readRunEvents } from "#events";
-import type { AppendStepInput, Supervisor } from "#supervisor";
+import type { Supervisor } from "#supervisor";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { runLandings } from "../support/ledger.js";
 import { seedWorkflowRun } from "../support/seed.js";
-import { makeSupervisor } from "../support/supervisor.js";
+import { appendStepInput, makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
 
@@ -23,16 +23,7 @@ afterEach(() => {
   fix.cleanup();
 });
 
-const RECOVERY_STEP: AppendStepInput = {
-  name: "Review again",
-  note: null,
-  references: [],
-  selector: { kind: "runtime", runtimeId: "fake" },
-  overrides: {},
-  dependsOn: [],
-  replaces: null,
-  origin: "user",
-};
+const RECOVERY_STEP = appendStepInput({ name: "Review again" });
 
 function stepStatus(runId: string, stepId: string): string | undefined {
   return listStepRunsForRun(fix.db, runId).find((step) => step.id === stepId)?.status;

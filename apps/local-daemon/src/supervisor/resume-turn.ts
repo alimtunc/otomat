@@ -36,7 +36,7 @@ export async function spawnReopenTurn(
   action: ReopenAction,
 ): Promise<RunRow> {
   if (action.kind === "native" && !agentSessionMachine.isTerminal(action.session.status)) {
-    return spawnResumeTurn(state, run, NATIVE_CONTINUATION);
+    return spawnResumeTurn(state, run, action.session, NATIVE_CONTINUATION);
   }
 
   if (action.kind === "native") {

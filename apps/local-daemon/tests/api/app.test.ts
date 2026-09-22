@@ -504,6 +504,7 @@ it("appends a step with the agent the caller chose, never an inherited one", asy
     selector: { kind: "profile", profileId: "p-reviewer" },
     overrides: {},
     dependsOn: [],
+    parallel: false,
     replaces: null,
     origin: "user",
   });
@@ -537,6 +538,7 @@ it("appends a step on a runtime the caller named directly", async () => {
     selector: { kind: "runtime", runtimeId: "codex" },
     overrides: { model: { kind: "model", id: "gpt-5" } },
     dependsOn: [],
+    parallel: false,
     replaces: null,
     origin: "user",
   });

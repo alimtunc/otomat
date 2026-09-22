@@ -55,10 +55,7 @@ export function scheduleTurn(
     spawnTurn(state, ctx, mode, providerSessionId).then(
       () => undefined,
       (error: unknown) => {
-        console.error(
-          `[otomat] run ${ctx.runId} competitor ${ctx.stepRunId} failed to start`,
-          error,
-        );
+        console.error(`[otomat] run ${ctx.runId} step ${ctx.stepRunId} failed to start`, error);
       },
     ),
   );

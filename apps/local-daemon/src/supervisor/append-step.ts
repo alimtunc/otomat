@@ -28,6 +28,7 @@ import { reopenIssue, reopenSettledRun, requireRunRow, requireWorktreePath } fro
 import { preflightRuntimeConfig } from "./runtime-preflight.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
+import { insertTurn, scheduleTurn } from "./turn-scheduling.js";
 import type { AppendStepInput } from "./types.js";
 import { requireOpenWorkspace } from "./workspace.js";
 
@@ -59,18 +60,7 @@ export class ReviewFixBusyError extends Error {
   }
 }
 
-/**
- * Appends a step to a launched run and starts it when the workspace is free.
- *
- * Every refusal happens before any write: the run must still hold its issue's
- * workspace (only a merge or an abandon closes it), the issue must accept
- * running again — a merged issue is `done`, and the issue machine is what says
- * no — and the agent config must resolve. The step then runs in the run's own
- * worktree, against the same history, with its own step/session rows and
- * conversation. A stopped cycle is reopened for it; while a turn is in flight
- * the step stays `queued` and the post-turn chain starts it, so nothing ever
- * runs twice in one worktree.
- */
+/** Every refusal happens before any write. */
 export async function appendRunStep(
   state: SupervisorState,
   runId: string,
@@ -89,7 +79,8 @@ export async function appendRunStep(
     runtimeSource: "step",
   });
   const runtime = ensureRuntimeAgent(db, config.runtime);
-  preflightRuntimeConfig(runtime, config, requireWorktreePath(state, run));
+  const worktreePath = requireWorktreePath(state, run);
+  preflightRuntimeConfig(runtime, config, worktreePath);
 
   const step: RunPlanStep = {
     id: randomUUID(),
@@ -101,6 +92,7 @@ export async function appendRunStep(
     replaces: input.replaces,
     config,
   };
+  if (input.parallel) step.parallel = true;
   const plan = appendPlanStep(run.plan_json, step);
   const idx = nextStepIndex(state, runId);
 
@@ -127,7 +119,10 @@ export async function appendRunStep(
   );
   if (issue) signalIssueLifecycle(state.syncIssueLifecycle, issue.id, "in_progress", runId);
 
-  if (!hasRunActivity(state, runId)) {
+  if (input.parallel) {
+    const reopened = reopenSettledRun(state, requireRunRow(db, runId, "append"));
+    scheduleTurn(state, insertTurn(state, reopened, step, worktreePath));
+  } else if (!hasRunActivity(state, runId)) {
     scheduleNextStep(state, reopenSettledRun(state, requireRunRow(db, runId, "append")));
   }
   return requireRunRow(db, runId, "append");

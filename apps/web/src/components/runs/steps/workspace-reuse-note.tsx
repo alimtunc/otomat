@@ -15,7 +15,7 @@ export function WorkspaceReuseNote({ workspace }: WorkspaceReuseNoteProps) {
       </p>
       <p className="text-xs text-text-tertiary">
         {workspace.busy
-          ? "A turn is running there right now — this step is queued behind it and starts when the workspace is free."
+          ? "A turn is running there right now — this step waits for it unless you run it in parallel."
           : "The step runs in that same worktree, on the same history. No second worktree is created."}
       </p>
     </div>

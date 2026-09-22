@@ -1,7 +1,6 @@
 import type { AgentSessionRow, StepRunRow } from "@otomat/db";
 import {
-  allStepsSucceeded,
-  haltedPlanOutcome,
+  isStepBusy,
   isStepSettled,
   readyPlanWork,
   type RunPlan,
@@ -24,6 +23,7 @@ import {
   type SettleEvidence,
   type SettleOptions,
 } from "./context.js";
+import { resolveIdleRun } from "./idle.js";
 import { recordReconciled, recordRunLanding } from "./ledger.js";
 
 interface RunResolution {
@@ -49,14 +49,6 @@ function recordTurnOutcome(
   });
 }
 
-/** Candidate states that still owe the competition an outcome; `queued` counts because it has not started yet. */
-const UNSETTLED_CANDIDATE_STATES: ReadonlySet<StepRunState> = new Set([
-  "queued",
-  "starting",
-  "running",
-  "awaiting_permission",
-]);
-
 interface CompeteTargets {
   group: "running" | "awaiting_selection" | "awaiting_human" | "failed";
   run: RunState;
@@ -76,7 +68,7 @@ function competeTargets(
   return { group: "failed", run: "failed" };
 }
 
-/** A completed ordinary step chains live but rests at `awaiting_human` on boot; failure/cancel are fail-fast. */
+/** A completed ordinary step chains live but rests at `awaiting_human` on boot; failure/cancel are fail-fast once no sibling is live. */
 function resolveRunTarget(
   ctx: SettleContext,
   classification: ReconcileClassification,
@@ -84,15 +76,17 @@ function resolveRunTarget(
   projected: Map<string, StepRunState>,
   mode: SettleOptions["mode"],
 ): RunResolution {
+  // A parallel sibling still holds the workspace: only this turn's own step lands, and the plan is judged when the last one settles.
+  if ([...projected.values()].some(isStepBusy)) return { run: "running", cancelRemaining: false };
   if (classification === "completed") {
-    if (allStepsSucceeded(plan, projected, competeGroupStatuses(ctx.groups))) {
-      return { run: "review_ready", cancelRemaining: false };
-    }
-    if (readyPlanWork(plan, projected, competeGroupStatuses(ctx.groups)) !== null) {
-      return { run: mode === "live" ? "running" : "awaiting_human", cancelRemaining: false };
-    }
-    // The turn itself succeeded, so the run rests on what the plan's other steps still owe it — the same reading `settleIdleRun` makes on boot.
-    return { run: haltedPlanOutcome(plan, projected) ?? "failed", cancelRemaining: true };
+    const groups = competeGroupStatuses(ctx.groups);
+    const idle = resolveIdleRun(plan, projected, groups);
+    const startable =
+      idle.classification === "interrupted" && readyPlanWork(plan, projected, groups) !== null;
+    return {
+      run: mode === "live" && startable ? "running" : idle.target,
+      cancelRemaining: idle.cancelRemaining,
+    };
   }
   if (classification === "awaiting_supervision") {
     return { run: mode === "live" ? "running" : "awaiting_human", cancelRemaining: false };
@@ -134,7 +128,7 @@ function settleCompeteTurn(
   const candidateStates = ctx.steps
     .filter((step) => step.compete_group_id === group.id)
     .map((step) => projected.get(step.id) ?? step.status);
-  const hasActive = candidateStates.some((status) => UNSETTLED_CANDIDATE_STATES.has(status));
+  const hasActive = candidateStates.some((status) => status === "queued" || isStepBusy(status));
   const hasSucceeded = candidateStates.includes("succeeded");
   const hasResumable = candidateStates.includes("awaiting_human");
   const hasWaiting = candidateStates.includes("waiting_for_provider");
