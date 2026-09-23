@@ -109,7 +109,7 @@ it("refuses a launch whose context outgrows what one step can carry, before writ
 
   await expect(supervisor.start({ issue_id: "OTO-1", context })).rejects.toMatchObject({
     code: "context_too_large",
-    message: expect.stringContaining("over the 512 KB one step can carry"),
+    message: expect.stringContaining("one step can carry; attach fewer or smaller files."),
   });
   expect(fix.db.select().from(schema.runs).all()).toHaveLength(0);
   expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(0);
