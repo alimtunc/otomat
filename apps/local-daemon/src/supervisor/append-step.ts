@@ -21,6 +21,7 @@ import { emitLedgerEvent } from "#events";
 import { diffSnapshotOrNull } from "#git";
 
 import { scheduleNextStep } from "./advance.js";
+import { withContextBudget } from "./context-budget.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { requireLaunchable } from "./launch-hold.js";
 import { buildPlanRevisedEvent } from "./plan-revision.js";
@@ -44,12 +45,14 @@ function freezeAppendedContext(
   input: AppendStepInput,
 ): ContextSelection {
   const binding = state.repositories.forRepository(run.repository_id);
-  return createContextFreezer({
-    db: state.db,
-    issue: getIssue(state.db, run.issue_id) ?? null,
-    snapshot: binding === null ? null : diffSnapshotOrNull(binding.service, run.id),
-    capturedAt: new Date().toISOString(),
-  })(input.references, input.note, input.reviewComments);
+  return withContextBudget(
+    createContextFreezer({
+      db: state.db,
+      issue: getIssue(state.db, run.issue_id) ?? null,
+      snapshot: binding === null ? null : diffSnapshotOrNull(binding.service, run.id),
+      capturedAt: new Date().toISOString(),
+    }),
+  )(input.references, input.note, input.reviewComments);
 }
 
 /** Settle credits any completed turn with the stamped comments, so the fix must be the next settlement. */

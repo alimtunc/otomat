@@ -95,6 +95,8 @@ export interface ProcessExit {
 export interface SessionProcess {
   pid: number;
   pgid: number;
+  /** Rejects with `WorkerSpawnError` when the OS refused the process: Node throws some refusals from `spawn` and emits the rest. */
+  spawned: Promise<void>;
   exited: Promise<ProcessExit>;
   /** Releases the worker after the parent has durably recorded its process identity. */
   start(): void;

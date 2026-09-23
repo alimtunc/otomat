@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it } from "vitest";
 import { readRunEvents } from "#events";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { logTexts } from "../support/ledger.js";
 import { waitFor } from "../support/poll.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
@@ -17,15 +18,6 @@ afterEach(() => {
   fix.cleanup();
 });
 
-function logTexts(runId: string): string[] {
-  return readRunEvents(fix.db, runId)
-    .filter((event) => event.type === "runtime.log")
-    .map((event) => {
-      const text = event.payload["text"];
-      return typeof text === "string" ? text : "";
-    });
-}
-
 it("runs init commands in the worktree, streams their output, then starts the first step", async () => {
   updateRepositoryInitCommands(fix.db, "repo-1", ["echo hello-from-init", "pwd"]);
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
@@ -36,7 +28,7 @@ it("runs init commands in the worktree, streams their output, then starts the fi
   expect(await waitFor(() => getRun(fix.db, run.id)?.status === "review_ready")).toBe(true);
   expect(spawn.calls).toBe(1);
 
-  const texts = logTexts(run.id);
+  const texts = logTexts(fix.db, run.id);
   expect(texts).toContain("[otomat] worktree init: $ echo hello-from-init");
   expect(texts).toContain("hello-from-init");
   const pwdLine = texts.find((text) => text.includes("/worktrees/"));
@@ -52,7 +44,7 @@ it("fails the run honestly when an init command exits non-zero, never spawning t
   expect(await waitFor(() => getRun(fix.db, run.id)?.status === "failed")).toBe(true);
   expect(spawn.calls).toBe(0);
 
-  const texts = logTexts(run.id);
+  const texts = logTexts(fix.db, run.id);
   expect(texts).toContain("before-failure");
   expect(texts.some((text) => text.includes("`exit 3` failed (exit 3)"))).toBe(true);
   const events = readRunEvents(fix.db, run.id);
@@ -79,7 +71,7 @@ it("re-runs init on resume when the daemon died before any agent started", async
   expect(await waitFor(() => getRun(fix.db, run.id)?.status === "review_ready")).toBe(true);
   expect(second.spawn.calls).toBe(1);
 
-  const texts = logTexts(run.id);
+  const texts = logTexts(fix.db, run.id);
   expect(texts.filter((text) => text.includes("worktree init: $ sleep 0.5"))).toHaveLength(2);
   expect(texts).toContain("second-command");
 });
@@ -89,9 +81,9 @@ it("abort interrupts a running init command instead of waiting it out", async ()
   const { supervisor, spawn } = makeSupervisor(fix, "complete");
 
   const run = await supervisor.start({ prompt: "hung init" });
-  expect(await waitFor(() => logTexts(run.id).some((text) => text.includes("$ sleep 30")))).toBe(
-    true,
-  );
+  expect(
+    await waitFor(() => logTexts(fix.db, run.id).some((text) => text.includes("$ sleep 30"))),
+  ).toBe(true);
 
   await supervisor.abort(run.id);
   await supervisor.settle();
@@ -106,5 +98,5 @@ it("launches immediately when the repository has no init commands", async () => 
   const run = await supervisor.start({ prompt: "no init" });
   expect(run.status).toBe("queued");
   expect(await waitFor(() => getRun(fix.db, run.id)?.status === "review_ready")).toBe(true);
-  expect(logTexts(run.id).some((text) => text.includes("worktree init"))).toBe(false);
+  expect(logTexts(fix.db, run.id).some((text) => text.includes("worktree init"))).toBe(false);
 });

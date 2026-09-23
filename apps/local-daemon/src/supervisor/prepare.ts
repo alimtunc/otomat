@@ -33,6 +33,7 @@ import {
 } from "#git";
 
 import { issueBranchName } from "./branch-name.js";
+import { withContextBudget } from "./context-budget.js";
 import {
   freezePlan,
   resolvePlanConfigs,
@@ -152,12 +153,14 @@ export function prepareRun(state: SupervisorState, request: StartRunRequest): st
     request,
     defaultConfig,
     configFor,
-    createContextFreezer({
-      db,
-      issue: issue.row,
-      snapshot: binding.service.treeSnapshot(baseSha),
-      capturedAt: new Date().toISOString(),
-    }),
+    withContextBudget(
+      createContextFreezer({
+        db,
+        issue: issue.row,
+        snapshot: binding.service.treeSnapshot(baseSha),
+        capturedAt: new Date().toISOString(),
+      }),
+    ),
   );
 
   const worktree = acquireRunWorktree(binding.service, {

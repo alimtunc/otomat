@@ -32,7 +32,15 @@ export function makeSupervisor(
   const { concurrency, ...overrides } = options;
   if (concurrency !== undefined) writeMaxConcurrentSessions(fix.db, concurrency);
   const spawn = workerSpawn(behavior);
-  const supervisor = createSupervisor({
+  return { supervisor: supervisorWithSpawn(fix, spawn, overrides), spawn };
+}
+
+export function supervisorWithSpawn(
+  fix: DaemonTestDb,
+  spawn: SupervisorConfig["spawn"],
+  overrides: Partial<Omit<SupervisorConfig, "spawn">> = {},
+): Supervisor {
+  return createSupervisor({
     db: fix.db,
     dataDir: fix.dataDir,
     defaultProjectId: "p1",
@@ -43,7 +51,6 @@ export function makeSupervisor(
     }),
     ...overrides,
   });
-  return { supervisor, spawn };
 }
 
 export function appendStepInput(overrides: Partial<AppendStepInput> = {}): AppendStepInput {

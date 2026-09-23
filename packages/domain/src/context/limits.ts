@@ -3,6 +3,8 @@ export const CONTEXT_MAX_REFERENCES = 20;
 export const CONTEXT_FILE_PATH_MAX_LENGTH = 400;
 /** A referenced file is read whole or refused; past this it stops being context and becomes the payload. */
 export const CONTEXT_FILE_MAX_BYTES = 128_000;
+/** A step's whole frozen selection; its worker receives it through the environment, which macOS caps at 1 MiB with argv. */
+export const CONTEXT_SELECTION_MAX_BYTES = 512_000;
 export const CONTEXT_ISSUE_BODY_MAX_LENGTH = 20_000;
 export const CONTEXT_MAX_DIFF_FILES = 100;
 export const CONTEXT_MAX_COMMITS = 20;

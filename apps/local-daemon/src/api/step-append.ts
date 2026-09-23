@@ -2,9 +2,10 @@ import { IllegalTransitionError, InvalidRunPlanError, type AgentSelection } from
 import type { Context, Env } from "hono";
 
 import type { AgentConfigSelector } from "#agents";
-import { LaunchRefusedError, RunWorkspaceClosedError } from "#supervisor";
+import { RunWorkspaceClosedError } from "#supervisor";
 
 import { agentConfigErrorResponse } from "./agent-config-refusal.js";
+import { launchRefusalResponse } from "./launch-refusal.js";
 import { refusalJson } from "./refusal.js";
 import { runtimeUnavailableResponse } from "./runtime-unavailable.js";
 
@@ -31,9 +32,8 @@ export function stepAppendErrorResponse<E extends Env>(
       409,
     );
   }
-  if (error instanceof LaunchRefusedError) {
-    return c.json({ error: error.code, message: error.message }, 409);
-  }
+  const launchRefusal = launchRefusalResponse(c, error);
+  if (launchRefusal) return launchRefusal;
   if (error instanceof IllegalTransitionError && error.machine === "issue") {
     return c.json({ error: "issue_closed", message: error.message }, 409);
   }

@@ -35,3 +35,12 @@ export function runLandings(db: Db, runId: string): { status: string; seq: numbe
     .filter((event) => event.type === "run.lifecycle" && event.payload["phase"] === "settled")
     .map((event) => ({ status: String(event.payload["run_status"]), seq: event.seq }));
 }
+
+export function logTexts(db: Db, runId: string): string[] {
+  return readRunEvents(db, runId)
+    .filter((event) => event.type === "runtime.log")
+    .map((event) => {
+      const text = event.payload["text"];
+      return typeof text === "string" ? text : "";
+    });
+}

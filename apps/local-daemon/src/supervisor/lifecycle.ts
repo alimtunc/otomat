@@ -18,13 +18,14 @@ import {
 } from "./contribution/carry.js";
 import { contributionImageFiles } from "./contribution/images.js";
 import { withCarriedContributions } from "./contribution/prompt.js";
-import { failureReason } from "./fail-run.js";
+import { failUnstartedTurn, failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
 import { ingestRunInteractions } from "./interaction/index.js";
 import { startIntervalPass } from "./interval-pass.js";
 import { clearLiveInput } from "./live-input.js";
 import { capturePassStart, finishSettle } from "./pass-boundary.js";
+import { WorkerSpawnError } from "./process.js";
 import type { SlotGrant } from "./semaphore.js";
 import { settleRun, type SettleOptions } from "./settle/index.js";
 import { clearWorkerStartEvidence } from "./start-gate.js";
@@ -188,6 +189,8 @@ export async function spawnTurn(
       mode,
       providerSessionId,
     });
+    // Only a refused spawn lacks a pid; awaiting a live one yields a tick in which a next-turn revision could be cleared as this turn's.
+    if (proc.pid === -1) await proc.spawned;
     state.starting.set(ctx.agentSessionId, {
       runId: ctx.runId,
       proc,
@@ -232,7 +235,10 @@ export async function spawnTurn(
       kind: "failed",
       reason: failureReason(error),
     });
-    if (!aborting.has(ctx.runId)) settleLive(state, ctx);
+    if (!aborting.has(ctx.runId)) {
+      if (error instanceof WorkerSpawnError) failUnstartedTurn(state, ctx, error.message);
+      settleLive(state, ctx);
+    }
     throw error;
   } finally {
     state.starting.delete(ctx.agentSessionId);

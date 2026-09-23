@@ -96,6 +96,7 @@ export const RUN_LAUNCH_ERRORS = [
   "worktree_unavailable",
   "issue_workspace_open",
   "launches_held",
+  "context_too_large",
 ] as const;
 export type RunLaunchError = (typeof RUN_LAUNCH_ERRORS)[number];
 
@@ -198,7 +199,7 @@ export const RUN_STEP_APPEND_ERRORS = [
 ] as const;
 
 export const runStepAppendErrorSchema = z.object({
-  error: z.enum(RUN_STEP_APPEND_ERRORS),
+  error: z.enum([...RUN_STEP_APPEND_ERRORS, ...RUN_LAUNCH_ERRORS]),
   message: z.string(),
 });
 

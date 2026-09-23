@@ -15,13 +15,12 @@ import {
 } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { readRunEvents } from "#events";
 import { createRepositoryResolver, type RepositoryResolver } from "#git";
 import { createSupervisor, RunNotResumableError, type Supervisor } from "#supervisor";
 
 import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { runLandings } from "../support/ledger.js";
+import { logTexts, runLandings } from "../support/ledger.js";
 import { providerSessionEvent, writeRunEvents } from "../support/run-event-fixtures.js";
 import { deadPid, workerSpawn } from "../support/spawn.js";
 import { makeSupervisor } from "../support/supervisor.js";
@@ -239,12 +238,7 @@ it("initializes every candidate worktree before its agent starts", async () => {
   expect(markerAtSpawn.size).toBe(2);
   expect([...markerAtSpawn.values()]).toEqual([true, true]);
 
-  const texts = readRunEvents(fix.db, run.id)
-    .filter((event) => event.type === "runtime.log")
-    .map((event) => {
-      const text = event.payload["text"];
-      return typeof text === "string" ? text : "";
-    });
+  const texts = logTexts(fix.db, run.id);
   expect(texts).toContain("[otomat] worktree init: $ touch init-marker");
   expect(texts).toContain("[otomat] worktree init [Direct]: $ touch init-marker");
   expect(texts).toContain("[otomat] worktree init [Layered]: $ touch init-marker");

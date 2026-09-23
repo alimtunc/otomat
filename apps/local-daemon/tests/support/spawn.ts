@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { once } from "node:events";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,7 +15,7 @@ import {
   type SupervisedJob,
 } from "#supervisor";
 
-const FAKE_WORKER = join(dirname(fileURLToPath(import.meta.url)), "fake-worker.mjs");
+export const FAKE_WORKER = join(dirname(fileURLToPath(import.meta.url)), "fake-worker.mjs");
 
 function toHandle(child: ReturnType<typeof spawn>, start: SessionProcess["start"]): SessionProcess {
   const pid = child.pid ?? -1;
@@ -25,6 +26,7 @@ function toHandle(child: ReturnType<typeof spawn>, start: SessionProcess["start"
   return {
     pid,
     pgid: pid,
+    spawned: once(child, "spawn").then(() => undefined),
     exited,
     start,
     kill: (signal) => killProcessGroup(pid, signal),
