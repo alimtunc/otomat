@@ -215,7 +215,7 @@ describe("codexProviderLimit", () => {
 
 describe("provider limits through the adapters", () => {
   it("ends a quota-refused Claude turn as failed, with the reset and the raw frame kept", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-usage-limit.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-usage-limit.jsonl");
     const sink = new MemorySink();
 
     const final = await new ClaudeRuntimeAdapter(STUB_BIN).run(
@@ -240,7 +240,7 @@ describe("provider limits through the adapters", () => {
   });
 
   it("ends a quota-refused Codex turn as failed, honestly without a reset", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-usage-limit.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-usage-limit.jsonl");
     const sink = new MemorySink();
 
     const final = await new CodexRuntimeAdapter(STUB_BIN).run(
@@ -259,7 +259,7 @@ describe("provider limits through the adapters", () => {
   });
 
   it("reports no limit for a Codex turn that failed on its own", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-turn-failed.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-turn-failed.jsonl");
     const sink = new MemorySink();
 
     const final = await new CodexRuntimeAdapter(STUB_BIN).run(

@@ -17,6 +17,7 @@ const WORKER_START_TIMEOUT_MS = 30_000;
 const WORKER_START_POLL_MS = 10;
 const RELEASED_PREFIX = ".worker-start-";
 const CONSUMED_PREFIX = ".worker-started-";
+const JOB_PREFIX = ".worker-job-";
 const TOKEN_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function requireToken(token: string): string {
@@ -32,6 +33,10 @@ function consumedPath(workerDir: string, token: string): string {
   return join(workerDir, `${CONSUMED_PREFIX}${requireToken(token)}`);
 }
 
+export function workerJobPath(workerDir: string, token: string): string {
+  return join(workerDir, `${JOB_PREFIX}${requireToken(token)}.json`);
+}
+
 export function errorCode(error: unknown): string | null {
   if (typeof error !== "object" || error === null || !("code" in error)) return null;
   return typeof error.code === "string" ? error.code : null;
@@ -40,7 +45,10 @@ export function errorCode(error: unknown): string | null {
 function gateEntries(workerDir: string): string[] {
   try {
     return readdirSync(workerDir).filter(
-      (entry) => entry.startsWith(RELEASED_PREFIX) || entry.startsWith(CONSUMED_PREFIX),
+      (entry) =>
+        entry.startsWith(RELEASED_PREFIX) ||
+        entry.startsWith(CONSUMED_PREFIX) ||
+        entry.startsWith(JOB_PREFIX),
     );
   } catch (error) {
     if (errorCode(error) === "ENOENT") return [];
@@ -53,7 +61,7 @@ export function workerConsumedStartGate(workerDir: string): boolean {
   return gateEntries(workerDir).some((entry) => entry.startsWith(CONSUMED_PREFIX));
 }
 
-/** Drops the previous turn's gate trace so the next one speaks only for itself. */
+/** Drops the previous turn's gate trace, and any job its worker never read, so the next turn speaks only for itself. */
 export function clearWorkerStartEvidence(workerDir: string): void {
   for (const entry of gateEntries(workerDir)) {
     rmSync(join(workerDir, entry), { force: true });

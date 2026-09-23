@@ -32,10 +32,10 @@ vi.mock("#runtime/cli/process-runner", () => ({ runCliProcess: vi.fn() }));
 let directory: string;
 beforeEach(() => {
   directory = setupStubHarness("otomat-reviewer-");
-  process.env.OTOMAT_STUB_FIXTURE = stubFixture("codex-frames.jsonl");
+  process.env.STUB_FIXTURE = stubFixture("codex-frames.jsonl");
   vi.mocked(runCliProcess).mockImplementation(async (input) => {
     input.onSpawn?.();
-    const fixture = process.env.OTOMAT_STUB_FIXTURE;
+    const fixture = process.env.STUB_FIXTURE;
     if (!fixture) throw new Error("Missing replay fixture");
     for (const line of readFileSync(fixture, "utf8").split("\n").filter(Boolean))
       input.onStdoutLine(line);
@@ -206,7 +206,7 @@ it("keeps a simulated automatic-review refusal as a failed tool and turn without
       .map((frame) => JSON.stringify(frame))
       .join("\n"),
   );
-  process.env.OTOMAT_STUB_FIXTURE = fixture;
+  process.env.STUB_FIXTURE = fixture;
   const sink = new MemorySink();
   const result = await new CodexRuntimeAdapter(STUB_BIN).run(
     runtimeRunInput({

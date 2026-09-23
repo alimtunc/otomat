@@ -22,8 +22,8 @@ let worktree: string;
 
 beforeEach(() => {
   worktree = setupStubHarness("otomat-claude-live-");
-  process.env["OTOMAT_STUB_STREAM_INPUT"] = "1";
-  process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-init-only.jsonl");
+  process.env["STUB_STREAM_INPUT"] = "1";
+  process.env["STUB_FIXTURE"] = stubFixture("claude-init-only.jsonl");
 });
 
 afterEach(() => {
@@ -53,8 +53,8 @@ function userFrame(text: string) {
 it("writes the prompt and every live message as ordered user frames on one invocation", async () => {
   const stdinFile = join(worktree, "stub-stdin.jsonl");
   const argsFile = join(worktree, "stub-args.json");
-  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
-  process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+  process.env["STUB_STDIN_FILE"] = stdinFile;
+  process.env["STUB_ARGS_FILE"] = argsFile;
   const channel = channelOf([
     { kind: "message", id: "c1", body: "also update the changelog", images: [] },
     { kind: "message", id: "c2", body: "and bump the version", images: [] },
@@ -108,7 +108,7 @@ it("sums each loop's usage but keeps the invocation's running cost total", async
 
 it("keeps a plain turn on the same streaming input, closing stdin with no channel to wait for", async () => {
   const stdinFile = join(worktree, "stub-stdin.jsonl");
-  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  process.env["STUB_STDIN_FILE"] = stdinFile;
 
   const final = await new ClaudeRuntimeAdapter(STUB_BIN).run(
     runtimeRunInput({ run_dir: worktree, cwd: worktree, prompt: "do the work" }),

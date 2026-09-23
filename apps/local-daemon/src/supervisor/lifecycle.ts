@@ -180,7 +180,7 @@ export async function spawnTurn(
       captureTurnContext(state, ctx, mode),
       carried.map((row) => row.body),
     );
-    // The selection is already rendered into `prompt`; a job is serialized into the worker's env, so it must not carry it twice.
+    // The selection is already rendered into `prompt`; a job is serialized for the worker, so it must not carry it twice.
     const { kind: _kind, contextSelection: _frozen, carryContributionIds: _carried, ...turn } = ctx;
     proc = state.spawn({
       ...turn,

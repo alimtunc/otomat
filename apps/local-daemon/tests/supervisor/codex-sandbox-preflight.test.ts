@@ -40,14 +40,14 @@ beforeEach(() => {
     [
       "#!/bin/sh",
       'if [ "$1 $2" = "exec --help" ]; then',
-      '  cat "$OTOMAT_CODEX_HELP_FIXTURE"',
+      '  cat "$STUB_CODEX_HELP_FIXTURE"',
       "  exit 0",
       "fi",
       'if [ "$1" = "--version" ]; then',
       '  printf "%s\\n" "codex-cli 0.148.0"',
       "  exit 0",
       "fi",
-      'if [ "$1" = "sandbox" ] && [ "$(cat "$OTOMAT_CODEX_SANDBOX_STATE")" = "fail" ]; then',
+      'if [ "$1" = "sandbox" ] && [ "$(cat "$STUB_CODEX_SANDBOX_STATE")" = "fail" ]; then',
       '  printf "%s\\n" "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted" >&2',
       "  exit 1",
       "fi",
@@ -58,8 +58,8 @@ beforeEach(() => {
   writeFileSync(stateFile, "fail");
   priorPath = process.env.PATH;
   process.env.PATH = `${directory}${delimiter}${priorPath ?? ""}`;
-  process.env.OTOMAT_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help.txt");
-  process.env.OTOMAT_CODEX_SANDBOX_STATE = stateFile;
+  process.env.STUB_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help.txt");
+  process.env.STUB_CODEX_SANDBOX_STATE = stateFile;
   clearProviderProbeCache();
   clearCodexSandboxProbeCache();
 });
@@ -70,8 +70,8 @@ afterEach(() => {
   clearCodexSandboxProbeCache();
   if (priorPath === undefined) delete process.env.PATH;
   else process.env.PATH = priorPath;
-  delete process.env.OTOMAT_CODEX_HELP_FIXTURE;
-  delete process.env.OTOMAT_CODEX_SANDBOX_STATE;
+  delete process.env.STUB_CODEX_HELP_FIXTURE;
+  delete process.env.STUB_CODEX_SANDBOX_STATE;
   rmSync(directory, { recursive: true, force: true });
   fix.cleanup();
 });
@@ -138,7 +138,7 @@ it.each([
 ])(
   "persists %j through launch, Resume and follow-up after preferences change",
   async (permissions) => {
-    process.env.OTOMAT_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
+    process.env.STUB_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
     writeFileSync(stateFile, "ok");
     const profile = {
       name: "Explicit permissions",
@@ -186,7 +186,7 @@ it.each([
 );
 
 it("refuses incompatible Codex permissions from host preferences instead of dropping them", async () => {
-  process.env.OTOMAT_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
+  process.env.STUB_CODEX_HELP_FIXTURE = stubFixture("codex-exec-help-0.153.4.txt");
   writeFileSync(stateFile, "ok");
   writeExecutionDefaults(fix.db, {
     runtime: "codex",

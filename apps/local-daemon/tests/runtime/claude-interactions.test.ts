@@ -22,8 +22,8 @@ let worktree: string;
 
 beforeEach(() => {
   worktree = setupStubHarness("otomat-claude-perm-");
-  process.env["OTOMAT_STUB_PERMISSION"] = "1";
-  process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-init-only.jsonl");
+  process.env["STUB_PERMISSION"] = "1";
+  process.env["STUB_FIXTURE"] = stubFixture("claude-init-only.jsonl");
 });
 
 afterEach(() => {
@@ -89,7 +89,7 @@ it("turns a can_use_tool control request into a runtime-agnostic question", asyn
 
 it("sends an approval back as the tool input the operator was shown", async () => {
   const stdinFile = join(worktree, "stub-stdin.jsonl");
-  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  process.env["STUB_STDIN_FILE"] = stdinFile;
   const turn = turnAnswering({ kind: "permission", decision: "allow" });
 
   const final = await runTurn(turn);
@@ -108,7 +108,7 @@ it("sends an approval back as the tool input the operator was shown", async () =
 
 it("sends a refusal as a deny the model reads, and never as an approval", async () => {
   const stdinFile = join(worktree, "stub-stdin.jsonl");
-  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  process.env["STUB_STDIN_FILE"] = stdinFile;
 
   await runTurn(turnAnswering({ kind: "permission", decision: "deny" }));
 
@@ -132,7 +132,7 @@ it("reports a refusal once, not again as a provider-decided denial", async () =>
 
 it("refuses an answer to a question this turn never asked instead of writing a blind approval", async () => {
   const stdinFile = join(worktree, "stub-stdin.jsonl");
-  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  process.env["STUB_STDIN_FILE"] = stdinFile;
   const turn = turnAnswering({ kind: "permission", decision: "allow" }, "req-from-elsewhere");
 
   const controller = new AbortController();
@@ -152,7 +152,7 @@ it("refuses an answer to a question this turn never asked instead of writing a b
 
 it("always sends the flag that routes an ask to Otomat rather than to an auto-denial", async () => {
   const argsFile = join(worktree, "stub-args.json");
-  process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+  process.env["STUB_ARGS_FILE"] = argsFile;
 
   await runTurn(turnAnswering({ kind: "permission", decision: "deny" }));
 
@@ -164,7 +164,7 @@ it("always sends the flag that routes an ask to Otomat rather than to an auto-de
 
 /** The shape the CLI sends for its question tool: an ask it needs answered, not an action it needs cleared. */
 function asksQuestions(questions: unknown[]): void {
-  process.env["OTOMAT_STUB_PERMISSION_REQUEST"] = JSON.stringify({
+  process.env["STUB_PERMISSION_REQUEST"] = JSON.stringify({
     subtype: "can_use_tool",
     tool_name: "AskUserQuestion",
     display_name: "AskUserQuestion",
@@ -218,7 +218,7 @@ it("turns a native question into a choice carrying its own options, never an app
 
 it("sends the chosen option back as the answers the question tool reads", async () => {
   const stdinFile = join(worktree, "stub-stdin.jsonl");
-  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  process.env["STUB_STDIN_FILE"] = stdinFile;
   asksQuestions([COLOUR_QUESTION]);
 
   const final = await runTurn(turnAnswering({ kind: "choice", values: ["Red"] }));
@@ -238,7 +238,7 @@ it("sends the chosen option back as the answers the question tool reads", async 
 
 it("carries a custom answer the runtime allows, and a multi-select as the comma-joined string it documents", async () => {
   const stdinFile = join(worktree, "stub-stdin.jsonl");
-  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  process.env["STUB_STDIN_FILE"] = stdinFile;
   asksQuestions([COLOUR_QUESTION, SCOPE_QUESTION]);
 
   const turn = turnAnswering({
@@ -271,7 +271,7 @@ it("carries a custom answer the runtime allows, and a multi-select as the comma-
 
 it("keeps the request open when an answer cannot be translated, rather than clearing the tool blindly", async () => {
   const stdinFile = join(worktree, "stub-stdin.jsonl");
-  process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+  process.env["STUB_STDIN_FILE"] = stdinFile;
   const turn = turnAnswering({ kind: "choice", values: ["Red"] });
 
   const controller = new AbortController();

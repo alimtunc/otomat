@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -10,6 +10,7 @@ import {
   releaseWorkerStart,
   waitForWorkerStart,
   workerConsumedStartGate,
+  workerJobPath,
 } from "#supervisor/start-gate";
 
 let workerDir: string;
@@ -47,6 +48,15 @@ it("forgets the previous turn once the trace is cleared", async () => {
 
   // Without this, boot would read an earlier turn's proof and bury the batch claimed for the next one.
   expect(workerConsumedStartGate(workerDir)).toBe(false);
+});
+
+it("sweeps a job file its worker never read", () => {
+  const jobFile = workerJobPath(workerDir, randomUUID());
+  writeFileSync(jobFile, "{}");
+
+  clearWorkerStartEvidence(workerDir);
+
+  expect(existsSync(jobFile)).toBe(false);
 });
 
 it("refuses a gate whose token is not the one the worker was given", async () => {

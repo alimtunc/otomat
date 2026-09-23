@@ -20,11 +20,11 @@ beforeEach(() => {
       '  printf "%s\\n" "codex-cli 0.148.0"',
       "  exit 0",
       "fi",
-      'printf "%s\\n" "$@" > "$OTOMAT_CODEX_PROBE_ARGS_FILE"',
-      'if [ -n "$OTOMAT_CODEX_PROBE_STDERR" ]; then',
-      '  printf "%s\\n" "$OTOMAT_CODEX_PROBE_STDERR" >&2',
+      'printf "%s\\n" "$@" > "$STUB_CODEX_PROBE_ARGS_FILE"',
+      'if [ -n "$STUB_CODEX_PROBE_STDERR" ]; then',
+      '  printf "%s\\n" "$STUB_CODEX_PROBE_STDERR" >&2',
       "fi",
-      'exit "${OTOMAT_CODEX_PROBE_EXIT:-0}"',
+      'exit "${STUB_CODEX_PROBE_EXIT:-0}"',
     ].join("\n"),
   );
   chmodSync(binary, 0o755);
@@ -41,7 +41,7 @@ describe("Codex sandbox capability probe", () => {
     const argsFile = join(directory, "args.txt");
     const result = probeCodexSandbox(binary, directory, {
       ...process.env,
-      OTOMAT_CODEX_PROBE_ARGS_FILE: argsFile,
+      STUB_CODEX_PROBE_ARGS_FILE: argsFile,
     });
 
     expect(result.status).toBe("available");
@@ -57,9 +57,9 @@ describe("Codex sandbox capability probe", () => {
   it("classifies the RTM_NEWADDR signature as a denied loopback namespace capability", () => {
     const result = probeCodexSandbox(binary, directory, {
       ...process.env,
-      OTOMAT_CODEX_PROBE_ARGS_FILE: join(directory, "args.txt"),
-      OTOMAT_CODEX_PROBE_EXIT: "1",
-      OTOMAT_CODEX_PROBE_STDERR: "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+      STUB_CODEX_PROBE_ARGS_FILE: join(directory, "args.txt"),
+      STUB_CODEX_PROBE_EXIT: "1",
+      STUB_CODEX_PROBE_STDERR: "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
     });
 
     expect(result).toMatchObject({

@@ -58,14 +58,14 @@ describe("buildDaemonEnv", () => {
       baseEnv: {
         OTOMAT_MAINTENANCE_ACTION: "restore",
         OTOMAT_RESTORE_BACKUP: "/untrusted/backup.sqlite",
-        OTOMAT_WORKER_JOB: "serialized-worker-job",
+        OTOMAT_WORKER_JOB_FILE: "worker-job.json",
         OTOMAT_WORKER_START_TOKEN: "worker-start-token",
       },
     });
 
     expect(env.OTOMAT_MAINTENANCE_ACTION).toBeUndefined();
     expect(env.OTOMAT_RESTORE_BACKUP).toBeUndefined();
-    expect(env.OTOMAT_WORKER_JOB).toBeUndefined();
+    expect(env.OTOMAT_WORKER_JOB_FILE).toBeUndefined();
     expect(env.OTOMAT_WORKER_START_TOKEN).toBeUndefined();
   });
 

@@ -23,7 +23,7 @@ afterEach(() => {
 
 describe("codex model discovery", () => {
   it("lists the installed binary's bundled catalog, hidden and flag-shaped slugs excluded", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-models.json");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-models.json");
 
     const result = discoverCodexModels(STUB_BIN);
 
@@ -46,8 +46,8 @@ describe("codex model discovery", () => {
   });
 
   it("reports an unsupported catalog when the installed version rejects the subcommand", () => {
-    process.env["OTOMAT_STUB_EXIT"] = "2";
-    process.env["OTOMAT_STUB_STDERR"] = "error: unrecognized subcommand 'models'";
+    process.env["STUB_EXIT"] = "2";
+    process.env["STUB_STDERR"] = "error: unrecognized subcommand 'models'";
 
     const result = discoverCodexModels(STUB_BIN);
 
@@ -59,8 +59,8 @@ describe("codex model discovery", () => {
   });
 
   it("reports a failed catalog on a non-zero exit that is not an argument refusal", () => {
-    process.env["OTOMAT_STUB_EXIT"] = "1";
-    process.env["OTOMAT_STUB_STDERR"] = "error: could not read the model catalog";
+    process.env["STUB_EXIT"] = "1";
+    process.env["STUB_STDERR"] = "error: could not read the model catalog";
 
     const result = discoverCodexModels(STUB_BIN);
 
@@ -69,7 +69,7 @@ describe("codex model discovery", () => {
   });
 
   it("never invents entries when the output is not a catalog", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
 
     const result = discoverCodexModels(STUB_BIN);
 

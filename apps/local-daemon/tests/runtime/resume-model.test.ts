@@ -21,13 +21,13 @@ afterEach(() => {
 });
 
 it("allows Claude model selection only when the installed help announces both flags", () => {
-  process.env.OTOMAT_STUB_FIXTURE = stubFixture("claude-help-current.txt");
+  process.env.STUB_FIXTURE = stubFixture("claude-help-current.txt");
 
   expect(claudeResumeModelCapability(STUB_BIN)).toEqual({ status: "supported" });
 
   teardownStubHarness(worktree);
   worktree = setupStubHarness("otomat-resume-model-empty-");
-  process.env.OTOMAT_STUB_FIXTURE = stubFixture("claude-init-only.jsonl");
+  process.env.STUB_FIXTURE = stubFixture("claude-init-only.jsonl");
   expect(claudeResumeModelCapability(STUB_BIN)).toMatchObject({
     status: "unsupported",
     reason: expect.stringMatching(/native resume/i),
@@ -35,7 +35,7 @@ it("allows Claude model selection only when the installed help announces both fl
 });
 
 it("allows Codex model selection only when exec and native resume are both announced", () => {
-  process.env.OTOMAT_STUB_FIXTURES = JSON.stringify({
+  process.env.STUB_FIXTURE_BY_ARGV = JSON.stringify({
     "exec --help": stubFixture("codex-exec-help.txt"),
     "exec resume --help": stubFixture("codex-exec-resume-help.txt"),
   });
@@ -44,7 +44,7 @@ it("allows Codex model selection only when exec and native resume are both annou
 
   teardownStubHarness(worktree);
   worktree = setupStubHarness("otomat-resume-model-missing-");
-  process.env.OTOMAT_STUB_FIXTURES = JSON.stringify({
+  process.env.STUB_FIXTURE_BY_ARGV = JSON.stringify({
     "exec --help": stubFixture("codex-exec-help.txt"),
     "exec resume --help": stubFixture("codex-frames.jsonl"),
   });

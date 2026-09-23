@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -97,12 +97,21 @@ it("never signals a non-positive process group (no PID 1 / broadcast)", () => {
   }
 });
 
-it("reports a job the OS refuses to hand the worker as a spawn error carrying its errno", () => {
-  const spawnOversized = () =>
-    createReexecSpawn(FAKE_WORKER)({ ...job(), prompt: "x".repeat(2 ** 22) });
+it("hands the worker a job past the environment's size cap", async () => {
+  const proc = createReexecSpawn(FAKE_WORKER)({ ...job(), prompt: "x".repeat(2 ** 22) });
+  proc.start();
 
-  expect(spawnOversized).toThrow(WorkerSpawnError);
-  expect(spawnOversized).toThrow(/^the worker could not be started: spawn .*E2BIG/);
+  expect(await proc.exited).toEqual({ code: 0, signal: null });
+});
+
+it("reports a job it cannot hand the worker as a spawn error carrying its errno", () => {
+  const blocker = join(agentSessionDir, "blocker");
+  writeFileSync(blocker, "");
+  const spawnUnwritable = () =>
+    createReexecSpawn(FAKE_WORKER)({ ...job(), agentSessionDir: join(blocker, "session") });
+
+  expect(spawnUnwritable).toThrow(WorkerSpawnError);
+  expect(spawnUnwritable).toThrow(/^the worker could not be started: ENOTDIR/);
 });
 
 it("reports a spawn failure Node emits after returning the child as a spawn error", async () => {

@@ -34,7 +34,7 @@ const MISSING_WORKTREE = "/nonexistent/otomat-worktree";
 
 describe("CodexRuntimeAdapter", () => {
   it("maps a recorded codex --json turn onto runtime events and a completed final state", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
 
@@ -84,7 +84,7 @@ describe("CodexRuntimeAdapter", () => {
   });
 
   it("fails with the provider's error message on turn.failed", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-turn-failed.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-turn-failed.jsonl");
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
 
@@ -96,8 +96,8 @@ describe("CodexRuntimeAdapter", () => {
   });
 
   it("surfaces an [otomat] diagnostic when the provider exits without reporting a result", async () => {
-    process.env["OTOMAT_STUB_EXIT"] = "3";
-    process.env["OTOMAT_STUB_EXITS"] = JSON.stringify({ "sandbox true": 0 });
+    process.env["STUB_EXIT"] = "3";
+    process.env["STUB_EXIT_BY_ARGV"] = JSON.stringify({ "sandbox true": 0 });
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
 
@@ -137,8 +137,8 @@ describe("CodexRuntimeAdapter", () => {
 
   it("resumes via exec resume with the thread id and refuses to resume without one", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
     const session = runtimeSessionRef("thread-codex-1");
@@ -175,8 +175,8 @@ describe("CodexRuntimeAdapter", () => {
 
   it("keeps the model an exec-level flag, before the resume subcommand, and sends none by default", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
 
     await adapter.run(
@@ -219,9 +219,9 @@ describe("CodexRuntimeAdapter", () => {
 
   it("sends the frozen sandbox, approval and reasoning level before `resume`", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
-    process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE_BY_ARGV"] = JSON.stringify({
       "exec --help": join(STUB_FIXTURES, "codex-exec-help.txt"),
     });
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
@@ -261,8 +261,8 @@ describe("CodexRuntimeAdapter", () => {
 
   it("keeps the worktree sandbox and sends no override by default", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
 
     await new CodexRuntimeAdapter(STUB_BIN).run(
       input(worktree),
@@ -302,8 +302,8 @@ describe("CodexRuntimeAdapter", () => {
 
   it("preflights the one-shot read-only sandbox with its effective argv", () => {
     stubLinuxPlatform();
-    process.env["OTOMAT_STUB_EXITS"] = JSON.stringify({ "sandbox true": 1 });
-    process.env["OTOMAT_STUB_STDERRS"] = JSON.stringify({
+    process.env["STUB_EXIT_BY_ARGV"] = JSON.stringify({ "sandbox true": 1 });
+    process.env["STUB_STDERR_BY_ARGV"] = JSON.stringify({
       "sandbox true": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
     });
     const oneShot = new CodexRuntimeAdapter(STUB_BIN).describeOneShot(null, {});
@@ -314,8 +314,8 @@ describe("CodexRuntimeAdapter", () => {
   });
 
   it("streams stderr lines as raw_log evidence", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
-    process.env["OTOMAT_STUB_STDERR"] = "WARN model config fallback";
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["STUB_STDERR"] = "WARN model config fallback";
     const adapter = new CodexRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
 
@@ -330,8 +330,8 @@ describe("CodexRuntimeAdapter", () => {
 
   it("scrubs inherited Codex session markers without dropping Codex home", async () => {
     const envFile = join(worktree, "stub-env.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
-    process.env["OTOMAT_STUB_ENV_FILE"] = envFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+    process.env["STUB_ENV_FILE"] = envFile;
     const prior = {
       thread: process.env["CODEX_THREAD_ID"],
       payload: process.env["CODEX_REMOTE_PAYLOAD"],

@@ -1565,7 +1565,10 @@
               <div class="edge-row">
                 <span class="from">supervisor</span><span class="verb">re-execs</span
                 ><span class="to">worker</span
-                ><span class="why">Le job sérialisé passe par <code>OTOMAT_WORKER_JOB</code>.</span>
+                ><span class="why"
+                  >Le job sérialisé passe par un fichier du dossier de session désigné par
+                  <code>OTOMAT_WORKER_JOB_FILE</code>, jamais par l'environnement.</span
+                >
               </div>
               <div class="edge-row">
                 <span class="from">worker</span><span class="verb">appends</span
@@ -1847,7 +1850,7 @@
                     <div class="trace-node">
                       <span class="seq">seq 001</span><span class="loc">tsx src/index.ts</span
                       ><span class="action"
-                        ><code>OTOMAT_WORKER_JOB</code> absent : choisit le mode server et appelle
+                        ><code>OTOMAT_WORKER_JOB_FILE</code> absent : choisit le mode server et appelle
                         <code>startDaemon()</code>.</span
                       >
                     </div>

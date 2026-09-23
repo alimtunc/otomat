@@ -1,8 +1,10 @@
 // Pure Node with no workspace imports so the spawned child survives independent of the test process; behavior via FAKE_WORKER_BEHAVIOR.
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-const job = JSON.parse(process.env.OTOMAT_WORKER_JOB);
+const jobFile = process.env.OTOMAT_WORKER_JOB_FILE;
+const job = JSON.parse(readFileSync(jobFile, "utf8"));
+rmSync(jobFile);
 const behavior = process.env.FAKE_WORKER_BEHAVIOR ?? "complete";
 const startToken = process.env.OTOMAT_WORKER_START_TOKEN;
 const file = join(job.agentSessionDir, "events.jsonl");

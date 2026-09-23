@@ -1,3 +1,6 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { getRun, listAgentSessionsForRun, listStepRunsForRun } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -21,13 +24,17 @@ afterEach(() => {
   fix.cleanup();
 });
 
-function oversizedJobSupervisor(): Supervisor {
+function unwritableSessionSupervisor(): Supervisor {
+  const blocker = join(fix.dataDir, "blocker");
+  writeFileSync(blocker, "");
   const reexec = createReexecSpawn(FAKE_WORKER);
-  return supervisorWithSpawn(fix, (job) => reexec({ ...job, prompt: "x".repeat(2 ** 22) }));
+  return supervisorWithSpawn(fix, (job) =>
+    reexec({ ...job, agentSessionDir: join(blocker, "session") }),
+  );
 }
 
 it("fails a launched run whose worker the OS refused, with the errno in its ledger", async () => {
-  const supervisor = oversizedJobSupervisor();
+  const supervisor = unwritableSessionSupervisor();
 
   const run = await supervisor.start({ prompt: "implement the thing" });
   await supervisor.settle();
@@ -35,7 +42,7 @@ it("fails a launched run whose worker the OS refused, with the errno in its ledg
   expect(getRun(fix.db, run.id)?.status).toBe("failed");
   expect(listStepRunsForRun(fix.db, run.id).map((step) => step.status)).toEqual(["stale"]);
   expect(logTexts(fix.db, run.id)).toContainEqual(
-    expect.stringMatching(/^\[otomat\] the worker could not be started: spawn .*E2BIG/),
+    expect.stringMatching(/^\[otomat\] the worker could not be started: ENOTDIR/),
   );
 });
 
@@ -59,7 +66,7 @@ it("fails a run whose spawn is refused after the child was returned", async () =
 });
 
 it("fails a refused resume instead of leaving its provider session resumable", async () => {
-  const supervisor = oversizedJobSupervisor();
+  const supervisor = unwritableSessionSupervisor();
   const seed = seedRun(fix.db, {
     runId: "rh",
     runStatus: "awaiting_human",
@@ -76,5 +83,5 @@ it("fails a refused resume instead of leaving its provider session resumable", a
   expect(listAgentSessionsForRun(fix.db, "rh").map((session) => session.status)).toEqual([
     "failed",
   ]);
-  expect(logTexts(fix.db, "rh")).toContainEqual(expect.stringContaining("E2BIG"));
+  expect(logTexts(fix.db, "rh")).toContainEqual(expect.stringContaining("ENOTDIR"));
 });

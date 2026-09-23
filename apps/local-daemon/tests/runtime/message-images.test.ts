@@ -70,8 +70,8 @@ it("refuses to read an image through a symlink", () => {
 
 it("passes images to Codex as one --image flag each, on exec and after the resume subcommand", async () => {
   const argsFile = join(worktree, "stub-args.json");
-  process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
-  process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+  process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "codex-frames.jsonl");
+  process.env["STUB_ARGS_FILE"] = argsFile;
   const adapter = new CodexRuntimeAdapter(STUB_BIN);
   const images = [storedPng("a.png"), storedPng("b.png")];
   const sink = new MemorySink();
@@ -137,12 +137,12 @@ it("replaces only the image paths in an argv", () => {
 });
 
 it("announces Claude images when the installed help announces stream-json input", () => {
-  process.env.OTOMAT_STUB_FIXTURE = stubFixture("claude-help-current.txt");
+  process.env.STUB_FIXTURE = stubFixture("claude-help-current.txt");
   expect(claudeImageCapability(STUB_BIN)).toEqual({ status: "supported", standalone: true });
 });
 
 it("refuses Claude images when the installed help announces no stream-json input", () => {
-  process.env.OTOMAT_STUB_FIXTURE = stubFixture("claude-help-legacy.txt");
+  process.env.STUB_FIXTURE = stubFixture("claude-help-legacy.txt");
   expect(claudeImageCapability(STUB_BIN)).toMatchObject({
     status: "unsupported",
     reason: expect.stringMatching(/stream-json/),
@@ -150,7 +150,7 @@ it("refuses Claude images when the installed help announces no stream-json input
 });
 
 it("announces Codex images when exec and exec resume both take the flag", () => {
-  process.env.OTOMAT_STUB_FIXTURES = JSON.stringify({
+  process.env.STUB_FIXTURE_BY_ARGV = JSON.stringify({
     "exec --help": stubFixture("codex-exec-help-0.153.4.txt"),
     "exec resume --help": stubFixture("codex-exec-resume-help-0.153.4.txt"),
   });
@@ -158,7 +158,7 @@ it("announces Codex images when exec and exec resume both take the flag", () => 
 });
 
 it("refuses Codex images when only exec takes the flag", () => {
-  process.env.OTOMAT_STUB_FIXTURES = JSON.stringify({
+  process.env.STUB_FIXTURE_BY_ARGV = JSON.stringify({
     "exec --help": stubFixture("codex-exec-help-0.153.4.txt"),
     "exec resume --help": stubFixture("codex-exec-resume-help.txt"),
   });
