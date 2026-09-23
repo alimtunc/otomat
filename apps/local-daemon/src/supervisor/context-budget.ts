@@ -9,8 +9,8 @@ function kilobytes(bytes: number): string {
 }
 
 export function withContextBudget(freeze: ContextFreezer): ContextFreezer {
-  return (references, note, reviewComments) => {
-    const selection = freeze(references, note, reviewComments);
+  return async (references, note, reviewComments) => {
+    const selection = await freeze(references, note, reviewComments);
     const bytes = Buffer.byteLength(JSON.stringify(selection));
     if (bytes > CONTEXT_SELECTION_MAX_BYTES) {
       const remedy =
