@@ -29,7 +29,13 @@ runs:
         set -euo pipefail
         echo "Setup Node|$(date +%s)" >> "$RUNNER_TEMP/setup-phases"
         corepack enable pnpm
-        corepack install
+        # Node's bundled undici can crash mid-download (`assert(!this.paused)`); the fetch is idempotent.
+        for attempt in 1 2 3; do
+          corepack install && break
+          [ "$attempt" -lt 3 ] || exit 1
+          echo "::warning::corepack install failed (attempt $attempt), retrying"
+          sleep $((attempt * 5))
+        done
         node_major=$(node -p 'process.versions.node.split(".")[0]')
         {
           echo "store=$(pnpm store path --silent)"
