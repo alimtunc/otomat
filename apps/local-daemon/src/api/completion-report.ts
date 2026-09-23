@@ -17,18 +17,22 @@ import { renderRunCompletionMarkdown } from "./completion-report/markdown.js";
 import { appendReportMessages } from "./completion-report/messages.js";
 import { projectReviewEvidence } from "./completion-report/review.js";
 
-export function projectRunCompletionReport(
+export async function projectRunCompletionReport(
   db: Db,
   runId: string,
   review: ReviewService,
-): RunCompletionReportResponse | null {
-  const run = db.select().from(schema.runs).where(eq(schema.runs.id, runId)).get();
+): Promise<RunCompletionReportResponse | null> {
+  const readRun = () => db.select().from(schema.runs).where(eq(schema.runs.id, runId)).get();
+  if (!readRun()) return null;
+  const errors: RunCompletionReport["errors"] = [];
+  // Awaited before any row is read, so the report never pairs rows from either side of the diff.
+  const reviewEvidence = await projectReviewEvidence({ runId, review, errors });
+  const run = readRun();
   if (!run) return null;
 
   const plan = runPlanSchema.safeParse(run.plan_json);
   const eventProjection = readRunEventProjection(db, runId);
   const sessions = listAgentSessionsForRun(db, runId);
-  const errors: RunCompletionReport["errors"] = [];
   const notices: RunCompletionReport["notices"] = [];
   if (!plan.success) {
     notices.push({
@@ -53,7 +57,6 @@ export function projectRunCompletionReport(
     events: eventProjection.events,
     notices,
   });
-  const reviewEvidence = projectReviewEvidence({ runId: run.id, review, errors });
   const delivery = projectDelivery({ db, issueId: run.issue_id, runId: run.id, errors });
   const report: RunCompletionReport = {
     version: 1,

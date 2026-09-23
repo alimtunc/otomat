@@ -3,9 +3,9 @@ import { currentBranch } from "./repo.js";
 import type { WorktreeTree } from "./service-contract.js";
 import { listTreeFiles, readTreeBlob, readTreeFile } from "./tree-file.js";
 
-export function checkoutTree(cwd: string): WorktreeTree & { branch: string } {
-  const branch = currentBranch(cwd);
-  const tree = worktreeStateTree(cwd, "HEAD");
+export async function checkoutTree(cwd: string): Promise<WorktreeTree & { branch: string }> {
+  const branch = await currentBranch(cwd);
+  const tree = await worktreeStateTree(cwd, "HEAD");
   return {
     branch,
     worktreePath: cwd,

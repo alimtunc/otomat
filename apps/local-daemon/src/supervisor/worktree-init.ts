@@ -1,5 +1,7 @@
 import { getRun, type RunRow } from "@otomat/db";
 
+import { serializeByKey } from "#serialize";
+
 import { startNextStepOrConverge } from "./advance.js";
 import { failIdleRun, failureReason } from "./fail-run.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
@@ -40,16 +42,15 @@ export function scheduleWorktreeInit(
 ): Promise<void> {
   return trackPending(
     state,
-    performWorktreeInit(state, run, commands)
-      .then(async (ready) => {
-        if (!ready) return;
-        const current = getRun(state.db, run.id);
-        if (!current) return;
-        await startNextStepOrConverge(state, current);
-      })
-      .catch((error: unknown) => {
-        console.error(`[otomat] run ${run.id} worktree init failed`, error);
-        failIdleRun(state, run.id, failureReason(error));
-      }),
+    // The run's pass: a sequential append during init queues behind it rather than starting on a half-initialized checkout.
+    serializeByKey(state.advancing, run.id, async () => {
+      if (!(await performWorktreeInit(state, run, commands))) return;
+      const current = getRun(state.db, run.id);
+      if (!current) return;
+      await startNextStepOrConverge(state, current);
+    }).catch((error: unknown) => {
+      console.error(`[otomat] run ${run.id} worktree init failed`, error);
+      return failIdleRun(state, run.id, failureReason(error));
+    }),
   );
 }

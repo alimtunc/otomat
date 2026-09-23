@@ -65,13 +65,13 @@ export function reviewedFileRow(overrides: Partial<ReviewedFileRow> = {}): Revie
 /** Every method throws or returns empty unless a test overrides it — no accidental fake success. */
 export function stubReviewService(overrides: Partial<ReviewService> = {}): ReviewService {
   return {
-    getDiff: () => ({
+    getDiff: async () => ({
       computedAt: "2026-07-05T00:00:00.000Z",
       diff: null,
       scope: { kind: "branch", branch: null, base_ref: null },
       unavailable: "This run has no worktree, so there is no current diff to show.",
     }),
-    getBranchCommits: () => ({ commits: [], unavailable: null }),
+    getBranchCommits: async () => ({ commits: [], unavailable: null }),
     getCommentFixProof: () => {
       throw new Error("getCommentFixProof stub not configured");
     },
@@ -101,7 +101,7 @@ export function stubReviewService(overrides: Partial<ReviewService> = {}): Revie
     requestFix: async () => {
       throw new Error("requestFix stub not configured");
     },
-    onRunSettled: () => {},
+    onRunSettled: async () => {},
     ...overrides,
   };
 }

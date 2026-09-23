@@ -55,7 +55,7 @@ it("withdraws a follow-up queued behind a live turn; the turn's settle then land
   if (!followUp) throw new Error("expected an appended step");
   expect(listStepRunsForRun(fix.db, run.id).at(-1)?.status).toBe("queued");
 
-  const withdrawn = supervisor.cancelStep(run.id, followUp.id);
+  const withdrawn = await supervisor.cancelStep(run.id, followUp.id);
 
   expect(withdrawn.status).toBe("withdrawn");
   expect(getRun(fix.db, run.id)?.status).toBe("running");
@@ -74,10 +74,10 @@ it("withdraws a follow-up queued behind a live turn; the turn's settle then land
       }),
     }),
   ]);
-  expect(() => supervisor.cancelStep(run.id, followUp.id)).toThrow(
+  await expect(supervisor.cancelStep(run.id, followUp.id)).rejects.toThrow(
     expect.objectContaining({ code: "step_not_queued" }),
   );
-  expect(() => supervisor.cancelStep(run.id, implement.id)).toThrow(
+  await expect(supervisor.cancelStep(run.id, implement.id)).rejects.toThrow(
     expect.objectContaining({ code: "step_not_queued" }),
   );
 
@@ -116,7 +116,7 @@ it("unqueues a turn waiting for a slot, leaves its dependent blocked, and lets a
   const b = withB.plan_json.steps.at(-1);
   if (!b) throw new Error("expected step B");
 
-  supervisor.cancelStep(run.id, a.id);
+  await supervisor.cancelStep(run.id, a.id);
 
   expect(supervisor.capacity().waiting_sessions).toBe(0);
   expect(await waitFor(() => supervisor.waitFor(run.id) === null)).toBe(true);
@@ -158,13 +158,13 @@ it("refuses to withdraw the plan's last reachable work, an unknown step, or a st
   const [only] = listStepRunsForRun(fix.db, queued.id);
   if (!only) throw new Error("plan seeded no step");
 
-  expect(() => supervisor.cancelStep(queued.id, only.id)).toThrow(
+  await expect(supervisor.cancelStep(queued.id, only.id)).rejects.toThrow(
     expect.objectContaining({ code: "step_last_work" }),
   );
-  expect(() => supervisor.cancelStep(holder.id, only.id)).toThrow(
+  await expect(supervisor.cancelStep(holder.id, only.id)).rejects.toThrow(
     expect.objectContaining({ code: "step_not_found" }),
   );
-  expect(() => supervisor.cancelStep(queued.id, "missing")).toThrow(StepCancelRefusedError);
+  await expect(supervisor.cancelStep(queued.id, "missing")).rejects.toThrow(StepCancelRefusedError);
   expect(listStepRunsForRun(fix.db, queued.id)[0]?.status).toBe("queued");
   expect(supervisor.waitFor(queued.id)).toMatchObject({ kind: "concurrency_limit" });
 
@@ -185,7 +185,7 @@ it("survives a restart: reconciliation keeps the withdrawn step and lands the ru
     ],
   });
 
-  const report = supervisor.reconcile();
+  const report = await supervisor.reconcile();
 
   expect(report.reconciled).toHaveLength(1);
   expect(getRun(fix.db, "torn")?.status).toBe("review_ready");
@@ -214,7 +214,7 @@ it("never resurrects a withdrawn step: a resume of the canceled run requeues onl
   const review = listStepRunsForRun(fix.db, run.id).find((step) => step.name === "Review");
   if (!review) throw new Error("plan seeded no review step");
 
-  supervisor.cancelStep(run.id, review.id);
+  await supervisor.cancelStep(run.id, review.id);
   await supervisor.abort(run.id);
   await supervisor.settle();
   expect(getRun(fix.db, run.id)?.status).toBe("canceled");
@@ -248,7 +248,7 @@ it("re-reads a run left awaiting a step that no longer exists", async () => {
     ],
   });
 
-  const withdrawn = supervisor.cancelStep("paused", "review");
+  const withdrawn = await supervisor.cancelStep("paused", "review");
 
   expect(withdrawn.status).toBe("withdrawn");
   expect(getRun(fix.db, "paused")?.status).toBe("review_ready");

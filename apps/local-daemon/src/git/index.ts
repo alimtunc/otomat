@@ -40,6 +40,7 @@ export { checkoutDirectories } from "./checkout-directories.js";
 export { createWorktreeEntry } from "./create-entry.js";
 export { readIgnoredFile } from "./ignored-file.js";
 export { hasPartialStaging } from "./worktree-snapshot.js";
+export { inCheckout } from "./lock.js";
 export * from "./source-control/index.js";
 export * from "./probe.js";
 export * from "./resolver.js";

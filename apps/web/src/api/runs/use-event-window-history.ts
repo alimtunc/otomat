@@ -1,5 +1,6 @@
-import type { EventEnvelope, RunEventWindow } from "@otomat/domain";
-import { useInfiniteQuery, type QueryKey } from "@tanstack/react-query";
+import type { EventEnvelope } from "@otomat/domain";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import type { eventWindowOptions } from "@web/api/runs/event-window";
 import { useCallback, useMemo } from "react";
 
 export interface RunEventHistory {
@@ -15,18 +16,9 @@ export interface RunEventHistory {
 }
 
 export function useEventWindowHistory(
-  queryKey: QueryKey,
-  readWindow: (params: { before?: number }) => Promise<RunEventWindow>,
+  options: ReturnType<typeof eventWindowOptions>,
 ): RunEventHistory {
-  const query = useInfiniteQuery({
-    queryKey,
-    queryFn: ({ pageParam }) => readWindow(pageParam === null ? {} : { before: pageParam }),
-    // SAFETY: seeds TanStack's page-param type; the daemon pages by the seq cursor.
-    initialPageParam: null as number | null,
-    getPreviousPageParam: (firstPage) => firstPage.older_cursor,
-    getNextPageParam: () => null,
-    staleTime: Infinity,
-  });
+  const query = useInfiniteQuery(options);
 
   const pages = query.data?.pages;
   const events = useMemo(() => (pages ?? []).flatMap((page) => page.events), [pages]);

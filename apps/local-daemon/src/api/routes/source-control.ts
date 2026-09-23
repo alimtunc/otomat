@@ -23,20 +23,22 @@ export function createSourceControlRoutes(deps: ApiDeps): Hono<CheckoutEnv> {
   routes.use("/:kind/:id", checkoutGuard(deps.repositories));
   routes.use("/:kind/:id/commit", checkoutGuard(deps.repositories));
 
-  routes.get("/:kind/:id", (c) => c.json(sourceControlSnapshot(c.get("checkout").cwd).response));
+  routes.get("/:kind/:id", async (c) =>
+    c.json((await sourceControlSnapshot(c.get("checkout").cwd)).response),
+  );
 
-  routes.post("/:kind/:id", validateJson(changeFilesRequestSchema), (c) => {
-    changeCheckoutFiles(c.get("checkout").cwd, c.req.valid("json"));
+  routes.post("/:kind/:id", validateJson(changeFilesRequestSchema), async (c) => {
+    await changeCheckoutFiles(c.get("checkout").cwd, c.req.valid("json"));
     return c.json({ ok: true });
   });
 
-  routes.post("/:kind/:id/commit", validateJson(commitFilesRequestSchema), (c) => {
+  routes.post("/:kind/:id/commit", validateJson(commitFilesRequestSchema), async (c) => {
     const { target, cwd, binding } = c.get("checkout");
     const request = c.req.valid("json");
     return c.json(
       target.kind === "run"
-        ? binding.service.commitStaged(target.id, request)
-        : commitCheckoutFiles(cwd, request),
+        ? await binding.service.commitStaged(target.id, request)
+        : await commitCheckoutFiles(cwd, request),
     );
   });
 

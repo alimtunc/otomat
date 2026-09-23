@@ -1,4 +1,4 @@
-import { daemon } from "@web/api/client";
+import { stepEventWindowOptions } from "@web/api/runs/event-window";
 import {
   useEventWindowHistory,
   type RunEventHistory,
@@ -7,7 +7,5 @@ import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useStepEventHistory(runId: string, stepId: string): RunEventHistory {
   const keys = useQueryKeys();
-  return useEventWindowHistory(keys.stepEventWindow(runId, stepId), (params) =>
-    daemon.getStepEventWindow(runId, stepId, params),
-  );
+  return useEventWindowHistory(stepEventWindowOptions(keys, runId, stepId));
 }

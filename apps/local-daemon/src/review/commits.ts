@@ -20,13 +20,13 @@ interface BranchCommits {
 }
 
 /** An unreadable history is reported, never rendered as a branch with no commits. */
-export function getBranchCommits(ctx: ReviewContext, runId: string): BranchCommits {
+export async function getBranchCommits(ctx: ReviewContext, runId: string): Promise<BranchCommits> {
   const service = ctx.repositories.forRun(runId)?.service ?? null;
   if (service === null) {
     return { commits: [], unavailable: "This run has no git repository to read commits from." };
   }
   try {
-    return { commits: service.branchCommits(runId).map(toRunCommit), unavailable: null };
+    return { commits: (await service.branchCommits(runId)).map(toRunCommit), unavailable: null };
   } catch (error) {
     if (error instanceof WorktreeNotFoundError) {
       return {

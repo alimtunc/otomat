@@ -26,7 +26,7 @@ export interface SupervisorState {
   defaultProjectId: string;
   spawn: SpawnSession;
   repositories: RepositoryResolver;
-  afterSettle: ((outcome: ReconcileOutcome) => void) | null;
+  afterSettle: ((outcome: ReconcileOutcome) => Promise<void>) | null;
   syncIssueLifecycle: LinearLifecycleSync | null;
   refreshPullRequests: (() => Promise<number>) | null;
   slots: Semaphore;
@@ -41,8 +41,9 @@ export interface SupervisorState {
   initInterrupts: Map<string, Set<AbortController>>;
   /** Launches waiting for a global concurrency slot or completing their spawn bookkeeping. */
   pending: Set<Promise<void>>;
+  launchesByProject: Map<string, Promise<unknown>>;
   /** Run-level scheduler guard; sessions within one compete group remain independently claimable. */
-  advancing: Set<string>;
+  advancing: Map<string, Promise<unknown>>;
   /** Run-level delivery guard so two contribution posts never batch the same queue twice. */
   delivering: Set<string>;
   /** Steps the operator stopped mid-turn: their queued messages wait for an explicit message, retry or resume, never an automatic restart. */
@@ -72,7 +73,8 @@ export function createState(config: SupervisorConfig): SupervisorState {
     claiming: new Map(),
     initInterrupts: new Map(),
     pending: new Set(),
-    advancing: new Set(),
+    launchesByProject: new Map(),
+    advancing: new Map(),
     delivering: new Set(),
     stopHeld: new Set(),
     shuttingDown: false,

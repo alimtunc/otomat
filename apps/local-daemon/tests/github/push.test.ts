@@ -10,7 +10,7 @@ import {
 } from "@otomat/db";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createGitWorktreeService, headSha, type GitWorktreeService } from "#git";
+import { createGitWorktreeService, type GitWorktreeService } from "#git";
 import { createGitHubService, GitHubCliError, type GitHubService } from "#github";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
@@ -40,7 +40,7 @@ describe("pull request pushes", () => {
       defaultBranch: repo.defaultBranch,
       worktreesRoot: join(fix.dataDir, "worktrees"),
     });
-    const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+    const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
     worktreePath = acquired.path;
     seedRun(fix.db, {
       runId: RUN_ID,
@@ -72,7 +72,7 @@ describe("pull request pushes", () => {
     writeFileSync(join(worktreePath, "change.txt"), content);
     repo.git("-C", worktreePath, "add", "-A");
     repo.git("-C", worktreePath, "commit", "--no-verify", "-m", message);
-    return headSha(worktreePath);
+    return repo.git("-C", worktreePath, "rev-parse", "HEAD").trim();
   };
 
   /** A commit the fake remote gained on its own: same parent, never in this workspace's history. */
@@ -112,7 +112,7 @@ describe("pull request pushes", () => {
     expect(cli.remoteHeads.get(BRANCH)).toBe(local);
     expect(pushed.sync).toMatchObject({ state: "in_sync", remote_head_sha: local, ahead: [] });
     expect(pushed.row.published_head_sha).toBe(local);
-    expect(pushed.row.published_diff_sha).toBe(worktrees.commitDiff(RUN_ID, local).sha);
+    expect(pushed.row.published_diff_sha).toBe((await worktrees.commitDiff(RUN_ID, local)).sha);
     expect(cli.forcePushes).toEqual([]);
   });
 

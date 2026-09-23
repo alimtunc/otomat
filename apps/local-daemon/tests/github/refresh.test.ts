@@ -21,7 +21,7 @@ let worktreePath: string;
 let cli: FakeGitHubCli;
 let github: GitHubService;
 
-beforeEach(() => {
+beforeEach(async () => {
   fix = setupDaemonDb();
   const worktreesRoot = join(fix.dataDir, "worktrees");
   worktrees = createGitWorktreeService({
@@ -31,7 +31,7 @@ beforeEach(() => {
     defaultBranch: fix.repo.defaultBranch,
     worktreesRoot,
   });
-  const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+  const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
   worktreePath = acquired.path;
   seedRun(fix.db, {
     runId: RUN_ID,

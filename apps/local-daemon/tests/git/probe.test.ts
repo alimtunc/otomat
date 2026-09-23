@@ -23,63 +23,63 @@ afterEach(() => {
   rmSync(scratch, { recursive: true, force: true });
 });
 
-it("accepts a repository root and returns its canonical path and current branch", () => {
-  const probe = probeLocalRepository(repo.root);
+it("accepts a repository root and returns its canonical path and current branch", async () => {
+  const probe = await probeLocalRepository(repo.root);
   expect(probe).toEqual({ ok: true, rootPath: realpathSync(repo.root), defaultBranch: "main" });
 });
 
-it("resolves a symlinked path to the canonical repository root", () => {
+it("resolves a symlinked path to the canonical repository root", async () => {
   const link = join(scratch, "repo-link");
   symlinkSync(repo.root, link);
-  const probe = probeLocalRepository(link);
+  const probe = await probeLocalRepository(link);
   expect(probe).toEqual({ ok: true, rootPath: realpathSync(repo.root), defaultBranch: "main" });
 });
 
-it("refuses a relative path", () => {
-  expect(probeLocalRepository("some/relative/path")).toEqual({
+it("refuses a relative path", async () => {
+  expect(await probeLocalRepository("some/relative/path")).toEqual({
     ok: false,
     error: "path_not_absolute",
   });
 });
 
-it("refuses a path that does not exist", () => {
-  expect(probeLocalRepository(join(scratch, "ghost"))).toEqual({
+it("refuses a path that does not exist", async () => {
+  expect(await probeLocalRepository(join(scratch, "ghost"))).toEqual({
     ok: false,
     error: "path_not_found",
   });
 });
 
-it("refuses a file path", () => {
+it("refuses a file path", async () => {
   const file = join(scratch, "notes.txt");
   writeFileSync(file, "x");
-  expect(probeLocalRepository(file)).toEqual({ ok: false, error: "path_not_directory" });
+  expect(await probeLocalRepository(file)).toEqual({ ok: false, error: "path_not_directory" });
 });
 
-it("refuses a directory that is not a git repository", () => {
+it("refuses a directory that is not a git repository", async () => {
   const dir = join(scratch, "plain");
   mkdirSync(dir);
-  expect(probeLocalRepository(dir)).toEqual({ ok: false, error: "path_not_git_repository" });
+  expect(await probeLocalRepository(dir)).toEqual({ ok: false, error: "path_not_git_repository" });
 });
 
-it("refuses a subdirectory of a repository, pointing at the root instead", () => {
+it("refuses a subdirectory of a repository, pointing at the root instead", async () => {
   repo.write("nested/file.txt", "x");
-  expect(probeLocalRepository(join(repo.root, "nested"))).toEqual({
+  expect(await probeLocalRepository(join(repo.root, "nested"))).toEqual({
     ok: false,
     error: "path_not_repository_root",
   });
 });
 
-it("refuses a repository with a detached HEAD", () => {
+it("refuses a repository with a detached HEAD", async () => {
   const head = repo.git("rev-parse", "HEAD").trim();
   repo.git("checkout", "--detach", head);
-  expect(probeLocalRepository(repo.root)).toEqual({ ok: false, error: "head_detached" });
+  expect(await probeLocalRepository(repo.root)).toEqual({ ok: false, error: "head_detached" });
 });
 
-it("refuses a repository whose branch has no commit yet", () => {
+it("refuses a repository whose branch has no commit yet", async () => {
   const bare = join(scratch, "unborn");
   mkdirSync(bare);
   execFileSync("git", ["init", "-b", "main"], { cwd: bare, env: scrubGitEnv(process.env) });
-  expect(probeLocalRepository(bare)).toEqual({
+  expect(await probeLocalRepository(bare)).toEqual({
     ok: false,
     error: "default_branch_undetectable",
   });

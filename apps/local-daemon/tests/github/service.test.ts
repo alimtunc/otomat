@@ -43,7 +43,7 @@ describe("GitHubService", () => {
   let worktreePath: string;
   let cli: FakeGitHubCli;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     fix = setupDaemonDb();
     repo = fix.repo;
     worktrees = createGitWorktreeService({
@@ -53,7 +53,7 @@ describe("GitHubService", () => {
       defaultBranch: repo.defaultBranch,
       worktreesRoot: join(fix.dataDir, "worktrees"),
     });
-    const acquired = worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
+    const acquired = await worktrees.acquire({ owner: RUN_ID, branch: BRANCH });
     worktreePath = acquired.path;
     seedRun(fix.db, {
       runId: RUN_ID,
@@ -528,7 +528,7 @@ describe("GitHubService", () => {
 
   it("targets the run's frozen fork branch, never the repository default", async () => {
     repo.git("branch", "feature-base");
-    const forked = worktrees.acquire({
+    const forked = await worktrees.acquire({
       owner: "run-forked",
       branch: "otomat/run/run-forked",
       baseRef: "feature-base",
@@ -587,7 +587,7 @@ describe("GitHubService", () => {
       error_message: null,
     });
     expect(result.published_head_sha).toBe(worktrees.get(RUN_ID)?.headSha);
-    expect(result.published_diff_sha).toBe(worktrees.diff(RUN_ID).sha);
+    expect(result.published_diff_sha).toBe((await worktrees.diff(RUN_ID)).sha);
     expect((await service().getPullRequest(RUN_ID))?.sync).toMatchObject({
       state: "in_sync",
       dirty: false,
@@ -618,7 +618,7 @@ describe("GitHubService", () => {
 
   it("opens the pull request against the branch the run forked from, not the repository default", async () => {
     repo.git("branch", "release/v1");
-    const acquired = worktrees.acquire({
+    const acquired = await worktrees.acquire({
       owner: "r-release",
       branch: "otomat/run/r-release",
       baseRef: "release/v1",
@@ -643,7 +643,7 @@ describe("GitHubService", () => {
   });
 
   it("falls back to the repository default for a worktree recorded before fork refs", async () => {
-    const acquired = worktrees.acquire({ owner: "r-legacy", branch: "otomat/run/r-legacy" });
+    const acquired = await worktrees.acquire({ owner: "r-legacy", branch: "otomat/run/r-legacy" });
     fix.db
       .update(schema.worktrees)
       .set({ base_ref: "" })

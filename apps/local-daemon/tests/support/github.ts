@@ -284,22 +284,22 @@ export class FakeGitHubCli implements GitHubCli {
     this.pushCalls += 1;
     this.pushedBranches.push(branch);
     if (this.pushError) throw this.pushError;
-    const pushed = sha ?? headSha(cwd);
+    const pushed = sha ?? (await headSha(cwd));
     this.remoteHeads.set(branch, pushed);
     // A real push also moves the remote-tracking ref, which the upstream set afterwards points at.
-    runGit(["update-ref", `refs/remotes/${remote}/${branch}`, pushed], { cwd });
+    await runGit(["update-ref", `refs/remotes/${remote}/${branch}`, pushed], { cwd });
   }
 
   async forcePushWithLease(input: ForcePushWithLeaseInput): Promise<void> {
     this.forcePushes.push(input);
-    this.remoteHeads.set(input.branch, headSha(input.cwd));
+    this.remoteHeads.set(input.branch, await headSha(input.cwd));
   }
 
   async remoteHead(_cwd: string, _remote: string, branch: string): Promise<string | null> {
     return this.remoteHeads.get(branch) ?? null;
   }
 
-  async fetchBranch(): Promise<void> {}
+  async fetchBranch(_cwd: string, _remote: string, _branch: string): Promise<void> {}
 
   async findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null> {
     const matchesSelector =

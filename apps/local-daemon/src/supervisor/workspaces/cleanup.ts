@@ -8,28 +8,39 @@ import {
 } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
-import { isInsideRoot } from "#git";
+import { inCheckout, isInsideRoot } from "#git";
 import { deleteBranch } from "#git/branches";
 import { pruneWorktrees, removeWorktree } from "#git/worktree-cli";
 import { findWorktreeById, updateWorktreeStatus } from "#git/worktrees-store";
 
 import { buildWorkspaceCleanedEvent } from "../markers.js";
 import type { WorkspaceContext } from "./context.js";
-import { listWorkspaces, repositoryInventory } from "./inventory.js";
+import { cycleHolders, listWorkspaces, repositoryInventory } from "./inventory.js";
 
 /** Re-classified from git here, so a cleanup never acts on a verdict a caller has been holding. */
-export function findWorkspaceEntry(
+export async function findWorkspaceEntry(
   context: WorkspaceContext,
   workspaceId: string,
   holders: Map<string, string>,
-): WorkspaceEntry | null {
+): Promise<WorkspaceEntry | null> {
   const row = findWorktreeById(context.db, workspaceId);
   const repository = row === undefined ? undefined : getRepository(context.db, row.repository_id);
   // A worktree Otomat holds no row for is identified by its path, so it is found by listing.
   const entries = repository
-    ? repositoryInventory(context, repository, holders)
-    : listWorkspaces(context).entries;
+    ? await repositoryInventory(context, repository, holders)
+    : (await listWorkspaces(context)).entries;
   return entries.find((entry) => entry.id === workspaceId) ?? null;
+}
+
+/** Classifies under the checkout's lock, so no write to it lands between a cleanup's verdict and its act. */
+export function inWorkspaceCheckout<T>(
+  context: WorkspaceContext,
+  workspaceId: string,
+  operation: (entry: WorkspaceEntry | null) => Promise<T>,
+): Promise<T> {
+  return inCheckout(findWorktreeById(context.db, workspaceId)?.path ?? workspaceId, async () =>
+    operation(await findWorkspaceEntry(context, workspaceId, cycleHolders(context.db))),
+  );
 }
 
 function audit(context: WorkspaceContext, entry: WorkspaceEntry, forced: boolean): void {
@@ -62,11 +73,11 @@ interface WorkspaceCleanupOptions {
 }
 
 /** A git refusal leaves the record untouched, so the workspace stays retryable. */
-export function cleanupWorkspace(
+export async function cleanupWorkspace(
   context: WorkspaceContext,
   entry: WorkspaceEntry,
   options: WorkspaceCleanupOptions = { force: false },
-): WorkspaceCleanupResult {
+): Promise<WorkspaceCleanupResult> {
   // An external worktree is bounded by git listing it for this repository, not by Otomat's root.
   if (
     entry.provenance !== "external_worktree" &&
@@ -85,7 +96,9 @@ export function cleanupWorkspace(
 
   // Only a registration is removable, directory or not; an orphan record has none and prune converges it.
   if (entry.registered) {
-    const refusal = removeWorktree(entry.repository_path, entry.path, { force: options.force });
+    const refusal = await removeWorktree(entry.repository_path, entry.path, {
+      force: options.force,
+    });
     if (refusal !== null) {
       console.error(`[otomat] worktree removal refused for ${entry.path}: ${refusal}`);
       return {
@@ -96,8 +109,8 @@ export function cleanupWorkspace(
       };
     }
   }
-  pruneWorktrees(entry.repository_path);
-  if (ownedBranch !== null) deleteBranch(entry.repository_path, ownedBranch);
+  await pruneWorktrees(entry.repository_path);
+  if (ownedBranch !== null) await deleteBranch(entry.repository_path, ownedBranch);
   if (record) updateWorktreeStatus(context.db, entry.id, { status: "removed" });
   audit(context, entry, options.force);
   return {

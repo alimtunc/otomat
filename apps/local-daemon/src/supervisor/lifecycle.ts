@@ -21,21 +21,16 @@ import { withCarriedContributions } from "./contribution/prompt.js";
 import { failUnstartedTurn, failureReason } from "./fail-run.js";
 import { waitForWorkerIdentity } from "./identity.js";
 import { runInitCommandBatch, runStillLive } from "./init-commands.js";
-import { ingestRunInteractions } from "./interaction/index.js";
-import { startIntervalPass } from "./interval-pass.js";
 import { clearLiveInput } from "./live-input.js";
-import { capturePassStart, finishSettle } from "./pass-boundary.js";
+import { settleLive, trackTurn } from "./live-turn.js";
+import { capturePassStart } from "./pass-boundary.js";
 import { WorkerSpawnError } from "./process.js";
 import type { SlotGrant } from "./semaphore.js";
-import { settleRun, type SettleOptions } from "./settle/index.js";
 import { clearWorkerStartEvidence } from "./start-gate.js";
-import { trackPending, type SupervisorState } from "./state.js";
+import type { SupervisorState } from "./state.js";
 import { driveRunTo, driveSessionTo, driveStepTo } from "./transitions.js";
 import { captureTurnContext } from "./turn-context.js";
 import type { ProcessExit, SessionProcess, TurnContext } from "./types.js";
-
-/** Just behind the session tail's own interval, so a question reaches the operator within one poll of being written. */
-const INTERACTION_INGEST_INTERVAL_MS = 250;
 
 /** Advances only the turn's own step/session — siblings keep their state. The step machine decides what may reopen: a stopped step goes back to work, a succeeded one is left as delivered. */
 function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
@@ -56,64 +51,6 @@ function advanceToRunning(state: SupervisorState, ctx: TurnContext): void {
   if (!agentSessionMachine.isTerminal(session.status)) {
     driveSessionTo(db, session.id, session.status, "active");
   }
-}
-
-function settleLive(state: SupervisorState, ctx: TurnContext, exit?: ProcessExit): void {
-  const run = getRun(state.db, ctx.runId);
-  if (!run) return;
-  try {
-    const settle: SettleOptions = {
-      mode: "live",
-      turn: { agentSessionId: ctx.agentSessionId },
-      now: new Date().toISOString(),
-    };
-    if (exit) settle.observedExit = exit;
-    const outcome = settleRun(state.db, state.dataDir, run, settle);
-    finishSettle(state, outcome);
-  } catch (error) {
-    console.error(`[otomat] run ${ctx.runId} settle failed`, error);
-  }
-}
-
-/** The whole chain — settle, cleanup, and the advance that may start the next step — lives in `state.pending`, so `settle` and `shutdown` never observe a window where the turn is gone from `inflight` but its advance is still running. */
-function trackTurn(
-  state: SupervisorState,
-  ctx: TurnContext,
-  proc: SessionProcess,
-  tail: ReturnType<typeof startSessionTail>,
-): void {
-  // Paired with the tail because it reads what the tail just ingested: a question the turn asked is only answerable once it is a row.
-  const interactions = startIntervalPass(
-    `run ${ctx.runId} interactions`,
-    async () => ingestRunInteractions(state.db, ctx.runId),
-    INTERACTION_INGEST_INTERVAL_MS,
-  );
-  const monitor = trackPending(
-    state,
-    (async () => {
-      const exit = await proc.exited;
-      // Stopped before settling: settle owns the interaction lifecycle from here, and a pass firing mid-settle would race its state walk.
-      interactions.stop();
-      try {
-        if (!state.aborting.has(ctx.runId)) settleLive(state, ctx, exit);
-      } finally {
-        tail.stop();
-        state.inflight.delete(ctx.agentSessionId);
-        state.slots.release();
-      }
-      if (state.aborting.has(ctx.runId)) return;
-      await state.advance?.(ctx.runId);
-    })().catch((error: unknown) =>
-      console.error(`[otomat] run ${ctx.runId} turn monitor failed`, error),
-    ),
-  );
-  state.inflight.set(ctx.agentSessionId, {
-    runId: ctx.runId,
-    proc,
-    monitor,
-    tail,
-    turn: { agentSessionId: ctx.agentSessionId },
-  });
 }
 
 /**
@@ -141,6 +78,13 @@ export async function spawnTurn(
     resolveCarriedContributions(state, ctx.agentSessionId, { kind: "released" });
     slots.release();
   };
+  // A gone, settled or aborting run is settled by its owner; shutdown leaves the turn to this one.
+  const settleWithdrawn = async (exit?: ProcessExit): Promise<void> => {
+    const run = getRun(db, ctx.runId);
+    if (run && !isRunSettled(run.status) && !aborting.has(ctx.runId)) {
+      await settleLive(state, ctx, exit);
+    }
+  };
 
   let grant: SlotGrant | null = null;
   let proc: SessionProcess | undefined;
@@ -163,7 +107,14 @@ export async function spawnTurn(
       });
       if (!initialized) return abandon();
     }
-    capturePassStart(state, ctx);
+    await capturePassStart(state, ctx);
+    // Captured before the claim, so no await separates claiming a contribution from the spawn that carries it.
+    const context = await captureTurnContext(state, ctx, mode);
+    // Abort and shutdown cannot see a turn that is neither starting nor in flight.
+    if (!runStillLive(state, ctx.runId)) {
+      await settleWithdrawn();
+      return abandon();
+    }
     clearWorkerStartEvidence(ctx.agentSessionDir);
     clearLiveInput(ctx.agentSessionDir);
     if (ctx.kind === "step") {
@@ -177,7 +128,7 @@ export async function spawnTurn(
     }
     const carried = carriedContributions(state, ctx.agentSessionId);
     const prompt = withCarriedContributions(
-      captureTurnContext(state, ctx, mode),
+      context,
       carried.map((row) => row.body),
     );
     // The selection is already rendered into `prompt`; a job is serialized for the worker, so it must not carry it twice.
@@ -200,18 +151,9 @@ export async function spawnTurn(
     if (!(await waitForWorkerIdentity(ctx.agentSessionDir, proc.pid, proc.pgid))) {
       throw new Error(`worker ${proc.pid} exited before its identity could be recorded`);
     }
-    const readyRun = getRun(db, ctx.runId);
-    if (
-      !readyRun ||
-      isRunSettled(readyRun.status) ||
-      aborting.has(ctx.runId) ||
-      state.shuttingDown
-    ) {
+    if (!runStillLive(state, ctx.runId)) {
       proc.kill("SIGKILL");
-      const exit = await proc.exited;
-      if (readyRun && !isRunSettled(readyRun.status) && !aborting.has(ctx.runId)) {
-        settleLive(state, ctx, exit);
-      }
+      await settleWithdrawn(await proc.exited);
       return abandon();
     }
     tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);
@@ -237,7 +179,7 @@ export async function spawnTurn(
     });
     if (!aborting.has(ctx.runId)) {
       if (error instanceof WorkerSpawnError) failUnstartedTurn(state, ctx, error.message);
-      settleLive(state, ctx);
+      await settleLive(state, ctx);
     }
     throw error;
   } finally {

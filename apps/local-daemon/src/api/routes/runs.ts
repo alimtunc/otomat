@@ -73,8 +73,8 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
 
   routes.get("/:id/usage", runGuard(deps.db), (c) => c.json(readRunUsage(deps.db, c.get("run"))));
 
-  routes.get("/:id/report", (c) => {
-    const report = projectRunCompletionReport(deps.db, c.req.param("id"), deps.review);
+  routes.get("/:id/report", async (c) => {
+    const report = await projectRunCompletionReport(deps.db, c.req.param("id"), deps.review);
     return report ? c.json(report) : c.json({ error: "run_not_found" }, 404);
   });
 
@@ -117,10 +117,10 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     },
   );
 
-  routes.get("/:id/workspace", runGuard(deps.db), (c) => {
+  routes.get("/:id/workspace", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     try {
-      const facts = deps.supervisor.workspaceClosure(run.id);
+      const facts = await deps.supervisor.workspaceClosure(run.id);
       if (!facts) return c.json({ error: "run_not_found" }, 404);
       const pullRequest = getPullRequestForRun(deps.db, run.id);
       return c.json({

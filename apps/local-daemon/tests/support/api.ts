@@ -214,16 +214,16 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
     abandon: () => {
       throw new Error("abandon stub not configured");
     },
-    workspaceClosure: () => null,
+    workspaceClosure: async () => null,
     contributionImage: () => null,
-    workspaces: () => ({
+    workspaces: async () => ({
       entries: [],
       counts: { active: 0, cleanup_required: 0, stale: 0, missing: 0, unmanaged: 0 },
     }),
     reconcileWorkspaces: async () => {
       throw new Error("reconcileWorkspaces stub not configured");
     },
-    cleanupWorkspace: () => null,
+    cleanupWorkspace: async () => null,
     appendStep: async () => {
       throw new Error("appendStep stub not configured");
     },
@@ -246,7 +246,7 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
       throw new Error("selectWinner stub not configured");
     },
     abort: async () => {},
-    reconcile: () => ({ reconciled: [] }),
+    reconcile: async () => ({ reconciled: [] }),
     settle: async () => {},
     shutdown: async () => {},
     ...overrides,

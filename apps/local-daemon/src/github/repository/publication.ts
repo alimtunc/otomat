@@ -63,7 +63,7 @@ export async function publishRepositoryPullRequest(
       "This branch's pull request is closed. Choose a new branch.",
     );
   await config.cli.push(cwd, remote.name, head, snapshot.head);
-  setUpstream(cwd, head, remote.name);
+  await setUpstream(cwd, head, remote.name);
   const publication = {
     title,
     body: details.body,
@@ -78,7 +78,7 @@ export async function publishRepositoryPullRequest(
     // The pre-push view is what `existing` holds; the mirrored checks and update time must be the pushed head's.
     provider = await config.cli.viewPullRequest(cwd, remote.repository, existing.number);
   }
-  const row = mirrorPullRequest(config, {
+  const row = await mirrorPullRequest(config, {
     repositoryId,
     provider,
     connectedLogin: connection.login,

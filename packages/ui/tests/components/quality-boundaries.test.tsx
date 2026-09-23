@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import {
   AppShell,
+  AppShellMain,
   Avatar,
   Button,
   CommandPalette,
@@ -32,8 +33,8 @@ describe("shared UI boundaries", () => {
   it("leaves toast infrastructure to the application root", async () => {
     await render(
       <ThemeProvider>
-        <AppShell sidebar={<aside />} pageBar={<header />}>
-          content
+        <AppShell sidebar={<aside />}>
+          <AppShellMain pageBar={<header />}>content</AppShellMain>
         </AppShell>
       </ThemeProvider>,
     );

@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 
 import { GitCommandError } from "./errors.js";
 
@@ -8,7 +8,7 @@ export interface RunGitOptions {
   env?: NodeJS.ProcessEnv;
   /** When true, a non-zero exit returns the result instead of throwing. */
   allowFailure?: boolean;
-  /** Bounds a command that can wait on a network peer; `spawnSync` blocks the whole daemon without it. */
+  /** Bounds a command that can wait on a network peer. */
   timeoutMs?: number;
   /** Fed to stdin, for commands that hash or read content rather than a path. */
   input?: Buffer | string;
@@ -45,68 +45,88 @@ export function scrubGitEnv(env: NodeJS.ProcessEnv = process.env): NodeJS.Proces
   return scrubbed;
 }
 
-/** `spawnSync` reports a timeout as an error, not an exit code; `allowFailure` still owns whether it throws. */
-function timeoutStderr(error: Error, args: readonly string[], options: RunGitOptions): string {
-  if (!("code" in error) || error.code !== "ETIMEDOUT") throw error;
-  const stderr = `timed out after ${options.timeoutMs}ms`;
-  if (!options.allowFailure) throw new GitCommandError(args, options.cwd, null, stderr);
-  return stderr;
+function outputOverflow(args: readonly string[]): Error {
+  return Object.assign(new Error(`git ${args.join(" ")} wrote more than ${MAX_BUFFER} bytes`), {
+    code: "ENOBUFS",
+  });
+}
+
+/** A timeout is a result with no exit code, so `allowFailure` still owns whether it throws. */
+function execGit(args: readonly string[], options: RunGitOptions): Promise<GitBytesResult> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", args, {
+      cwd: options.cwd,
+      env: { ...scrubGitEnv(process.env), ...options.env },
+      stdio: "pipe",
+    });
+    const stdout: Buffer[] = [];
+    const stderr: Buffer[] = [];
+    let buffered = 0;
+    let failure: Error | null = null;
+    let timedOut = false;
+    const abort = (error: Error): void => {
+      failure ??= error;
+      child.kill();
+    };
+    const collect =
+      (chunks: Buffer[]) =>
+      (chunk: Buffer): void => {
+        buffered += chunk.length;
+        if (buffered > MAX_BUFFER) abort(outputOverflow(args));
+        else chunks.push(chunk);
+      };
+    child.stdout.on("data", collect(stdout));
+    child.stderr.on("data", collect(stderr));
+    const timer =
+      options.timeoutMs === undefined
+        ? null
+        : setTimeout(() => {
+            timedOut = true;
+            child.kill();
+          }, options.timeoutMs);
+    let settled = false;
+    const settle = (finish: () => void): void => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) clearTimeout(timer);
+      finish();
+    };
+    child.on("error", (error) => settle(() => reject(error)));
+    child.on("close", (exitCode) =>
+      settle(() => {
+        if (failure !== null) return reject(failure);
+        if (timedOut) {
+          const reason = `timed out after ${options.timeoutMs}ms`;
+          return resolve({ stdout: Buffer.alloc(0), stderr: reason, exitCode: null });
+        }
+        resolve({
+          stdout: Buffer.concat(stdout),
+          stderr: Buffer.concat(stderr).toString("utf8"),
+          exitCode,
+        });
+      }),
+    );
+    // git may exit before draining its input; its exit status is then the answer, not the broken pipe.
+    child.stdin.on("error", (error: NodeJS.ErrnoException) => {
+      if (error.code !== "EPIPE") abort(error);
+    });
+    child.stdin.end(options.input);
+  });
+}
+
+export async function runGitBytes(
+  args: readonly string[],
+  options: RunGitOptions,
+): Promise<GitBytesResult> {
+  const result = await execGit(args, options);
+  if (!options.allowFailure && result.exitCode !== 0) {
+    throw new GitCommandError(args, options.cwd, result.exitCode, result.stderr);
+  }
+  return result;
 }
 
 /** Runs `git` with array args (no shell), capturing stdout/stderr as UTF-8. */
-export function runGit(args: readonly string[], options: RunGitOptions): GitResult {
-  const result = spawnSync("git", args, {
-    cwd: options.cwd,
-    encoding: "utf8",
-    env: { ...scrubGitEnv(process.env), ...options.env },
-    input: options.input,
-    maxBuffer: MAX_BUFFER,
-    timeout: options.timeoutMs,
-  });
-
-  if (result.error) {
-    return { stdout: "", stderr: timeoutStderr(result.error, args, options), exitCode: null };
-  }
-
-  const out: GitResult = {
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-    exitCode: result.status,
-  };
-
-  if (!options.allowFailure && result.status !== 0) {
-    throw new GitCommandError(args, options.cwd, result.status, out.stderr);
-  }
-  return out;
-}
-
-export function runGitBytes(args: readonly string[], options: RunGitOptions): GitBytesResult {
-  const result = spawnSync("git", args, {
-    cwd: options.cwd,
-    encoding: null,
-    env: { ...scrubGitEnv(process.env), ...options.env },
-    input: options.input,
-    maxBuffer: MAX_BUFFER,
-    timeout: options.timeoutMs,
-  });
-
-  if (result.error) {
-    return {
-      stdout: Buffer.alloc(0),
-      stderr: timeoutStderr(result.error, args, options),
-      exitCode: null,
-    };
-  }
-
-  const stderr = result.stderr?.toString("utf8") ?? "";
-  const out: GitBytesResult = {
-    stdout: result.stdout ?? Buffer.alloc(0),
-    stderr,
-    exitCode: result.status,
-  };
-
-  if (!options.allowFailure && result.status !== 0) {
-    throw new GitCommandError(args, options.cwd, result.status, stderr);
-  }
-  return out;
+export async function runGit(args: readonly string[], options: RunGitOptions): Promise<GitResult> {
+  const result = await runGitBytes(args, options);
+  return { ...result, stdout: result.stdout.toString("utf8") };
 }

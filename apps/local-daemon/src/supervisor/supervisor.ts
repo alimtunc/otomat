@@ -33,8 +33,7 @@ import type { Supervisor, SupervisorConfig } from "./types.js";
 import { workspaceClosureFacts } from "./workspace-summary.js";
 import {
   cleanupWorkspace,
-  cycleHolders,
-  findWorkspaceEntry,
+  inWorkspaceCheckout,
   listWorkspaces,
   reconcileWorkspaces,
   supervisorWorkspaces,
@@ -83,13 +82,13 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     selectWinner: (runId, groupId, stepRunId) =>
       selectCompeteWinner(state, runId, groupId, stepRunId),
     abort: (runId) => abortRun(state, runId),
-    reconcile: () => {
+    reconcile: async () => {
       const now = new Date().toISOString();
       reconcileContributionClaims(state.db, state.dataDir, now);
-      const recovered = recoverCompeteSelections(state);
+      const recovered = await recoverCompeteSelections(state);
       const report = reconcileRuns(state.db, state.dataDir, now);
       const reconciled = [...recovered, ...report.reconciled];
-      for (const outcome of reconciled) finishSettle(state, outcome);
+      for (const outcome of reconciled) await finishSettle(state, outcome);
       return { reconciled };
     },
     workspaces: (scope) => listWorkspaces(workspaces, scope),
@@ -110,10 +109,10 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       }
       return workspacePass;
     },
-    cleanupWorkspace: (workspaceId, force) => {
-      const entry = findWorkspaceEntry(workspaces, workspaceId, cycleHolders(state.db));
-      return entry === null ? null : cleanupWorkspace(workspaces, entry, { force });
-    },
+    cleanupWorkspace: (workspaceId, force) =>
+      inWorkspaceCheckout(workspaces, workspaceId, async (entry) =>
+        entry === null ? null : cleanupWorkspace(workspaces, entry, { force }),
+      ),
     settle: async () => {
       while (state.inflight.size > 0 || state.pending.size > 0) {
         await Promise.all([

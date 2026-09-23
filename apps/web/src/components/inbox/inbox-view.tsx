@@ -53,7 +53,6 @@ export function InboxView() {
 
   return (
     <RouteShell
-      active="inbox"
       titleIcon="inbox"
       titleNote="Everything that needs you, across every project on this host."
       breadcrumbs={[{ label: "Inbox", current: true }]}
@@ -76,7 +75,7 @@ export function InboxView() {
     >
       <QueryBoundary
         query={inbox}
-        pending={<ListSkeleton rows={3} height={52} />}
+        pending={<ListSkeleton rows={8} height={44} />}
         error={
           <ErrorReport
             error={inbox.error}

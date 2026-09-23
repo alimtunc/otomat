@@ -33,8 +33,12 @@ function parseTreeRecord(record: string): TreeEntry | null {
   return { mode, type, oid, size: Number.parseInt(size ?? "0", 10) || 0, path };
 }
 
-export function lsTree(gitCwd: string, tree: string, path: string): TreeEntry | null {
-  const result = runGit(
+export async function lsTree(
+  gitCwd: string,
+  tree: string,
+  path: string,
+): Promise<TreeEntry | null> {
+  const result = await runGit(
     [
       "--literal-pathspecs",
       "-c",
@@ -58,10 +62,12 @@ function entryKind(entry: TreeEntry): WorktreeFileEntry["kind"] {
   return entry.type === "commit" ? "submodule" : "file";
 }
 
-export function listTreeFiles(gitCwd: string, tree: string): WorktreeFileEntry[] {
-  const out = runGit(["-c", "core.quotepath=false", "ls-tree", "-r", "--long", "-z", tree], {
-    cwd: gitCwd,
-  }).stdout;
+export async function listTreeFiles(gitCwd: string, tree: string): Promise<WorktreeFileEntry[]> {
+  const out = (
+    await runGit(["-c", "core.quotepath=false", "ls-tree", "-r", "--long", "-z", tree], {
+      cwd: gitCwd,
+    })
+  ).stdout;
   const entries: WorktreeFileEntry[] = [];
   for (const record of out.split("\0")) {
     const entry = record === "" ? null : parseTreeRecord(record);
@@ -71,23 +77,26 @@ export function listTreeFiles(gitCwd: string, tree: string): WorktreeFileEntry[]
   return entries;
 }
 
-export function readTreeBlob(gitCwd: string, oid: string): Buffer {
-  return runGitBytes(["cat-file", "blob", oid], { cwd: gitCwd }).stdout;
+export async function readTreeBlob(gitCwd: string, oid: string): Promise<Buffer> {
+  return (await runGitBytes(["cat-file", "blob", oid], { cwd: gitCwd })).stdout;
 }
 
 /** `path` must already have been validated as repository-relative; anything unusable as text is named by kind rather than approximated. */
-export function readTreeFile(
+export async function readTreeFile(
   gitCwd: string,
   tree: string,
   path: string,
   limits: TreeFileLimits,
-): TreeFileRead {
-  const entry = lsTree(gitCwd, tree, path);
+): Promise<TreeFileRead> {
+  const entry = await lsTree(gitCwd, tree, path);
   if (entry === null) return { kind: "missing" };
   if (entry.mode === SYMLINK_MODE) return { kind: "symlink" };
   if (entry.type !== "blob") return { kind: "directory" };
   if (entry.size > limits.maxBytes) return { kind: "too_large", bytes: entry.size };
-  const content = runGit(["cat-file", "blob", entry.oid], { cwd: gitCwd, allowFailure: true });
+  const content = await runGit(["cat-file", "blob", entry.oid], {
+    cwd: gitCwd,
+    allowFailure: true,
+  });
   if (content.exitCode !== 0) return { kind: "missing" };
   if (content.stdout.includes("\0")) return { kind: "binary", bytes: entry.size, oid: entry.oid };
   return { kind: "text", text: content.stdout, bytes: entry.size, oid: entry.oid };

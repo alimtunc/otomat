@@ -82,16 +82,16 @@ function activateHookEnv(repoRoot: string): () => void {
 }
 
 describe("git env isolation under an ambient hook env", () => {
-  it("runGit targets its cwd repo, never the hook's repo", () => {
+  it("runGit targets its cwd repo, never the hook's repo", async () => {
     const sentinel = makeRepo("otomat-git-sentinel-", "SENTINEL.md");
     const target = makeRepo("otomat-git-target-", "README.md");
     const before = snapshot(sentinel);
     const restore = activateHookEnv(sentinel);
     try {
       writeFileSync(join(target, "feature.txt"), "target work\n");
-      runGit(["checkout", "-b", "feature"], { cwd: target });
-      runGit(["add", "-A"], { cwd: target });
-      runGit(["commit", "-m", "target commit"], { cwd: target });
+      await runGit(["checkout", "-b", "feature"], { cwd: target });
+      await runGit(["add", "-A"], { cwd: target });
+      await runGit(["commit", "-m", "target commit"], { cwd: target });
 
       expect(systemGit(target, "branch", "--show-current").trim()).toBe("feature");
       expect(systemGit(target, "log", "--oneline").trim()).toContain("target commit");
@@ -103,14 +103,14 @@ describe("git env isolation under an ambient hook env", () => {
     }
   });
 
-  it("worktreeStateTree writes its throwaway tree into its cwd repo, never the hook's repo", () => {
+  it("worktreeStateTree writes its throwaway tree into its cwd repo, never the hook's repo", async () => {
     const sentinel = makeRepo("otomat-git-sentinel-", "SENTINEL.md");
     const target = makeRepo("otomat-git-target-", "README.md");
-    const groundTruth = worktreeStateTree(target, "HEAD");
+    const groundTruth = await worktreeStateTree(target, "HEAD");
     const before = snapshot(sentinel);
     const restore = activateHookEnv(sentinel);
     try {
-      const tree = worktreeStateTree(target, "HEAD");
+      const tree = await worktreeStateTree(target, "HEAD");
       expect(tree).toBe(groundTruth);
       expect(snapshot(sentinel)).toEqual(before);
     } finally {

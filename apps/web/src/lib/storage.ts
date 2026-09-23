@@ -34,6 +34,18 @@ export function writeStored(
   }
 }
 
+export function removeStored(
+  key: string,
+  storage: Pick<Storage, "removeItem"> | null = browserStorage(),
+): void {
+  if (storage === null) return;
+  try {
+    storage.removeItem(key);
+  } catch {
+    /* storage unavailable; nothing is left to remove */
+  }
+}
+
 export type ScopedStorage = Pick<Storage, "getItem" | "setItem">;
 
 export function readStoredJson<T>(

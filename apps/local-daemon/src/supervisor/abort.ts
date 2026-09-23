@@ -62,7 +62,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
     if (handles.length <= 1 && findFinalStatus(scoped) !== null) {
       const settle: SettleOptions = { mode: "live", now };
       if (turn) settle.turn = turn;
-      finishSettle(state, settleRun(db, dataDir, current, settle));
+      await finishSettle(state, settleRun(db, dataDir, current, settle));
       const settled = getRun(db, runId);
       if (settled) cancelRemainder(state, settled, now);
       return;
@@ -100,7 +100,7 @@ export async function abortRun(state: SupervisorState, runId: string): Promise<v
       null;
     const marker = buildTerminalMarker(ref, "canceled", providerSessionId, null, 0, now);
     emitLedgerEvent(db, dataDir, runId, marker);
-    finishSettle(state, {
+    await finishSettle(state, {
       runId,
       stepRunId: ref.stepRunId,
       agentSessionId: ref.agentSessionId,

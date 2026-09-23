@@ -82,8 +82,7 @@ export async function checkProjectHealth(
     },
   ];
 
-  const checks: ProjectHealthCheck[] = [];
-  for (const probe of probes) checks.push(await settle(probe));
+  const checks = await Promise.all(probes.map(settle));
 
   return {
     project_id: projectId,

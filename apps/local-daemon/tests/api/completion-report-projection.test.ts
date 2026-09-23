@@ -77,7 +77,7 @@ describe("run completion report projection", () => {
     t.cleanup();
   });
 
-  it("projects persisted run evidence and renders the same Markdown after restart", () => {
+  it("projects persisted run evidence and renders the same Markdown after restart", async () => {
     const seeded = seedRun(t.db, {
       runId: "run-report",
       runStatus: "completed",
@@ -197,7 +197,7 @@ describe("run completion report projection", () => {
       .run();
 
     const review = stubReviewService({
-      getDiff: () => ({
+      getDiff: async () => ({
         computedAt: OCCURRED_AT,
         diff: DIFF,
         scope: BRANCH_SCOPE,
@@ -216,7 +216,7 @@ describe("run completion report projection", () => {
       }),
     });
 
-    const first = projectRunCompletionReport(t.db, "run-report", review);
+    const first = await projectRunCompletionReport(t.db, "run-report", review);
     expect(first?.report).toMatchObject({
       run: { outcome: "succeeded", status: "completed", terminal: true },
       plan: { state: "reported", step_count: 1 },
@@ -265,7 +265,7 @@ describe("run completion report projection", () => {
     t.client.sqlite.close();
     const restarted = createClient(dbPath);
     try {
-      expect(projectRunCompletionReport(restarted.db, "run-report", review)).toEqual(first);
+      expect(await projectRunCompletionReport(restarted.db, "run-report", review)).toEqual(first);
     } finally {
       restarted.sqlite.close();
       rmSync(dir, { recursive: true, force: true });
@@ -273,7 +273,7 @@ describe("run completion report projection", () => {
     }
   });
 
-  it("correlates command results within their agent session", () => {
+  it("correlates command results within their agent session", async () => {
     const seeded = seedRun(t.db, {
       runId: "run-report",
       runStatus: "completed",
@@ -346,16 +346,16 @@ describe("run completion report projection", () => {
     }
 
     expect(
-      projectRunCompletionReport(t.db, "run-report", stubReviewService())?.report.commands.map(
-        ({ id, outcome, exit_code: exitCode }) => ({ id, outcome, exitCode }),
-      ),
+      (
+        await projectRunCompletionReport(t.db, "run-report", stubReviewService())
+      )?.report.commands.map(({ id, outcome, exit_code: exitCode }) => ({ id, outcome, exitCode })),
     ).toEqual([
       { id: "first-call", outcome: "passed", exitCode: 0 },
       { id: "second-call", outcome: "failed", exitCode: 1 },
     ]);
   });
 
-  it("keeps missing and corrupt evidence explicit instead of failing the report", () => {
+  it("keeps missing and corrupt evidence explicit instead of failing the report", async () => {
     seedRun(t.db, {
       runId: "run-report",
       runStatus: "failed",
@@ -381,7 +381,7 @@ describe("run completion report projection", () => {
       })
       .run();
 
-    const projected = projectRunCompletionReport(
+    const projected = await projectRunCompletionReport(
       t.db,
       "run-report",
       stubReviewService({
@@ -407,11 +407,11 @@ describe("run completion report projection", () => {
     expect(projected?.markdown).toContain("Diff: unavailable");
   });
 
-  it("returns null for an unknown run", () => {
-    expect(projectRunCompletionReport(t.db, "missing", stubReviewService())).toBeNull();
+  it("returns null for an unknown run", async () => {
+    expect(await projectRunCompletionReport(t.db, "missing", stubReviewService())).toBeNull();
   });
 
-  it("projects an interrupted multi-step workflow in stable evidence order", () => {
+  it("projects an interrupted multi-step workflow in stable evidence order", async () => {
     seedWorkflowRun(t.db, {
       runId: "run-report",
       runStatus: "awaiting_human",
@@ -444,7 +444,7 @@ describe("run completion report projection", () => {
       }),
     );
 
-    const projected = projectRunCompletionReport(t.db, "run-report", stubReviewService());
+    const projected = await projectRunCompletionReport(t.db, "run-report", stubReviewService());
 
     expect(projected?.report.run).toMatchObject({
       outcome: "interrupted",
@@ -457,7 +457,7 @@ describe("run completion report projection", () => {
     expect(projected?.markdown).toContain("Result: interrupted");
   });
 
-  it("isolates corrupt review, pull request, and Linear evidence", () => {
+  it("isolates corrupt review, pull request, and Linear evidence", async () => {
     seedRun(t.db, {
       runId: "run-report",
       runStatus: "completed",
@@ -494,7 +494,7 @@ describe("run completion report projection", () => {
     t.client.sqlite.prepare("UPDATE pull_requests SET status = 'invalid'").run();
     t.client.sqlite.prepare("UPDATE linear_writes SET status = 'invalid'").run();
 
-    const projected = projectRunCompletionReport(
+    const projected = await projectRunCompletionReport(
       t.db,
       "run-report",
       stubReviewService({

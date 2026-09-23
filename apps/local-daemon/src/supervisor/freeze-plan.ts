@@ -149,7 +149,7 @@ export function resolvePlanConfigs(
   };
 }
 
-function freezeNode(
+async function freezeNode(
   node: RunPlanNodeInput,
   idByRequestId: ReadonlyMap<string, string>,
   configFor: ConfigResolver,
@@ -161,17 +161,19 @@ function freezeNode(
       id: mappedStepId(idByRequestId, node.id),
       name: node.name,
       depends_on: dependencies,
-      compete: node.compete.map((competitor) => {
-        const config = configFor(nodeAgentSelector(competitor), competitor);
-        return {
-          id: mappedStepId(idByRequestId, competitor.id),
-          name: competitor.name,
-          agent: config.runtime,
-          prompt: null,
-          context: freezeContext(competitor.context ?? [], competitor.note ?? null),
-          config,
-        };
-      }),
+      compete: await Promise.all(
+        node.compete.map(async (competitor) => {
+          const config = configFor(nodeAgentSelector(competitor), competitor);
+          return {
+            id: mappedStepId(idByRequestId, competitor.id),
+            name: competitor.name,
+            agent: config.runtime,
+            prompt: null,
+            context: await freezeContext(competitor.context ?? [], competitor.note ?? null),
+            config,
+          };
+        }),
+      ),
     };
   }
   const config = configFor(nodeAgentSelector(node), node);
@@ -180,7 +182,7 @@ function freezeNode(
     name: node.name,
     agent: config.runtime,
     prompt: null,
-    context: freezeContext(node.context ?? [], node.note ?? null),
+    context: await freezeContext(node.context ?? [], node.note ?? null),
     depends_on: dependencies,
     config,
   };
@@ -192,12 +194,12 @@ function freezeNode(
  * resume/follow-up/fix read the frozen snapshot, never the live profile, the host defaults or the
  * tracker as they stand later. A node's name stays a label: nothing composes it into an instruction.
  */
-export function freezePlan(
+export async function freezePlan(
   request: StartRunRequest,
   defaultConfig: ResolvedAgentConfig,
   configFor: ConfigResolver,
   freezeContext: ContextFreezer,
-): RunPlan {
+): Promise<RunPlan> {
   if (!request.plan) {
     return {
       version: 1,
@@ -207,7 +209,7 @@ export function freezePlan(
           name: STEP_NAME,
           agent: defaultConfig.runtime,
           prompt: null,
-          context: freezeContext(request.context ?? [], request.note ?? null),
+          context: await freezeContext(request.context ?? [], request.note ?? null),
           depends_on: [],
           config: defaultConfig,
         },
@@ -224,8 +226,8 @@ export function freezePlan(
   }
   return {
     version: 1,
-    steps: request.plan.steps.map((node) =>
-      freezeNode(node, idByRequestId, configFor, freezeContext),
+    steps: await Promise.all(
+      request.plan.steps.map((node) => freezeNode(node, idByRequestId, configFor, freezeContext)),
     ),
   };
 }

@@ -11,7 +11,7 @@ import { useFile } from "@web/api/files/queries";
 import { useSourceControl } from "@web/api/source-control/queries";
 import { FileBrowser } from "@web/components/files/browser";
 import { FilePanel } from "@web/components/files/panel";
-import { FILES_SURFACE } from "@web/components/files/surface";
+import { FILE_TREE_WIDTH, FILES_SURFACE } from "@web/components/files/surface";
 import { useFileSelection } from "@web/components/files/use-file-selection";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
@@ -64,7 +64,7 @@ export function FilesExplorer({ target, entries, editable, notice }: FilesExplor
           id={surface.panel}
           label={surface.label}
           side="left"
-          defaultSize={264}
+          defaultSize={FILE_TREE_WIDTH}
           minSize={168}
           maxSize="40%"
         >

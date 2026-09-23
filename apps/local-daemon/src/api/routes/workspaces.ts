@@ -7,9 +7,9 @@ import { validateJson } from "../guards.js";
 export function createWorkspaceRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
-  routes.get("/", (c) => {
+  routes.get("/", async (c) => {
     return c.json(
-      deps.supervisor.workspaces({
+      await deps.supervisor.workspaces({
         runId: c.req.query("run_id"),
         projectId: c.req.query("project_id"),
       }),
@@ -18,9 +18,9 @@ export function createWorkspaceRoutes(deps: ApiDeps): Hono {
 
   routes.post("/reconcile", async (c) => c.json(await deps.supervisor.reconcileWorkspaces()));
 
-  routes.post("/:workspaceId/cleanup", validateJson(workspaceCleanupRequestSchema), (c) => {
+  routes.post("/:workspaceId/cleanup", validateJson(workspaceCleanupRequestSchema), async (c) => {
     const workspaceId = c.req.param("workspaceId");
-    const result = deps.supervisor.cleanupWorkspace(workspaceId, c.req.valid("json").force);
+    const result = await deps.supervisor.cleanupWorkspace(workspaceId, c.req.valid("json").force);
     if (result === null) {
       return c.json(
         { error: "workspace_not_found", message: `no workspace is recorded as ${workspaceId}` },

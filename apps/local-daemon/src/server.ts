@@ -79,7 +79,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     const dataDir = dirname(dbPath);
     const projectRoot = process.env.OTOMAT_PROJECT_ROOT ?? process.cwd();
     const defaultProjectId = ensureDefaultProject(db, projectRoot);
-    ensureDefaultRepository(db, defaultProjectId);
+    await ensureDefaultRepository(db, defaultProjectId);
     try {
       rescanSkills(db);
     } catch (error) {
@@ -155,7 +155,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     });
     supervisorBinding.bind(supervisor);
 
-    const report = supervisor.reconcile();
+    const report = await supervisor.reconcile();
     if (report.reconciled.length > 0) {
       console.log(`[otomat] reconciled ${report.reconciled.length} run(s) left in flight at boot`);
     }

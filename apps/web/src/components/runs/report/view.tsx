@@ -1,7 +1,8 @@
-import { ErrorState, Icon, IconButton, Skeleton } from "@otomat/ui";
+import { ErrorState, Icon, IconButton } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { useRunCompletionReport } from "@web/api/runs/queries";
 import { CenteredState } from "@web/components/shell/centered-state";
+import { DetailSkeleton } from "@web/components/shell/detail-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 
 import { DeliverySections } from "./delivery-sections";
@@ -15,7 +16,7 @@ export function RunCompletionReportView() {
   return (
     <QueryBoundary
       query={query}
-      pending={<Skeleton height={120} />}
+      pending={<DetailSkeleton blocks={2} />}
       error={
         <CenteredState>
           <ErrorState

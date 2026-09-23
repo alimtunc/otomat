@@ -14,7 +14,6 @@ export function SettingsLayout() {
   const wide = !!matchRoute({ to: "/settings/project/workspaces" });
   return (
     <RouteShell
-      active="settings"
       titleIcon="settings"
       back={back}
       breadcrumbs={[{ label: "Settings", current: true }]}

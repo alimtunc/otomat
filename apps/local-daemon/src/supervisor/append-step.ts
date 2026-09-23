@@ -20,7 +20,7 @@ import { createContextFreezer } from "#context";
 import { emitLedgerEvent } from "#events";
 import { diffSnapshotOrNull } from "#git";
 
-import { scheduleNextStep } from "./advance.js";
+import { scheduleNextStep, startAfterLiveTurns } from "./advance.js";
 import { withContextBudget } from "./context-budget.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { requireLaunchable } from "./launch-hold.js";
@@ -39,17 +39,17 @@ function nextStepIndex(state: SupervisorState, runId: string): number {
 }
 
 /** An appended step attaches its files from the run's own worktree: that is the tree its work will start from. */
-function freezeAppendedContext(
+async function freezeAppendedContext(
   state: SupervisorState,
   run: RunRow,
   input: AppendStepInput,
-): ContextSelection {
+): Promise<ContextSelection> {
   const binding = state.repositories.forRepository(run.repository_id);
   return withContextBudget(
     createContextFreezer({
       db: state.db,
       issue: getIssue(state.db, run.issue_id) ?? null,
-      snapshot: binding === null ? null : diffSnapshotOrNull(binding.service, run.id),
+      snapshot: binding === null ? null : await diffSnapshotOrNull(binding.service, run.id),
       capturedAt: new Date().toISOString(),
     }),
   )(input.references, input.note, input.reviewComments);
@@ -69,8 +69,10 @@ export async function appendRunStep(
   runId: string,
   input: AppendStepInput,
 ): Promise<RunRow> {
-  requireLaunchable(state);
   const { db } = state;
+  // Frozen first, so nothing awaits between the plan read below and its rewrite: a concurrent append cannot lose a node.
+  const context = await freezeAppendedContext(state, requireRunRow(db, runId, "append"), input);
+  requireLaunchable(state);
   const run = requireRunRow(db, runId, "append");
   requireOpenWorkspace(db, run);
   if (input.origin === "review_fix" && hasRunActivity(state, runId)) {
@@ -90,7 +92,7 @@ export async function appendRunStep(
     name: input.name,
     agent: config.runtime,
     prompt: null,
-    context: freezeAppendedContext(state, run, input),
+    context,
     depends_on: [...input.dependsOn],
     replaces: input.replaces,
     config,
@@ -125,7 +127,9 @@ export async function appendRunStep(
   if (input.parallel) {
     const reopened = reopenSettledRun(state, requireRunRow(db, runId, "append"));
     scheduleTurn(state, insertTurn(state, reopened, step, worktreePath));
-  } else if (!hasRunActivity(state, runId)) {
+  } else if (hasRunActivity(state, runId)) {
+    startAfterLiveTurns(state, runId);
+  } else {
     scheduleNextStep(state, reopenSettledRun(state, requireRunRow(db, runId, "append")));
   }
   return requireRunRow(db, runId, "append");

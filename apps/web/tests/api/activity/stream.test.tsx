@@ -11,7 +11,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { runActivity } from "#support/activity";
 import { mountWithQuery } from "#support/mount";
 import { testQueryClient } from "#support/query";
-import { memoryStorage } from "#support/storage";
+import { memorySnapshotStore } from "#support/storage";
 
 const keys = hostKeys("local");
 
@@ -110,14 +110,14 @@ it("keeps the one stream open across a navigation", async () => {
 });
 
 it("shows the stored snapshot on a cold start, then whatever the reopened stream pushes", async () => {
-  const storage = memoryStorage();
+  const storage = memorySnapshotStore();
   const source = testQueryClient();
   source.setQueryData(keys.activity, snapshot(["run-1"], "2026-08-20T10:00:00.000Z"));
-  saveQuerySnapshot(source, storage);
+  await saveQuerySnapshot(source, storage);
   listActivity.mockReturnValue(new Promise(() => undefined));
 
   const restored = testQueryClient();
-  restoreQuerySnapshot(restored, storage);
+  await restoreQuerySnapshot(restored, storage);
   const mounted = await mountWithQuery(<Probe />, restored);
   cleanups.push(mounted.cleanup);
 

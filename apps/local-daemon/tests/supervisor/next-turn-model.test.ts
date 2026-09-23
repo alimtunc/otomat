@@ -27,6 +27,7 @@ it("freezes a queued message before a later next-turn model change", async () =>
     model: { kind: "model", id: "fake-thorough" },
     options: { effort: { kind: "value", value: "high" } },
   });
+  await waitFor(() => spawn.calls === 1);
   const stepRunId = firstStepOf(fix.db, run.id);
   const active = listAgentSessionsForRun(fix.db, run.id)[0];
   if (!active?.config_json) throw new Error("expected the active turn's frozen config");

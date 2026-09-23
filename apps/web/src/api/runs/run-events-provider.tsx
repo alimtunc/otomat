@@ -9,7 +9,8 @@ import { useQueryKeys } from "@web/api/use-query-keys";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export interface RunEventsProviderProps {
-  runId: string;
+  /** Null keeps the provider mounted with nothing to stream, so the subtree survives a run appearing. */
+  runId: string | null;
   children: ReactNode;
 }
 
@@ -30,7 +31,7 @@ export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
     setLive([]);
     setState("connecting");
     setDegraded(false);
-    if (!anchored) return;
+    if (runId === null || !anchored) return;
     const subscription = daemon.subscribeRunEvents(runId, {
       afterSeq: tailSeq ?? undefined,
       onOpen: () => setState("open"),
@@ -59,7 +60,9 @@ export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
   const events = mergeEventWindow(history.events, live);
 
   return (
-    <RunEventsContext.Provider value={{ events, state, degraded, history }}>
+    <RunEventsContext.Provider
+      value={runId === null ? null : { runId, events, state, degraded, history }}
+    >
       {children}
     </RunEventsContext.Provider>
   );

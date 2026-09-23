@@ -39,3 +39,15 @@ export const SETTINGS_NAV: NavItem = {
   label: "Settings",
   to: "/settings",
 };
+
+const SECTION_BY_SEGMENT = new Map<string, ShellSection>([
+  ...[...WORKSPACE_NAV, INBOX_NAV, SETTINGS_NAV].map((item): [string, ShellSection] => [
+    item.to.slice(1),
+    item.section,
+  ]),
+  ["pull-requests", "reviews"],
+]);
+
+export function sectionForPath(pathname: string): ShellSection | null {
+  return SECTION_BY_SEGMENT.get(pathname.split("/")[1] ?? "") ?? null;
+}

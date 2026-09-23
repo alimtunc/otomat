@@ -1,9 +1,10 @@
-import { ErrorState, Icon, Spinner } from "@otomat/ui";
+import { ErrorState, Icon } from "@otomat/ui";
 import { useRepositoryTree } from "@web/api/repositories/file-queries";
 import { branchLabel } from "@web/components/files/branch-label";
 import { FilesExplorer } from "@web/components/files/explorer";
-import { CenteredState } from "@web/components/shell/centered-state";
+import { FILE_TREE_WIDTH } from "@web/components/files/surface";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { SplitSkeleton } from "@web/components/shell/split-skeleton";
 
 export interface ProjectExplorerProps {
   repositoryId: string;
@@ -16,11 +17,7 @@ export function ProjectExplorer({ repositoryId }: ProjectExplorerProps) {
   return (
     <QueryBoundary
       query={files}
-      pending={
-        <CenteredState>
-          <Spinner label="Loading repository files" />
-        </CenteredState>
-      }
+      pending={<SplitSkeleton side={FILE_TREE_WIDTH} />}
       error={
         <ErrorState title="Could not list the repository" onRetry={() => void files.refetch()} />
       }

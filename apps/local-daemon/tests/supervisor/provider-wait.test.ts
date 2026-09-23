@@ -270,7 +270,7 @@ it("survives a restart without losing or duplicating the scheduled resume", asyn
   });
 
   // Boot reconciliation must leave a waiting run exactly as it found it.
-  expect(supervisor.reconcile().reconciled).toHaveLength(0);
+  expect((await supervisor.reconcile()).reconciled).toHaveLength(0);
   expect(getRun(fix.db, "rboot")?.status).toBe("waiting_for_provider");
 
   const [first, second] = await Promise.all([

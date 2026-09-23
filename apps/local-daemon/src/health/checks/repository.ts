@@ -2,7 +2,9 @@ import type { ProjectHealthOutcome } from "@otomat/domain";
 
 import { isRepositoryRoot, type RepositoryBinding } from "#git";
 
-export function repositoryCheck(binding: RepositoryBinding | null): ProjectHealthOutcome {
+export async function repositoryCheck(
+  binding: RepositoryBinding | null,
+): Promise<ProjectHealthOutcome> {
   if (binding === null) {
     return {
       status: "error",
@@ -11,7 +13,7 @@ export function repositoryCheck(binding: RepositoryBinding | null): ProjectHealt
     };
   }
 
-  if (!isRepositoryRoot(binding.rootPath)) {
+  if (!(await isRepositoryRoot(binding.rootPath))) {
     return {
       status: "error",
       message: `${binding.rootPath} is no longer a git repository root on this host.`,

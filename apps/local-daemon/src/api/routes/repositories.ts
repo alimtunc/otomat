@@ -47,11 +47,11 @@ const CONFLICT_ERRORS: ReadonlySet<RepositoryRegistrationError> = new Set([
 export function createRepositoryRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
 
-  routes.get("/", (c) => c.json(readRepositories(deps.db, c.req.query("projectId"))));
+  routes.get("/", async (c) => c.json(await readRepositories(deps.db, c.req.query("projectId"))));
 
-  routes.post("/", validateJson(registerRepositoryRequestSchema), (c) => {
+  routes.post("/", validateJson(registerRepositoryRequestSchema), async (c) => {
     const { path, project_id } = c.req.valid("json");
-    const result = registerLocalRepository(deps.db, path, project_id);
+    const result = await registerLocalRepository(deps.db, path, project_id);
     if (!result.ok) {
       const status = CONFLICT_ERRORS.has(result.error) ? 409 : 400;
       return c.json({ error: result.error, message: REGISTRATION_MESSAGES[result.error] }, status);
@@ -59,19 +59,19 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
     return c.json(
       {
         project: toProject(result.project, true),
-        repository: repositoryContract(deps.db, result.repository),
+        repository: await repositoryContract(deps.db, result.repository),
       },
       201,
     );
   });
 
-  routes.patch("/:id", validateJson(updateRepositoryRequestSchema), (c) => {
+  routes.patch("/:id", validateJson(updateRepositoryRequestSchema), async (c) => {
     const repository = getRepository(deps.db, c.req.param("id"));
     if (!repository) return c.json({ error: "repository_not_found" }, 404);
     updateRepositoryInitCommands(deps.db, repository.id, c.req.valid("json").init_commands);
     const updated = getRepository(deps.db, repository.id);
     if (!updated) return c.json({ error: "repository_not_found" }, 404);
-    return c.json(repositoryContract(deps.db, updated));
+    return c.json(await repositoryContract(deps.db, updated));
   });
 
   /** Removes the repository, its runs, and the owning project; refused while a run is active. */
@@ -97,11 +97,11 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
   });
 
   /** Branches a run can fork from. 409 rather than an empty list so an unusable root is legible. */
-  routes.get("/:id/branches", (c) => {
+  routes.get("/:id/branches", async (c) => {
     const repository = getRepository(deps.db, c.req.param("id"));
     if (!repository) return c.json({ error: "repository_not_found" }, 404);
     const project = getProject(deps.db, repository.project_id);
-    if (!project || !isRepositoryRoot(project.root_path)) {
+    if (!project || !(await isRepositoryRoot(project.root_path))) {
       return c.json(
         {
           error: "repository_unavailable",
@@ -112,16 +112,16 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
     }
     return c.json({
       default_branch: repository.default_branch,
-      branches: listBranches(project.root_path),
-      has_remote: repositoryRemotes(project.root_path).length > 0,
+      branches: await listBranches(project.root_path),
+      has_remote: (await repositoryRemotes(project.root_path)).length > 0,
     } satisfies RepositoryBranchesResponse);
   });
 
-  routes.get("/:id/files", (c) => {
+  routes.get("/:id/files", async (c) => {
     const repository = getRepository(deps.db, c.req.param("id"));
     if (!repository) return c.json({ error: "repository_not_found" }, 404);
     const project = getProject(deps.db, repository.project_id);
-    if (!project || !isRepositoryRoot(project.root_path)) {
+    if (!project || !(await isRepositoryRoot(project.root_path))) {
       return c.json(
         {
           error: "repository_unavailable",
@@ -130,7 +130,7 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
         409,
       );
     }
-    const matches = searchTrackedFiles(
+    const matches = await searchTrackedFiles(
       project.root_path,
       c.req.query("q") ?? "",
       FILE_SEARCH_LIMIT,

@@ -23,6 +23,7 @@ import {
 
 import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
+import { waitFor } from "../support/poll.js";
 import { firstStepOf, seedRun, seedWorkflowRun } from "../support/seed.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
@@ -55,6 +56,7 @@ async function contribute(supervisor: Supervisor, runId: string, stepRunId: stri
 it("persists a message sent during an active turn without claiming any delivery", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "linger");
   const run = await supervisor.start({ prompt: "do the work" });
+  await waitFor(() => spawn.calls === 1);
 
   const queued = await contribute(
     supervisor,
@@ -77,6 +79,7 @@ it("persists a message sent during an active turn without claiming any delivery"
 it("batches the queued messages into the next turn in send order, keeping each one visible", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, ["slow", "complete"]);
   const run = await supervisor.start({ prompt: "do the work" });
+  await waitFor(() => spawn.calls === 1);
   const step = firstStepOf(fix.db, run.id);
 
   await contribute(supervisor, run.id, step, "first message");
@@ -106,6 +109,7 @@ it("carries a message queued while the run waited for capacity into that step's 
   const { supervisor, spawn } = makeSupervisor(fix, ["linger", "complete"], { concurrency: 1 });
   const holder = await supervisor.start({ prompt: "hold the only slot" });
   const waiting = await supervisor.start({ prompt: "the real work" });
+  await waitFor(() => spawn.calls === 1);
 
   // The second run owns its rows but has not spawned: its turn is still queued on the semaphore.
   expect(spawn.calls).toBe(1);
@@ -131,6 +135,7 @@ it("carries a message queued while the run waited for capacity into that step's 
 it("delivers on the run's own provider session and worktree", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, ["slow", "complete"]);
   const run = await supervisor.start({ prompt: "do the work" });
+  await waitFor(() => spawn.calls === 1);
   await contribute(supervisor, run.id, firstStepOf(fix.db, run.id), "keep going");
   await supervisor.settle();
 
@@ -335,6 +340,7 @@ it("withdraws a message no turn has claimed, and refuses once one has", async ()
 it("never carries a canceled message into a later turn", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, ["slow", "complete"]);
   const run = await supervisor.start({ prompt: "do the work" });
+  await waitFor(() => spawn.calls === 1);
   const step = firstStepOf(fix.db, run.id);
 
   const dropped = await contribute(supervisor, run.id, step, "forget this");
@@ -382,7 +388,7 @@ it("keeps a message queued across a restart and never spawns for it at boot", as
   expect(queued.status).toBe("queued");
 
   const rebooted = makeSupervisor(fix, "complete");
-  rebooted.supervisor.reconcile();
+  await rebooted.supervisor.reconcile();
 
   expect(rebooted.spawn.calls).toBe(0);
   expect(contributions(run.id)[0]?.status).toBe("queued");
@@ -411,7 +417,7 @@ it("replays a message a restart left queued exactly once", async () => {
   });
 
   const rebooted = makeSupervisor(fix, "complete");
-  rebooted.supervisor.reconcile();
+  await rebooted.supervisor.reconcile();
   expect(rebooted.spawn.calls).toBe(0);
 
   // Two flushes in a row: the replay hands the message to one turn, never two.
@@ -468,7 +474,7 @@ it("treats a crash-time claim as delivered only when its worker was really launc
   mkdirSync(gateDir, { recursive: true });
   writeFileSync(join(gateDir, `.worker-started-${randomUUID()}`), "ready");
 
-  makeSupervisor(fix, "complete").supervisor.reconcile();
+  await makeSupervisor(fix, "complete").supervisor.reconcile();
 
   // The lost worker did carry it, so boot settles it as a failed delivery — never back to `queued`,
   // which would let a retry replay an instruction the provider already saw.

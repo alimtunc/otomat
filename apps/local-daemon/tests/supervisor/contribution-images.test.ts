@@ -12,6 +12,7 @@ import { RunContributionImageError } from "#supervisor";
 import { contributeToStep } from "../support/contribution.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { fakePng } from "../support/images.js";
+import { waitFor } from "../support/poll.js";
 import { stubRuntimeOnPath } from "../support/runtime.js";
 import { firstStepOf, seedWorkflowRun } from "../support/seed.js";
 import { stubFixture } from "../support/stub-harness.js";
@@ -48,6 +49,7 @@ async function refusal(work: Promise<unknown>): Promise<RunContributionImageErro
 it("stores the images with the message, survives a restart and hands them to the next turn in order", async () => {
   const first = makeSupervisor(fix, ["slow", "complete"]);
   const run = await first.supervisor.start({ prompt: "do the work" });
+  await waitFor(() => first.spawn.calls === 1);
   const step = firstStepOf(fix.db, run.id);
 
   const queued = await contributeToStep(fix.db, first.supervisor, run.id, step, "look at these", [
@@ -72,7 +74,7 @@ it("stores the images with the message, survives a restart and hands them to the
   expect(listRunContributions(fix.db, run.id)[0]?.status).toBe("acknowledged");
 
   const restarted = makeSupervisor(fix, "complete");
-  restarted.supervisor.reconcile();
+  await restarted.supervisor.reconcile();
   const rows = listRunContributions(fix.db, run.id);
   expect(rows).toHaveLength(1);
   expect(rows[0]?.images_json).toEqual(queued.images_json);

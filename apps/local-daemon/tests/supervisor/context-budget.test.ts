@@ -19,8 +19,8 @@ function commentOnLargeFile(id: string): ContextReviewComment {
   };
 }
 
-it("tells a fix step past the budget to resolve comments, since it attached no files", () => {
-  const freeze = withContextBudget((_references, note, reviewComments) =>
+it("tells a fix step past the budget to resolve comments, since it attached no files", async () => {
+  const freeze = withContextBudget(async (_references, note, reviewComments) =>
     contextSelectionSchema.parse({
       captured_at: "2026-09-23T00:00:00.000Z",
       issue: null,
@@ -30,7 +30,7 @@ it("tells a fix step past the budget to resolve comments, since it attached no f
   );
   const comments = Array.from({ length: 40 }, (_, index) => commentOnLargeFile(`c${index}`));
 
-  expect(() => freeze([], null, comments)).toThrow(
+  await expect(freeze([], null, comments)).rejects.toThrow(
     /one step can carry; fix or resolve some review comments first\.$/,
   );
 });

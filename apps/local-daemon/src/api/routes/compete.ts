@@ -12,26 +12,30 @@ import { toReviewDiffResponse } from "../serialize-review-diff.js";
 export function createCompeteRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
-  routes.get("/:id/compete-groups/:groupId/candidates/:stepId/diff", runGuard(deps.db), (c) => {
-    const run = c.get("run");
-    const step = readCompeteCandidate(
-      deps.db,
-      run.id,
-      c.req.param("groupId"),
-      c.req.param("stepId"),
-    );
-    if (!step) return c.json({ error: "compete_candidate_not_found" }, 404);
-    try {
-      const diff = deps.review.getDiff(
-        { kind: "run", id: run.id, owner: step.id },
-        BRANCH_DIFF_SCOPE,
+  routes.get(
+    "/:id/compete-groups/:groupId/candidates/:stepId/diff",
+    runGuard(deps.db),
+    async (c) => {
+      const run = c.get("run");
+      const step = readCompeteCandidate(
+        deps.db,
+        run.id,
+        c.req.param("groupId"),
+        c.req.param("stepId"),
       );
-      return c.json(toReviewDiffResponse(run.id, diff));
-    } catch (error) {
-      console.error(`[otomat] compete candidate diff ${step.id} failed`, error);
-      return c.json({ error: "compete_diff_failed" }, 500);
-    }
-  });
+      if (!step) return c.json({ error: "compete_candidate_not_found" }, 404);
+      try {
+        const diff = await deps.review.getDiff(
+          { kind: "run", id: run.id, owner: step.id },
+          BRANCH_DIFF_SCOPE,
+        );
+        return c.json(toReviewDiffResponse(run.id, diff));
+      } catch (error) {
+        console.error(`[otomat] compete candidate diff ${step.id} failed`, error);
+        return c.json({ error: "compete_diff_failed" }, 500);
+      }
+    },
+  );
 
   routes.post(
     "/:id/compete-groups/:groupId/winner",

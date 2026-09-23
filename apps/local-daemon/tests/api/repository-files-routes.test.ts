@@ -6,8 +6,8 @@ import { setupCheckoutApi, type CheckoutApiFixture } from "../support/checkout-a
 
 let fix: CheckoutApiFixture;
 
-beforeEach(() => {
-  fix = setupCheckoutApi();
+beforeEach(async () => {
+  fix = await setupCheckoutApi();
 });
 
 afterEach(() => fix.cleanup());

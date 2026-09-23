@@ -107,7 +107,7 @@ it("runs competitors in isolated worktrees, waits for a winner, then continues o
   expect(spawn.calls).toBe(2);
   expect(new Set(spawn.jobs.map((job) => job.worktreePath)).size).toBe(2);
   // A group's name is a label, never an instruction: each candidate gets only its own note.
-  expect(spawn.jobs.map((job) => job.prompt.split("# Step instructions\n")[1])).toEqual([
+  expect(spawn.jobs.map((job) => job.prompt.split("# Step instructions\n")[1]).toSorted()).toEqual([
     "direct",
     "layered",
   ]);
@@ -179,7 +179,10 @@ it("rests the run on the selection when the competition is the plan's last node"
 });
 
 it("rests on the plan, not on a loser's session an earlier settle left open", async () => {
-  const { supervisor } = makeCompeteSupervisor(["complete", "quota"]);
+  // Competitors start in parallel, so each one's behavior is keyed to it rather than to spawn order.
+  const { supervisor } = makeCompeteSupervisor((job) =>
+    job.prompt.endsWith("layered") ? "quota" : "complete",
+  );
 
   const run = await supervisor.start({
     prompt: "the goal",
@@ -415,7 +418,7 @@ it("reconciles torn competitors but refuses to resume them without repository wo
   ]);
   const { supervisor, spawn: worker } = makeSupervisor(fix, "complete", { concurrency: 2 });
 
-  const report = supervisor.reconcile();
+  const report = await supervisor.reconcile();
 
   expect(report.reconciled).toHaveLength(2);
   expect(worker.calls).toBe(0);
@@ -440,7 +443,7 @@ it("finishes a reserved promotion after restart without auto-running dependents"
   claimCompeteWinner(fix.db, group.id, winner.id);
 
   const restarted = makeCompeteSupervisor();
-  const report = restarted.supervisor.reconcile();
+  const report = await restarted.supervisor.reconcile();
 
   expect(report.reconciled).toHaveLength(1);
   expect(restarted.spawn.calls).toBe(0);
@@ -477,7 +480,7 @@ it("leaves no step behind the run a recovered promotion lands terminal", async (
   updateStepRunStatus(fix.db, dependent.id, "canceled");
   claimCompeteWinner(fix.db, group.id, winner.id);
 
-  makeCompeteSupervisor().supervisor.reconcile();
+  await makeCompeteSupervisor().supervisor.reconcile();
 
   expect(getRun(fix.db, run.id)?.status).toBe("canceled");
   expect(listStepRunsForRun(fix.db, run.id).map((step) => step.status)).toEqual([
@@ -499,7 +502,7 @@ it("fails a reserved promotion instead of selecting it when the repository is un
     repositories: UNAVAILABLE_REPOSITORIES,
   });
 
-  const report = restarted.reconcile();
+  const report = await restarted.reconcile();
 
   expect(report.reconciled).toHaveLength(0);
   expect(listCompeteGroupsForRun(fix.db, run.id)[0]).toMatchObject({

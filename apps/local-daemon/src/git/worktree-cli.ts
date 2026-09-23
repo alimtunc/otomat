@@ -7,8 +7,8 @@ export interface AddWorktreeInput {
 }
 
 /** `git worktree add -b <branch> <path> <baseRef>` — creates the branch and checkout. */
-export function addWorktree(repoPath: string, input: AddWorktreeInput): void {
-  runGit(["worktree", "add", "-b", input.branch, input.worktreePath, input.baseRef], {
+export async function addWorktree(repoPath: string, input: AddWorktreeInput): Promise<void> {
+  await runGit(["worktree", "add", "-b", input.branch, input.worktreePath, input.baseRef], {
     cwd: repoPath,
   });
 }
@@ -18,13 +18,13 @@ export function addWorktree(repoPath: string, input: AddWorktreeInput): void {
  * refusal. Without `force`, uncommitted work refuses removal instead of being
  * discarded; with it, an already-removed directory converges instead of failing.
  */
-export function removeWorktree(
+export async function removeWorktree(
   repoPath: string,
   worktreePath: string,
   options: { force: boolean },
-): string | null {
+): Promise<string | null> {
   const flags = options.force ? ["--force"] : [];
-  const result = runGit(["worktree", "remove", ...flags, worktreePath], {
+  const result = await runGit(["worktree", "remove", ...flags, worktreePath], {
     cwd: repoPath,
     allowFailure: true,
   });
@@ -32,8 +32,8 @@ export function removeWorktree(
 }
 
 /** `--verbose` announces each removal on either stream, so the count is read from both. */
-export function pruneWorktrees(repoPath: string): number {
-  const result = runGit(["worktree", "prune", "--verbose"], { cwd: repoPath });
+export async function pruneWorktrees(repoPath: string): Promise<number> {
+  const result = await runGit(["worktree", "prune", "--verbose"], { cwd: repoPath });
   return `${result.stdout}\n${result.stderr}`
     .split("\n")
     .filter((line) => line.startsWith("Removing ")).length;
@@ -49,8 +49,8 @@ export interface GitWorktreeEntry {
 }
 
 /** Parses `git worktree list --porcelain` into structured entries. */
-export function listWorktrees(repoPath: string): GitWorktreeEntry[] {
-  const out = runGit(["worktree", "list", "--porcelain"], { cwd: repoPath }).stdout;
+export async function listWorktrees(repoPath: string): Promise<GitWorktreeEntry[]> {
+  const out = (await runGit(["worktree", "list", "--porcelain"], { cwd: repoPath })).stdout;
   return parseWorktreeList(out);
 }
 

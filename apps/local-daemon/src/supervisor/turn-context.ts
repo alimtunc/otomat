@@ -17,11 +17,11 @@ function compose(context: string | null, prompt: string | null): string | null {
 }
 
 /** A native resume keeps the conversation the provider already holds, so it is handed no fresh dossier — only what Otomat durably recorded since, which that conversation would otherwise contradict. */
-export function captureTurnContext(
+export async function captureTurnContext(
   state: SupervisorState,
   ctx: TurnContext,
   mode: "run" | "resume",
-): string | null {
+): Promise<string | null> {
   const run = getRun(state.db, ctx.runId);
   if (!run) return ctx.prompt;
   if (mode === "resume") {
@@ -29,7 +29,7 @@ export function captureTurnContext(
     const delta = published === null ? null : renderPublicationDelta(published, run.branch);
     return compose(delta, ctx.prompt);
   }
-  const context = buildSessionContext({
+  const context = await buildSessionContext({
     db: state.db,
     repositories: state.repositories,
     run,

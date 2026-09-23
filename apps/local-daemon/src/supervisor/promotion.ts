@@ -9,6 +9,7 @@ import {
   type CompeteGroupRow,
   type RunRow,
 } from "@otomat/db";
+import { isRunSettled } from "@otomat/domain";
 
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
 import { resolveIdleRun } from "./settle/idle.js";
@@ -35,7 +36,11 @@ function requireSelectionScope(
   return { run, group };
 }
 
-function archiveCandidates(state: SupervisorState, run: RunRow, groupId: string): void {
+async function archiveCandidates(
+  state: SupervisorState,
+  run: RunRow,
+  groupId: string,
+): Promise<void> {
   const service = state.repositories.forRepository(run.repository_id)?.service;
   if (!service) {
     throw new Error(`run ${run.id} compete group ${groupId} has no repository to archive into`);
@@ -44,7 +49,7 @@ function archiveCandidates(state: SupervisorState, run: RunRow, groupId: string)
     (step) => step.compete_group_id === groupId,
   );
   for (const candidate of candidates) {
-    if (service.get(candidate.id)) service.archive(candidate.id);
+    if (service.get(candidate.id)) await service.archive(candidate.id);
   }
 }
 
@@ -54,7 +59,7 @@ async function unlockAfterSelection(
   run: RunRow,
   groupId: string,
 ): Promise<void> {
-  archiveCandidates(state, run, groupId);
+  await archiveCandidates(state, run, groupId);
   await state.advance?.(run.id);
 }
 
@@ -84,11 +89,17 @@ export async function selectCompeteWinner(
   if (claimed.base_head_sha === null) {
     throw new CompeteWinnerConflictError(groupId, "competition base commit is missing");
   }
-  service.promote(stepRunId, runId, claimed.base_head_sha);
+  await service.promote(stepRunId, runId, claimed.base_head_sha);
 
   driveCompeteGroupTo(state.db, groupId, claimed.status, "selected");
   const current = getRun(state.db, runId);
   if (!current) throw new Error(`run ${runId} vanished after winner promotion`);
+  // An abort that landed during the promotion owns the run: its candidates are archived, its dependents stay locked.
+  const abortedMeanwhile =
+    (!isRunSettled(scoped.run.status) && isRunSettled(current.status)) || state.aborting.has(runId);
+  if (abortedMeanwhile) {
+    return archiveCandidates(state, current, groupId);
+  }
   driveRunTo(state.db, runId, current.status, "running", new Date().toISOString());
   return unlockAfterSelection(state, current, groupId);
 }
@@ -112,7 +123,9 @@ function restRecoveredRun(state: SupervisorState, runId: string): void {
 }
 
 /** Completes a winner reservation interrupted by daemon exit, but never auto-starts dependent work on boot. */
-export function recoverCompeteSelections(state: SupervisorState): ReconcileOutcome[] {
+export async function recoverCompeteSelections(
+  state: SupervisorState,
+): Promise<ReconcileOutcome[]> {
   const outcomes: ReconcileOutcome[] = [];
   for (const run of listActiveRuns(state.db).runs) {
     for (const group of listCompeteGroupsForRun(state.db, run.id)) {
@@ -124,14 +137,14 @@ export function recoverCompeteSelections(state: SupervisorState): ReconcileOutco
           const service = state.repositories.forRepository(run.repository_id)?.service;
           if (!service) throw new Error("competition repository is unavailable");
           if (!group.base_head_sha) throw new Error("competition base commit is missing");
-          service.promote(winnerId, run.id, group.base_head_sha);
+          await service.promote(winnerId, run.id, group.base_head_sha);
           driveCompeteGroupTo(state.db, group.id, group.status, "selected");
         }
         const current = getRun(state.db, run.id);
         if (current?.status === "awaiting_selection") {
           driveRunTo(state.db, run.id, current.status, "running", new Date().toISOString());
         }
-        archiveCandidates(state, run, group.id);
+        await archiveCandidates(state, run, group.id);
         restRecoveredRun(state, run.id);
         outcomes.push({
           runId: run.id,

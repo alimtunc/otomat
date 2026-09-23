@@ -9,15 +9,23 @@ import type {
 
 import { isPathAbsent, parentRefusal } from "./file-write.js";
 import { isIgnored } from "./ignored-file.js";
+import { inCheckout } from "./lock.js";
 
 /** `path` must already pass `isCreatableRepositoryPath`; a symlinked parent is refused because the entry would land where the tree does not show it. */
 export function createWorktreeEntry(
   cwd: string,
+  request: CreateWorktreeEntryRequest,
+): Promise<WorktreeFileEntry | WorktreeFileError> {
+  return inCheckout(cwd, () => createEntry(cwd, request));
+}
+
+async function createEntry(
+  cwd: string,
   { path, kind }: CreateWorktreeEntryRequest,
-): WorktreeFileEntry | WorktreeFileError {
+): Promise<WorktreeFileEntry | WorktreeFileError> {
   const parentError = parentRefusal(cwd, path);
   if (parentError !== null) return parentError;
-  const ignored = isIgnored(cwd, kind === "directory" ? `${path}/` : path);
+  const ignored = await isIgnored(cwd, kind === "directory" ? `${path}/` : path);
   const target = join(cwd, path);
   try {
     if (kind === "directory") mkdirSync(target);

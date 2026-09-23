@@ -37,12 +37,12 @@ function unavailable(scope: RunDiffScope, reason: string): ScopedDiff {
   return { scope, snapshot: null, unavailable: reason };
 }
 
-function resolveBranch(
+async function resolveBranch(
   service: GitWorktreeService,
   owner: string,
   pullRequest: PullRequestRow | null,
-): ScopedDiff {
-  const resolved = branchDiffOrNull(service, owner, runDiffBaseRef(pullRequest));
+): Promise<ScopedDiff> {
+  const resolved = await branchDiffOrNull(service, owner, runDiffBaseRef(pullRequest));
   if (resolved === null) {
     return unavailable({ kind: "branch", branch: null, base_ref: null }, NO_WORKTREE);
   }
@@ -53,8 +53,8 @@ function resolveBranch(
   };
 }
 
-function resolveCommit(service: GitWorktreeService, commit: string): ScopedDiff {
-  const resolved = service.commitScope(commit);
+async function resolveCommit(service: GitWorktreeService, commit: string): Promise<ScopedDiff> {
+  const resolved = await service.commitScope(commit);
   if (resolved === null) {
     throw new DiffScopeNotFoundError(
       "commit_not_found",
@@ -86,12 +86,12 @@ function boundaryUnavailable(passes: readonly AgentSessionRow[], subject: "pass"
   return `This ${subject} has not finished, so its end boundary is not captured yet.`;
 }
 
-function resolveSession(
+async function resolveSession(
   ctx: ReviewContext,
   service: GitWorktreeService,
   runId: string,
   agentSessionId: string,
-): ScopedDiff {
+): Promise<ScopedDiff> {
   const pass = listAgentSessionsForRun(ctx.db, runId).find((row) => row.id === agentSessionId);
   if (!pass) {
     throw new DiffScopeNotFoundError(
@@ -108,18 +108,18 @@ function resolveSession(
   const bounds = stepPassBounds([pass]);
   if (bounds === null) return unavailable(scope, boundaryUnavailable([pass], "pass"));
 
-  const snapshot = service.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha);
+  const snapshot = await service.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha);
   return snapshot === null
     ? unavailable(scope, PRUNED_TREES)
     : { scope, snapshot, unavailable: null };
 }
 
-function resolveStep(
+async function resolveStep(
   ctx: ReviewContext,
   service: GitWorktreeService,
   runId: string,
   stepRunId: string,
-): ScopedDiff {
+): Promise<ScopedDiff> {
   const step = getStepRun(ctx.db, stepRunId);
   if (!step || step.run_id !== runId) {
     throw new DiffScopeNotFoundError(
@@ -137,7 +137,7 @@ function resolveStep(
   const bounds = stepPassBounds(passes);
   if (bounds === null) return unavailable(scope, boundaryUnavailable(passes, "step"));
 
-  const snapshot = service.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha);
+  const snapshot = await service.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha);
   return snapshot === null
     ? unavailable(scope, PRUNED_TREES)
     : { scope, snapshot, unavailable: null };
@@ -150,26 +150,26 @@ function hasRecordedHead(row: PullRequestRow | null): boolean {
   return anchor !== null && anchor !== "";
 }
 
-function resolvePullRequest(
+async function resolvePullRequest(
   row: PullRequestRow | null,
   binding: RepositoryBinding | null,
-): ScopedDiff {
+): Promise<ScopedDiff> {
   const scope: RunDiffScope = { kind: "pull_request", number: row?.number ?? null };
   if (row === null) return unavailable(scope, NO_PULL_REQUEST);
   if (binding === null) return unavailable(scope, NO_REPOSITORY);
   if (!hasRecordedHead(row)) return unavailable(scope, NO_HEAD_RECORDED);
-  const trees = pullRequestTrees(row, binding);
+  const trees = await pullRequestTrees(row, binding);
   return trees === null
     ? unavailable(scope, NO_PUBLISHED_HEAD)
     : {
         scope,
-        snapshot: treeRangeSnapshot(binding.rootPath, trees.base, trees.head),
+        snapshot: await treeRangeSnapshot(binding.rootPath, trees.base, trees.head),
         unavailable: null,
       };
 }
 
 /** An adopted pull request is its own subject and has exactly one scope: the head it is pinned to. */
-function resolveAdoptedPullRequest(ctx: ReviewContext, ref: ReviewSubjectRef): ScopedDiff {
+function resolveAdoptedPullRequest(ctx: ReviewContext, ref: ReviewSubjectRef): Promise<ScopedDiff> {
   const row = resolveReviewSubject(ctx, ref).pullRequest();
   return resolvePullRequest(
     row,
@@ -178,11 +178,11 @@ function resolveAdoptedPullRequest(ctx: ReviewContext, ref: ReviewSubjectRef): S
 }
 
 /** The single place a scope becomes a snapshot, so no surface pairs one scope's descriptor with another's content. */
-export function resolveScope(
+export async function resolveScope(
   ctx: ReviewContext,
   ref: ReviewSubjectRef,
   request: RunDiffScopeSelector,
-): ScopedDiff {
+): Promise<ScopedDiff> {
   if (ref.kind === "pull_request") return resolveAdoptedPullRequest(ctx, ref);
   const binding = ctx.repositories.forRun(ref.id);
   if (binding === null) {

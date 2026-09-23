@@ -32,7 +32,7 @@ async function syncRepository(
     limit: OPEN_PULL_REQUEST_LIMIT,
   });
   for (const provider of open) {
-    mirrorPullRequest(config, { repositoryId, provider, connectedLogin, syncedAt });
+    await mirrorPullRequest(config, { repositoryId, provider, connectedLogin, syncedAt });
   }
 
   const listed = new Set(open.map((provider) => provider.number));
@@ -44,7 +44,7 @@ async function syncRepository(
       remote.repository,
       row.number,
     );
-    mirrorPullRequest(config, { repositoryId, provider, connectedLogin, syncedAt });
+    await mirrorPullRequest(config, { repositoryId, provider, connectedLogin, syncedAt });
   }
 
   const stored = getSyncState(config.db, SYNC_SOURCE, SYNC_RESOURCE, repositoryId);

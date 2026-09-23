@@ -22,12 +22,16 @@ describe("canonical diff", () => {
     repo.cleanup();
   });
 
-  it("classifies modify, add, and delete against the base tree", () => {
+  it("classifies modify, add, and delete against the base tree", async () => {
     repo.write("README.md", "# base\nmore\n");
     repo.write("added.txt", "new\n");
     repo.remove("gone.txt");
 
-    const files = collectChangedFiles(repo.root, base, worktreeStateTree(repo.root, base));
+    const files = await collectChangedFiles(
+      repo.root,
+      base,
+      await worktreeStateTree(repo.root, base),
+    );
     const byPath = new Map(files.map((f) => [f.path, f]));
 
     expect(byPath.get("README.md")?.status).toBe("modified");
@@ -36,56 +40,80 @@ describe("canonical diff", () => {
     expect(byPath.get("gone.txt")?.status).toBe("deleted");
   });
 
-  it("includes untracked files as additions", () => {
+  it("includes untracked files as additions", async () => {
     repo.write("brand-new.txt", "a\nb\n");
-    const files = collectChangedFiles(repo.root, base, worktreeStateTree(repo.root, base));
+    const files = await collectChangedFiles(
+      repo.root,
+      base,
+      await worktreeStateTree(repo.root, base),
+    );
     const f = files.find((x) => x.path === "brand-new.txt");
     expect(f?.status).toBe("added");
     expect(f?.additions).toBe(2);
   });
 
-  it("detects renames with old and new paths", () => {
+  it("detects renames with old and new paths", async () => {
     repo.write("old-name.txt", "l1\nl2\nl3\nl4\n");
     repo.commitAll("add file to rename");
     const renameBase = repo.git("rev-parse", "HEAD").trim();
     repo.write("new-name.txt", "l1\nl2\nl3\nl4\n");
     repo.remove("old-name.txt");
 
-    const files = collectChangedFiles(
+    const files = await collectChangedFiles(
       repo.root,
       renameBase,
-      worktreeStateTree(repo.root, renameBase),
+      await worktreeStateTree(repo.root, renameBase),
     );
     const renamed = files.find((f) => f.status === "renamed");
     expect(renamed?.oldPath).toBe("old-name.txt");
     expect(renamed?.path).toBe("new-name.txt");
   });
 
-  it("flags binary files with zero line counts", () => {
+  it("flags binary files with zero line counts", async () => {
     writeFileSync(join(repo.root, "blob.bin"), Buffer.from([0, 1, 2, 0, 255, 254, 9]));
-    const files = collectChangedFiles(repo.root, base, worktreeStateTree(repo.root, base));
+    const files = await collectChangedFiles(
+      repo.root,
+      base,
+      await worktreeStateTree(repo.root, base),
+    );
     const bin = files.find((f) => f.path === "blob.bin");
     expect(bin?.binary).toBe(true);
     expect(bin?.additions).toBe(0);
     expect(bin?.deletions).toBe(0);
   });
 
-  it("produces a stable sha for identical worktree state and a different one after edits", () => {
+  it("produces a stable sha for identical worktree state and a different one after edits", async () => {
     repo.write("README.md", "# base\nmore\n");
-    const d1 = computeCanonicalDiff(repo.root, base, worktreeStateTree(repo.root, base));
-    const d2 = computeCanonicalDiff(repo.root, base, worktreeStateTree(repo.root, base));
+    const d1 = await computeCanonicalDiff(
+      repo.root,
+      base,
+      await worktreeStateTree(repo.root, base),
+    );
+    const d2 = await computeCanonicalDiff(
+      repo.root,
+      base,
+      await worktreeStateTree(repo.root, base),
+    );
     expect(d1.sha).toBe(d2.sha);
     expect(d1.sha).toMatch(/^[0-9a-f]{64}$/);
 
     repo.write("README.md", "# base\nmore\neven more\n");
-    const d3 = computeCanonicalDiff(repo.root, base, worktreeStateTree(repo.root, base));
+    const d3 = await computeCanonicalDiff(
+      repo.root,
+      base,
+      await worktreeStateTree(repo.root, base),
+    );
     expect(d3.sha).not.toBe(d1.sha);
   });
 
-  it("carries per-file unified patch text, per-file sha, and aggregate counts", () => {
+  it("carries per-file unified patch text, per-file sha, and aggregate counts", async () => {
     repo.write("README.md", "# base\nmore\n");
     repo.write("added.txt", "x\n");
-    const diff = computeCanonicalDiff(repo.root, base, worktreeStateTree(repo.root, base));
+    const diff = await computeCanonicalDiff(
+      repo.root,
+      base,
+      await worktreeStateTree(repo.root, base),
+    );
 
     const readme = diff.files.find((f) => f.path === "README.md");
     expect(readme?.patch).toContain("README.md");
@@ -97,16 +125,16 @@ describe("canonical diff", () => {
 
   const EMPTY_SHA = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 
-  it("attaches the per-file patch for paths containing whitespace", () => {
+  it("attaches the per-file patch for paths containing whitespace", async () => {
     repo.write("with space.txt", "a\nb\n");
     repo.commitAll("seed spaced file");
     const spacedBase = repo.git("rev-parse", "HEAD").trim();
     repo.write("with space.txt", "a\nb\nc\n");
 
-    const diff = computeCanonicalDiff(
+    const diff = await computeCanonicalDiff(
       repo.root,
       spacedBase,
-      worktreeStateTree(repo.root, spacedBase),
+      await worktreeStateTree(repo.root, spacedBase),
     );
     const f = diff.files.find((x) => x.path === "with space.txt");
     expect(f?.patch).toContain("with space.txt");
@@ -114,7 +142,7 @@ describe("canonical diff", () => {
     expect(f?.sha).not.toBe(EMPTY_SHA);
   });
 
-  it("attaches per-file patch for renames and binaries via computeCanonicalDiff", () => {
+  it("attaches per-file patch for renames and binaries via computeCanonicalDiff", async () => {
     repo.write("ren-old.txt", "x\ny\nz\nw\n");
     writeFileSync(join(repo.root, "img.bin"), Buffer.from([0, 1, 2, 0, 9]));
     repo.commitAll("seed rename and binary base");
@@ -123,7 +151,7 @@ describe("canonical diff", () => {
     repo.remove("ren-old.txt");
     writeFileSync(join(repo.root, "img.bin"), Buffer.from([0, 1, 2, 0, 9, 8, 7]));
 
-    const diff = computeCanonicalDiff(repo.root, b2, worktreeStateTree(repo.root, b2));
+    const diff = await computeCanonicalDiff(repo.root, b2, await worktreeStateTree(repo.root, b2));
     const renamed = diff.files.find((f) => f.status === "renamed");
     expect(renamed?.patch).toContain("rename to ren-new.txt");
     const bin = diff.files.find((f) => f.path === "img.bin");

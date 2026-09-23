@@ -11,9 +11,11 @@ export function useFindShortcut(): RefObject<HTMLInputElement | null> {
       if (event.defaultPrevented) return;
       const target = event.target;
       if (target instanceof HTMLElement && target.closest('[role="dialog"]') !== null) return;
+      // A retained diff is inert: its field cannot take focus, so the browser keeps the shortcut.
+      if (field.current === null || field.current.closest("[inert]") !== null) return;
       event.preventDefault();
-      field.current?.focus();
-      field.current?.select();
+      field.current.focus();
+      field.current.select();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

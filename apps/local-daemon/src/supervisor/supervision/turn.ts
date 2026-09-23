@@ -19,6 +19,7 @@ import {
 import { readRunEvents, sessionDir } from "#events";
 import type { CanonicalDiff } from "#git";
 
+import { runStillLive } from "../init-commands.js";
 import { spawnTurn } from "../lifecycle.js";
 import { requireWorktreePath } from "../resume.js";
 import { preflightRuntimeConfig } from "../runtime-preflight.js";
@@ -28,24 +29,29 @@ import type { TurnContext } from "../types.js";
 import { buildSupervisionPrompt, type SupervisionBrief } from "./prompt.js";
 
 /** Read from the repository, not the worktree: the pass may already have been superseded by the next one. */
-function stepDiff(
+async function stepDiff(
   state: SupervisorState,
   run: RunRow,
   sessions: readonly AgentSessionRow[],
-): CanonicalDiff | null {
+): Promise<CanonicalDiff | null> {
   const bounds = stepPassBounds(sessions);
   if (bounds === null) return null;
   const service = state.repositories.forRepository(run.repository_id)?.service ?? null;
-  return service?.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha)?.diff ?? null;
+  if (service === null) return null;
+  return (await service.boundaryDiff(bounds.start_tree_sha, bounds.end_tree_sha))?.diff ?? null;
 }
 
-function buildBrief(state: SupervisorState, run: RunRow, step: StepRunRow): SupervisionBrief {
+async function buildBrief(
+  state: SupervisorState,
+  run: RunRow,
+  step: StepRunRow,
+): Promise<SupervisionBrief> {
   const events = readRunEvents(state.db, run.id);
   const sessions = stepSessions(listAgentSessionsForRun(state.db, run.id), step.id);
   const sessionIds = new Set(sessions.map((session) => session.id));
   return {
     step,
-    diff: stepDiff(state, run, sessions),
+    diff: await stepDiff(state, run, sessions),
     events: events.filter(
       (event) => event.agent_session_id !== null && sessionIds.has(event.agent_session_id),
     ),
@@ -67,6 +73,9 @@ export async function spawnSupervisionTurn(
   const worktreePath = requireWorktreePath(state, run);
   const runtime = ensureRuntimeAgent(state.db, supervision.config.runtime);
   preflightRuntimeConfig(runtime, supervision.config, worktreePath);
+  const prompt = buildSupervisionPrompt(await buildBrief(state, run, step));
+  // An abort or shutdown during the brief owns the run; its pending verdict stays for the next pass.
+  if (!runStillLive(state, run.id)) return;
   const agentSessionId = randomUUID();
   insertAgentSession(state.db, {
     id: agentSessionId,
@@ -81,7 +90,7 @@ export async function spawnSupervisionTurn(
     stepRunId: step.id,
     agentSessionId,
     kind: "supervision",
-    prompt: buildSupervisionPrompt(buildBrief(state, run, step)),
+    prompt,
     contextSelection: null,
     agentSessionDir: sessionDir(state.dataDir, run.id, agentSessionId),
     worktreePath,

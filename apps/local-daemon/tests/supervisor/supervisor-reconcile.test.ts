@@ -38,7 +38,7 @@ it("reconciles then resumes the same events.jsonl without skipping a line", asyn
     logEvent(seed, "before"),
   ]);
 
-  supervisor.reconcile();
+  await supervisor.reconcile();
   expect(getRun(fix.db, "rrr")?.status).toBe("awaiting_human");
 
   await supervisor.resume("rrr");
@@ -61,14 +61,14 @@ it("never spawns during boot reconciliation", async () => {
     sessionStatus: "active",
   });
 
-  const report = supervisor.reconcile();
+  const report = await supervisor.reconcile();
 
   expect(spawn.calls).toBe(0);
   expect(report.reconciled).toHaveLength(1);
   expect(getRun(fix.db, "rc")?.status).toBe("failed");
 });
 
-it("settles a corrupt plan even when compete recovery runs first", () => {
+it("settles a corrupt plan even when compete recovery runs first", async () => {
   const { supervisor } = makeSupervisor(fix, "complete");
   fix.db
     .insert(schema.runs)
@@ -76,7 +76,7 @@ it("settles a corrupt plan even when compete recovery runs first", () => {
     .run();
   writeRunEvents(fix.dataDir, "corrupt", []);
 
-  expect(() => supervisor.reconcile()).not.toThrow();
+  await expect(supervisor.reconcile()).resolves.not.toThrow();
 
   const row = fix.db
     .select()

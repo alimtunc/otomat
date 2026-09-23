@@ -18,6 +18,14 @@ function numberProperty(value: unknown, property: string): number | null {
   return typeof candidate === "number" && Number.isInteger(candidate) ? candidate : null;
 }
 
+/** A command's call opens a reported entry and any tool result may close one. */
+export function changesReportedCommands(event: EventEnvelope): boolean {
+  if (event.type !== "runtime.tool_call") return false;
+  if (event.payload["phase"] === "result") return true;
+  const tool = stringProperty(event.payload, "tool")?.toLowerCase();
+  return event.payload["phase"] === "call" && tool !== undefined && COMMAND_TOOLS.has(tool);
+}
+
 function commandOutcome(
   result: EventEnvelope | undefined,
   exitCode: number | null,

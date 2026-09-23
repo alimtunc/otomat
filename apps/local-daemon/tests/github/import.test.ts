@@ -140,7 +140,7 @@ it("reviews the imported head and refuses to rewrite the contributor's branch", 
   const attached = await github.attachPullRequest(ISSUE_ID, { reference: "7" });
   const target = { kind: "pull_request", id: attached.id } as const;
 
-  const diff = review.getDiff(target, DEFAULT_DIFF_SCOPE).diff;
+  const diff = (await review.getDiff(target, DEFAULT_DIFF_SCOPE)).diff;
   expect(diff?.files.map((file) => file.path)).toEqual(["contributed.txt"]);
 
   const detail = review.getReviewDetail(target);
@@ -175,9 +175,9 @@ it("fetches and reviews a mirrored pull request that no issue and no run own", a
   expect(fetched).toMatchObject({ issue_id: null, head_sha: headSha });
 
   const target = { kind: "pull_request", id: entry.id } as const;
-  expect(review.getDiff(target, DEFAULT_DIFF_SCOPE).diff?.files.map((file) => file.path)).toEqual([
-    "contributed.txt",
-  ]);
+  expect(
+    (await review.getDiff(target, DEFAULT_DIFF_SCOPE)).diff?.files.map((file) => file.path),
+  ).toEqual(["contributed.txt"]);
   expect(review.getReviewDetail(target).fixAuthority.kind).toBe("external");
 
   expect(viewedImports).toContain(entry.id);

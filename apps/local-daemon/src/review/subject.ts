@@ -17,7 +17,7 @@ function runSubject(ctx: ReviewContext, id: string, owner: string): ReviewSubjec
   return {
     id,
     ledgerRunId: id,
-    snapshot: () => {
+    snapshot: async () => {
       const binding = ctx.repositories.forRun(id);
       if (binding === null) return null;
       return diffSnapshotOrNull(binding.service, owner, runDiffBaseRef(pullRequest()));
@@ -33,10 +33,10 @@ function pullRequestSubject(ctx: ReviewContext, row: PullRequestRow): ReviewSubj
   return {
     id: row.id,
     ledgerRunId: row.run_id,
-    snapshot: () => {
+    snapshot: async () => {
       const binding = ctx.repositories.forRepository(row.repository_id);
       if (binding === null) return null;
-      const trees = pullRequestTrees(row, binding);
+      const trees = await pullRequestTrees(row, binding);
       return trees === null ? null : treeRangeSnapshot(binding.rootPath, trees.base, trees.head);
     },
     fixAuthority: () => importedFixAuthority(row),

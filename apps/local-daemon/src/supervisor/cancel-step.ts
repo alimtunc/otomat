@@ -29,13 +29,13 @@ export class StepCancelRefusedError extends Error {
 }
 
 /** A run resting on work that no longer exists re-reads its plan; a working run has a pass in flight that will, and a settled one stays where the operator left it. */
-function resettleRestingRun(state: SupervisorState, run: RunRow, now: string): void {
+async function resettleRestingRun(state: SupervisorState, run: RunRow, now: string): Promise<void> {
   if (isRunWorking(run.status) || isRunSettled(run.status) || hasRunActivity(state, run.id)) return;
   const { statuses, groups } = planStatuses(state.db, run.id);
   const resolution = resolveIdleRun(run.plan_json, statuses, groups);
   if (resolution.target === run.status) return;
   const outcome = settleRun(state.db, state.dataDir, run, { mode: "live", turn: null, now });
-  if (outcome !== null) finishSettle(state, outcome);
+  if (outcome !== null) await finishSettle(state, outcome);
 }
 
 function requireWithdrawableStep(db: Db, runId: string, stepRunId: string) {
@@ -66,11 +66,11 @@ function requireWithdrawableStep(db: Db, runId: string, stepRunId: string) {
   return { run, step };
 }
 
-export function cancelQueuedStep(
+export async function cancelQueuedStep(
   state: SupervisorState,
   runId: string,
   stepRunId: string,
-): StepRunRow {
+): Promise<StepRunRow> {
   const { db } = state;
   const { run, step } = requireWithdrawableStep(db, runId, stepRunId);
   const sessions = stepSessions(listAgentSessionsForRun(db, runId), stepRunId);
@@ -91,7 +91,7 @@ export function cancelQueuedStep(
     buildStepWithdrawnEvent(runId, stepRunId, step.name, now),
   );
   for (const session of sessions) state.slots.cancel(session.id);
-  resettleRestingRun(state, run, now);
+  await resettleRestingRun(state, run, now);
 
   const withdrawn = getStepRun(db, stepRunId);
   if (!withdrawn) throw new Error(`step ${stepRunId} vanished immediately after cancel`);

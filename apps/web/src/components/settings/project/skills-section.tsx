@@ -1,7 +1,7 @@
 import { Skeleton } from "@otomat/ui";
-import { NoProjectSelectedState } from "@web/components/settings/project/no-project-selected-state";
 import { SectionHeading } from "@web/components/settings/section-heading";
 import { SkillCatalogPanel } from "@web/components/settings/skills/catalog-panel";
+import { NoProjectSelectedState } from "@web/components/shell/project-selection/no-project-selected-state";
 import { ProjectQueryBoundary } from "@web/components/shell/project-selection/query-boundary";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import type { ReactNode } from "react";

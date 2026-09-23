@@ -28,7 +28,7 @@ it("lists metadata without descriptions or plans and keeps the complete detail",
   const app = makeApiApp(fixture);
   const catalog = await (await request(app, "/api/issues/catalog?projectId=p1")).json();
   expect(issueSummarySchema.array().parse(catalog)).toHaveLength(2);
-  expect(JSON.stringify(catalog)).not.toContain('"body"');
+  expect(JSON.stringify(catalog)).not.toMatch(/"(body|source_url|source_external_id)"/);
   const runs = await (await request(app, "/api/runs/catalog?projectId=p1")).json();
   expect(runSummarySchema.array().parse(runs)[0]).toMatchObject({ id: "r1", status: "completed" });
   expect(JSON.stringify(runs)).not.toContain("plan_json");
@@ -52,15 +52,14 @@ it("searches complete descriptions, bounds results and isolates the project", as
     });
   insertIssue(fixture.db, { id: "title", project_id: "p1", title: "Néédle" });
   const app = makeApiApp(fixture);
-  const result = issueSearchResponseSchema.parse(
-    await (
-      await request(app, `/api/issues/search?projectId=p1&query=${encodeURIComponent("NÉÉDLE")}`)
-    ).json(),
-  );
+  const response = await (
+    await request(app, `/api/issues/search?projectId=p1&query=${encodeURIComponent("NÉÉDLE")}`)
+  ).json();
+  const result = issueSearchResponseSchema.parse(response);
   expect(result.total).toBe(26);
   expect(result.issues).toHaveLength(20);
   expect(result.issues[0].id).toBe("title");
   expect(result.issues.some((issue) => issue.id === "private")).toBe(false);
-  expect(result.issues.every((issue) => !("body" in issue))).toBe(true);
+  expect(JSON.stringify(response)).not.toMatch(/"(body|source_url|source_external_id)"/);
   expect((await request(app, "/api/issues/search?query=x")).status).toBe(400);
 });

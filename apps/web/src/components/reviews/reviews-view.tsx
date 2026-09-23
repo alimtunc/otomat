@@ -26,7 +26,6 @@ export function ReviewsView() {
 
   return (
     <RouteShell
-      active="reviews"
       titleIcon="git-pull-request"
       breadcrumbs={[{ label: "Reviews", current: true }]}
       actions={
@@ -40,10 +39,10 @@ export function ReviewsView() {
         </div>
       }
     >
-      <ProjectQueryBoundary query={selectedProject.projects}>
+      <ProjectQueryBoundary query={selectedProject.projects} unselectedIcon="git-pull-request">
         <QueryBoundary
           query={inbox}
-          pending={<ListSkeleton rows={3} height={52} />}
+          pending={<ListSkeleton rows={8} height={44} />}
           error={
             <ErrorReport
               error={inbox.error}

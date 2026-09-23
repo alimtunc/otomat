@@ -1,36 +1,24 @@
 import {
-  AppShell,
+  AppShellMain,
   type BreadcrumbItem,
   Breadcrumbs,
-  CommandPalette,
   ConnectionStatusIndicator,
   FOCUS_RING,
   Icon,
   IconButton,
   type IconName,
   PageBar,
-  useCommandPalette,
-  useTheme,
 } from "@otomat/ui";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { QuickOpen } from "@web/components/files/quick-open";
-import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { ActivityCenter } from "@web/components/shell/activity/center";
-import type { ShellSection } from "@web/components/shell/nav-items";
 import { recordPaletteVisit } from "@web/components/shell/palette/history";
-import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
-import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
-import { ProjectTabsBar } from "@web/components/shell/project-tabs/bar";
 import { useRemoteSession } from "@web/components/shell/remote-session/context";
-import { Sidebar } from "@web/components/shell/sidebar";
 import type { BackNavigation } from "@web/components/shell/use-back-navigation";
-import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
 import { useShellData } from "@web/components/shell/use-shell-data";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 export interface RouteShellProps {
   breadcrumbs: BreadcrumbItem[];
-  active: ShellSection;
   titleIcon?: IconName;
   titleNote?: string;
   back?: BackNavigation | null;
@@ -45,7 +33,6 @@ export interface RouteShellProps {
 
 export function RouteShell({
   breadcrumbs,
-  active,
   titleIcon,
   titleNote,
   back,
@@ -56,14 +43,8 @@ export function RouteShell({
   rightPanel,
   children,
 }: RouteShellProps) {
-  const { density } = useTheme();
   const shell = useShellData();
   const remote = useRemoteSession();
-  const palette = useCommandPalette();
-  const [newIssueOpen, setNewIssueOpen] = useState(false);
-  const [addProjectOpen, setAddProjectOpen] = useState(false);
-  const projectTrigger = useRef<HTMLButtonElement>(null);
-  const openNewIssue = useCallback(() => setNewIssueOpen(true), []);
   const href = useRouterState({ select: (state) => state.location.href });
   const scope = shell.currentSwitcherId;
   const visitLabel = breadcrumbs.map((entry) => entry.label).join(" · ");
@@ -71,14 +52,6 @@ export function RouteShell({
   useEffect(() => {
     if (scope !== undefined) recordPaletteVisit(scope, { href, label: visitLabel });
   }, [scope, href, visitLabel]);
-  const paletteGroups = usePaletteGroups({
-    search: palette.search,
-    open: palette.open,
-    onNewIssue: openNewIssue,
-    scope,
-  });
-  useNewIssueShortcut(openNewIssue);
-
   const isTitle = breadcrumbs.length === 1;
 
   const pageBar = (
@@ -148,29 +121,11 @@ export function RouteShell({
   );
 
   return (
-    <AppShell
-      density={density}
-      tabs={<ProjectTabsBar />}
+    <AppShellMain
+      pageBar={pageBar}
+      rightPanel={rightPanel}
       connectionState={shell.connectionState}
       {...(shell.connectionLabel === undefined ? {} : { connectionLabel: shell.connectionLabel })}
-      sidebar={
-        <Sidebar
-          active={active}
-          projectTriggerRef={projectTrigger}
-          projects={shell.projects}
-          currentProjectId={shell.currentSwitcherId}
-          onProjectSelect={shell.selectProject}
-          onAddProject={() => setAddProjectOpen(true)}
-          onSearch={() => palette.setOpen(true)}
-          onNewIssue={openNewIssue}
-          hasLiveRun={shell.hasLiveRun}
-          reviewCount={shell.reviewCount}
-          inboxCount={shell.inboxCount}
-          conversationCount={shell.conversationCount}
-        />
-      }
-      rightPanel={rightPanel}
-      pageBar={pageBar}
     >
       <div className="flex h-full min-h-0 flex-col">
         {banner}
@@ -178,27 +133,6 @@ export function RouteShell({
           {children}
         </div>
       </div>
-      <CommandPalette
-        open={palette.open}
-        onOpenChange={palette.setOpen}
-        search={palette.search}
-        onSearchChange={palette.setSearch}
-        groups={paletteGroups}
-      />
-      <QuickOpen projectId={shell.currentProjectId} />
-      <NewIssueDialog
-        open={newIssueOpen}
-        onOpenChange={setNewIssueOpen}
-        projectId={shell.currentProjectId}
-        projectName={shell.projectLabel}
-      />
-      <AddProjectDialog
-        open={addProjectOpen}
-        finalFocus={projectTrigger}
-        onOpenChange={setAddProjectOpen}
-        hosts={shell.hostOptions}
-        onSelect={shell.selectProject}
-      />
-    </AppShell>
+    </AppShellMain>
   );
 }

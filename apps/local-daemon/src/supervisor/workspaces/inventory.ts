@@ -46,22 +46,22 @@ function writerAlive(context: WorkspaceContext, runId: string | null): boolean {
 }
 
 /** `null` says the worktree refused to answer, which blocks a deletion instead of allowing one. */
-function readUncommitted(path: string): number | null {
+async function readUncommitted(path: string): Promise<number | null> {
   try {
-    return uncommittedPaths(path).length;
+    return (await uncommittedPaths(path)).length;
   } catch (error) {
     console.error(`[otomat] git status for worktree ${path} failed`, error);
     return null;
   }
 }
 
-function toEntry(
+async function toEntry(
   context: WorkspaceContext,
   repository: RepositoryRow,
   binding: RepositoryBinding,
   attached: AttachedWorkspace,
   holders: Map<string, string>,
-): WorkspaceEntry {
+): Promise<WorkspaceEntry> {
   const { record } = attached;
   const present = existsSync(attached.path);
   const issueId = record?.issue_id ?? null;
@@ -71,7 +71,7 @@ function toEntry(
     present,
     record_status: record?.status ?? null,
     cycle_open: issueId !== null && holders.get(issueId) === record?.run_id,
-    uncommitted_files: present ? readUncommitted(attached.path) : 0,
+    uncommitted_files: present ? await readUncommitted(attached.path) : 0,
     writer_alive: writerAlive(context, record?.run_id ?? null),
   };
   const verdict = projectWorkspaceState(facts);
@@ -95,7 +95,9 @@ function toEntry(
     present,
     uncommitted_files: facts.uncommitted_files,
     unpushed_commits:
-      attached.branch === null ? null : unpushedCommitCount(binding.rootPath, attached.branch),
+      attached.branch === null
+        ? null
+        : await unpushedCommitCount(binding.rootPath, attached.branch),
     head_sha: attached.head,
     last_activity_at: record?.updated_at ?? null,
     pull_request: record?.pull_request ?? null,
@@ -112,31 +114,39 @@ export function cycleHolders(db: Db): Map<string, string> {
   return holders;
 }
 
-export function repositoryInventory(
+export async function repositoryInventory(
   context: WorkspaceContext,
   repository: RepositoryRow,
   holders: Map<string, string>,
-): WorkspaceEntry[] {
+): Promise<WorkspaceEntry[]> {
   const binding = context.repositories.forRepository(repository.id);
   // A root that is no longer a repository would converge its rows over an unmounted checkout.
-  if (!binding || !isRepositoryRoot(binding.rootPath)) return [];
+  if (!binding || !(await isRepositoryRoot(binding.rootPath))) return [];
   const attached = attachWorkspaces(
-    listWorktrees(binding.rootPath),
+    await listWorktrees(binding.rootPath),
     listWorkspaceRecords(context.db, repository.id),
     { repoRoot: binding.rootPath, worktreesRoot: context.repositories.worktreesRoot },
   );
-  return attached.map((entry) => toEntry(context, repository, binding, entry, holders));
+  const entries: WorkspaceEntry[] = [];
+  for (const entry of attached) {
+    entries.push(await toEntry(context, repository, binding, entry, holders));
+  }
+  return entries;
 }
 
-export function listWorkspaces(
+export async function listWorkspaces(
   context: WorkspaceContext,
   scope: WorkspaceScope = {},
-): WorkspaceInventory {
+): Promise<WorkspaceInventory> {
   const run = scope.runId === undefined ? undefined : getRun(context.db, scope.runId);
   const holders = cycleHolders(context.db);
-  const entries = listRepositories(context.db, { projectId: scope.projectId })
-    .filter((repository) => run === undefined || repository.id === run.repository_id)
-    .flatMap((repository) => repositoryInventory(context, repository, holders));
+  const repositories = listRepositories(context.db, { projectId: scope.projectId }).filter(
+    (repository) => run === undefined || repository.id === run.repository_id,
+  );
+  const entries: WorkspaceEntry[] = [];
+  for (const repository of repositories) {
+    entries.push(...(await repositoryInventory(context, repository, holders)));
+  }
   const scoped =
     scope.runId === undefined ? entries : entries.filter((entry) => entry.run_id === scope.runId);
   return { entries: scoped, counts: countWorkspaces(scoped) };

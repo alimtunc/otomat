@@ -15,20 +15,24 @@ export function snapshotSubject(action: string, owner: string): string {
   return formatCommitSubject({ type: "chore", scope: "worktree", summary: `${action} ${owner}` });
 }
 
-export function isDirty(cwd: string): boolean {
-  return runGit(["status", "--porcelain"], { cwd }).stdout.trim() !== "";
+export async function isDirty(cwd: string): Promise<boolean> {
+  return (
+    (await runGit(["--no-optional-locks", "status", "--porcelain"], { cwd })).stdout.trim() !== ""
+  );
 }
 
-function hasGitIdentity(cwd: string): boolean {
-  const res = runGit(["config", "--get", "user.email"], { cwd, allowFailure: true });
+async function hasGitIdentity(cwd: string): Promise<boolean> {
+  const res = await runGit(["config", "--get", "user.email"], { cwd, allowFailure: true });
   return res.exitCode === 0 && res.stdout.trim() !== "";
 }
 
 // `--untracked-files` is forced so a `status.showUntrackedFiles=no` config cannot hide work from the guard.
-function statusLines(cwd: string): string[] {
-  return runGit(["status", "--porcelain", "--untracked-files=normal"], { cwd })
-    .stdout.split("\n")
-    .filter(Boolean);
+async function statusLines(cwd: string): Promise<string[]> {
+  const status = await runGit(
+    ["--no-optional-locks", "status", "--porcelain", "--untracked-files=normal"],
+    { cwd },
+  );
+  return status.stdout.split("\n").filter(Boolean);
 }
 
 // Porcelain XY columns: a non-blank, non-`?` X is staged; a non-blank Y is unstaged or untracked work.
@@ -41,19 +45,22 @@ function partiallyStaged(lines: readonly string[]): boolean {
 }
 
 /** Staged work beside unstaged or untracked work: a snapshot could only commit part of a selection the operator made. */
-export function hasPartialStaging(cwd: string): boolean {
-  return partiallyStaged(statusLines(cwd));
+export async function hasPartialStaging(cwd: string): Promise<boolean> {
+  return partiallyStaged(await statusLines(cwd));
 }
 
 /** Commits the worktree's current state so an archived branch keeps the work. */
-export function snapshotWorktree(cwd: string, message: string): void {
-  const lines = statusLines(cwd);
+export async function snapshotWorktree(cwd: string, message: string): Promise<void> {
+  const lines = await statusLines(cwd);
   if (lines.length === 0) return;
   if (partiallyStaged(lines))
     throw new WorktreeConflictError(
       "This checkout has staged and unstaged changes. Commit your selection or stage the remaining changes before Otomat snapshots it.",
     );
-  if (!hasStaged(lines)) runGit(["add", "-A"], { cwd });
-  const env = hasGitIdentity(cwd) ? undefined : OTOMAT_IDENTITY;
-  runGit(["-c", "commit.gpgsign=false", "commit", "--no-verify", "-m", message], { cwd, env });
+  if (!hasStaged(lines)) await runGit(["add", "-A"], { cwd });
+  const env = (await hasGitIdentity(cwd)) ? undefined : OTOMAT_IDENTITY;
+  await runGit(["-c", "commit.gpgsign=false", "commit", "--no-verify", "-m", message], {
+    cwd,
+    env,
+  });
 }

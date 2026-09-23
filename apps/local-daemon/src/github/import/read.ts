@@ -44,12 +44,12 @@ export function readOverviewFacts(
 }
 
 /** Isolation is the fetch itself: the head lands in a read-only ref, so review holds no branch it could push. */
-export function fetchHeadTrees(
+export async function fetchHeadTrees(
   repository: IssueRepository,
   provider: GitHubPullRequest,
-): PullRequestTrees {
+): Promise<PullRequestTrees> {
   try {
-    return fetchPullRequestTrees({
+    return await fetchPullRequestTrees({
       repoRoot: repository.binding.rootPath,
       remote: repository.remote.name,
       number: provider.number,

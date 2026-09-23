@@ -28,10 +28,10 @@ export function runDiffBaseRef(row: PullRequestRow | null): string | undefined {
 }
 
 /** An import is pinned to the pair it fetched; a published head is only ever as current as its fork from the base. */
-export function pullRequestTrees(
+export async function pullRequestTrees(
   row: PullRequestRow,
   binding: RepositoryBinding,
-): PullRequestTrees | null {
+): Promise<PullRequestTrees | null> {
   const head = reviewAnchorSha(row);
   if (head === null || head === "") return null;
   if (row.origin !== "imported") {
@@ -39,7 +39,7 @@ export function pullRequestTrees(
     return publishedPullRequestTrees(binding.rootPath, row.base_ref, head);
   }
   if (row.base_sha === null || row.base_sha === "") return null;
-  return hasCommit(binding.rootPath, head) ? { base: row.base_sha, head } : null;
+  return (await hasCommit(binding.rootPath, head)) ? { base: row.base_sha, head } : null;
 }
 
 const OWNERSHIP_REASON = {

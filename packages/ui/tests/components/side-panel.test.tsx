@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import {
   AppShell,
+  AppShellMain,
   AppSidebar,
   ResizablePanel,
   ResizablePanelGroup,
@@ -121,8 +122,8 @@ function FileBrowser() {
 
 function Shell() {
   return (
-    <AppShell sidebar={<AppSidebar>navigation</AppSidebar>} pageBar={<header />}>
-      content
+    <AppShell sidebar={<AppSidebar>navigation</AppSidebar>}>
+      <AppShellMain pageBar={<header />}>content</AppShellMain>
     </AppShell>
   );
 }

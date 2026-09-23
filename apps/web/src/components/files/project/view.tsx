@@ -1,19 +1,19 @@
-import { EmptyState, ErrorState, Spinner } from "@otomat/ui";
+import { EmptyState, ErrorState } from "@otomat/ui";
 import { useRepositories } from "@web/api/daemon/queries";
 import { ProjectExplorer } from "@web/components/files/project/explorer";
+import { FILE_TREE_WIDTH } from "@web/components/files/surface";
 import { FilesTabs } from "@web/components/files/tabs";
 import { FilesWorkspace } from "@web/components/files/workspace";
-import { CenteredState } from "@web/components/shell/centered-state";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
 import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { SplitSkeleton } from "@web/components/shell/split-skeleton";
 
 export function ProjectFilesView() {
   const { projectId } = useSelectedProject();
   const repositories = useRepositories(projectId);
   return (
     <RouteShell
-      active="files"
       titleIcon="folder"
       breadcrumbs={[{ label: "Files", current: true }]}
       tabs={<FilesTabs />}
@@ -27,11 +27,7 @@ export function ProjectFilesView() {
       ) : (
         <QueryList
           query={repositories}
-          pending={
-            <CenteredState>
-              <Spinner label="Loading repository" />
-            </CenteredState>
-          }
+          pending={<SplitSkeleton side={FILE_TREE_WIDTH} />}
           error={
             <ErrorState
               title="Could not load the repository"

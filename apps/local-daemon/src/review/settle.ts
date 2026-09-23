@@ -53,12 +53,15 @@ function resolveSettledComments(
   ctx: ReviewContext,
   outcome: RunSettledOutcome,
   open: ReviewCommentRow[],
+  requestedBefore: ReadonlyMap<string, string | null>,
   diff: CanonicalDiff | null,
   now: string,
 ): void {
   const fileShas = new Map(diff?.files.map((file) => [file.path, file.sha]) ?? []);
   for (const comment of open) {
     if (comment.fix_requested_at !== null) {
+      // A fix requested while the diff was computed belongs to the pass it queued, not to this one.
+      if (requestedBefore.get(comment.id) !== comment.fix_requested_at) continue;
       // Stamped before the transition: an addressed comment must never exist without
       // the pass that addressed it, or its proof would have to guess one.
       if (outcome.agentSessionId !== null) {
@@ -85,25 +88,29 @@ function deriveReviewStatus(ctx: ReviewContext, runId: string): void {
 }
 
 /** After a turn settles: refresh the diff projection, resolve anchors, converge the review. */
-export function onRunSettled(ctx: ReviewContext, outcome: RunSettledOutcome): void {
+export async function onRunSettled(ctx: ReviewContext, outcome: RunSettledOutcome): Promise<void> {
   const run = getRun(ctx.db, outcome.runId);
   if (!run) return;
-  const now = new Date().toISOString();
-  const open = listReviewCommentsForSubject(ctx.db, run.id).filter(
-    (comment) => comment.status === "open",
-  );
+  const openComments = () =>
+    listReviewCommentsForSubject(ctx.db, run.id).filter((comment) => comment.status === "open");
 
   // The turn delivered and is held for its supervisor: releasing its fix requests would drop work that landed.
   if (outcome.classification === "awaiting_supervision") return;
   if (outcome.classification !== "completed") {
-    releasePendingFixes(ctx, open);
+    releasePendingFixes(ctx, openComments());
     return;
   }
 
-  const diff = computeDiff(resolveReviewSubject(ctx, { kind: "run", id: run.id }));
+  const requestedBefore = new Map(
+    openComments().map((comment) => [comment.id, comment.fix_requested_at]),
+  );
+  const diff = await computeDiff(resolveReviewSubject(ctx, { kind: "run", id: run.id }));
+  // Read after the diff: a comment the reviewer changed meanwhile must not transition from a stale status.
+  const open = openComments();
+  const now = new Date().toISOString();
   if (diff !== null) {
     emitLedgerEvent(ctx.db, ctx.dataDir, run.id, buildDiffUpdatedEvent(run.id, diff, now));
   }
-  resolveSettledComments(ctx, outcome, open, diff, now);
+  resolveSettledComments(ctx, outcome, open, requestedBefore, diff, now);
   deriveReviewStatus(ctx, run.id);
 }

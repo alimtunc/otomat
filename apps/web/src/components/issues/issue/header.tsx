@@ -6,21 +6,46 @@ import { LinearIssueHeader } from "@web/components/issues/workspace/linear/heade
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import type { ReactNode } from "react";
 
+const HEADER_PENDING = (
+  <div className="flex flex-col gap-2.5">
+    <Skeleton className="h-7 w-2/3" />
+    <Skeleton className="h-3.5 w-56" />
+  </div>
+);
+
+function LocalIssueDescription({
+  issueId,
+  body,
+  hasRun,
+}: {
+  issueId: string;
+  body: string;
+  hasRun: boolean | null;
+}) {
+  if (hasRun === null) return <Skeleton height={64} />;
+  return (
+    <IssueDescription key={`${issueId}:${hasRun}`} body={body} collapsed={hasRun}>
+      <Markdown value={body} className="text-sm text-foreground" allowMedia />
+    </IssueDescription>
+  );
+}
+
 export function IssueHeader({
   query,
   children,
-  hasRun = false,
+  hasRun,
   comments,
 }: {
   query: ReturnType<typeof useIssue>;
   children?: ReactNode;
-  hasRun?: boolean;
+  /** Null while the issue's runs are unknown: the description's collapsed default depends on them. */
+  hasRun: boolean | null;
   comments?: ReactNode;
 }) {
   return (
     <QueryBoundary
       query={query}
-      pending={<Skeleton height={44} />}
+      pending={HEADER_PENDING}
       error={
         <ErrorState
           variant="inline"
@@ -44,9 +69,7 @@ export function IssueHeader({
             </div>
             {children}
             {issue.body ? (
-              <IssueDescription key={`${issue.id}:${hasRun}`} body={issue.body} collapsed={hasRun}>
-                <Markdown value={issue.body} className="text-sm text-foreground" allowMedia />
-              </IssueDescription>
+              <LocalIssueDescription issueId={issue.id} body={issue.body} hasRun={hasRun} />
             ) : null}
           </div>
         )

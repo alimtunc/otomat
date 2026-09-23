@@ -38,12 +38,12 @@ function advanceRemote(name: string): string {
   return sha;
 }
 
-function diffBase(runId: string): string | undefined {
+async function diffBase(runId: string): Promise<string | undefined> {
   const resolver = createRepositoryResolver({
     db: fix.db,
     worktreesRoot: join(fix.dataDir, "worktrees"),
   });
-  return resolver.forRun(runId)?.service.diff(runId).base;
+  return (await resolver.forRun(runId)?.service.diff(runId))?.base;
 }
 
 it("forks a new run from the remote head when the local base branch is behind", async () => {
@@ -153,7 +153,7 @@ it("measures the run's diff against the base it recorded, not the local branch",
   await supervisor.settle();
   writeFileSync(join(spawn.jobs[0]?.worktreePath ?? "", "agent.md"), "agent work\n");
 
-  expect(diffBase(run.id)).toBe(published);
+  expect(await diffBase(run.id)).toBe(published);
 });
 
 it("gives the agent context the same base the diff reads, not the lagging local branch", async () => {
@@ -163,8 +163,8 @@ it("gives the agent context the same base the diff reads, not the lagging local 
   await supervisor.settle();
   const worktree = spawn.jobs[0]?.worktreePath ?? "";
   writeFileSync(join(worktree, "agent.md"), "agent work\n");
-  runGit(["add", "-A"], { cwd: worktree });
-  runGit(["commit", "-m", "agent commit"], { cwd: worktree });
+  await runGit(["add", "-A"], { cwd: worktree });
+  await runGit(["commit", "-m", "agent commit"], { cwd: worktree });
 
   await supervisor.appendStep(run.id, FOLLOW_UP);
   await supervisor.settle();

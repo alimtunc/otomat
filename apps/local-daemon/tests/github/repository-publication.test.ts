@@ -8,6 +8,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createRepositoryResolver, sourceControlSnapshot } from "#git";
 import { runGit } from "#git/git-cli";
 import { createGitHubService, GitHubCliError, type GitHubService } from "#github";
+import { runCommand } from "#github/process";
+import { fetchBranch } from "#github/remote";
 import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
 import { FakeGitHubCli } from "#test-support/github";
 
@@ -20,12 +22,12 @@ beforeEach(() => {
   fix.repo.write("manual.txt", "committed\n");
   fix.repo.commitAll("feat: manual changes");
   cli = new FakeGitHubCli();
-  vi.spyOn(cli, "fetchBranch").mockImplementation(async () => {
-    fix.repo.git("fetch", "origin", "main");
-  });
+  vi.spyOn(cli, "fetchBranch").mockImplementation((cwd, remote, branch) =>
+    fetchBranch(runCommand, cwd, remote, branch),
+  );
   vi.spyOn(cli, "push").mockImplementation(async (cwd, remote, branch, sha) => {
     if (cli.pushError !== null) throw cli.pushError;
-    runGit(["push", remote, `${sha}:refs/heads/${branch}`], { cwd });
+    await runGit(["push", remote, `${sha}:refs/heads/${branch}`], { cwd });
     cli.remoteHeads.set(branch, sha ?? "");
   });
   github = createGitHubService({
@@ -40,12 +42,12 @@ beforeEach(() => {
 });
 afterEach(() => fix.cleanup());
 
-function request(
+async function request(
   overrides: Partial<PublishRepositoryPullRequest> = {},
   headRef = "feat/manual-pr",
-): PublishRepositoryPullRequest {
+): Promise<PublishRepositoryPullRequest> {
   return {
-    revision: sourceControlSnapshot(fix.repo.root).response.revision,
+    revision: (await sourceControlSnapshot(fix.repo.root)).response.revision,
     base_ref: "main",
     mode: "draft",
     details: {
@@ -64,7 +66,7 @@ it(
     fix.repo.write("manual.txt", "uncommitted\n");
     const remoteMain = fix.repo.git("rev-parse", "origin/main");
     const head = fix.repo.git("rev-parse", "HEAD").trim();
-    const result = await github.publishRepositoryPullRequest(fix.repositoryId, request());
+    const result = await github.publishRepositoryPullRequest(fix.repositoryId, await request());
     expect(result).toMatchObject({
       run_id: null,
       issue_id: null,
@@ -86,7 +88,7 @@ it(
     );
     expect(readFileSync(join(fix.repo.root, "manual.txt"), "utf8")).toBe("uncommitted\n");
     expect(listRuns(fix.db)).toEqual([]);
-    const retried = await github.publishRepositoryPullRequest(fix.repositoryId, request());
+    const retried = await github.publishRepositoryPullRequest(fix.repositoryId, await request());
     expect(retried.id).toBe(result.id);
     expect(cli.createCalls).toBe(1);
   },
@@ -98,17 +100,17 @@ it(
   async () => {
     for (const head_ref of ["main", "master", "HEAD", "-bad", "bad..branch"])
       await expect(
-        github.publishRepositoryPullRequest(fix.repositoryId, request({}, head_ref)),
+        github.publishRepositoryPullRequest(fix.repositoryId, await request({}, head_ref)),
       ).rejects.toThrow();
-    const stale = request();
+    const stale = await request();
     fix.repo.write("new.txt", "new\n");
     await expect(github.publishRepositoryPullRequest(fix.repositoryId, stale)).rejects.toThrow(
       "checkout changed",
     );
     fix.repo.git("add", "new.txt");
-    await expect(github.publishRepositoryPullRequest(fix.repositoryId, request())).rejects.toThrow(
-      "Commit the staged changes",
-    );
+    await expect(
+      github.publishRepositoryPullRequest(fix.repositoryId, await request()),
+    ).rejects.toThrow("Commit the staged changes");
     expect(cli.push).not.toHaveBeenCalled();
     expect(fix.repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("main");
   },
@@ -119,9 +121,9 @@ it("refuses changes made during the remote preparation", async () => {
     fix.repo.write("manual.txt", "changed while preparing\n");
     return cli.remote;
   });
-  await expect(github.publishRepositoryPullRequest(fix.repositoryId, request())).rejects.toThrow(
-    "checkout changed during preparation",
-  );
+  await expect(
+    github.publishRepositoryPullRequest(fix.repositoryId, await request()),
+  ).rejects.toThrow("checkout changed during preparation");
   expect(cli.push).not.toHaveBeenCalled();
 });
 
@@ -130,16 +132,16 @@ it(
   { timeout: 20_000 },
   async () => {
     fix.repo.git("branch", "feat/manual-pr");
-    await expect(github.publishRepositoryPullRequest(fix.repositoryId, request())).rejects.toThrow(
-      "already exists",
-    );
+    await expect(
+      github.publishRepositoryPullRequest(fix.repositoryId, await request()),
+    ).rejects.toThrow("already exists");
     cli.remoteHeads.set("feat/taken", "a".repeat(40));
     await expect(
-      github.publishRepositoryPullRequest(fix.repositoryId, request({}, "feat/taken")),
+      github.publishRepositoryPullRequest(fix.repositoryId, await request({}, "feat/taken")),
     ).rejects.toThrow("remote branch already exists");
     fix.repo.git("push", "origin", "main");
     await expect(
-      github.publishRepositoryPullRequest(fix.repositoryId, request({}, "feat/empty")),
+      github.publishRepositoryPullRequest(fix.repositoryId, await request({}, "feat/empty")),
     ).rejects.toThrow("No committed changes");
     expect(cli.push).not.toHaveBeenCalled();
   },
@@ -147,14 +149,14 @@ it(
 
 it("keeps the new local branch and reports a push failure, then retries safely", async () => {
   cli.pushError = new GitHubCliError("github_push_failed", "network unavailable");
-  await expect(github.publishRepositoryPullRequest(fix.repositoryId, request())).rejects.toThrow(
-    "network unavailable",
-  );
+  await expect(
+    github.publishRepositoryPullRequest(fix.repositoryId, await request()),
+  ).rejects.toThrow("network unavailable");
   expect(cli.createCalls).toBe(0);
   expect(fix.repo.git("rev-parse", "--abbrev-ref", "HEAD").trim()).toBe("feat/manual-pr");
   cli.pushError = null;
   await expect(
-    github.publishRepositoryPullRequest(fix.repositoryId, request()),
+    github.publishRepositoryPullRequest(fix.repositoryId, await request()),
   ).resolves.toMatchObject({
     number: 42,
   });

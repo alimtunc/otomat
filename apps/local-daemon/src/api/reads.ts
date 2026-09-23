@@ -102,18 +102,18 @@ export function readWorkflowPreset(db: Db, id: string): WorkflowPresetContract |
 }
 
 /** Probed per read so a root that moved or stopped being a git repository is never offered as a launch target. */
-export function repositoryContract(db: Db, row: RepositoryRow): RepositoryContract {
+export async function repositoryContract(db: Db, row: RepositoryRow): Promise<RepositoryContract> {
   const project = getProject(db, row.project_id);
   return repositoryContractSchema.parse({
     ...row,
     root_path: project?.root_path ?? "",
     init_commands: row.init_commands_json,
-    available: project !== undefined && isRepositoryRoot(project.root_path),
+    available: project !== undefined && (await isRepositoryRoot(project.root_path)),
   });
 }
 
-export function readRepositories(db: Db, projectId?: string): RepositoryContract[] {
-  return listRepositories(db, { projectId }).map((row) => repositoryContract(db, row));
+export async function readRepositories(db: Db, projectId?: string): Promise<RepositoryContract[]> {
+  return Promise.all(listRepositories(db, { projectId }).map((row) => repositoryContract(db, row)));
 }
 
 export function readIssues(db: Db, projectId?: string, includeBody = true): IssueContract[] {

@@ -127,7 +127,7 @@ export class PublicationStore {
   }
 
   /** Landing on `merged` settles the run in the same breath: worktree, branch and issue. */
-  reconcileLifecycle(row: PullRequestRow, status: PullRequestState): PullRequestRow {
+  async reconcileLifecycle(row: PullRequestRow, status: PullRequestState): Promise<PullRequestRow> {
     let current = row;
     let merged = false;
     drivePath(pullRequestMachine, row.status, status, (next) => {
@@ -135,7 +135,7 @@ export class PublicationStore {
       merged ||= next === "merged";
     });
     if (merged) {
-      closeMergedRun(
+      await closeMergedRun(
         {
           db: this.config.db,
           dataDir: this.config.dataDir,

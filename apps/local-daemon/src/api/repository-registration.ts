@@ -18,6 +18,7 @@ import {
 import type { RepositoryRegistrationError } from "@otomat/domain";
 
 import { isRepositoryRoot, probeLocalRepository, tryRealpath, type RepositoryProbe } from "#git";
+import { serializeByKey } from "#serialize";
 
 type RepositoryProbeOk = Extract<RepositoryProbe, { ok: true }>;
 
@@ -42,13 +43,19 @@ function isUniqueViolation(error: unknown): boolean {
  * project root — this is what makes a project that was created without a usable
  * repository launchable without orphaning the issues already bound to it.
  */
-function attachToProject(db: Db, projectId: string, probe: RepositoryProbeOk): RegistrationResult {
+async function attachToProject(
+  db: Db,
+  projectId: string,
+  probe: RepositoryProbeOk,
+): Promise<RegistrationResult> {
   const project = getProject(db, projectId);
   if (!project) return { ok: false, error: "project_not_found" };
   const [existing] = listRepositories(db, { projectId });
-  if (existing && isRepositoryRoot(project.root_path)) {
+  if (existing && (await isRepositoryRoot(project.root_path))) {
     return { ok: false, error: "project_already_has_repository" };
   }
+  // A delete that landed during the probe refuses here rather than failing the writes below.
+  if (!getProject(db, projectId)) return { ok: false, error: "project_not_found" };
   const owner = findRegisteredProject(db, probe.rootPath);
   if (owner && owner.id !== projectId) {
     return { ok: false, error: "repository_already_registered" };
@@ -85,8 +92,15 @@ export function registerLocalRepository(
   db: Db,
   path: string,
   projectId?: string,
-): RegistrationResult {
-  const probe = probeLocalRepository(path);
+): Promise<RegistrationResult> {
+  // One at a time: the dedup reads and the inserts after them span awaits.
+  return serializeByKey(registrations, "registration", () => register(db, path, projectId));
+}
+
+const registrations = new Map<string, Promise<unknown>>();
+
+async function register(db: Db, path: string, projectId?: string): Promise<RegistrationResult> {
+  const probe = await probeLocalRepository(path);
   if (!probe.ok) return probe;
   if (projectId) return attachToProject(db, projectId, probe);
   if (findRegisteredProject(db, probe.rootPath)) {

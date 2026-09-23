@@ -10,10 +10,10 @@ import { runGit } from "#git/git-cli";
 import { setupTestRepo } from "../support/git.js";
 
 describe("runGit", () => {
-  it("returns trimmed stdout and exit code of a successful command", () => {
+  it("returns trimmed stdout and exit code of a successful command", async () => {
     const repo = setupTestRepo();
     try {
-      const res = runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repo.root });
+      const res = await runGit(["rev-parse", "--abbrev-ref", "HEAD"], { cwd: repo.root });
       expect(res.stdout.trim()).toBe("main");
       expect(res.exitCode).toBe(0);
     } finally {
@@ -21,21 +21,21 @@ describe("runGit", () => {
     }
   });
 
-  it("throws GitCommandError carrying stderr on a failing command", () => {
+  it("throws GitCommandError carrying stderr on a failing command", async () => {
     const repo = setupTestRepo();
     try {
-      expect(() => runGit(["rev-parse", "definitely-not-a-ref"], { cwd: repo.root })).toThrow(
-        GitCommandError,
-      );
+      await expect(
+        runGit(["rev-parse", "definitely-not-a-ref"], { cwd: repo.root }),
+      ).rejects.toThrow(GitCommandError);
     } finally {
       repo.cleanup();
     }
   });
 
-  it("returns the failing result instead of throwing when allowFailure is set", () => {
+  it("returns the failing result instead of throwing when allowFailure is set", async () => {
     const repo = setupTestRepo();
     try {
-      const res = runGit(["rev-parse", "--verify", "--quiet", "refs/heads/missing"], {
+      const res = await runGit(["rev-parse", "--verify", "--quiet", "refs/heads/missing"], {
         cwd: repo.root,
         allowFailure: true,
       });
@@ -65,8 +65,8 @@ describe("runGit with a timeout", () => {
     rmSync(scripts, { recursive: true, force: true });
   });
 
-  it("reports a peer that never answers as a failure with no exit code", () => {
-    const res = runGit(["ls-remote", "ssh://unreachable.invalid/repo.git"], {
+  it("reports a peer that never answers as a failure with no exit code", async () => {
+    const res = await runGit(["ls-remote", "ssh://unreachable.invalid/repo.git"], {
       cwd: repo.root,
       env: stalling,
       allowFailure: true,
@@ -77,13 +77,13 @@ describe("runGit with a timeout", () => {
     expect(res.stderr).toBe("timed out after 300ms");
   });
 
-  it("throws the module's own error, not a bare errno, when failure is not allowed", () => {
-    expect(() =>
+  it("throws the module's own error, not a bare errno, when failure is not allowed", async () => {
+    await expect(
       runGit(["ls-remote", "ssh://unreachable.invalid/repo.git"], {
         cwd: repo.root,
         env: stalling,
         timeoutMs: 300,
       }),
-    ).toThrow(GitCommandError);
+    ).rejects.toThrow(GitCommandError);
   });
 });

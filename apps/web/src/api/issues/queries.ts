@@ -66,10 +66,14 @@ export function useProjectIssues(projectId: string | undefined) {
   return useQuery({ ...issuesListOptions(keys, projectId), enabled: projectId !== undefined });
 }
 
-export function useIssue(issueId: string | null) {
-  const keys = useQueryKeys();
-  return useQuery({
+export function issueOptions(keys: HostQueryKeys, issueId: string | null) {
+  return queryOptions({
     queryKey: keys.issue(issueId ?? ""),
     queryFn: issueId === null ? skipToken : () => daemon.getIssue(issueId),
   });
+}
+
+export function useIssue(issueId: string | null) {
+  const keys = useQueryKeys();
+  return useQuery(issueOptions(keys, issueId));
 }

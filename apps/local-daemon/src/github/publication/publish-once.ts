@@ -59,7 +59,7 @@ export async function publishOnce(
     { cwd: workspace.worktree.path, repository: workspace.remote.repository },
     request,
   );
-  const reconciled = store.reconcileLifecycle(row, provider.lifecycle);
+  const reconciled = await store.reconcileLifecycle(row, provider.lifecycle);
   return store.transition(
     reconciled,
     "created",

@@ -2,10 +2,11 @@ import { getRun, listAgentSessionsForRun, listStepRunsForRun, type RunRow } from
 import { isRunSettled, type StartRunRequest } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
+import { serializeByKey } from "#serialize";
 
 import { scheduleNextStep, startNextReadyStep } from "./advance.js";
 import { failIdleRun, failureReason } from "./fail-run.js";
-import { repositoryInitCommands } from "./init-commands.js";
+import { repositoryInitCommands, runStillLive } from "./init-commands.js";
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { requireLaunchable } from "./launch-hold.js";
 import { buildRunReopenedEvent } from "./markers.js";
@@ -20,7 +21,7 @@ import {
   RunNotResumableError,
 } from "./resume.js";
 import { preflightResumeAction } from "./runtime-preflight.js";
-import type { SupervisorState } from "./state.js";
+import { hasRunActivity, type SupervisorState } from "./state.js";
 import { scheduleWorktreeInit } from "./worktree-init.js";
 
 /**
@@ -30,7 +31,7 @@ import { scheduleWorktreeInit } from "./worktree-init.js";
  */
 export async function startRun(state: SupervisorState, request: StartRunRequest): Promise<RunRow> {
   requireLaunchable(state);
-  const runId = prepareRun(state, request);
+  const runId = await prepareRun(state, request);
   const run = requireRunRow(state.db, runId, "spawn");
   signalIssueLifecycle(state.syncIssueLifecycle, run.issue_id, "in_progress", runId);
   const initCommands = repositoryInitCommands(state.db, run.repository_id);
@@ -48,9 +49,15 @@ async function startNextPlanNode(state: SupervisorState, run: RunRow): Promise<R
       return requireRunRow(state.db, run.id, "resume");
     }
   }
-  if (!(await startNextReadyStep(state, run))) {
-    throw new RunNotResumableError(`run ${run.id} has no step left to start`);
-  }
+  const started = await serializeByKey(
+    state.advancing,
+    run.id,
+    async () =>
+      !runStillLive(state, run.id) ||
+      hasRunActivity(state, run.id) ||
+      startNextReadyStep(state, requireRunRow(state.db, run.id, "resume")),
+  );
+  if (!started) throw new RunNotResumableError(`run ${run.id} has no step left to start`);
   return requireRunRow(state.db, run.id, "resume");
 }
 
@@ -104,7 +111,7 @@ export async function resumeRun(state: SupervisorState, runId: string): Promise<
   } catch (error) {
     // A reopened run that never reached a worker must not be left resting in `preparing`.
     if (run.status !== stopped.status) {
-      failIdleRun(state, runId, `resume failed: ${failureReason(error)}`);
+      await failIdleRun(state, runId, `resume failed: ${failureReason(error)}`);
     }
     throw error;
   }

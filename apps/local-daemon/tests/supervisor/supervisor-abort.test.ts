@@ -70,7 +70,7 @@ it("abort honors a worker that already completed, never faking a cancel", async 
 it("does not spawn a worker for a run aborted while queued on the semaphore", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "linger", { concurrency: 1 });
   const holder = await supervisor.start({ prompt: "holds the only slot" });
-  expect(await waitFor(() => getRun(fix.db, holder.id)?.status === "running")).toBe(true);
+  expect(await waitFor(() => spawn.calls === 1)).toBe(true);
 
   seedRun(fix.db, {
     runId: "rqa",
@@ -121,7 +121,7 @@ it("never releases a spawned worker when abort lands during durable startup", as
   });
 
   const run = await supervisor.start({ prompt: "abort in the start gate" });
-  if (!aborting) throw new Error("abort did not start during spawn");
+  expect(await waitFor(() => aborting !== null)).toBe(true);
   await aborting;
   // The launch answered before the spawn, so the kill path is still pending work.
   await supervisor.settle();

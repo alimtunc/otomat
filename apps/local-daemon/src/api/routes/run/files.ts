@@ -21,7 +21,7 @@ import {
   type WorktreeTree,
 } from "#git";
 
-function runTree(deps: ApiDeps, runId: string): WorktreeTree | null {
+async function runTree(deps: ApiDeps, runId: string): Promise<WorktreeTree | null> {
   const binding = deps.repositories.forRun(runId);
   return binding === null ? null : worktreeTreeOrNull(binding.service, runId);
 }
@@ -30,16 +30,16 @@ function runTree(deps: ApiDeps, runId: string): WorktreeTree | null {
 export function createRunFileRoutes(deps: ApiDeps): Hono<RunEnv> {
   const routes = new Hono<RunEnv>();
 
-  routes.get("/:id/files", runGuard(deps.db), (c) => {
+  routes.get("/:id/files", runGuard(deps.db), async (c) => {
     const run = c.get("run");
-    const tree = runTree(deps, run.id);
+    const tree = await runTree(deps, run.id);
     if (tree === null) return refuseFile(c, "workspace_unavailable");
     const response: WorktreeFilesResponse = {
       run_id: run.id,
       editable: tree.worktreePath !== null,
       entries: [
-        ...tree.entries(),
-        ...(tree.worktreePath === null ? [] : checkoutDirectories(tree.worktreePath)),
+        ...(await tree.entries()),
+        ...(tree.worktreePath === null ? [] : await checkoutDirectories(tree.worktreePath)),
       ],
     };
     return c.json(response);
@@ -49,19 +49,19 @@ export function createRunFileRoutes(deps: ApiDeps): Hono<RunEnv> {
     "/:id/files",
     runGuard(deps.db),
     validateJson(createWorktreeEntryRequestSchema),
-    (c) => {
-      const tree = runTree(deps, c.get("run").id);
+    async (c) => {
+      const tree = await runTree(deps, c.get("run").id);
       if (tree === null) return refuseFile(c, "workspace_unavailable");
       if (tree.worktreePath === null) return refuseFile(c, "workspace_read_only");
       return createEntryResponse(c, tree.worktreePath, c.req.valid("json"));
     },
   );
 
-  routes.get("/:id/files/content", runGuard(deps.db), (c) => {
+  routes.get("/:id/files/content", runGuard(deps.db), async (c) => {
     const run = c.get("run");
     const path = normalizeRepositoryPath(c.req.query("path") ?? "");
     if (!isRepositoryRelative(path)) return refuseFile(c, "path_invalid");
-    const tree = runTree(deps, run.id);
+    const tree = await runTree(deps, run.id);
     if (tree === null) return refuseFile(c, "workspace_unavailable");
     return fileContentResponse(c, tree, path);
   });
@@ -70,10 +70,10 @@ export function createRunFileRoutes(deps: ApiDeps): Hono<RunEnv> {
     "/:id/files/content",
     runGuard(deps.db),
     validateJson(saveWorktreeFileRequestSchema),
-    (c) => {
+    async (c) => {
       const run = c.get("run");
       const body = c.req.valid("json");
-      const tree = runTree(deps, run.id);
+      const tree = await runTree(deps, run.id);
       if (tree === null) return refuseFile(c, "workspace_unavailable");
       if (tree.worktreePath === null) return refuseFile(c, "workspace_read_only");
       return saveFileResponse(c, tree.worktreePath, body);

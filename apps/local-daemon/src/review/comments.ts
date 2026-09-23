@@ -22,12 +22,12 @@ import { ensureReview } from "./surface.js";
 import { driveReviewTo } from "./transitions.js";
 import type { ReviewContext, ReviewSubject } from "./types.js";
 
-export function addComment(
+export async function addComment(
   ctx: ReviewContext,
   subject: ReviewSubject,
   request: CreateReviewCommentRequest,
-): ReviewCommentRow {
-  const diff = computeDiff(subject);
+): Promise<ReviewCommentRow> {
+  const diff = await computeDiff(subject);
   if (diff === null) throw new DiffUnavailableError(subject.id);
   const file = diff.files.find(
     (candidate) => candidate.path === request.file_path && candidate.sha === request.diff_sha,
