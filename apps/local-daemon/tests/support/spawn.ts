@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
+import { WORKER_JOB_FILE_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
 
 import {
   killProcessGroup,
@@ -14,6 +14,7 @@ import {
   type SpawnSession,
   type SupervisedJob,
 } from "#supervisor";
+import { workerJobPath } from "#supervisor/start-gate";
 
 export const FAKE_WORKER = join(dirname(fileURLToPath(import.meta.url)), "fake-worker.mjs");
 
@@ -64,10 +65,13 @@ export function workerSpawn(
     const startToken = randomUUID();
     spawnFn.calls += 1;
     spawnFn.jobs.push(job);
+    const jobFile = workerJobPath(job.agentSessionDir, startToken);
+    mkdirSync(job.agentSessionDir, { recursive: true });
+    writeFileSync(jobFile, JSON.stringify(job));
     const child = spawn(process.execPath, [FAKE_WORKER], {
       env: {
         ...process.env,
-        [WORKER_JOB_ENV]: JSON.stringify(job),
+        [WORKER_JOB_FILE_ENV]: jobFile,
         [WORKER_START_TOKEN_ENV]: startToken,
         FAKE_WORKER_BEHAVIOR: turnBehavior,
       },

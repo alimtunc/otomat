@@ -53,8 +53,8 @@ it.each(REAL_PROVIDERS)(
   "$id steers a live session by resuming it with the queued message",
   async ({ create, fixture, providerSessionId, steering, stdin }) => {
     const stdinFile = join(worktree, "stub-stdin.txt");
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture(fixture);
-    process.env["OTOMAT_STUB_STDIN_FILE"] = stdinFile;
+    process.env["STUB_FIXTURE"] = stubFixture(fixture);
+    process.env["STUB_STDIN_FILE"] = stdinFile;
     const adapter = create();
 
     expect(adapter.capabilities.steering).toBe(steering);

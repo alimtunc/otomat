@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { resolvedAgentConfigSchema, WORKER_JOB_ENV } from "@otomat/domain";
+import { resolvedAgentConfigSchema } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { readEventsJsonl } from "#runtime";
@@ -48,9 +48,7 @@ it("runs a job and appends a completed terminal marker", async () => {
 
 it("rejects a serialized job whose runtime is unknown to the registry", () => {
   const corrupted = { ...job("run"), runtime: "nope" };
-  expect(() => parseJob({ [WORKER_JOB_ENV]: JSON.stringify(corrupted) })).toThrow(
-    /unknown runtime/,
-  );
+  expect(() => parseJob(JSON.stringify(corrupted))).toThrow(/unknown runtime/);
 });
 
 it("returns a canceled state when the signal is already aborted", async () => {
@@ -60,10 +58,9 @@ it("returns a canceled state when the signal is already aborted", async () => {
   expect(final.status).toBe("canceled");
 });
 
-it("parses a job from the environment, or null when absent", () => {
+it("parses a serialized job", () => {
   const j = job("resume");
-  expect(parseJob({ [WORKER_JOB_ENV]: JSON.stringify(j) })).toEqual(j);
-  expect(parseJob({})).toBeNull();
+  expect(parseJob(JSON.stringify(j))).toEqual(j);
 });
 
 it.each(["run", "resume"] as const)(
@@ -79,7 +76,7 @@ it.each(["run", "resume"] as const)(
       config_hash: "full",
     });
     const serialized = { ...job(mode), runtime: "codex", config };
-    expect(parseJob({ [WORKER_JOB_ENV]: JSON.stringify(serialized) })).toEqual(serialized);
+    expect(parseJob(JSON.stringify(serialized))).toEqual(serialized);
   },
 );
 
@@ -144,7 +141,5 @@ it("leaves the filesystem untouched when the job's worktree no longer exists", a
 
 it("rejects a serialized job that carries no worktree", () => {
   const { worktreePath: _dropped, ...withoutWorktree } = job("run");
-  expect(() => parseJob({ [WORKER_JOB_ENV]: JSON.stringify(withoutWorktree) })).toThrow(
-    /worktreePath/,
-  );
+  expect(() => parseJob(JSON.stringify(withoutWorktree))).toThrow(/worktreePath/);
 });

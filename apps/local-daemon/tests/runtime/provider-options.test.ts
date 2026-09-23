@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 function codexFixtures(catalog = stubFixture("codex-models.json")): void {
-  process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
+  process.env["STUB_FIXTURE_BY_ARGV"] = JSON.stringify({
     "exec --help": stubFixture("codex-exec-help.txt"),
     "debug models --bundled": catalog,
   });
@@ -63,7 +63,7 @@ const values = (option: ProviderOptionDescriptor | undefined) =>
 
 describe("claude provider options", () => {
   it("offers exactly the modes and effort levels the installed help announces", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
     const support = new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null);
 
@@ -86,7 +86,7 @@ describe("claude provider options", () => {
   });
 
   it("defaults to the autonomous mode a current CLI announces, and says why", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
     const support = new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null);
     const permission = descriptor(support.options, "permission_mode");
@@ -98,7 +98,7 @@ describe("claude provider options", () => {
   });
 
   it("falls back to acceptEdits on a CLI without `auto`, spelling out what that costs", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-legacy.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-legacy.txt");
 
     const permission = descriptor(
       new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null).options,
@@ -111,7 +111,7 @@ describe("claude provider options", () => {
   });
 
   it("marks only bypassPermissions dangerous, and never preselects it", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
     const permission = descriptor(
       new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null).options,
@@ -124,7 +124,7 @@ describe("claude provider options", () => {
   });
 
   it("describes each mode in one line, and describes none it cannot", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
     const permission = descriptor(
       new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null).options,
@@ -143,7 +143,7 @@ describe("claude provider options", () => {
   });
 
   it("drops the retired `default` mode a current CLI no longer announces", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
     const support = new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null);
 
@@ -151,7 +151,7 @@ describe("claude provider options", () => {
   });
 
   it("sends an effort as `--effort`, and never invents a level the help page omits", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
     const effort = providerOptionDescriptor(
       new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null).options,
@@ -163,7 +163,7 @@ describe("claude provider options", () => {
   });
 
   it("offers an older release only what that release documents", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-legacy.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-legacy.txt");
 
     const support = new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null);
 
@@ -173,8 +173,8 @@ describe("claude provider options", () => {
   });
 
   it("offers nothing, honestly, when the help page cannot be read", () => {
-    process.env["OTOMAT_STUB_EXIT"] = "1";
-    process.env["OTOMAT_STUB_STDERR"] = "error: could not start claude";
+    process.env["STUB_EXIT"] = "1";
+    process.env["STUB_STDERR"] = "error: could not start claude";
 
     const support = new ClaudeRuntimeAdapter(STUB_BIN).describeOptions(null);
 
@@ -186,7 +186,7 @@ describe("claude provider options", () => {
 
 describe("claudePermissionModeStatus", () => {
   it("separates the four ways a mode can stand on the host that runs the turn", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-current.txt");
 
     expect(claudePermissionModeStatus(STUB_BIN, undefined)).toBe("unfrozen");
     expect(claudePermissionModeStatus(STUB_BIN, "auto")).toBe("autonomous");
@@ -195,7 +195,7 @@ describe("claudePermissionModeStatus", () => {
   });
 
   it("calls the same mode supervised on a host whose CLI has no autonomous one", () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = stubFixture("claude-help-legacy.txt");
+    process.env["STUB_FIXTURE"] = stubFixture("claude-help-legacy.txt");
 
     // `acceptEdits` is this host's default, so it is the autonomous one available here.
     expect(claudePermissionModeStatus(STUB_BIN, "acceptEdits")).toBe("autonomous");
@@ -252,8 +252,8 @@ describe("codex provider options", () => {
   it("withholds confined sandboxes when the host capability probe is denied", () => {
     stubLinuxPlatform();
     codexFixtures();
-    process.env["OTOMAT_STUB_EXITS"] = JSON.stringify({ "sandbox true": 1 });
-    process.env["OTOMAT_STUB_STDERRS"] = JSON.stringify({
+    process.env["STUB_EXIT_BY_ARGV"] = JSON.stringify({ "sandbox true": 1 });
+    process.env["STUB_STDERR_BY_ARGV"] = JSON.stringify({
       "sandbox true": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
     });
 
@@ -389,8 +389,8 @@ describe("codex provider options", () => {
   });
 
   it("offers nothing when the installed CLI rejects `exec --help`", () => {
-    process.env["OTOMAT_STUB_EXIT"] = "2";
-    process.env["OTOMAT_STUB_STDERR"] = "error: unrecognized subcommand 'exec'";
+    process.env["STUB_EXIT"] = "2";
+    process.env["STUB_STDERR"] = "error: unrecognized subcommand 'exec'";
 
     const support = new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol");
 

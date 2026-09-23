@@ -33,7 +33,7 @@ const MISSING_WORKTREE = "/nonexistent/otomat-worktree";
 
 describe("ClaudeRuntimeAdapter", () => {
   it("maps a recorded stream-json turn onto runtime events and a completed final state", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
 
@@ -93,8 +93,8 @@ describe("ClaudeRuntimeAdapter", () => {
   });
 
   it("fails when the provider exits without a result frame, keeping the session id", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-init-only.jsonl");
-    process.env["OTOMAT_STUB_EXIT"] = "1";
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-init-only.jsonl");
+    process.env["STUB_EXIT"] = "1";
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
 
@@ -120,9 +120,9 @@ describe("ClaudeRuntimeAdapter", () => {
     { timeout: 20_000 },
     async () => {
       const pidFile = join(worktree, "stub.pid");
-      process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-init-only.jsonl");
-      process.env["OTOMAT_STUB_HANG"] = "1";
-      process.env["OTOMAT_STUB_PID_FILE"] = pidFile;
+      process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-init-only.jsonl");
+      process.env["STUB_HANG"] = "1";
+      process.env["STUB_PID_FILE"] = pidFile;
       const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
       const sink = new MemorySink();
       const controller = new AbortController();
@@ -143,8 +143,8 @@ describe("ClaudeRuntimeAdapter", () => {
 
   it("scrubs nested-session markers from the provider environment", async () => {
     const envFile = join(worktree, "stub-env.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
-    process.env["OTOMAT_STUB_ENV_FILE"] = envFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["STUB_ENV_FILE"] = envFile;
     const priorClaudeCode = process.env["CLAUDECODE"];
     const priorEntrypoint = process.env["CLAUDE_CODE_ENTRYPOINT"];
     process.env["CLAUDECODE"] = "1";
@@ -156,7 +156,7 @@ describe("ClaudeRuntimeAdapter", () => {
       const childEnv: Record<string, string> = JSON.parse(readFileSync(envFile, "utf8"));
       expect(childEnv["CLAUDECODE"]).toBeUndefined();
       expect(childEnv["CLAUDE_CODE_ENTRYPOINT"]).toBeUndefined();
-      expect(childEnv["OTOMAT_STUB_FIXTURE"]).toBeDefined();
+      expect(childEnv["STUB_FIXTURE"]).toBeDefined();
     } finally {
       if (priorClaudeCode === undefined) delete process.env["CLAUDECODE"];
       else process.env["CLAUDECODE"] = priorClaudeCode;
@@ -166,7 +166,7 @@ describe("ClaudeRuntimeAdapter", () => {
   });
 
   it("fails the turn instead of tearing the worker when the sink cannot persist events", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
     const sink: RuntimeSink = {
       emit() {
@@ -183,8 +183,8 @@ describe("ClaudeRuntimeAdapter", () => {
 
   it("passes the frozen permission_mode to --permission-mode on run and resume", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
 
     await adapter.run(
@@ -214,8 +214,8 @@ describe("ClaudeRuntimeAdapter", () => {
 
   it("runs a config frozen without a mode under the legacy fallback, and says so", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
     const sink = new MemorySink();
 
     await new ClaudeRuntimeAdapter(STUB_BIN).run(
@@ -232,8 +232,8 @@ describe("ClaudeRuntimeAdapter", () => {
 
   it("passes the frozen effort before the session flags, and none by default", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
     const options = { permission_mode: "auto", effort: "xhigh" };
 
@@ -257,8 +257,8 @@ describe("ClaudeRuntimeAdapter", () => {
 
   it("passes the frozen model on the initial turn and the resume, and none by default", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
 
     await adapter.run(
@@ -308,10 +308,10 @@ describe("ClaudeRuntimeAdapter", () => {
   });
 
   it("records every call the provider refused, with the mode it refused under", async () => {
-    process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
+    process.env["STUB_FIXTURE_BY_ARGV"] = JSON.stringify({
       "--help": join(STUB_FIXTURES, "claude-help-current.txt"),
     });
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
 
@@ -345,10 +345,10 @@ describe("ClaudeRuntimeAdapter", () => {
   });
 
   it("marks a refusal under the autonomous mode as the provider's own verdict", async () => {
-    process.env["OTOMAT_STUB_FIXTURES"] = JSON.stringify({
+    process.env["STUB_FIXTURE_BY_ARGV"] = JSON.stringify({
       "--help": join(STUB_FIXTURES, "claude-help-current.txt"),
     });
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-permission-denied.jsonl");
     const sink = new MemorySink();
 
     await new ClaudeRuntimeAdapter(STUB_BIN).run(
@@ -362,7 +362,7 @@ describe("ClaudeRuntimeAdapter", () => {
   });
 
   it("emits nothing about permissions when the provider refused nothing", async () => {
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
     const sink = new MemorySink();
 
     await new ClaudeRuntimeAdapter(STUB_BIN).run(
@@ -376,8 +376,8 @@ describe("ClaudeRuntimeAdapter", () => {
 
   it("resumes with the provider session id and refuses to resume without one", async () => {
     const argsFile = join(worktree, "stub-args.json");
-    process.env["OTOMAT_STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
-    process.env["OTOMAT_STUB_ARGS_FILE"] = argsFile;
+    process.env["STUB_FIXTURE"] = join(STUB_FIXTURES, "claude-frames.jsonl");
+    process.env["STUB_ARGS_FILE"] = argsFile;
     const adapter = new ClaudeRuntimeAdapter(STUB_BIN);
     const sink = new MemorySink();
     const session = runtimeSessionRef("sess-claude-1");

@@ -1,6 +1,11 @@
+import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
-import { resolvedAgentConfigSchema, WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
+import {
+  resolvedAgentConfigSchema,
+  WORKER_JOB_FILE_ENV,
+  WORKER_START_TOKEN_ENV,
+} from "@otomat/domain";
 import { z } from "zod";
 
 import { composeTurnPrompt } from "#agents";
@@ -37,10 +42,7 @@ const supervisedJobSchema = z.object({
   providerSessionId: z.string().nullable(),
 }) satisfies z.ZodType<SupervisedJob>;
 
-/** Parses the serialized job from `WORKER_JOB_ENV`; null when the var is absent or empty. Throws (zod/JSON) when it is present but malformed. */
-export function parseJob(env: NodeJS.ProcessEnv): SupervisedJob | null {
-  const raw = env[WORKER_JOB_ENV];
-  if (raw === undefined || raw === "") return null;
+export function parseJob(raw: string): SupervisedJob {
   return supervisedJobSchema.parse(JSON.parse(raw));
 }
 
@@ -141,9 +143,9 @@ export function writeTerminalMarker(
 // SIGTERM/SIGINT abort the turn so the adapter writes a `canceled` marker; SIGKILL leaves
 // none, which reconciliation reads as interrupted (resumable).
 export async function runWorkerMain(env: NodeJS.ProcessEnv = process.env): Promise<void> {
-  const job = parseJob(env);
-  if (job === null) {
-    console.error("[otomat] worker: no job in environment");
+  const jobFile = env[WORKER_JOB_FILE_ENV];
+  if (!jobFile) {
+    console.error("[otomat] worker: no job file in environment");
     process.exit(2);
   }
 
@@ -153,6 +155,9 @@ export async function runWorkerMain(env: NodeJS.ProcessEnv = process.env): Promi
   process.once("SIGINT", onSignal);
 
   try {
+    const raw = readFileSync(jobFile, "utf8");
+    rmSync(jobFile);
+    const job = parseJob(raw);
     const startToken = env[WORKER_START_TOKEN_ENV];
     if (!startToken) throw new Error("worker start token is missing");
     if (!(await waitForWorkerStart(job.agentSessionDir, startToken, controller.signal))) {

@@ -1,12 +1,13 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { once } from "node:events";
+import { mkdirSync, writeFileSync } from "node:fs";
 
-import { WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
+import { WORKER_JOB_FILE_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
 
 import { errorMessage } from "#runtime";
 
-import { releaseWorkerStart } from "./start-gate.js";
+import { releaseWorkerStart, workerJobPath } from "./start-gate.js";
 import { type ProcessExit, type SessionProcess, type SupervisedJob } from "./types.js";
 
 export class WorkerSpawnError extends Error {
@@ -63,10 +64,14 @@ export function createReexecSpawn(mainScript: string): (job: SupervisedJob) => S
     const startToken = randomUUID();
     let child: ChildProcess;
     try {
+      // Never the environment: `ps -E` shows it to every same-user process, and a large prompt overflows it (E2BIG).
+      const jobFile = workerJobPath(job.agentSessionDir, startToken);
+      mkdirSync(job.agentSessionDir, { recursive: true });
+      writeFileSync(jobFile, JSON.stringify(job), { flag: "wx", mode: 0o600 });
       child = spawn(process.execPath, [...process.execArgv, mainScript], {
         env: {
           ...process.env,
-          [WORKER_JOB_ENV]: JSON.stringify(job),
+          [WORKER_JOB_FILE_ENV]: jobFile,
           [WORKER_START_TOKEN_ENV]: startToken,
         },
         detached: true,

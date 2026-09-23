@@ -18,11 +18,11 @@ let worktree: string;
 
 beforeEach(() => {
   worktree = setupStubHarness("otomat-codex-permissions-");
-  process.env.OTOMAT_STUB_FIXTURE = stubFixture("codex-frames.jsonl");
-  process.env.OTOMAT_STUB_FIXTURES = JSON.stringify({
+  process.env.STUB_FIXTURE = stubFixture("codex-frames.jsonl");
+  process.env.STUB_FIXTURE_BY_ARGV = JSON.stringify({
     "exec --help": stubFixture("codex-exec-help-0.153.4.txt"),
   });
-  process.env.OTOMAT_STUB_ARGS_FILE = join(worktree, "args.json");
+  process.env.STUB_ARGS_FILE = join(worktree, "args.json");
 });
 
 afterEach(() => teardownStubHarness(worktree));
@@ -119,10 +119,10 @@ it("keeps the confined default and sends no approval override for Runtime defaul
 
 it("keeps a managed refusal visible and never retries with different permissions", async () => {
   const refusal = 'Error: approval_policy "never" is not allowed by requirements.toml';
-  process.env.OTOMAT_STUB_FIXTURE = "";
-  process.env.OTOMAT_STUB_EXIT = "1";
-  process.env.OTOMAT_STUB_EXITS = JSON.stringify({ "exec --help": 0 });
-  process.env.OTOMAT_STUB_STDERR = refusal;
+  process.env.STUB_FIXTURE = "";
+  process.env.STUB_EXIT = "1";
+  process.env.STUB_EXIT_BY_ARGV = JSON.stringify({ "exec --help": 0 });
+  process.env.STUB_STDERR = refusal;
   const sink = new MemorySink();
   const final = await new CodexRuntimeAdapter(STUB_BIN).run(
     runtimeRunInput({

@@ -1,18 +1,18 @@
 #!/usr/bin/env node
-// Provider-CLI stand-in for adapter tests: replays OTOMAT_STUB_FIXTURE to stdout, then exits/hangs per OTOMAT_STUB_* env; injected via the adapters' binary constructor parameter.
+// Provider-CLI stand-in: replays STUB_FIXTURE to stdout, then exits/hangs per STUB_* env.
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
-if (process.env.OTOMAT_STUB_PID_FILE) {
-  writeFileSync(process.env.OTOMAT_STUB_PID_FILE, String(process.pid));
+if (process.env.STUB_PID_FILE) {
+  writeFileSync(process.env.STUB_PID_FILE, String(process.pid));
 }
 
-if (process.env.OTOMAT_STUB_ARGS_FILE) {
-  writeFileSync(process.env.OTOMAT_STUB_ARGS_FILE, JSON.stringify(process.argv.slice(2)));
+if (process.env.STUB_ARGS_FILE) {
+  writeFileSync(process.env.STUB_ARGS_FILE, JSON.stringify(process.argv.slice(2)));
 }
 
-if (process.env.OTOMAT_STUB_ENV_FILE) {
-  writeFileSync(process.env.OTOMAT_STUB_ENV_FILE, JSON.stringify(process.env));
+if (process.env.STUB_ENV_FILE) {
+  writeFileSync(process.env.STUB_ENV_FILE, JSON.stringify(process.env));
 }
 
 function valueForArgv(name, fallback) {
@@ -30,13 +30,13 @@ function replay(fixture) {
   for (const line of lines) process.stdout.write(`${line}\n`);
 }
 
-const stdinFile = process.env.OTOMAT_STUB_STDIN_FILE;
+const stdinFile = process.env.STUB_STDIN_FILE;
 
 // Permission stand-in: replay the prelude, ask once over the control channel, and report the decision the client sent back.
-if (process.env.OTOMAT_STUB_PERMISSION === "1") {
-  replay(process.env.OTOMAT_STUB_FIXTURE);
-  const request = process.env.OTOMAT_STUB_PERMISSION_REQUEST
-    ? JSON.parse(process.env.OTOMAT_STUB_PERMISSION_REQUEST)
+if (process.env.STUB_PERMISSION === "1") {
+  replay(process.env.STUB_FIXTURE);
+  const request = process.env.STUB_PERMISSION_REQUEST
+    ? JSON.parse(process.env.STUB_PERMISSION_REQUEST)
     : {
         subtype: "can_use_tool",
         tool_name: "Write",
@@ -74,8 +74,8 @@ if (process.env.OTOMAT_STUB_PERMISSION === "1") {
 }
 
 // Streaming-input stand-in: replay the prelude, then answer one result frame per user message and exit at EOF.
-if (process.env.OTOMAT_STUB_STREAM_INPUT === "1") {
-  replay(valueForArgv("OTOMAT_STUB_FIXTURES", process.env.OTOMAT_STUB_FIXTURE));
+if (process.env.STUB_STREAM_INPUT === "1") {
+  replay(valueForArgv("STUB_FIXTURE_BY_ARGV", process.env.STUB_FIXTURE));
   let results = 0;
   for await (const line of createInterface({ input: process.stdin })) {
     if (stdinFile) appendFileSync(stdinFile, `${line}\n`);
@@ -105,13 +105,13 @@ if (stdinFile) {
   process.stdin.resume();
 }
 
-const stderr = valueForArgv("OTOMAT_STUB_STDERRS", process.env.OTOMAT_STUB_STDERR);
+const stderr = valueForArgv("STUB_STDERR_BY_ARGV", process.env.STUB_STDERR);
 if (stderr) process.stderr.write(`${stderr}\n`);
 
-replay(valueForArgv("OTOMAT_STUB_FIXTURES", process.env.OTOMAT_STUB_FIXTURE));
+replay(valueForArgv("STUB_FIXTURE_BY_ARGV", process.env.STUB_FIXTURE));
 
-if (process.env.OTOMAT_STUB_HANG === "1") {
+if (process.env.STUB_HANG === "1") {
   setInterval(() => {}, 60_000);
 } else {
-  process.exit(Number(valueForArgv("OTOMAT_STUB_EXITS", process.env.OTOMAT_STUB_EXIT ?? 0)));
+  process.exit(Number(valueForArgv("STUB_EXIT_BY_ARGV", process.env.STUB_EXIT ?? 0)));
 }

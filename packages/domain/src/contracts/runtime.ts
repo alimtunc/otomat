@@ -5,7 +5,7 @@ import { RUN_INTERACTION_KINDS } from "./entity-states.js";
 /** Wire id of the built-in deterministic fake runtime — a simulated runtime for tests and explicit development only. */
 export const FAKE_RUNTIME_ID = "fake";
 
-export const WORKER_JOB_ENV = "OTOMAT_WORKER_JOB";
+export const WORKER_JOB_FILE_ENV = "OTOMAT_WORKER_JOB_FILE";
 export const WORKER_START_TOKEN_ENV = "OTOMAT_WORKER_START_TOKEN";
 
 /** How far a runtime can carry a message that arrives while it works; a boundary is promised, never a read receipt. `live` means the invocation already running takes it. */

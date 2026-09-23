@@ -34,15 +34,11 @@ export function setupStubHarness(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
-/**
- * Removes the worktree and every `OTOMAT_STUB_*` knob a test set on the shared
- * process env, then drops the probe cache: the stub keeps one path and mtime
- * across tests, so a cached answer would outlive the fixture that produced it.
- */
+// The stub keeps one path and mtime across tests, so a cached probe answer would outlive its fixture.
 export function teardownStubHarness(worktree: string): void {
   rmSync(worktree, { recursive: true, force: true });
   for (const key of Object.keys(process.env)) {
-    if (key.startsWith("OTOMAT_STUB_")) delete process.env[key];
+    if (key.startsWith("STUB_")) delete process.env[key];
   }
   clearProviderProbeCache();
   clearCodexSandboxProbeCache();

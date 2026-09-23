@@ -10,7 +10,7 @@ import { createClient, listAgentSessionsForRun, listStepRunsForRun, type Db } fr
 import {
   runDetailSchema,
   runLaunchResponseSchema,
-  WORKER_JOB_ENV,
+  WORKER_JOB_FILE_ENV,
   WORKER_START_TOKEN_ENV,
   type RunDetail,
 } from "@otomat/domain";
@@ -67,7 +67,7 @@ function daemonEnv(
   delete env.VITEST;
   delete env.VITEST_WORKER_ID;
   delete env.VITEST_POOL_ID;
-  delete env[WORKER_JOB_ENV];
+  delete env[WORKER_JOB_FILE_ENV];
   delete env[WORKER_START_TOKEN_ENV];
   return env;
 }

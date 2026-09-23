@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
+import { WORKER_JOB_FILE_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
 
 const PORT = 43190;
 const dir = mkdtempSync(join(tmpdir(), "otomat-smoke-"));
@@ -17,7 +17,7 @@ const childEnv = {
   OTOMAT_PROJECT_ROOT: dir,
 };
 delete childEnv.OTOMAT_LINEAR_API_KEY;
-delete childEnv[WORKER_JOB_ENV];
+delete childEnv[WORKER_JOB_FILE_ENV];
 delete childEnv[WORKER_START_TOKEN_ENV];
 const child = spawn(process.execPath, ["dist/index.js"], {
   env: childEnv,
