@@ -1,3 +1,4 @@
+import type { DaemonEndpoint } from "@otomat/client";
 import {
   connectLinearRequestSchema,
   type LinearDeliverySnapshot,
@@ -27,7 +28,7 @@ export interface LinearCoordinatorOptions {
 
 interface PushedHost {
   target: LinearDaemonTarget;
-  url: string;
+  endpoint: DaemonEndpoint;
 }
 
 /**
@@ -98,12 +99,12 @@ export class LinearCoordinator {
     const accepted: PushedHost[] = [];
     let refusal: LinearHandoffError | null = null;
     for (const target of this.options.targets()) {
-      if (target.url === null) {
+      if (target.endpoint === null) {
         this.ledger.set(request.id, target.id, holdsNothing(target.unavailable));
         continue;
       }
-      const push = await pushToHost(this.ledger, target, target.url, request);
-      if (push.delivered) accepted.push({ target, url: target.url });
+      const push = await pushToHost(this.ledger, target, target.endpoint, request);
+      if (push.delivered) accepted.push({ target, endpoint: target.endpoint });
       else refusal ??= push.refusal;
     }
     if (accepted.length === 0) return this.refuseSave(refusal);
@@ -146,8 +147,8 @@ export class LinearCoordinator {
       return { ok: false, message, error_code: null };
     }
     const pending: string[] = [];
-    for (const { target, url } of accepted) {
-      if (!(await revokeOnHost(this.ledger, target, url, connectionId))) {
+    for (const { target, endpoint } of accepted) {
+      if (!(await revokeOnHost(this.ledger, target, endpoint, connectionId))) {
         pending.push(target.label);
       }
     }
@@ -185,12 +186,12 @@ export class LinearCoordinator {
   private async revokeEverywhere(connectionId: string): Promise<string[]> {
     const pending: string[] = [];
     for (const target of this.options.targets()) {
-      if (target.url === null) {
+      if (target.endpoint === null) {
         this.ledger.set(connectionId, target.id, mayHoldKey(target.unavailable));
         pending.push(target.label);
         continue;
       }
-      if (!(await revokeOnHost(this.ledger, target, target.url, connectionId))) {
+      if (!(await revokeOnHost(this.ledger, target, target.endpoint, connectionId))) {
         pending.push(target.label);
       }
     }
@@ -201,21 +202,21 @@ export class LinearCoordinator {
     const keys = this.vaultKeys();
     if (keys === null) return;
     for (const target of this.options.targets()) {
-      if (target.url === null) continue;
-      await this.reconcileTarget(target, target.url, keys);
+      if (target.endpoint === null) continue;
+      await this.reconcileTarget(target, target.endpoint, keys);
     }
     this.publish();
   }
 
   private async reconcileTarget(
     target: LinearDaemonTarget,
-    url: string,
+    endpoint: DaemonEndpoint,
     keys: LinearVaultKeys,
   ): Promise<void> {
     let catalogued: string[];
     let held: Set<string>;
     try {
-      const connections = await cataloguedConnections(this.ledger, url);
+      const connections = await cataloguedConnections(this.ledger, endpoint);
       catalogued = connections.map((connection) => connection.id);
       held = new Set(
         connections
@@ -236,11 +237,11 @@ export class LinearCoordinator {
     }
     for (const [id, apiKey] of Object.entries(keys)) {
       const request = { id, label: this.ledger.labelOf(id), api_key: apiKey };
-      await restoreOnHost(this.ledger, target, url, request, held.has(id));
+      await restoreOnHost(this.ledger, target, endpoint, request, held.has(id));
     }
     // A catalogued row the vault no longer names is revoked even when the daemon lost its key.
     for (const id of new Set([...catalogued, ...this.ledger.owedTo(target.id)])) {
-      if (keys[id] === undefined) await revokeOnHost(this.ledger, target, url, id);
+      if (keys[id] === undefined) await revokeOnHost(this.ledger, target, endpoint, id);
     }
   }
 }

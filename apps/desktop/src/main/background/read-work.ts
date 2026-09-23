@@ -1,4 +1,4 @@
-import { createDaemonClient, DaemonTransportError } from "@otomat/client";
+import { createDaemonClient, DaemonTransportError, type DaemonEndpoint } from "@otomat/client";
 
 import { localWorkItems, type LocalWorkItem } from "./work-items.js";
 
@@ -14,11 +14,11 @@ const boundedFetch: typeof fetch = (input, init) =>
 
 /** An unreadable daemon is reported, never counted as an idle one: quitting would still cut its runs. */
 export async function readLocalWork(
-  daemonUrl: string,
+  daemon: DaemonEndpoint | null,
   fetchImpl: typeof fetch = boundedFetch,
 ): Promise<LocalWorkReading> {
-  if (daemonUrl === "") return { ok: true, items: [] };
-  const client = createDaemonClient({ baseUrl: daemonUrl, fetch: fetchImpl });
+  if (daemon === null) return { ok: true, items: [] };
+  const client = createDaemonClient({ ...daemon, fetch: fetchImpl });
   try {
     return { ok: true, items: localWorkItems((await client.listActivity()).activities) };
   } catch (error) {

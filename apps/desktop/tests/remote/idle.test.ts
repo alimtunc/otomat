@@ -8,7 +8,7 @@ function runsResponse(payload: unknown): Response {
 }
 
 function options(fetchImpl: typeof fetch, log: (message: string) => void = () => {}) {
-  return { baseUrl: "http://127.0.0.1:45010", fetchImpl, log };
+  return { endpoint: { baseUrl: "http://127.0.0.1:45010", token: "remote-token" }, fetchImpl, log };
 }
 
 it("counts every run with a live or permission-blocked turn", async () => {
@@ -42,4 +42,12 @@ it("answers null — never zero — on a refusal, an unexpected body, or an unre
   });
   expect(await remoteBusyRuns(options(unreachable, log))).toBeNull();
   expect(log).toHaveBeenCalledWith("Remote idle check failed: Error: tunnel down");
+});
+
+it("presents the remote daemon's token", async () => {
+  const fetchImpl = vi.fn(async (_input: unknown, _init?: RequestInit) => runsResponse([]));
+  await remoteBusyRuns(options(fetchImpl));
+  expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:45010/api/runs", {
+    headers: { authorization: "Bearer remote-token" },
+  });
 });

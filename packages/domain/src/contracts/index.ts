@@ -12,6 +12,7 @@
  */
 export * from "./api.js";
 export * from "./commit-subject.js";
+export * from "./daemon-auth.js";
 export * from "./data-safety.js";
 export * from "./desktop-update.js";
 export * from "./desktop.js";

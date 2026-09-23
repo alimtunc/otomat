@@ -36,3 +36,16 @@ export function daemonUrl(requestUrl) {
   const url = new URL(requestUrl);
   return new URL(`${url.pathname}${url.search}`, `http://127.0.0.1:${String(DAEMON_PORT)}`);
 }
+
+/** The container daemon is started with the client secret as its token, so no second secret is provisioned. */
+export function daemonToken(env) {
+  return env.PREVIEW_CLIENT_SECRET;
+}
+
+export function upstreamRequest(request, env) {
+  const upstream = new Request(daemonUrl(request.url), request);
+  upstream.headers.delete(CLIENT_ID_HEADER);
+  upstream.headers.delete(CLIENT_SECRET_HEADER);
+  upstream.headers.set("authorization", `Bearer ${daemonToken(env)}`);
+  return upstream;
+}

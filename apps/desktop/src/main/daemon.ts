@@ -1,5 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import { randomBytes } from "node:crypto";
 
+import type { DaemonEndpoint } from "@otomat/client";
 import {
   MAINTENANCE_ACTION_ENV,
   MAINTENANCE_RESTORE_ACTION,
@@ -61,14 +63,16 @@ export class DaemonController {
     return this.active?.child.pid;
   }
 
-  async start(): Promise<string> {
+  async start(): Promise<DaemonEndpoint> {
     if (this.restoreOperation !== null) {
       throw new Error("The database restore process is still running.");
     }
     if (this.active !== null) throw new Error("The local daemon is already running.");
     const port = await findFreeLoopbackPort();
+    const token = randomBytes(32).toString("base64url");
     const env = buildDaemonEnv({
       port,
+      token,
       dbPath: this.options.dbPath,
       projectRoot: this.options.projectRoot,
       path: this.options.userPath,
@@ -119,7 +123,7 @@ export class DaemonController {
     }
     child.off("exit", onEarlyExit);
     child.off("error", onSpawnError);
-    return `http://${DAEMON_HOST}:${port}`;
+    return { baseUrl: `http://${DAEMON_HOST}:${port}`, token };
   }
 
   async restoreBackup(backupPath: string): Promise<void> {

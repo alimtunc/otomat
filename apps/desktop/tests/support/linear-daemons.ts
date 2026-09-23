@@ -33,11 +33,16 @@ export function connected(id: string, label: string): LinearConnectionContract {
 const LABELS = { local: "Local", remote: "otomat-vps" } satisfies Record<ExecutionHostId, string>;
 
 export function reachable(id: ExecutionHostId, url: string): LinearDaemonTarget {
-  return { id, label: LABELS[id], url, unavailable: null };
+  return {
+    id,
+    label: LABELS[id],
+    endpoint: { baseUrl: url, token: `${id}-token` },
+    unavailable: null,
+  };
 }
 
 export function unreachable(id: ExecutionHostId, reason: string): LinearDaemonTarget {
-  return { id, label: LABELS[id], url: null, unavailable: reason };
+  return { id, label: LABELS[id], endpoint: null, unavailable: reason };
 }
 
 /** One daemon double answering `/api/linear/*` the way the real service would, in memory. */

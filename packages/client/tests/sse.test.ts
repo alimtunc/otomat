@@ -43,7 +43,7 @@ const ENVELOPE: EventEnvelope = {
   raw_ref: null,
 };
 
-function captureEventSource() {
+function captureEventSource(token = "") {
   const sources: FakeEventSource[] = [];
   const factory = class extends FakeEventSource {
     constructor(url: string) {
@@ -53,6 +53,7 @@ function captureEventSource() {
   };
   const client = createDaemonClient({
     baseUrl: "",
+    token,
     EventSource: factory,
   });
   return { sources, client };
@@ -193,4 +194,16 @@ it("delivers each conversations snapshot the host pushes and closes with the sub
   expect(received).toEqual([["conversation:step-1"], []]);
   sub.close();
   expect(source.closed).toBe(true);
+});
+
+it("opens every stream with the daemon token in its query, since EventSource sends no header", () => {
+  const { sources, client } = captureEventSource("secret");
+
+  client.subscribeRunEvents("run-1", { afterSeq: 4, onEvent: () => {} });
+  client.subscribeConversations({ onSnapshot: () => {} });
+
+  expect(sources.map((source) => source.url)).toEqual([
+    "/api/runs/run-1/events?afterSeq=4&access_token=secret",
+    "/api/conversations/stream?access_token=secret",
+  ]);
 });

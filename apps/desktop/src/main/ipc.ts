@@ -10,6 +10,7 @@ import { BrowserWindow, dialog, ipcMain } from "electron";
 
 import {
   BUILD_SYNC_CHANNEL,
+  DAEMON_TOKEN_CHANNEL,
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL,
@@ -58,6 +59,7 @@ import { electronWorkspaceLaunchers } from "./workspace-launchers.js";
 /** Mutable holder so the sync handler always returns the URL resolved by the last successful daemon start. */
 export interface IpcState {
   daemonUrl: string;
+  daemonToken: string;
   /** True for a packaged preview build; static per process. */
   preview: boolean;
   /** Identity of this build, so a copied diagnostic names the artifact it came from. */
@@ -85,6 +87,10 @@ export interface IpcActions {
 export function registerIpc(state: IpcState, actions: IpcActions): void {
   ipcMain.on(DAEMON_URL_CHANNEL, (event) => {
     event.returnValue = state.daemonUrl;
+  });
+
+  ipcMain.on(DAEMON_TOKEN_CHANNEL, (event) => {
+    event.returnValue = state.daemonToken;
   });
 
   ipcMain.on(PREVIEW_SYNC_CHANNEL, (event) => {

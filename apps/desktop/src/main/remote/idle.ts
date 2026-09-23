@@ -1,8 +1,8 @@
-import { isRunBusy } from "@otomat/domain";
+import type { DaemonEndpoint } from "@otomat/client";
+import { daemonAuthorization, isRunBusy } from "@otomat/domain";
 
 export interface RemoteIdleOptions {
-  /** Origin of the remote daemon through the tunnel. */
-  baseUrl: string;
+  endpoint: DaemonEndpoint;
   fetchImpl: typeof fetch;
   log(message: string): void;
 }
@@ -17,7 +17,9 @@ export interface RemoteIdleOptions {
  */
 export async function remoteBusyRuns(options: RemoteIdleOptions): Promise<number | null> {
   try {
-    const response = await options.fetchImpl(`${options.baseUrl}/api/runs`);
+    const response = await options.fetchImpl(`${options.endpoint.baseUrl}/api/runs`, {
+      headers: { authorization: daemonAuthorization(options.endpoint.token) },
+    });
     if (!response.ok) return null;
     const payload: unknown = await response.json();
     if (!Array.isArray(payload)) return null;

@@ -34,7 +34,7 @@ export function hostDelivery(
   stored: boolean,
 ): LinearHostDelivery {
   const host = { host_id: target.id, label: target.label };
-  if (target.url === null) {
+  if (target.endpoint === null) {
     if (stored && record?.holdsCurrentKey !== true) {
       return { ...host, state: "pending_restore", detail: target.unavailable };
     }

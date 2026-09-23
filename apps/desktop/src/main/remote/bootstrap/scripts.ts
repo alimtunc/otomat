@@ -1,4 +1,4 @@
-import { PREVIEW_BUILD_SHA } from "@otomat/domain";
+import { DAEMON_TOKEN_ENV, DAEMON_TOKEN_FILE, PREVIEW_BUILD_SHA } from "@otomat/domain";
 
 import type { DesktopChannel } from "#shared/channel";
 
@@ -76,10 +76,11 @@ export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string 
     `OTOMAT_HOME="$HOME/${deployment.homeSuffix}"`,
     'ENTRY="$OTOMAT_HOME/daemon/dist/index.js"',
     'PID_FILE="$OTOMAT_HOME/daemon.pid"',
+    `DAEMON_TOKEN_PATH="$OTOMAT_HOME/data/${DAEMON_TOKEN_FILE}"`,
     'mkdir -p "$OTOMAT_HOME/data"',
     'PID="$(cat "$PID_FILE" 2>/dev/null || true)"',
     'if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null && grep -aqF "$ENTRY" "/proc/$PID/cmdline" 2>/dev/null; then',
-    `  echo "${TOKEN_PREFIX}RUNNING:$PID"`,
+    `  echo "${TOKEN_PREFIX}RUNNING:$PID:$(cat "$DAEMON_TOKEN_PATH" 2>/dev/null)"`,
     "  exit 0",
     "fi",
     'if [ ! -f "$ENTRY" ]; then',
@@ -95,7 +96,10 @@ export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string 
     `  echo "${TOKEN_PREFIX}NODE_TOO_OLD:$(node --version)"`,
     "  exit 0",
     "fi",
-    `OTOMAT_DAEMON_HOST=127.0.0.1 OTOMAT_DAEMON_PORT=${deployment.port} \\`,
+    'DAEMON_TOKEN="$(node -e \'process.stdout.write(require("node:crypto").randomBytes(32).toString("base64url"))\')"',
+    'rm -f "$DAEMON_TOKEN_PATH"',
+    '(umask 077 && printf "%s" "$DAEMON_TOKEN" > "$DAEMON_TOKEN_PATH")',
+    `${DAEMON_TOKEN_ENV}="$DAEMON_TOKEN" OTOMAT_DAEMON_HOST=127.0.0.1 OTOMAT_DAEMON_PORT=${deployment.port} \\`,
     '  OTOMAT_DB_PATH="$OTOMAT_HOME/data/otomat.db" \\',
     '  OTOMAT_PROJECT_ROOT="$OTOMAT_HOME/data" \\',
     "  OTOMAT_ALLOWED_ORIGINS=otomat://app \\",
@@ -107,7 +111,7 @@ export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string 
     "  exit 0",
     "fi",
     'echo "$DAEMON_PID" > "$PID_FILE"',
-    `echo "${TOKEN_PREFIX}STARTED:$DAEMON_PID"`,
+    `echo "${TOKEN_PREFIX}STARTED:$DAEMON_PID:$DAEMON_TOKEN"`,
     "",
   ].join("\n");
 }
@@ -141,16 +145,21 @@ export function stopDaemonScript(deployment: RemoteDeployment): string {
 }
 
 export type RemoteBootstrapOutcome =
-  | { kind: "running"; pid: number }
-  | { kind: "started"; pid: number }
+  | { kind: "running"; pid: number; token: string }
+  | { kind: "started"; pid: number; token: string }
   | { kind: "start_failed"; logTail: string }
   | { kind: "daemon_missing"; entry: string }
   | { kind: "node_missing" }
   | { kind: "node_too_old"; version: string };
 
+/** An empty token is a daemon predating auth: it asks for none and must stay reachable to be upgraded. */
 function liveDaemon(kind: "running" | "started", detail: string): RemoteBootstrapOutcome | null {
-  const pid = Number.parseInt(detail, 10);
-  return Number.isInteger(pid) && pid > 0 ? { kind, pid } : null;
+  const separator = detail.indexOf(":");
+  const pid = Number(detail.slice(0, separator));
+  const token = detail.slice(separator + 1);
+  if (separator === -1 || !Number.isInteger(pid) || pid <= 0 || !/^[\w-]*$/.test(token))
+    return null;
+  return { kind, pid, token };
 }
 
 /** Last `OTOMAT_REMOTE:` token wins; null means the script never reported (treated as a start failure). */

@@ -6,7 +6,11 @@ import { RemoteHostSession } from "#main/remote/session";
 import type { RunSshScriptOptions, SshScriptResult } from "#main/remote/ssh/script";
 import type { SshTunnelOptions, TunnelHandle } from "#main/remote/ssh/tunnel";
 
-const STARTED: SshScriptResult = { code: 0, stdout: "OTOMAT_REMOTE:STARTED:100\n", stderr: "" };
+const STARTED: SshScriptResult = {
+  code: 0,
+  stdout: "OTOMAT_REMOTE:STARTED:100:remote-token\n",
+  stderr: "",
+};
 
 const HEALTHY: HealthResponse = {
   status: "ok",
@@ -75,6 +79,7 @@ function phases(statuses: RemoteHostStatus[]): string[] {
 
 it("declares connected only after a health response came back through the tunnel", async () => {
   const { session, statuses, tunnels, health } = harness();
+  expect(session.endpoint).toBeNull();
   const status = await session.connect(false);
   expect(status.phase).toBe("connected");
   expect(phases(statuses)).toEqual([
@@ -84,6 +89,7 @@ it("declares connected only after a health response came back through the tunnel
     "connected",
   ]);
   expect(session.url).toBe("http://127.0.0.1:45000");
+  expect(session.endpoint).toEqual({ baseUrl: "http://127.0.0.1:45000", token: "remote-token" });
   expect(session.remoteBuild).toBe("abc1234");
   expect(tunnels).toHaveLength(1);
   expect(health).toHaveBeenCalledWith(

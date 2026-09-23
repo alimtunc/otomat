@@ -33,6 +33,8 @@ import { isDesktopBuildSummary } from "#shared/build-summary";
 import { isExecutionHostSync } from "#shared/execution-host-sync";
 import {
   BUILD_SYNC_CHANNEL,
+  DAEMON_TOKEN_CHANGED_CHANNEL,
+  DAEMON_TOKEN_CHANNEL,
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_ALIASES_CHANNEL,
   EXECUTION_HOST_CATALOG_REPOSITORIES_CHANNEL,
@@ -96,9 +98,19 @@ if (!isDesktopBuildSummary(buildSummary)) {
   throw new Error("Invalid build metadata from the main process");
 }
 
+const initialToken: unknown = ipcRenderer.sendSync(DAEMON_TOKEN_CHANNEL);
+if (typeof initialToken !== "string") {
+  throw new Error("Invalid daemon token from the main process");
+}
+let daemonToken = initialToken;
+subscribe(DAEMON_TOKEN_CHANGED_CHANNEL, (token: string) => (daemonToken = token));
+
 contextBridge.exposeInMainWorld("otomat", {
   notifications,
   daemonUrl,
+  daemonToken: (): string => daemonToken,
+  onDaemonToken: (listener: (token: string) => void): (() => void) =>
+    subscribe(DAEMON_TOKEN_CHANGED_CHANNEL, listener),
   executionHostId: hostSync.id,
   executionHostSshAlias: hostSync.ssh_alias,
   build: buildSummary,

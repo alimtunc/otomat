@@ -15,12 +15,12 @@ export function pollNotifications(
     try {
       const statuses = new Map<ExecutionHostId, boolean>();
       await Promise.all(
-        catalog.targets().map(async ({ host, url }) => {
+        catalog.targets().map(async ({ host, endpoint }) => {
           statuses.set(host.id, false);
-          if (url === null) return;
+          if (endpoint === null) return;
           try {
             const snapshot = await createDaemonClient({
-              baseUrl: url,
+              ...endpoint,
               fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(5_000) }),
             }).listNotifications();
             delivery.receive(

@@ -1,4 +1,4 @@
-import { CORRELATION_ID_HEADER } from "@otomat/domain";
+import { CORRELATION_ID_HEADER, DAEMON_TOKEN_QUERY, daemonAuthorization } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
 
@@ -57,9 +57,31 @@ async function readErrorBody(res: Response): Promise<JsonValue> {
   }
 }
 
-export function resolveUrl(config: DaemonClientConfig, path: string): string {
+function resolveUrl(config: DaemonClientConfig, path: string): string {
   const base = typeof config.baseUrl === "function" ? config.baseUrl() : (config.baseUrl ?? "");
   return `${base}${path}`;
+}
+
+function resolveToken(config: DaemonClientConfig): string {
+  return typeof config.token === "function" ? config.token() : (config.token ?? "");
+}
+
+export function resolveAuthorizedUrl(config: DaemonClientConfig, path: string): string {
+  const url = resolveUrl(config, path);
+  const token = resolveToken(config);
+  if (token === "") return url;
+  return `${url}${path.includes("?") ? "&" : "?"}${DAEMON_TOKEN_QUERY}=${encodeURIComponent(token)}`;
+}
+
+function authorized(
+  config: DaemonClientConfig,
+  init: RequestInit | undefined,
+): RequestInit | undefined {
+  const token = resolveToken(config);
+  if (token === "") return init;
+  const headers = new Headers(init?.headers);
+  headers.set("authorization", daemonAuthorization(token));
+  return { ...init, headers };
 }
 
 /** A list value repeats its key, so a selection carrying an empty string stays distinguishable from an absent one. */
@@ -85,7 +107,7 @@ async function daemonFetch(
   const method = init?.method ?? "GET";
   let res: Response;
   try {
-    res = await doFetch(resolveUrl(config, path), init);
+    res = await doFetch(resolveUrl(config, path), authorized(config, init));
   } catch (error) {
     throw new DaemonTransportError(method, path, error);
   }

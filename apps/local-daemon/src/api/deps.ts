@@ -14,6 +14,7 @@ export interface ApiDeps {
   build: string | null;
   startedAt: string;
   dbPath: string;
+  token: string;
   schemaMetadata(): SchemaMetadataContract;
   repositories: RepositoryResolver;
   supervisor: Supervisor;

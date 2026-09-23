@@ -2,7 +2,7 @@ import { schema } from "@otomat/db";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { makeApiApp } from "../support/api.js";
+import { AUTHORIZED_HEADERS, makeApiApp } from "../support/api.js";
 import { setupTestDb, type TestDb } from "../support/db.js";
 import { seedRun } from "../support/seed.js";
 
@@ -33,7 +33,7 @@ it(
   { timeout: 20_000 },
   async () => {
     const app = makeApiApp(t);
-    const sse = await app.request("/api/activity/stream", { headers: { Host: "127.0.0.1" } });
+    const sse = await app.request("/api/activity/stream", { headers: AUTHORIZED_HEADERS });
     const reader = sse.body?.getReader();
     if (!reader) throw new Error("SSE response has no body");
 

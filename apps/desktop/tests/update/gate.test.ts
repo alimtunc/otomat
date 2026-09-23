@@ -11,7 +11,7 @@ function target(id: "local" | "remote", label: string, url: string | null): Host
     host: { id, label, kind: id === "local" ? "local" : "ssh" },
     active: id === "local",
     status: null,
-    url,
+    endpoint: url === null ? null : { baseUrl: url, token: `${id}-token` },
   };
 }
 

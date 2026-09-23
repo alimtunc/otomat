@@ -119,10 +119,10 @@ export class RemoteUpgradeCoordinator {
     session: RemoteSessionHandle,
     manual: boolean,
   ): Promise<RemoteUpdateResult> {
-    const url = session.status.phase === "connected" ? session.url : null;
+    const endpoint = session.endpoint;
     const stale = session.remoteBuild;
     if (!manual) {
-      if (url === null || stale === null || stale === expected) return this.rest({ ok: true });
+      if (endpoint === null || stale === null || stale === expected) return this.rest({ ok: true });
       const failed = this.failure;
       if (failed !== null && failed.build === stale) {
         return this.rest({ ok: false, message: failed.message });
@@ -131,9 +131,9 @@ export class RemoteUpgradeCoordinator {
       if (this.journey === null) this.publish({ phase: "checking_version", detail: null });
     }
     // Both waits belong to a connected host: they hold a running daemon, and the tunnel serves on.
-    if (url !== null) {
+    if (endpoint !== null) {
       const busy = await remoteBusyRuns({
-        baseUrl: url,
+        endpoint,
         fetchImpl: this.options.fetchImpl ?? fetch,
         log: this.options.log,
       });

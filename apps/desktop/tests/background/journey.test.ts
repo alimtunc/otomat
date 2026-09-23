@@ -95,7 +95,7 @@ vi.mock("#main/runtime", () => ({
     daemonLog: { write: vi.fn(), read: () => "" },
     daemon: {
       running: true,
-      start: () => Promise.resolve("http://127.0.0.1:4310"),
+      start: () => Promise.resolve({ baseUrl: "http://127.0.0.1:4310", token: "local-token" }),
       stop: () => {
         harness.daemonStops += 1;
         return Promise.resolve();

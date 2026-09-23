@@ -35,8 +35,14 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 function session(status: RemoteHostStatus, url: string | null): RemoteSessionHandle {
-  // SAFETY: the catalog reads status and url alone; the connection methods are never called here.
-  return { alias: "otomat-vps", status, url } as RemoteSessionHandle;
+  const endpoint =
+    status.phase === "connected" && url !== null ? { baseUrl: url, token: "remote-token" } : null;
+  // SAFETY: the catalog reads status and endpoint alone; the connection methods are never called here.
+  return { alias: "otomat-vps", status, url, endpoint } as RemoteSessionHandle;
+}
+
+function authorized(token: string): RequestInit {
+  return { headers: new Headers({ authorization: `Bearer ${token}` }) };
 }
 
 function catalog(fetchImpl: unknown, overrides: Partial<HostCatalogOptions> = {}) {
@@ -46,7 +52,7 @@ function catalog(fetchImpl: unknown, overrides: Partial<HostCatalogOptions> = {}
   return {
     logs,
     catalog: new HostCatalog({
-      localDaemonUrl: () => LOCAL_URL,
+      localDaemon: () => ({ baseUrl: LOCAL_URL, token: "local-token" }),
       activeHostId: () => "local",
       remoteSshAlias: () => "otomat-vps",
       remoteSession: () => session({ phase: "connected", detail: null }, REMOTE_URL),
@@ -73,8 +79,14 @@ it("lists every host's own repositories, naming the host that answered", async (
   ]);
   expect(entries[0]?.repositories?.map((row) => row.id)).toEqual(["r-1"]);
   expect(entries[1]?.repositories?.map((row) => row.id)).toEqual(["r-2"]);
-  expect(fetchImpl).toHaveBeenCalledWith(`${LOCAL_URL}/api/repositories`, undefined);
-  expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/repositories`, undefined);
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `${LOCAL_URL}/api/repositories`,
+    authorized("local-token"),
+  );
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `${REMOTE_URL}/api/repositories`,
+    authorized("remote-token"),
+  );
 });
 
 it("reads null for a host whose tunnel is down, never an empty list", async () => {
@@ -167,7 +179,10 @@ it("reads the worktrees of the host that was named, on that host alone", async (
   const result = await catalog(fetchImpl).catalog.readWorkspaces("remote");
 
   expect(result).toEqual({ ok: true, value: EMPTY_INVENTORY });
-  expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/workspaces`, undefined);
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `${REMOTE_URL}/api/workspaces`,
+    authorized("remote-token"),
+  );
 });
 
 it("reads the Inbox of the host that was named, on that host alone", async () => {
@@ -177,7 +192,7 @@ it("reads the Inbox of the host that was named, on that host alone", async () =>
   const result = await catalog(fetchImpl).catalog.readInbox("remote");
 
   expect(result).toEqual({ ok: true, value: inbox });
-  expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/inbox`, undefined);
+  expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/inbox`, authorized("remote-token"));
 });
 
 it("runs the health check on the named host's own daemon, under that host's project id", async () => {
@@ -192,7 +207,10 @@ it("runs the health check on the named host's own daemon, under that host's proj
   const result = await catalog(fetchImpl).catalog.readProjectHealth("remote", "p-remote");
 
   expect(result).toEqual({ ok: true, value: health });
-  expect(fetchImpl).toHaveBeenCalledWith(`${REMOTE_URL}/api/projects/p-remote/health`, undefined);
+  expect(fetchImpl).toHaveBeenCalledWith(
+    `${REMOTE_URL}/api/projects/p-remote/health`,
+    authorized("remote-token"),
+  );
 });
 
 it("says why an unreachable host could not be read instead of answering for it", async () => {

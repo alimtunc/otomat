@@ -283,6 +283,31 @@ it("posts a message with images as multipart, the request riding as one JSON par
   );
 });
 
+it("authenticates each request with the token current at that moment", async () => {
+  const authorizations: (string | null)[] = [];
+  let token = "first";
+  const client = createDaemonClient({
+    baseUrl: "http://localhost:4319",
+    token: () => token,
+    fetch: async (_input, init) => {
+      authorizations.push(new Headers(init?.headers).get("authorization"));
+      return jsonResponse([]);
+    },
+  });
+
+  await client.listProjects();
+  token = "second";
+  await client.listProjects();
+  token = "";
+  await client.listProjects();
+
+  expect(authorizations).toEqual(["Bearer first", "Bearer second", null]);
+  token = "img";
+  expect(client.runContributionImageUrl("run-1", "c-1", "img-1")).toBe(
+    "http://localhost:4319/api/runs/run-1/contributions/c-1/images/img-1?access_token=img",
+  );
+});
+
 it("lists a run's contributions in send order", async () => {
   let calledUrl = "";
   const fetchMock: typeof fetch = async (input) => {

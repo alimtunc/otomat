@@ -1,4 +1,4 @@
-import { createDaemonClient, type DaemonClient } from "@otomat/client";
+import { createDaemonClient, type DaemonClient, type DaemonEndpoint } from "@otomat/client";
 import type { LaunchHold } from "@otomat/domain";
 
 import type { HostTarget } from "../remote/host/catalog.js";
@@ -29,9 +29,9 @@ export class UpdateGate {
   /** Nothing is held: this is the read the operator decides on. */
   async observe(): Promise<GateVerdict> {
     for (const target of this.options.hosts()) {
-      if (target.url === null) return unreachable(target.host.label);
+      if (target.endpoint === null) return unreachable(target.host.label);
       const runs = await remoteBusyRuns({
-        baseUrl: target.url,
+        endpoint: target.endpoint,
         fetchImpl: this.options.fetchImpl ?? fetch,
         log: this.options.log,
       });
@@ -45,8 +45,8 @@ export class UpdateGate {
   /** The caller releases on any verdict but `clear`. */
   async arm(): Promise<GateVerdict> {
     for (const target of this.options.hosts()) {
-      if (target.url === null) return unreachable(target.host.label);
-      const hold = await this.hold(target.url, true);
+      if (target.endpoint === null) return unreachable(target.host.label);
+      const hold = await this.hold(target.endpoint, true);
       if (hold === null) {
         return { clear: false, reason: `${target.host.label} did not accept the update hold.` };
       }
@@ -59,22 +59,19 @@ export class UpdateGate {
   /** Best effort: a hold left behind expires by itself, but a live one must not. */
   async release(): Promise<void> {
     for (const target of this.options.hosts()) {
-      if (target.url === null) continue;
-      if ((await this.hold(target.url, false)) === null) {
+      if (target.endpoint === null) continue;
+      if ((await this.hold(target.endpoint, false)) === null) {
         this.options.log(`Update hold on ${target.host.label} could not be lifted.`);
       }
     }
   }
 
-  private async hold(baseUrl: string, held: boolean): Promise<LaunchHold | null> {
-    const client: DaemonClient = createDaemonClient({
-      baseUrl,
-      fetch: this.options.fetchImpl,
-    });
+  private async hold(endpoint: DaemonEndpoint, held: boolean): Promise<LaunchHold | null> {
+    const client: DaemonClient = createDaemonClient({ ...endpoint, fetch: this.options.fetchImpl });
     try {
       return await client.setLaunchHold({ held });
     } catch (error) {
-      this.options.log(`Update hold on ${baseUrl} failed: ${String(error)}`);
+      this.options.log(`Update hold on ${endpoint.baseUrl} failed: ${String(error)}`);
       return null;
     }
   }

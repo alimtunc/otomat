@@ -47,7 +47,11 @@ vi.mock("#main/runtime", () => ({
     dataDirectory: { root: "/unused", dbPath: "/unused/otomat.db", backupsDir: "/unused/backups" },
     desktopLog: { write: vi.fn(), read: () => "" },
     daemonLog: { write: vi.fn(), read: () => "" },
-    daemon: { running: false, start: async () => "http://127.0.0.1:49152", stop: vi.fn() },
+    daemon: {
+      running: false,
+      start: async () => ({ baseUrl: "http://127.0.0.1:49152", token: "local-token" }),
+      stop: vi.fn(),
+    },
     linear: { reconcile: async () => {} },
     hosts: { bootActivate: async () => null, shutdown: async () => {}, remoteSession: null },
     sandbox: { ensure: async () => {} },

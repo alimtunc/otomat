@@ -1,6 +1,7 @@
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import type { DaemonEndpoint } from "@otomat/client";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { devAppPaths } from "#support/app-paths";
@@ -14,13 +15,13 @@ interface RecoveryHarness {
     daemonLog: { write(message: string): void };
     daemon: {
       running: boolean;
-      start(): Promise<string>;
+      start(): Promise<DaemonEndpoint>;
       stop(): Promise<void>;
       restoreBackup(path: string): Promise<void>;
     };
     linear: { reconcile(): Promise<void> };
     hosts: {
-      bootActivate(): Promise<string | null>;
+      bootActivate(): Promise<DaemonEndpoint | null>;
       shutdown(): Promise<void>;
       remoteSession: null;
     };
@@ -166,7 +167,7 @@ it("offers the next managed backup after the daemon rejects the newest candidate
             },
           };
         }
-        return "http://127.0.0.1:4319";
+        return { baseUrl: "http://127.0.0.1:4319", token: "local-token" };
       },
       stop: async () => {},
       restoreBackup,

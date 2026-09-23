@@ -37,7 +37,11 @@ stay on disk until you remove them yourself.
 
 ## Credentials
 
-Otomat holds no credential of its own and asks for none:
+Otomat asks for no credential; the only secret it makes is its daemon's access token:
+
+- **The daemon's access token** is minted at every daemon launch and only opens that daemon's API.
+  The desktop app keeps it in memory; a remote host or a standalone daemon keeps it in an
+  owner-only `daemon-token` file beside its database. Agents never inherit it.
 
 - **Agent runtimes** authenticate through their own CLIs (`claude`, `codex`). Otomat never reads
   their tokens.
@@ -55,6 +59,8 @@ Otomat holds no credential of its own and asks for none:
 - The daemon listens on the **loopback interface only** and rejects requests whose `Host` header
   is not loopback. A remote daemon is reached through an SSH tunnel to the server's loopback; no
   port is opened on the network.
+- Every daemon request except its health check must present the daemon's access token, and a
+  change requested from a foreign web origin is refused before it runs.
 - Outbound connections are the ones the tools you configured make: the provider CLIs to their
   APIs, `gh` to GitHub, Linear's API when a workspace is connected, `git` to your remotes, and
   GitHub Releases for the app's own update check.

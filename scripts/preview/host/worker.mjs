@@ -1,12 +1,6 @@
 import { Container, getContainer } from "@cloudflare/containers";
 
-import {
-  authorizedClient,
-  CLIENT_ID_HEADER,
-  CLIENT_SECRET_HEADER,
-  DAEMON_PORT,
-  daemonUrl,
-} from "./gate.mjs";
+import { authorizedClient, DAEMON_PORT, daemonToken, upstreamRequest } from "./gate.mjs";
 
 export class PreviewDaemon extends Container {
   defaultPort = DAEMON_PORT;
@@ -28,7 +22,9 @@ export default {
     // instead of an old instance still draining on the previous commit.
     const container = getContainer(env.PREVIEW_DAEMON, env.PREVIEW_BUILD ?? "unknown");
     try {
-      await container.startAndWaitForPorts();
+      await container.startAndWaitForPorts({
+        startOptions: { envVars: { OTOMAT_DAEMON_TOKEN: daemonToken(env) } },
+      });
     } catch (error) {
       return Response.json(
         {
@@ -38,9 +34,6 @@ export default {
         { status: 503 },
       );
     }
-    const upstream = new Request(daemonUrl(request.url), request);
-    upstream.headers.delete(CLIENT_ID_HEADER);
-    upstream.headers.delete(CLIENT_SECRET_HEADER);
-    return container.fetch(upstream);
+    return container.fetch(upstreamRequest(request, env));
   },
 };

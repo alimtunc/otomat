@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 
+import type { DaemonEndpoint } from "@otomat/client";
 import type { DesktopStartupDiagnostic } from "@otomat/domain";
 import { app, ipcMain, session } from "electron";
 
@@ -25,6 +26,7 @@ import { startNotifications } from "./notifications/electron.js";
 import type { AppPaths } from "./paths.js";
 import { serveAppScheme } from "./protocol.js";
 import { QuitSequence } from "./quit.js";
+import { RendererDaemon } from "./renderer-daemon.js";
 import { createDesktopRuntime, type DesktopRuntime } from "./runtime.js";
 import { denyRendererPermissions, hardenWebContents, resolveAllowedOrigins } from "./security.js";
 import { SplashWindow } from "./splash-window.js";
@@ -42,17 +44,18 @@ import { createCockpitWindow, createSplashWindow } from "./windows.js";
 
 export class DesktopApp {
   private readonly ipcState: IpcState;
+  private readonly renderer: RendererDaemon;
   private readonly devServer: string | null;
   private readonly userPath: string;
   private readonly userData: string;
   private readonly support: DesktopSupport;
   private runtime: DesktopRuntime | null = null;
-  private localDaemonUrl = "";
+  private localDaemon: DaemonEndpoint | null = null;
   private notificationsStarted = false;
   private diagnostic: DesktopStartupDiagnostic | null = null;
   private operation: "restoring" | "starting" | null = null;
   private readonly csp = new RendererCsp(() => [
-    this.localDaemonUrl,
+    this.localDaemon?.baseUrl ?? null,
     this.runtime?.hosts.remoteSession?.url ?? null,
   ]);
   private readonly rejectedBackupPaths = new Set<string>();
@@ -65,7 +68,7 @@ export class DesktopApp {
   readonly background = createBackgroundMode({
     trayIcon: () => this.paths.trayIcon,
     appIcon: () => this.paths.appIcon,
-    daemonUrl: () => this.localDaemonUrl,
+    daemon: () => this.localDaemon,
     hideWindow: () => this.cockpit.hide(),
     openWindow: () => this.showPrimary(),
     openRun: (runId) => this.cockpit.send(OPEN_RUN_CHANNEL, runId),
@@ -87,6 +90,7 @@ export class DesktopApp {
     this.userData = app.getPath("userData");
     this.ipcState = {
       daemonUrl: "",
+      daemonToken: "",
       preview: buildInfo.channel === "preview",
       build: {
         version: buildInfo.version,
@@ -94,6 +98,7 @@ export class DesktopApp {
         channel: buildInfo.channel,
       },
     };
+    this.renderer = new RendererDaemon(this.ipcState, this.csp, this.cockpit);
     this.support = new DesktopSupport({
       daemonUrl: () => this.ipcState.daemonUrl,
       logs: () => ({
@@ -152,25 +157,25 @@ export class DesktopApp {
         updaterPort: createElectronUpdaterPort(feedOf(this.buildInfo.version), (message) =>
           this.log.write(message),
         ),
-        localDaemonUrl: () => this.localDaemonUrl,
+        localDaemon: () => this.localDaemon,
         onRemoteStatus: (status) => {
           this.cockpit.send(EXECUTION_HOST_STATUS_CHANNEL, status);
           if (status.phase === "connected") void this.runtime?.linear.reconcile();
         },
         onLinearDelivery: (delivery) => this.cockpit.send(LINEAR_DELIVERY_STATUS_CHANNEL, delivery),
         onUpdate: (snapshot) => this.cockpit.send(UPDATE_STATUS_CHANNEL, snapshot),
-        applyRendererUrl: (url) => this.applyRendererUrl(url),
-        onSandboxDaemonStarted: (url) => {
-          this.localDaemonUrl = url;
+        applyRendererEndpoint: (endpoint) => this.renderer.follow(endpoint),
+        onSandboxDaemonStarted: (daemon) => {
+          this.localDaemon = daemon;
           void this.runtime?.linear.reconcile();
-          if (this.runtime?.hosts.activeHostId !== "remote") this.ipcState.daemonUrl = url;
+          if (this.runtime?.hosts.activeHostId !== "remote") this.renderer.point(daemon);
         },
       });
-      this.localDaemonUrl = await this.runtime.daemon.start();
-      this.ipcState.daemonUrl = this.localDaemonUrl;
-      await this.runtime.sandbox.ensure(this.localDaemonUrl);
-      const remoteUrl = await this.runtime.hosts.bootActivate();
-      if (remoteUrl !== null) this.ipcState.daemonUrl = remoteUrl;
+      this.localDaemon = await this.runtime.daemon.start();
+      this.renderer.point(this.localDaemon);
+      await this.runtime.sandbox.ensure(this.localDaemon);
+      const remote = await this.runtime.hosts.bootActivate();
+      if (remote !== null) this.renderer.point(remote);
       await this.runtime.linear.reconcile();
       this.rejectedBackupPaths.clear();
       this.diagnostic = null;
@@ -180,8 +185,8 @@ export class DesktopApp {
       this.splash.close();
       this.runtime.updater.start();
     } catch (error) {
-      this.ipcState.daemonUrl = "";
-      this.localDaemonUrl = "";
+      this.renderer.point();
+      this.localDaemon = null;
       this.diagnostic = attachAvailableBackup(describeStartupFailure(error), this.backupContext());
       this.log.write(`${this.diagnostic.code}: ${this.diagnostic.message}`);
       this.splash.send({ phase: "failed", diagnostic: this.diagnostic });
@@ -203,7 +208,7 @@ export class DesktopApp {
       }
       this.splash.send({ phase: "restoring" });
       await this.runtime.daemon.restoreBackup(backupPath);
-      this.ipcState.daemonUrl = "";
+      this.renderer.point();
       this.diagnostic = null;
       this.operation = null;
       await this.runStartup();
@@ -234,11 +239,6 @@ export class DesktopApp {
       rejectedBackupPaths: this.rejectedBackupPaths,
       log: (message) => this.log.write(message),
     };
-  }
-
-  private applyRendererUrl(url: string): void {
-    this.ipcState.daemonUrl = url;
-    if (!this.csp.allows(url)) this.cockpit.reload();
   }
 
   private showPrimary(): void {

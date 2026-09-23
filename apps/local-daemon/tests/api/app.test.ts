@@ -37,6 +37,7 @@ import {
   runRowWithStep,
   stepRunRow,
   stubSupervisor,
+  TEST_DAEMON_TOKEN,
 } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { appendEvents } from "../support/ledger.js";
@@ -1027,6 +1028,95 @@ it("echoes CORS for a loopback origin but not a foreign one", async () => {
     headers: { Origin: "https://evil.example.com" },
   });
   expect(denied.headers.get("access-control-allow-origin")).not.toBe("https://evil.example.com");
+});
+
+it("refuses every api route but health without the daemon token", async () => {
+  const app = makeApiApp(t);
+  const anonymous = { Host: "127.0.0.1" };
+
+  const health = await app.request("/api/health", { headers: anonymous });
+  const read = await app.request("/api/repositories", { headers: anonymous });
+  const wrong = await app.request("/api/repositories", {
+    headers: { ...anonymous, Authorization: "Bearer not-the-token" },
+  });
+  const authorized = await request(app, "/api/repositories");
+
+  expect(health.status).toBe(200);
+  expect(read.status).toBe(401);
+  expect(await json<{ error: string }>(read)).toEqual({ error: "unauthorized" });
+  expect(wrong.status).toBe(401);
+  expect(authorized.status).toBe(200);
+});
+
+it("takes the token from the query only on a GET, the one request EventSource and img make", async () => {
+  const app = makeApiApp(t);
+  const query = `access_token=${TEST_DAEMON_TOKEN}`;
+
+  const read = await app.request(`/api/repositories?${query}`, {
+    headers: { Host: "127.0.0.1" },
+  });
+  const write = await app.request(`/api/workspaces/reconcile?${query}`, {
+    method: "POST",
+    headers: { Host: "127.0.0.1" },
+  });
+
+  expect(read.status).toBe(200);
+  expect(write.status).toBe(401);
+});
+
+it("refuses a foreign-origin simple request before it can execute, token or not", async () => {
+  const app = makeApiApp(t);
+  const foreign = { Host: "127.0.0.1", Origin: "https://evil.example" };
+
+  const textPlain = await app.request("/api/linear/sync", {
+    method: "POST",
+    headers: { ...foreign, "content-type": "text/plain" },
+    body: "x",
+  });
+  const bodyless = await app.request("/api/workspaces/reconcile", {
+    method: "POST",
+    headers: foreign,
+  });
+  const withToken = await request(app, "/api/workspaces/reconcile", {
+    method: "POST",
+    headers: { Origin: "https://evil.example" },
+  });
+  const loopbackWithoutToken = await app.request("/api/workspaces/reconcile", {
+    method: "POST",
+    headers: { Host: "127.0.0.1", Origin: "http://localhost:3000" },
+  });
+
+  expect(textPlain.status).toBe(403);
+  expect(await json<{ error: string }>(textPlain)).toEqual({ error: "forbidden_origin" });
+  expect(bodyless.status).toBe(403);
+  expect(withToken.status).toBe(403);
+  expect(loopbackWithoutToken.status).toBe(401);
+});
+
+it("answers a token-less preflight so the renderer's bearer requests can follow", async () => {
+  const res = await makeApiApp(t).request("/api/repositories", {
+    method: "OPTIONS",
+    headers: {
+      Host: "127.0.0.1",
+      Origin: "http://localhost:5173",
+      "Access-Control-Request-Method": "GET",
+      "Access-Control-Request-Headers": "authorization",
+    },
+  });
+
+  expect(res.status).toBe(204);
+  expect(res.headers.get("access-control-allow-headers")).toContain("authorization");
+  expect(res.headers.get("access-control-max-age")).toBe("7200");
+});
+
+it("lets an allowed origin mutate with the token", async () => {
+  const res = await request(makeApiApp(t), "/api/runs/missing/resume", {
+    method: "POST",
+    headers: { Origin: "http://localhost:5173" },
+  });
+
+  expect(res.status).toBe(404);
+  expect(res.headers.get("access-control-allow-origin")).toBe("http://localhost:5173");
 });
 
 // The web preview's topology: the pull request's worker rewrites `Host` to the loopback origin

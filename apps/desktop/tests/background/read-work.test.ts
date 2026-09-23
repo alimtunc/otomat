@@ -2,6 +2,8 @@ import { afterEach, expect, it, vi } from "vitest";
 
 import { readLocalWork } from "#main/background/read-work";
 
+const LOCAL = { baseUrl: "http://127.0.0.1:4310", token: "local-token" };
+
 const SNAPSHOT = {
   activities: [
     {
@@ -25,7 +27,7 @@ afterEach(() => {
 });
 
 it("reads the daemon's own activity projection", async () => {
-  const reading = await readLocalWork("http://127.0.0.1:4310", async (input) => {
+  const reading = await readLocalWork(LOCAL, async (input) => {
     expect(String(input)).toBe("http://127.0.0.1:4310/api/activity");
     return new Response(JSON.stringify(SNAPSHOT));
   });
@@ -45,18 +47,16 @@ it("reads the daemon's own activity projection", async () => {
 });
 
 it("reports an unreachable daemon instead of counting it as idle", async () => {
-  const reading = await readLocalWork("http://127.0.0.1:4310", () =>
-    Promise.reject(new Error("connection refused")),
-  );
+  const reading = await readLocalWork(LOCAL, () => Promise.reject(new Error("connection refused")));
 
   expect(reading.ok).toBe(false);
   expect(reading.ok ? "" : reading.message).toContain("connection refused");
 });
 
-it("has no work to read before the daemon has a URL", async () => {
+it("has no work to read before the daemon started", async () => {
   const fetchImpl = vi.fn();
 
-  expect(await readLocalWork("", fetchImpl)).toEqual({ ok: true, items: [] });
+  expect(await readLocalWork(null, fetchImpl)).toEqual({ ok: true, items: [] });
   expect(fetchImpl).not.toHaveBeenCalled();
 });
 
@@ -67,7 +67,7 @@ it("bounds its own read, so a wedged daemon cannot hold the close forever", asyn
     return Promise.resolve(new Response(JSON.stringify(SNAPSHOT)));
   });
 
-  await readLocalWork("http://127.0.0.1:4310");
+  await readLocalWork(LOCAL);
 
   expect(seen[0]).toBeInstanceOf(AbortSignal);
 });

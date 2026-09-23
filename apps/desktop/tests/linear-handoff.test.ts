@@ -4,6 +4,7 @@ import { pushLinearKey } from "#shared/linear-handoff";
 import { connected, OTOMAT } from "#support/linear-daemons";
 
 const CONNECTED = connected(OTOMAT.id, OTOMAT.label);
+const DAEMON = { baseUrl: "http://127.0.0.1:4319", token: "daemon-token" };
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -12,7 +13,7 @@ afterEach(() => {
 it("accepts a key only when the daemon connected", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(CONNECTED)));
 
-  await expect(pushLinearKey("http://127.0.0.1:4319", OTOMAT)).resolves.toBeUndefined();
+  await expect(pushLinearKey(DAEMON, OTOMAT)).resolves.toBeUndefined();
 });
 
 it("rejects an HTTP-success response when Linear refused the key", async () => {
@@ -28,9 +29,7 @@ it("rejects an HTTP-success response when Linear refused the key", async () => {
     ),
   );
 
-  await expect(pushLinearKey("http://127.0.0.1:4319", OTOMAT)).rejects.toThrow(
-    "Linear rejected the API key.",
-  );
+  await expect(pushLinearKey(DAEMON, OTOMAT)).rejects.toThrow("Linear rejected the API key.");
 });
 
 it("rejects a daemon that answers without holding the key", async () => {
@@ -39,7 +38,7 @@ it("rejects a daemon that answers without holding the key", async () => {
     vi.fn().mockResolvedValue(Response.json({ ...CONNECTED, status: "disconnected" })),
   );
 
-  await expect(pushLinearKey("http://127.0.0.1:4319", OTOMAT)).rejects.toThrow(
+  await expect(pushLinearKey(DAEMON, OTOMAT)).rejects.toThrow(
     "The daemon did not connect to Linear.",
   );
 });
@@ -58,7 +57,7 @@ it("surfaces a typed daemon refusal from a non-success response", async () => {
     ),
   );
 
-  await expect(pushLinearKey("http://127.0.0.1:4319", OTOMAT)).rejects.toThrow(
+  await expect(pushLinearKey(DAEMON, OTOMAT)).rejects.toThrow(
     "A newer Linear connection state replaced this request.",
   );
 });

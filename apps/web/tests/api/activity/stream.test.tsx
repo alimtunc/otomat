@@ -9,6 +9,7 @@ import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { runActivity } from "#support/activity";
+import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { mountWithQuery } from "#support/mount";
 import { testQueryClient } from "#support/query";
 import { memorySnapshotStore } from "#support/storage";
@@ -63,6 +64,7 @@ beforeEach(() => {
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
+  delete window.otomat;
 });
 
 it("renders the snapshot first, then whatever the stream pushes", async () => {
@@ -126,4 +128,27 @@ it("shows the stored snapshot on a cold start, then whatever the reopened stream
   await push(snapshot(["run-2"], "2026-08-20T10:00:05.000Z"));
 
   expect(mounted.container.textContent).toBe("run-2");
+});
+
+it("reopens the stream on the token a restarted daemon now demands", async () => {
+  let token = "first-token";
+  const listeners = new Set<(next: string) => void>();
+  window.otomat = fakeDesktopBridge({
+    daemonToken: () => token,
+    onDaemonToken: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  });
+  listActivity.mockResolvedValue(snapshot([], "2026-08-20T10:00:00.000Z"));
+  const mounted = await mountWithQuery(<Probe />);
+  cleanups.push(mounted.cleanup);
+
+  await act(async () => {
+    token = "restarted-token";
+    for (const listener of listeners) listener(token);
+  });
+
+  expect(close).toHaveBeenCalledTimes(1);
+  expect(subscribe).toHaveBeenCalledTimes(2);
 });

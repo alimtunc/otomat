@@ -1,5 +1,7 @@
 /** Cockpit renderer↔main channels. Kept electron-free so the preload can import them without pulling in main-only code. */
 export const DAEMON_URL_CHANNEL = "otomat:daemon-url";
+export const DAEMON_TOKEN_CHANNEL = "otomat:daemon-token";
+export const DAEMON_TOKEN_CHANGED_CHANNEL = "otomat:daemon-token-changed";
 export const PICK_DIRECTORY_CHANNEL = "otomat:pick-directory";
 export const LINEAR_SAVE_KEY_CHANNEL = "otomat:linear-save-key";
 export const LINEAR_FORGET_KEY_CHANNEL = "otomat:linear-forget-key";

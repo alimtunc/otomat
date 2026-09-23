@@ -59,11 +59,11 @@ function sessionFor(worktree: string, appData: string) {
       quitAndInstall: () => {},
       onProgress: () => {},
     },
-    localDaemonUrl: () => "",
+    localDaemon: () => null,
     onRemoteStatus: () => {},
     onLinearDelivery: () => {},
     onUpdate: () => {},
-    applyRendererUrl: () => {},
+    applyRendererEndpoint: () => {},
     onSandboxDaemonStarted: () => {},
   });
   expect(runtime.dataDirectory.root).toBe(root);

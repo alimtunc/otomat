@@ -48,6 +48,8 @@ export function fakeDesktopBridge(
 ): OtomatDesktopBridge {
   return {
     daemonUrl: "http://127.0.0.1:5000",
+    daemonToken: () => "test-daemon-token",
+    onDaemonToken: () => () => {},
     notifications: {
       snapshot: async () => ({
         preferences: DEFAULT_NOTIFICATION_PREFERENCES,

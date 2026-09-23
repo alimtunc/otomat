@@ -9,15 +9,21 @@ import { seedSandbox } from "#main/preview/seed";
 interface RecordedCall {
   url: string;
   body: unknown;
+  authorization: string | undefined;
 }
+
+const DAEMON = { baseUrl: "http://127.0.0.1:4319", token: "local-token" };
 
 function fakeFetch(respond: (url: string, body: unknown) => Response) {
   const calls: RecordedCall[] = [];
-  // SAFETY: the seed calls fetch only with a URL and an optional JSON init.
-  const fetchImpl = ((input: unknown, init?: RequestInit) => {
+  // SAFETY: the seed calls fetch only with a URL and a JSON init whose headers are a plain record.
+  const fetchImpl = ((
+    input: unknown,
+    init?: RequestInit & { headers?: Record<string, string> },
+  ) => {
     const url = String(input);
     const body = typeof init?.body === "string" ? JSON.parse(init.body) : null;
-    calls.push({ url, body });
+    calls.push({ url, body, authorization: init?.headers?.authorization });
     return Promise.resolve(respond(url, body));
   }) as typeof fetch;
   return { calls, fetchImpl };
@@ -44,13 +50,16 @@ describe("seedSandbox", () => {
     );
 
     const result = await seedSandbox({
-      daemonUrl: "http://127.0.0.1:4319",
+      daemon: DAEMON,
       repoPath: "/data/test-repo",
       fetchImpl,
     });
 
     expect(result.seeded).toBe(true);
     expect(result.issues).toBeGreaterThanOrEqual(3);
+    expect(new Set(calls.map((call) => call.authorization))).toEqual(
+      new Set(["Bearer local-token"]),
+    );
     const issueCalls = calls.filter((call) => call.url.endsWith("/api/issues"));
     expect(issueCalls).toHaveLength(result.issues);
     for (const call of issueCalls) {
@@ -75,7 +84,7 @@ describe("seedSandbox", () => {
     });
 
     const result = await seedSandbox({
-      daemonUrl: "http://127.0.0.1:4319",
+      daemon: DAEMON,
       repoPath,
       fetchImpl,
     });
@@ -102,7 +111,7 @@ describe("seedSandbox", () => {
     });
 
     const result = await seedSandbox({
-      daemonUrl: "http://127.0.0.1:4319",
+      daemon: DAEMON,
       repoPath,
       fetchImpl,
     });
@@ -122,8 +131,8 @@ describe("seedSandbox", () => {
       () => new Response(JSON.stringify({ error: "path_not_git_repository" }), { status: 400 }),
     );
 
-    await expect(
-      seedSandbox({ daemonUrl: "http://127.0.0.1:4319", repoPath: "/nope", fetchImpl }),
-    ).rejects.toThrow(/registration failed \(400\)/);
+    await expect(seedSandbox({ daemon: DAEMON, repoPath: "/nope", fetchImpl })).rejects.toThrow(
+      /registration failed \(400\)/,
+    );
   });
 });
