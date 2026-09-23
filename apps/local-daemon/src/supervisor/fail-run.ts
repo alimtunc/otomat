@@ -3,7 +3,7 @@ import { isRunSettled } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
 
-import { buildTerminalMarker } from "./markers.js";
+import { buildTerminalMarker, type SessionRef } from "./markers.js";
 import { finishSettle } from "./pass-boundary.js";
 import { emitSupervisorLog } from "./run-log.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
@@ -40,4 +40,15 @@ export function failIdleRun(state: SupervisorState, runId: string, reason: strin
     orphanTerminated: false,
     providerSessionId: null,
   });
+}
+
+/** The worker never ran, so its session has no marker of its own; without this one a known provider session would read as resumable. */
+export function failUnstartedTurn(state: SupervisorState, ref: SessionRef, reason: string): void {
+  emitSupervisorLog(state, ref.runId, "stderr", `[otomat] ${reason}`);
+  emitLedgerEvent(
+    state.db,
+    state.dataDir,
+    ref.runId,
+    buildTerminalMarker(ref, "failed", null, null, 0, new Date().toISOString()),
+  );
 }

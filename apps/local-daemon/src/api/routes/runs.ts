@@ -7,13 +7,11 @@ import {
   scheduleProviderResumeRequestSchema,
   startRunRequestSchema,
   runSummarySchema,
-  type RunLaunchError,
   type SessionContextResponse,
 } from "@otomat/domain";
 import { Hono } from "hono";
 
 import {
-  LaunchRefusedError,
   ProviderResumeRefusedError,
   RunNotResumableError,
   WorkspaceAbandonRefusedError,
@@ -23,6 +21,7 @@ import { agentConfigErrorResponse } from "../agent-config-refusal.js";
 import { projectRunCompletionReport } from "../completion-report.js";
 import type { ApiDeps } from "../deps.js";
 import { runGuard, validateJson, type RunEnv } from "../guards.js";
+import { launchRefusalResponse } from "../launch-refusal.js";
 import { toPullRequest } from "../pull-request-serialize.js";
 import { readRunUsage, readRuns } from "../reads.js";
 import { refusalJson } from "../refusal.js";
@@ -30,18 +29,6 @@ import { runDetailJson } from "../run-detail.js";
 import { runtimeUnavailableResponse } from "../runtime-unavailable.js";
 import { toRun } from "../serialize.js";
 import { appendStepSelector, stepAppendErrorResponse } from "../step-append.js";
-
-const LAUNCH_REFUSAL_STATUS = {
-  project_not_found: 400,
-  project_mismatch: 400,
-  base_branch_not_found: 400,
-  base_remote_unavailable: 409,
-  repository_required: 409,
-  repository_unavailable: 409,
-  worktree_unavailable: 409,
-  issue_workspace_open: 409,
-  launches_held: 409,
-} satisfies Record<RunLaunchError, 400 | 409>;
 
 /** Mounted at `/api/runs`. Holds the run reads, the run commands (start/resume/abort), and the SSE stream. */
 export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
@@ -71,13 +58,8 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
       const run = getRun(deps.db, launched.id) ?? launched;
       return c.json({ run: toRun(run), wait: deps.supervisor.waitFor(run.id) }, 201);
     } catch (error) {
-      if (error instanceof LaunchRefusedError) {
-        const status = LAUNCH_REFUSAL_STATUS[error.code];
-        return c.json(
-          { error: error.code, message: error.message, run_id: error.runId, remote: error.remote },
-          status,
-        );
-      }
+      const launchRefusal = launchRefusalResponse(c, error);
+      if (launchRefusal) return launchRefusal;
       const runtimeRefusal = runtimeUnavailableResponse(c, error);
       if (runtimeRefusal) return runtimeRefusal;
       const refusal = agentConfigErrorResponse(error);
@@ -101,9 +83,8 @@ export function createRunRoutes(deps: ApiDeps): Hono<RunEnv> {
     try {
       return c.json(toRun(await deps.supervisor.resume(run.id)));
     } catch (error) {
-      if (error instanceof LaunchRefusedError) {
-        return c.json({ error: error.code, message: error.message }, 409);
-      }
+      const launchRefusal = launchRefusalResponse(c, error);
+      if (launchRefusal) return launchRefusal;
       if (error instanceof RunNotResumableError) {
         return c.json({ error: "run_not_resumable", message: error.message }, 409);
       }

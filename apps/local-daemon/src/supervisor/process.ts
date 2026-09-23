@@ -1,10 +1,20 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { once } from "node:events";
 
 import { WORKER_JOB_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
 
+import { errorMessage } from "#runtime";
+
 import { releaseWorkerStart } from "./start-gate.js";
 import { type ProcessExit, type SessionProcess, type SupervisedJob } from "./types.js";
+
+export class WorkerSpawnError extends Error {
+  constructor(cause: unknown) {
+    super(`the worker could not be started: ${errorMessage(cause)}`, { cause });
+    this.name = "WorkerSpawnError";
+  }
+}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -51,15 +61,20 @@ export function killProcessGroup(pgid: number, signal: NodeJS.Signals): void {
 export function createReexecSpawn(mainScript: string): (job: SupervisedJob) => SessionProcess {
   return (job) => {
     const startToken = randomUUID();
-    const child = spawn(process.execPath, [...process.execArgv, mainScript], {
-      env: {
-        ...process.env,
-        [WORKER_JOB_ENV]: JSON.stringify(job),
-        [WORKER_START_TOKEN_ENV]: startToken,
-      },
-      detached: true,
-      stdio: "ignore",
-    });
+    let child: ChildProcess;
+    try {
+      child = spawn(process.execPath, [...process.execArgv, mainScript], {
+        env: {
+          ...process.env,
+          [WORKER_JOB_ENV]: JSON.stringify(job),
+          [WORKER_START_TOKEN_ENV]: startToken,
+        },
+        detached: true,
+        stdio: "ignore",
+      });
+    } catch (error) {
+      throw new WorkerSpawnError(error);
+    }
     child.unref();
 
     const pid = child.pid ?? -1;
@@ -74,6 +89,12 @@ export function createReexecSpawn(mainScript: string): (job: SupervisedJob) => S
     return {
       pid,
       pgid: pid,
+      spawned: once(child, "spawn").then(
+        () => undefined,
+        (error: unknown) => {
+          throw new WorkerSpawnError(error);
+        },
+      ),
       exited,
       start: () => releaseWorkerStart(job.agentSessionDir, startToken),
       kill: (signal) => killProcessGroup(pid, signal),

@@ -567,6 +567,26 @@ it("refuses a step whose runtime this host cannot run", async () => {
   });
 });
 
+it("answers an oversized step context with a bad request, on launch and on append alike", async () => {
+  const runId = "run-detail";
+  seedTerminalRun(t.db, runId);
+  const refuse = async (): Promise<never> => {
+    throw new LaunchRefusedError("context_too_large", "context is 900 KB, over the 512 KB");
+  };
+  const app = makeApiApp(t, { supervisor: stubSupervisor({ start: refuse, appendStep: refuse }) });
+
+  const launch = await post(app, "/api/runs", { prompt: "goal" });
+  const append = await post(app, `/api/runs/${runId}/steps`, {
+    name: "Address review",
+    profile_id: "p-reviewer",
+  });
+
+  for (const res of [launch, append]) {
+    expect(res.status).toBe(400);
+    expect(await json<{ error: string }>(res)).toMatchObject({ error: "context_too_large" });
+  }
+});
+
 it("rejects an appended step with no agent, and maps a closed workspace to 409", async () => {
   const runId = "run-detail";
   seedTerminalRun(t.db, runId);

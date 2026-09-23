@@ -1,11 +1,11 @@
 import { getRun, listAgentSessionsForRun, schema } from "@otomat/db";
-import { executableSteps, sessionContextSchema } from "@otomat/domain";
+import { executableSteps, sessionContextSchema, type ContextReference } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { toRun } from "#api/serialize";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
-import { makeSupervisor } from "../support/supervisor.js";
+import { appendStepInput, makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
 
@@ -36,6 +36,14 @@ beforeEach(() => {
 afterEach(() => {
   fix.cleanup();
 });
+
+function commitOversizedContext(): ContextReference[] {
+  const paths = Array.from({ length: 9 }, (_, index) => `fixtures/part-${index}.txt`);
+  for (const path of paths) fix.repo.write(path, "x".repeat(120_000));
+  fix.repo.commitAll("add large fixtures");
+  fix.repo.git("push", "--quiet", "origin", "main");
+  return paths.map((path) => ({ kind: "file", path }));
+}
 
 function planStep(runId: string, index = 0) {
   const step = executableSteps(getRun(fix.db, runId)?.plan_json ?? { version: 1, steps: [] })[
@@ -93,6 +101,32 @@ it("freezes an attached file's content, and names a path it refuses", async () =
     },
     { state: "unavailable", path: "../escape.ts", reason: "outside_repository" },
   ]);
+});
+
+it("refuses a launch whose context outgrows what one step can carry, before writing anything", async () => {
+  const context = commitOversizedContext();
+  const { supervisor, spawn } = makeSupervisor(fix, "complete");
+
+  await expect(supervisor.start({ issue_id: "OTO-1", context })).rejects.toMatchObject({
+    code: "context_too_large",
+    message: expect.stringContaining("one step can carry; attach fewer or smaller files."),
+  });
+  expect(fix.db.select().from(schema.runs).all()).toHaveLength(0);
+  expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(0);
+  expect(spawn.calls).toBe(0);
+});
+
+it("refuses an appended step whose context outgrows what one step can carry, leaving the plan as launched", async () => {
+  const references = commitOversizedContext();
+  const { supervisor } = makeSupervisor(fix, "complete");
+  const run = await supervisor.start({ issue_id: "OTO-1" });
+  await supervisor.settle();
+  const launched = getRun(fix.db, run.id)?.plan_json;
+
+  await expect(
+    supervisor.appendStep(run.id, appendStepInput({ references })),
+  ).rejects.toMatchObject({ code: "context_too_large" });
+  expect(getRun(fix.db, run.id)?.plan_json).toEqual(launched);
 });
 
 it("keeps the frozen file content out of the plan the API serves", async () => {

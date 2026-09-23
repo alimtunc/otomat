@@ -23,7 +23,8 @@ host does not support is refused before anything runs; nothing is silently subst
    from what the remote holds, not from your local checkout. Search the list with **Find branch…**.
 3. **Add context** — attach further issues or repository files by reference. The issue itself is
    always attached. Attached files are read from the same snapshot of the repository the worktree
-   is created from.
+   is created from. A step carries at most 512 KB of context; past that the launch, or a step
+   added later, is refused with the size it measured.
 4. The note — the text area of the composer — is one optional instruction for what the attached
    context and the agent's own guidance do not already say. It is the only free text a launch
    carries: the issue body is never copied into an editable field.

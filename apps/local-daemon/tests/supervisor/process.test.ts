@@ -1,7 +1,6 @@
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, it } from "vitest";
 
@@ -9,13 +8,13 @@ import {
   createReexecSpawn,
   isProcessAlive,
   killProcessGroup,
+  type SessionProcess,
   type SupervisedJob,
 } from "#supervisor";
+import { WorkerSpawnError } from "#supervisor/process";
 
 import { waitFor } from "../support/poll.js";
-import { deadPid, spawnOrphan } from "../support/spawn.js";
-
-const FAKE_WORKER = join(dirname(fileURLToPath(import.meta.url)), "../support/fake-worker.mjs");
+import { deadPid, FAKE_WORKER, spawnOrphan } from "../support/spawn.js";
 
 let agentSessionDir = "";
 
@@ -96,4 +95,27 @@ it("never signals a non-positive process group (no PID 1 / broadcast)", () => {
   for (const pgid of [-1, 0, 1]) {
     expect(() => killProcessGroup(pgid, "SIGKILL")).not.toThrow();
   }
+});
+
+it("reports a job the OS refuses to hand the worker as a spawn error carrying its errno", () => {
+  const spawnOversized = () =>
+    createReexecSpawn(FAKE_WORKER)({ ...job(), prompt: "x".repeat(2 ** 22) });
+
+  expect(spawnOversized).toThrow(WorkerSpawnError);
+  expect(spawnOversized).toThrow(/^the worker could not be started: spawn .*E2BIG/);
+});
+
+it("reports a spawn failure Node emits after returning the child as a spawn error", async () => {
+  const execPath = process.execPath;
+  process.execPath = join(agentSessionDir, "missing-node");
+  let proc: SessionProcess;
+  try {
+    proc = createReexecSpawn(FAKE_WORKER)(job());
+  } finally {
+    process.execPath = execPath;
+  }
+
+  expect(proc.pid).toBe(-1);
+  await expect(proc.spawned).rejects.toBeInstanceOf(WorkerSpawnError);
+  await expect(proc.spawned).rejects.toThrow(/^the worker could not be started: spawn .*ENOENT/);
 });

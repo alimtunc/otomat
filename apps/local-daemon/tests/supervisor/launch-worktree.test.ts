@@ -6,7 +6,6 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
 import { registerLocalRepository } from "#api/repository-registration";
-import { readRunEvents } from "#events";
 import {
   createRepositoryResolver,
   GitCommandError,
@@ -18,6 +17,7 @@ import { findActiveByOwner } from "#git/worktrees-store";
 
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { branches, setupTestRepo } from "../support/git.js";
+import { logTexts } from "../support/ledger.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
 let fix: DaemonTestDb;
@@ -52,15 +52,6 @@ const COMPETE_PLAN = {
     },
   ],
 };
-
-function logTexts(runId: string): string[] {
-  return readRunEvents(fix.db, runId)
-    .filter((event) => event.type === "runtime.log")
-    .map((event) => {
-      const text = event.payload["text"];
-      return typeof text === "string" ? text : "";
-    });
-}
 
 function seedProject(id: string, rootPath: string, repositoryId?: string): void {
   fix.db.insert(schema.projects).values({ id, name: id, root_path: rootPath }).run();
@@ -408,7 +399,7 @@ it("writes no session when a compete group cannot acquire every competitor workt
   await supervisor.settle();
 
   expect(getRun(fix.db, run.id)?.status).toBe("failed");
-  expect(logTexts(run.id).some((text) => text.includes("ENOSPC"))).toBe(true);
+  expect(logTexts(fix.db, run.id).some((text) => text.includes("ENOSPC"))).toBe(true);
   expect(spawn.calls).toBe(0);
   // A session on a step of a now-failed group is a state no boot pass can settle.
   expect(fix.db.select().from(schema.agentSessions).all()).toHaveLength(0);
