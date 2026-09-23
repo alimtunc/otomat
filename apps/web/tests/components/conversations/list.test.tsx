@@ -22,7 +22,7 @@ function headers(container: HTMLElement): HTMLButtonElement[] {
   return [...container.querySelectorAll<HTMLButtonElement>("h3 button")];
 }
 
-it("lists each issue once, its threads beneath, with the cycle as an icon", async () => {
+it("opens the selected issue and makes a single conversation directly accessible", async () => {
   const { container, cleanup } = await mountRouted(
     <ConversationList
       sections={sections}
@@ -32,15 +32,14 @@ it("lists each issue once, its threads beneath, with the cycle as an icon", asyn
     />,
   );
 
-  expect(headers(container).map((header) => header.textContent)).toEqual([
-    "OTO-1Ship it2",
-    "OTO-2Write docs1",
-  ]);
-  expect(container.querySelector('h3 [aria-label="PR open"]')).not.toBeNull();
+  expect(headers(container)).toHaveLength(1);
+  expect(headers(container)[0]?.textContent).toContain("Ship it");
   const [first] = container.querySelectorAll("h3 + ul");
   expect(first?.textContent).toContain("Implement");
   expect(first?.textContent).toContain("Review");
   expect(first?.textContent).not.toContain("Docs");
+  expect(container.querySelectorAll("[data-conversation-row]")).toHaveLength(3);
+  expect(container.textContent).toContain("Write docs");
   await cleanup();
 });
 
@@ -64,5 +63,25 @@ it("collapses a group without dropping the selected thread, and the arrows skip 
   await act(async () => ship.click());
   expect(ship.getAttribute("aria-expanded")).toBe("true");
   expect(container.querySelector('[aria-current="true"]')?.textContent).toContain("Review");
+  await cleanup();
+});
+
+it("folds finished conversations by default while keeping their unread count visible", async () => {
+  const finished = groupConversations([
+    conversationEntry({
+      id: "conversation:finished",
+      step_run_id: "finished",
+      issue: { id: "finished-issue", identifier: "OTO-3", title: "Finished work", cycle: null },
+    }),
+  ]);
+  const { container, cleanup } = await mountRouted(
+    <ConversationList sections={finished} selectedId={null} pending={false} onMark={vi.fn()} />,
+  );
+  const history = container.querySelector<HTMLButtonElement>("h2 button");
+  expect(history?.getAttribute("aria-expanded")).toBe("false");
+  expect(history?.textContent).toContain("1 unread");
+  expect(container.querySelectorAll("[data-conversation-row]")).toHaveLength(0);
+  await act(async () => history?.click());
+  expect(container.textContent).toContain("Finished work");
   await cleanup();
 });

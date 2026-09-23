@@ -1,7 +1,6 @@
-import { cn, FOCUS_RING_INSET, Icon, IssueStatusChip, LiveDot } from "@otomat/ui";
-import { CountBadge } from "@web/components/issues/count-badge";
-import { IssueLabel } from "@web/components/issues/issue-label";
+import { cn, FOCUS_RING_INSET, Icon, LiveDot, StepStatusChip } from "@otomat/ui";
 import type { ConversationIssueGroup } from "@web/lib/conversations/sections";
+import { conversationStatus } from "@web/lib/conversations/status";
 import { type ReactNode, useId } from "react";
 
 export interface ConversationIssueGroupItemProps {
@@ -19,6 +18,7 @@ export function ConversationIssueGroupItem({
 }: ConversationIssueGroupItemProps) {
   const rowsId = useId();
   const unread = group.entries.some((entry) => !entry.read);
+  const status = conversationStatus(group.entries);
   return (
     <li className="flex flex-col">
       <h3>
@@ -27,7 +27,7 @@ export function ConversationIssueGroupItem({
           aria-expanded={!collapsed}
           aria-controls={rowsId}
           onClick={onToggle}
-          className={`relative flex h-8 w-full items-center gap-1.5 rounded-md px-2 text-sm hover:bg-hover ${FOCUS_RING_INSET}`}
+          className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left hover:bg-hover ${FOCUS_RING_INSET}`}
         >
           <Icon
             name="chevron-down"
@@ -35,24 +35,27 @@ export function ConversationIssueGroupItem({
             aria-hidden
             className={cn("shrink-0 text-text-tertiary", collapsed && "-rotate-90")}
           />
-          {group.issue.cycle === null ? null : (
-            <IssueStatusChip status={group.issue.cycle} showLabel={false} />
-          )}
-          <IssueLabel
-            identifier={group.issue.identifier}
-            title={group.issue.title}
-            className={cn(
-              "flex-1 text-left",
-              unread ? "font-medium text-foreground" : "text-text-secondary",
-            )}
-          />
+          <span className="flex min-w-0 flex-1 flex-col gap-1">
+            <span
+              className={cn(
+                "truncate text-sm",
+                unread ? "font-medium text-foreground" : "text-text-secondary",
+              )}
+            >
+              {group.issue.title}
+            </span>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">
+              <span className="font-mono">{group.issue.identifier}</span>
+              <span>{group.entries.length} conversations</span>
+              {status === null ? null : <StepStatusChip status={status} />}
+            </span>
+          </span>
           {unread && collapsed ? (
             <>
               <LiveDot tone="iris" size={6} />
               <span className="sr-only">Unread</span>
             </>
           ) : null}
-          <CountBadge count={group.entries.length} tone="neutral" />
         </button>
       </h3>
       {collapsed ? null : (

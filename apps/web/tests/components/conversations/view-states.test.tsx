@@ -98,7 +98,7 @@ it("keeps the loaded threads on screen when a refresh fails", async () => {
   const { container, cleanup } = await mount(<ConversationsView />);
 
   expect(container.textContent).toContain("Couldn’t refresh");
-  expect(container.textContent).toContain("Implement");
+  expect(container.textContent).toContain("Ship it");
   expect(container.textContent).not.toContain("Couldn’t load the conversations");
   await cleanup();
 });
@@ -149,7 +149,7 @@ it("does not read a thread that is already read, nor one the host does not list"
   await foreign.cleanup();
 });
 
-it("moves an issue out of Active on the frame that closes its cycle", async () => {
+it("moves an issue out of Following on the frame that closes its cycle", async () => {
   conversations = {
     data: snapshot([conversationEntry()]),
     dataUpdatedAt: Date.now(),
@@ -158,7 +158,7 @@ it("moves an issue out of Active on the frame that closes its cycle", async () =
   const { container, rerender, cleanup } = await mount(<ConversationsView />);
   const sectionOf = () =>
     [...container.querySelectorAll("h2")].map((heading) => heading.textContent);
-  expect(sectionOf()).toEqual(["Active1"]);
+  expect(sectionOf()).toEqual(["Following1"]);
 
   conversations = {
     data: snapshot([
@@ -172,6 +172,6 @@ it("moves an issue out of Active on the frame that closes its cycle", async () =
   };
   await rerender(<ConversationsView />);
 
-  expect(sectionOf()).toEqual(["Recently finished1"]);
+  expect(sectionOf()).toEqual(["Recently finished11 unread"]);
   await cleanup();
 });
