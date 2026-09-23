@@ -1,5 +1,6 @@
 import { join } from "node:path";
 
+import type { DaemonEndpoint } from "@otomat/client";
 import type {
   DesktopUpdateSnapshot,
   LinearDeliverySnapshot,
@@ -55,12 +56,12 @@ interface DesktopRuntimeOptions {
   version: string;
   installability: Installability;
   updaterPort: UpdaterPort;
-  localDaemonUrl(): string;
+  localDaemon(): DaemonEndpoint | null;
   onRemoteStatus(status: RemoteHostStatus): void;
   onLinearDelivery(snapshot: LinearDeliverySnapshot): void;
   onUpdate(snapshot: DesktopUpdateSnapshot): void;
-  applyRendererUrl(url: string): void;
-  onSandboxDaemonStarted(url: string): void;
+  applyRendererEndpoint(endpoint: DaemonEndpoint): void;
+  onSandboxDaemonStarted(daemon: DaemonEndpoint): void;
 }
 
 export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRuntime {
@@ -96,10 +97,10 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
   const hosts = new ExecutionHostManager({
     dataDir: dataDirectory.root,
     log: (message) => desktopLog.write(message),
-    localDaemonUrl: options.localDaemonUrl,
+    localDaemon: options.localDaemon,
     onRemoteStatus: options.onRemoteStatus,
-    onRemoteConnected: (alias, url) => void sandbox.ensureRemote(alias, url),
-    applyRendererUrl: options.applyRendererUrl,
+    onRemoteConnected: (alias, endpoint) => void sandbox.ensureRemote(alias, endpoint),
+    applyRendererEndpoint: options.applyRendererEndpoint,
     expectedBuild: options.expectedBuild,
     deployment,
     repo: OTOMAT_GITHUB_REPO,
@@ -115,7 +116,7 @@ export function createDesktopRuntime(options: DesktopRuntimeOptions): DesktopRun
     log: (message) => desktopLog.write(message),
   });
   const capacity = new HostCapacityActions({
-    daemonUrl: (hostId) => hosts.catalog.resolveBaseUrl(hostId),
+    daemon: (hostId) => hosts.catalog.resolveEndpoint(hostId),
     log: (message) => desktopLog.write(message),
   });
   const updater = new DesktopUpdater({

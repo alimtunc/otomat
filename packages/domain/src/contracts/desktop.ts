@@ -123,6 +123,9 @@ export interface OtomatDesktopBridge {
   notifications: DesktopNotificationsBridge;
   /** Origin of the host active at page load: the local daemon, or the SSH tunnel's local end. */
   readonly daemonUrl: string;
+  /** Secret of the active host's daemon, current across host switches and daemon restarts. */
+  daemonToken(): string;
+  onDaemonToken(listener: (token: string) => void): () => void;
   /** Active host at page load; a later switch answers with its own origin. */
   readonly executionHostId: ExecutionHostId;
   /** Configured `~/.ssh/config` alias of the remote host, or null when none is configured. */

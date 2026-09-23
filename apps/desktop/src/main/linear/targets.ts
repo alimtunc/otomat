@@ -1,12 +1,15 @@
+import type { DaemonEndpoint } from "@otomat/client";
 import type { ExecutionHostId } from "@otomat/domain";
+
+import type { ResolvedDaemonEndpoint } from "../remote/host/command-endpoint.js";
 
 /** One daemon the Linear key belongs on, with the reason it cannot take it right now. */
 export interface LinearDaemonTarget {
   id: ExecutionHostId;
   label: string;
-  /** Base URL of that host's daemon, or null while it cannot be reached. */
-  url: string | null;
-  /** Why the daemon cannot be reached; null when `url` is set. */
+  /** That host's daemon, or null while it cannot be reached. */
+  endpoint: DaemonEndpoint | null;
+  /** Why the daemon cannot be reached; null when `endpoint` is set. */
   unavailable: string | null;
 }
 
@@ -14,19 +17,17 @@ export interface LinearDaemonTarget {
 export interface LinearHostSource {
   readonly remoteSshAlias: string | null;
   readonly catalog: {
-    resolveBaseUrl(hostId: ExecutionHostId): { url: string } | { message: string };
+    resolveEndpoint(hostId: ExecutionHostId): ResolvedDaemonEndpoint;
   };
 }
-
-type ResolvedDaemonUrl = ReturnType<LinearHostSource["catalog"]["resolveBaseUrl"]>;
 
 function target(
   id: ExecutionHostId,
   label: string,
-  resolved: ResolvedDaemonUrl,
+  resolved: ResolvedDaemonEndpoint,
 ): LinearDaemonTarget {
-  if ("url" in resolved) return { id, label, url: resolved.url, unavailable: null };
-  return { id, label, url: null, unavailable: resolved.message };
+  if ("message" in resolved) return { id, label, endpoint: null, unavailable: resolved.message };
+  return { id, label, endpoint: resolved, unavailable: null };
 }
 
 /**
@@ -35,8 +36,9 @@ function target(
  * host, so a reconnect that is already possible starts here.
  */
 export function linearTargets(hosts: LinearHostSource): LinearDaemonTarget[] {
-  const targets = [target("local", "Local", hosts.catalog.resolveBaseUrl("local"))];
+  const targets = [target("local", "Local", hosts.catalog.resolveEndpoint("local"))];
   const alias = hosts.remoteSshAlias;
-  if (alias !== null) targets.push(target("remote", alias, hosts.catalog.resolveBaseUrl("remote")));
+  if (alias !== null)
+    targets.push(target("remote", alias, hosts.catalog.resolveEndpoint("remote")));
   return targets;
 }

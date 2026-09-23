@@ -37,11 +37,10 @@ const SETTLED_RUN_STATUSES = new Set(["review_ready", "succeeded", "failed", "ca
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function request(baseUrl, path, init) {
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...init,
-    headers: init?.body ? { "content-type": "application/json" } : undefined,
-  });
+async function request(daemon, path, init) {
+  const headers = { authorization: `Bearer ${daemon.token}` };
+  if (init?.body) headers["content-type"] = "application/json";
+  const response = await fetch(`${daemon.baseUrl}${path}`, { ...init, headers });
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(`${init?.method ?? "GET"} ${path} failed: ${response.status} ${detail}`);
@@ -50,48 +49,48 @@ async function request(baseUrl, path, init) {
 }
 
 /** Null once the daemon answers, else why it never did: a preview that cannot boot must say so. */
-async function waitForHealth(baseUrl, timeoutMs) {
+async function waitForHealth(daemon, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   let lastError = null;
   while (Date.now() < deadline) {
     try {
-      await request(baseUrl, "/health");
+      await request(daemon, "/health");
       return null;
     } catch (error) {
       lastError = error;
       await delay(200);
     }
   }
-  return new Error(`${baseUrl}/health never answered`, { cause: lastError });
+  return new Error(`${daemon.baseUrl}/health never answered`, { cause: lastError });
 }
 
-async function waitForSettledRun(baseUrl, runId, timeoutMs) {
+async function waitForSettledRun(daemon, runId, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const { run } = await request(baseUrl, `/runs/${runId}`);
+    const { run } = await request(daemon, `/runs/${runId}`);
     if (SETTLED_RUN_STATUSES.has(run.status)) return run.status;
     await delay(500);
   }
   return null;
 }
 
-async function seedIssue(baseUrl, projectId, entry, runTimeoutMs) {
-  const issue = await request(baseUrl, "/issues", {
+async function seedIssue(daemon, projectId, entry, runTimeoutMs) {
+  const issue = await request(daemon, "/issues", {
     method: "POST",
     body: JSON.stringify({ project_id: projectId, title: entry.title, body: entry.body }),
   });
   if (entry.launch !== null) {
-    const { run } = await request(baseUrl, "/runs", {
+    const { run } = await request(daemon, "/runs", {
       method: "POST",
       body: JSON.stringify({ issue_id: issue.id, runtime: "fake" }),
     });
     if (entry.launch === "abort") {
-      await request(baseUrl, `/runs/${run.id}/abort`, { method: "POST" });
+      await request(daemon, `/runs/${run.id}/abort`, { method: "POST" });
     }
-    await waitForSettledRun(baseUrl, run.id, runTimeoutMs);
+    await waitForSettledRun(daemon, run.id, runTimeoutMs);
   }
   if (entry.status !== null) {
-    await request(baseUrl, `/issues/${issue.id}/status`, {
+    await request(daemon, `/issues/${issue.id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status: entry.status }),
     });
@@ -100,12 +99,18 @@ async function seedIssue(baseUrl, projectId, entry, runTimeoutMs) {
 }
 
 /** Fills an empty preview database with issues and simulated runs; a filled one is left alone. */
-export async function seedPreview({ baseUrl, healthTimeoutMs = 60_000, runTimeoutMs = 120_000 }) {
-  const unhealthy = await waitForHealth(baseUrl, healthTimeoutMs);
+export async function seedPreview({
+  baseUrl,
+  token,
+  healthTimeoutMs = 60_000,
+  runTimeoutMs = 120_000,
+}) {
+  const daemon = { baseUrl, token };
+  const unhealthy = await waitForHealth(daemon, healthTimeoutMs);
   if (unhealthy !== null) throw unhealthy;
-  const issues = await request(baseUrl, "/issues");
+  const issues = await request(daemon, "/issues");
   if (issues.length > 0) return { seeded: 0, reason: "issues_exist" };
-  const projects = await request(baseUrl, "/projects");
+  const projects = await request(daemon, "/projects");
   const projectId = projects[0]?.id;
   if (projectId === undefined) return { seeded: 0, reason: "no_project" };
 
@@ -113,7 +118,7 @@ export async function seedPreview({ baseUrl, healthTimeoutMs = 60_000, runTimeou
   // spawns its own worker process.
   let seeded = 0;
   for (const entry of SEED_ISSUES) {
-    await seedIssue(baseUrl, projectId, entry, runTimeoutMs);
+    await seedIssue(daemon, projectId, entry, runTimeoutMs);
     seeded += 1;
   }
   return { seeded, reason: null };
@@ -121,7 +126,9 @@ export async function seedPreview({ baseUrl, healthTimeoutMs = 60_000, runTimeou
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const port = process.env.OTOMAT_DAEMON_PORT ?? "4331";
-  seedPreview({ baseUrl: `http://127.0.0.1:${port}/api` })
+  const token = process.env.OTOMAT_DAEMON_TOKEN;
+  if (!token) throw new Error("OTOMAT_DAEMON_TOKEN is not set");
+  seedPreview({ baseUrl: `http://127.0.0.1:${port}/api`, token })
     .then(({ seeded, reason }) => {
       const detail = reason === null ? "" : ` (${reason})`;
       console.log(`[otomat] preview seed: ${seeded} issues${detail}`);

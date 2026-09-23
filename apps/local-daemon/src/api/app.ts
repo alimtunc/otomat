@@ -38,21 +38,33 @@ import { createSourceControlRoutes } from "./routes/source-control.js";
 import { createUsageRoutes } from "./routes/usage.js";
 import { createWorkflowPresetRoutes } from "./routes/workflow-presets.js";
 import { createWorkspaceRoutes } from "./routes/workspaces.js";
-import { allowedOrigin, hostGuard } from "./security.js";
+import {
+  allowedOrigin,
+  hostGuard,
+  refuseForeignMutations,
+  requireDaemonToken,
+} from "./security.js";
 
-/**
- * Builds the daemon's Hono app: a host-guard then CORS on `/api/*` (the guard runs
- * first, so a rejected `Host` never reaches CORS), the correlation-id log that lets a
- * failure be traced back to this host, JSON compression, the mounted route groups, and a JSON
- * fallthrough — unmatched routes return 404 `not_found`, `HTTPException`s are
- * passed through, and any other thrown error is logged and returned as 500 `internal_error`.
- */
+// The bearer header preflights every renderer GET; Chromium caps the cache at two hours.
+const PREFLIGHT_MAX_AGE_SECONDS = 7200;
+
+/** CORS runs before the origin and token guards so it answers preflights and keeps their refusals readable. */
 export function createApiApp(deps: ApiDeps): Hono {
   const app = new Hono();
   const diagnosticLog = new DiagnosticLogRing();
+  const allowOrigin = allowedOrigin();
 
   app.use("/api/*", hostGuard());
-  app.use("/api/*", cors({ origin: allowedOrigin(), exposeHeaders: [CORRELATION_ID_HEADER] }));
+  app.use(
+    "/api/*",
+    cors({
+      origin: allowOrigin,
+      exposeHeaders: [CORRELATION_ID_HEADER],
+      maxAge: PREFLIGHT_MAX_AGE_SECONDS,
+    }),
+  );
+  app.use("/api/*", refuseForeignMutations(allowOrigin));
+  app.use("/api/*", requireDaemonToken(deps.token));
   app.use("/api/*", correlatedRequestLog(diagnosticLog));
   app.use("/api/*", ...jsonCompression);
 

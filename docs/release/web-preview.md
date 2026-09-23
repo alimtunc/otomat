@@ -29,7 +29,8 @@ No daemon port exists anywhere on the internet: the container only answers its o
 Worker only answers requests carrying the client pair, and the façade only lends that pair to a
 request whose Cloudflare Access identity it has verified at the origin. The daemon runs with no
 `OTOMAT_ALLOWED_ORIGINS`, so its loopback `Host` guard and CORS behaviour are exactly what a
-desktop install gets.
+desktop install gets; the Worker starts the container with its client secret as the daemon token
+and presents it on every forwarded request.
 
 ## Resource ownership
 

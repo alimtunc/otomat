@@ -17,6 +17,7 @@ it("drops the daemon, worker, Electron and nested-session variables but keeps th
     OTOMAT_ALLOWED_ORIGINS: "app://otomat",
     OTOMAT_PROJECT_ROOT: "/repo",
     OTOMAT_LINEAR_API_KEY: "lin-key",
+    OTOMAT_DAEMON_TOKEN: "daemon-token",
     ELECTRON_RUN_AS_NODE: "1",
     CLAUDECODE: "1",
     CLAUDE_CODE_ENTRYPOINT: "cli",

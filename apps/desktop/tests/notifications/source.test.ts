@@ -24,7 +24,7 @@ it("reports disconnected hosts and clears the error when a host is removed", asy
       host: { id: "remote", label: "vps", kind: "ssh" },
       active: false,
       status: { phase: "disconnected", detail: null },
-      url: null,
+      endpoint: null,
     },
   ]);
   const stop = pollNotifications({ targets }, delivery);

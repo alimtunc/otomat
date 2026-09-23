@@ -1,4 +1,4 @@
-import { createDaemonClient, DaemonRequestError } from "@otomat/client";
+import { createDaemonClient, DaemonRequestError, type DaemonEndpoint } from "@otomat/client";
 import {
   linearErrorSchema,
   type ConnectLinearRequest,
@@ -25,12 +25,12 @@ function refusalOf(error: unknown): LinearHandoffError | null {
 }
 
 export async function pushLinearKey(
-  daemonUrl: string,
+  endpoint: DaemonEndpoint,
   request: ConnectLinearRequest,
 ): Promise<void> {
   let connection: LinearConnectionContract;
   try {
-    connection = await createDaemonClient({ baseUrl: daemonUrl }).connectLinear(request);
+    connection = await createDaemonClient(endpoint).connectLinear(request);
   } catch (error) {
     throw refusalOf(error) ?? error;
   }
@@ -42,14 +42,19 @@ export async function pushLinearKey(
   }
 }
 
-export async function clearLinearKey(daemonUrl: string, connectionId: string): Promise<void> {
+export async function clearLinearKey(
+  endpoint: DaemonEndpoint,
+  connectionId: string,
+): Promise<void> {
   try {
-    await createDaemonClient({ baseUrl: daemonUrl }).disconnectLinear(connectionId);
+    await createDaemonClient(endpoint).disconnectLinear(connectionId);
   } catch (error) {
     throw refusalOf(error) ?? error;
   }
 }
 
-export function readLinearConnections(daemonUrl: string): Promise<LinearConnectionContract[]> {
-  return createDaemonClient({ baseUrl: daemonUrl }).listLinearConnections();
+export function readLinearConnections(
+  endpoint: DaemonEndpoint,
+): Promise<LinearConnectionContract[]> {
+  return createDaemonClient(endpoint).listLinearConnections();
 }

@@ -1,12 +1,19 @@
 // Smoke test for the bundled daemon: boot `node dist/index.js` against a throwaway
-// DB, confirm it serves /api/health, then shut it down. Guards against shipping a
-// dist that only runs under `tsx src`. Run after `pnpm --filter @otomat/local-daemon build`.
+// DB, confirm it serves /api/health and refuses the rest without the token it published,
+// then shut it down. Guards against shipping a dist that only runs under `tsx src`.
+// Run after `pnpm --filter @otomat/local-daemon build`.
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { WORKER_JOB_FILE_ENV, WORKER_START_TOKEN_ENV } from "@otomat/domain";
+import {
+  DAEMON_TOKEN_ENV,
+  DAEMON_TOKEN_FILE,
+  daemonAuthorization,
+  WORKER_JOB_FILE_ENV,
+  WORKER_START_TOKEN_ENV,
+} from "@otomat/domain";
 
 const PORT = 43190;
 const dir = mkdtempSync(join(tmpdir(), "otomat-smoke-"));
@@ -19,6 +26,7 @@ const childEnv = {
 delete childEnv.OTOMAT_LINEAR_API_KEY;
 delete childEnv[WORKER_JOB_FILE_ENV];
 delete childEnv[WORKER_START_TOKEN_ENV];
+delete childEnv[DAEMON_TOKEN_ENV];
 const child = spawn(process.execPath, ["dist/index.js"], {
   env: childEnv,
   stdio: ["ignore", "pipe", "pipe"],
@@ -46,6 +54,14 @@ let code = 0;
 try {
   const body = await waitForHealth(10_000);
   if (body.status !== "ok") throw new Error(`unexpected health body: ${JSON.stringify(body)}`);
+  const anonymous = await fetch(`http://localhost:${PORT}/api/repositories`);
+  if (anonymous.status !== 401)
+    throw new Error(`unauthenticated read answered ${anonymous.status}`);
+  const token = readFileSync(join(dir, DAEMON_TOKEN_FILE), "utf8");
+  const authorized = await fetch(`http://localhost:${PORT}/api/repositories`, {
+    headers: { authorization: daemonAuthorization(token) },
+  });
+  if (!authorized.ok) throw new Error(`authorized read answered ${authorized.status}`);
   console.log(`smoke ok: node dist/index.js healthy on :${PORT} -> ${JSON.stringify(body)}`);
 } catch (error) {
   code = 1;

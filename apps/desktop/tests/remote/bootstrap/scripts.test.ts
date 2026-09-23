@@ -60,6 +60,18 @@ it("keeps the remote daemon loopback-bound with the packaged renderer origin all
   expect(script).not.toContain("0.0.0.0");
 });
 
+it("starts the daemon with a fresh owner-only token and reports it only over ssh", () => {
+  const script = startOrVerifyDaemonScript(STABLE_DEPLOYMENT);
+  expect(script).toContain('DAEMON_TOKEN_PATH="$OTOMAT_HOME/data/daemon-token"');
+  expect(script).toContain('(umask 077 && printf "%s" "$DAEMON_TOKEN" > "$DAEMON_TOKEN_PATH")');
+  expect(script).toContain('OTOMAT_DAEMON_TOKEN="$DAEMON_TOKEN" OTOMAT_DAEMON_HOST=127.0.0.1');
+  expect(script).toContain('echo "OTOMAT_REMOTE:STARTED:$DAEMON_PID:$DAEMON_TOKEN"');
+  expect(script).toContain(
+    'echo "OTOMAT_REMOTE:RUNNING:$PID:$(cat "$DAEMON_TOKEN_PATH" 2>/dev/null)"',
+  );
+  expect(script).not.toMatch(/node "\$ENTRY".*TOKEN/);
+});
+
 it("detaches the daemon, verifies it survived boot, and records a pidfile", () => {
   const script = startOrVerifyDaemonScript(STABLE_DEPLOYMENT);
   expect(script).toContain("nohup node");
@@ -70,8 +82,9 @@ it("detaches the daemon, verifies it survived boot, and records a pidfile", () =
 });
 
 it.each([
-  ["OTOMAT_REMOTE:RUNNING:4242", { kind: "running", pid: 4242 }],
-  ["OTOMAT_REMOTE:STARTED:7", { kind: "started", pid: 7 }],
+  ["OTOMAT_REMOTE:RUNNING:4242:kept-token", { kind: "running", pid: 4242, token: "kept-token" }],
+  ["OTOMAT_REMOTE:RUNNING:4242:", { kind: "running", pid: 4242, token: "" }],
+  ["OTOMAT_REMOTE:STARTED:7:new-token", { kind: "started", pid: 7, token: "new-token" }],
   [
     "OTOMAT_REMOTE:NO_DAEMON:/home/u/.otomat/daemon/dist/index.js",
     { kind: "daemon_missing", entry: "/home/u/.otomat/daemon/dist/index.js" },
@@ -91,18 +104,22 @@ it("ignores login-shell noise around the token and keeps the last token", () => 
     "Welcome to Ubuntu 24.04 LTS",
     "Last login: Fri Aug  1 10:00:00 2026",
     "OTOMAT_REMOTE:NO_DAEMON:/stale/entry",
-    "OTOMAT_REMOTE:STARTED:1234",
+    "OTOMAT_REMOTE:STARTED:1234:new-token",
     "",
   ].join("\n");
-  expect(parseBootstrapOutput(stdout)).toEqual({ kind: "started", pid: 1234 });
+  expect(parseBootstrapOutput(stdout)).toEqual({ kind: "started", pid: 1234, token: "new-token" });
 });
 
-it.each(["", "no token at all", "OTOMAT_REMOTE:STARTED:not-a-pid", "OTOMAT_REMOTE:UNKNOWN:x"])(
-  "returns null for unusable output %j",
-  (stdout) => {
-    expect(parseBootstrapOutput(stdout)).toBeNull();
-  },
-);
+it.each([
+  "",
+  "no token at all",
+  "OTOMAT_REMOTE:STARTED:not-a-pid:token",
+  "OTOMAT_REMOTE:STARTED:1234",
+  "OTOMAT_REMOTE:STARTED:1234:bad token\r",
+  "OTOMAT_REMOTE:UNKNOWN:x",
+])("returns null for unusable output %j", (stdout) => {
+  expect(parseBootstrapOutput(stdout)).toBeNull();
+});
 
 it("stops by pidfile pid only — never by pattern — and clears the pidfile", () => {
   const script = stopDaemonScript(STABLE_DEPLOYMENT);

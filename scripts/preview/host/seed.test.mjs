@@ -4,6 +4,8 @@ import { test } from "node:test";
 
 import { seedPreview } from "./seed.mjs";
 
+const TOKEN = "preview-daemon-token";
+
 async function readJson(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
@@ -16,6 +18,7 @@ function daemonStub(issues) {
   const runs = new Map();
   const server = createServer(async (req, res) => {
     calls.push(`${req.method} ${req.url}`);
+    if (req.headers.authorization !== `Bearer ${TOKEN}`) return res.writeHead(401).end();
     const body = await readJson(req);
     const json = (payload) => {
       res.writeHead(200, { "content-type": "application/json" });
@@ -51,15 +54,20 @@ async function withStub(issues, run) {
   await new Promise((resolve) => stub.server.listen(0, "127.0.0.1", resolve));
   const { port } = stub.server.address();
   try {
-    return await run({ ...stub, baseUrl: `http://127.0.0.1:${port}/api` });
+    return await run({ ...stub, baseUrl: `http://127.0.0.1:${port}/api`, token: TOKEN });
   } finally {
     await new Promise((resolve) => stub.server.close(resolve));
   }
 }
 
 test("fills an empty database with issues, a settled run and an aborted one", async () => {
-  await withStub([], async ({ baseUrl, calls, launches, runs }) => {
-    const result = await seedPreview({ baseUrl, healthTimeoutMs: 2_000, runTimeoutMs: 5_000 });
+  await withStub([], async ({ baseUrl, token, calls, launches, runs }) => {
+    const result = await seedPreview({
+      baseUrl,
+      token,
+      healthTimeoutMs: 2_000,
+      runTimeoutMs: 5_000,
+    });
 
     assert.deepEqual(result, { seeded: 4, reason: null });
     assert.equal(calls.filter((call) => call === "POST /api/issues").length, 4);
@@ -70,16 +78,21 @@ test("fills an empty database with issues, a settled run and an aborted one", as
 });
 
 test("launches every seeded run on the simulated runtime, never on a provider", async () => {
-  await withStub([], async ({ baseUrl, launches }) => {
-    await seedPreview({ baseUrl, healthTimeoutMs: 2_000, runTimeoutMs: 5_000 });
+  await withStub([], async ({ baseUrl, token, launches }) => {
+    await seedPreview({ baseUrl, token, healthTimeoutMs: 2_000, runTimeoutMs: 5_000 });
 
     for (const launch of launches) assert.equal(launch.runtime, "fake");
   });
 });
 
 test("leaves a database that already holds issues untouched", async () => {
-  await withStub([{ id: "existing" }], async ({ baseUrl, calls }) => {
-    const result = await seedPreview({ baseUrl, healthTimeoutMs: 2_000, runTimeoutMs: 5_000 });
+  await withStub([{ id: "existing" }], async ({ baseUrl, token, calls }) => {
+    const result = await seedPreview({
+      baseUrl,
+      token,
+      healthTimeoutMs: 2_000,
+      runTimeoutMs: 5_000,
+    });
 
     assert.deepEqual(result, { seeded: 0, reason: "issues_exist" });
     assert.equal(calls.filter((call) => call.startsWith("POST /api/")).length, 0);

@@ -655,8 +655,9 @@ as-is so SSE streams, and the daemon's loopback protections are **untouched**. T
 verifies the request's Access JWT at the origin (`functions/_access.ts`, fail closed while
 unconfigured), so it lends its machine credential only to an identity Access actually authenticated.
 Nothing of the browser's identity crosses over — no `Origin`, no `Cookie`, no `Host` — and the
-worker rewrites `Host` to loopback, so `hostGuard` and `allowedOrigin` keep refusing everything else
-with `OTOMAT_ALLOWED_ORIGINS` unset.
+worker rewrites `Host` to loopback and presents the daemon token — its client secret, which it
+starts the container with — so `hostGuard` and `allowedOrigin` keep refusing everything else with
+`OTOMAT_ALLOWED_ORIGINS` unset.
 
 **The daemon runs in a Cloudflare container, not on the operator's VPS.** Each pull request owns
 one Worker (`otomat-preview-pr-<n>`, deployed by `scripts/preview/instance.mjs` from CI) whose
@@ -2208,6 +2209,35 @@ things the reload used to conflate:
   and the navigation only once the target host answered (never optimistically,
   so no view paints one host's data under another's tab), and the tabs' badges
   come from the per-host Inbox polls described above.
+
+## Who May Call the Daemon
+
+Reaching loopback is not authority: a page on any `localhost` port, a compromised dependency or an
+agent the daemon itself launched can all reach it. Every `/api/*` route but `/api/health` therefore
+requires a bearer secret minted per daemon launch (`requireDaemonToken`), and a mutation whose
+`Origin` is neither loopback nor allowlisted is refused before it runs (`refuseForeignMutations`) —
+CORS alone only hides the answer to a cross-site simple request, it does not stop it executing.
+
+- **Who mints it.** The desktop shell generates the local daemon's token and passes it in
+  `OTOMAT_DAEMON_TOKEN`; the remote start-or-verify script mints one per remote launch, keeps it
+  owner-only in `data/daemon-token` and reports it over the ssh round trip, so it travels exactly
+  as the tunnel origin does. A daemon started with neither generates its own and publishes it in
+  the same owner-only file beside its database once its server listens, so a second daemon that
+  fails to bind never replaces the live token. The daemon deletes the variable from its own env at
+  boot, so no worker or provider inherits it.
+- **How callers present it.** `@otomat/client` sends `Authorization: Bearer`; EventSource and
+  `<img>` cannot set a header, so the stream and contribution-image URLs carry `access_token`,
+  which the daemon honors on GET only. Main-process code passes a `DaemonEndpoint` (origin and
+  token) to every daemon caller. The renderer reads `daemonToken()` from the bridge on
+  every request: the preload follows the main process's pushes, so a host switch or a restarted
+  daemon (an update, a reconnect) never leaves the cockpit on a dead token. A 401 ends an
+  EventSource for good, so every stream hook also reopens on `useDaemonToken()`.
+- **Where no one holds it in the page.** `pnpm dev`'s Vite proxy adds the standalone daemon's
+  token only to requests the browser itself marks `Sec-Fetch-Site: same-origin`; a web preview's
+  Worker presents it upstream (see [Web Previews Per Pull Request](#web-previews-per-pull-request)).
+- **What it costs.** The header makes every renderer GET preflighted; the daemon answers
+  preflights with a two-hour `Access-Control-Max-Age`, Chromium's ceiling. A same-user process can
+  still read the token from the daemon's env or file — out of reach of a bearer scheme.
 
 ## Issue And Run Catalogs
 

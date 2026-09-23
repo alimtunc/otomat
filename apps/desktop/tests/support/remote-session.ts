@@ -1,3 +1,4 @@
+import type { DaemonEndpoint } from "@otomat/client";
 import type { RemoteHostStatus } from "@otomat/domain";
 
 import type { RemoteSessionHandle } from "#main/remote/session";
@@ -37,6 +38,12 @@ export class FakeRemoteSession implements RemoteSessionHandle {
 
   get url(): string | null {
     return this.options.url === undefined ? "http://127.0.0.1:49200" : this.options.url;
+  }
+
+  get endpoint(): DaemonEndpoint | null {
+    const baseUrl = this.url;
+    if (this.currentStatus.phase !== "connected" || baseUrl === null) return null;
+    return { baseUrl, token: "remote-token" };
   }
 
   get remoteBuild(): string | null {

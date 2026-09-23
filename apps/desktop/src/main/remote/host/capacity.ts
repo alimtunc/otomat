@@ -6,9 +6,11 @@ import {
 } from "@otomat/client";
 import type { AgentCapacity, ExecutionHostCapacityResult, ExecutionHostId } from "@otomat/domain";
 
+import type { ResolvedDaemonEndpoint } from "./command-endpoint.js";
+
 export interface HostCapacityActionsOptions {
   /** Where that host's daemon answers, or why it cannot be reached; asking warms an idle remote host. */
-  daemonUrl(hostId: ExecutionHostId): { url: string } | { message: string };
+  daemon(hostId: ExecutionHostId): ResolvedDaemonEndpoint;
   log(message: string): void;
   fetchImpl?: typeof fetch;
 }
@@ -34,12 +36,9 @@ export class HostCapacityActions {
     hostId: ExecutionHostId,
     call: (client: DaemonClient) => Promise<AgentCapacity>,
   ): Promise<ExecutionHostCapacityResult> {
-    const target = this.options.daemonUrl(hostId);
+    const target = this.options.daemon(hostId);
     if ("message" in target) return { ok: false, message: target.message };
-    const client = createDaemonClient({
-      baseUrl: target.url,
-      fetch: this.options.fetchImpl,
-    });
+    const client = createDaemonClient({ ...target, fetch: this.options.fetchImpl });
     try {
       return { ok: true, capacity: await call(client) };
     } catch (error) {

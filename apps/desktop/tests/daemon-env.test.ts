@@ -49,6 +49,16 @@ describe("buildDaemonEnv", () => {
     expect(JSON.stringify(env)).not.toContain("lin_api");
   });
 
+  it("carries only the token this launch minted, never an inherited one", () => {
+    const base = { port: 1, dbPath: "d", projectRoot: "p", path: "x" };
+    const baseEnv = { OTOMAT_DAEMON_TOKEN: "parent-token" };
+
+    expect(buildDaemonEnv({ ...base, baseEnv }).OTOMAT_DAEMON_TOKEN).toBeUndefined();
+    expect(buildDaemonEnv({ ...base, baseEnv, token: "launch-token" }).OTOMAT_DAEMON_TOKEN).toBe(
+      "launch-token",
+    );
+  });
+
   it("never inherits a process mode into a normal daemon start", () => {
     const env = buildDaemonEnv({
       port: 1,

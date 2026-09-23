@@ -13,13 +13,20 @@ import { stubGitHubService } from "./github.js";
 import { stubLinearService } from "./linear.js";
 import { stubReviewService } from "./review.js";
 
-/** `app.request` with the loopback Host header the api's host-guard requires. */
+export const TEST_DAEMON_TOKEN = "test-daemon-token";
+
+/** Loopback `Host` and daemon token headers the api's guards require. */
+export const AUTHORIZED_HEADERS = {
+  Host: "127.0.0.1",
+  Authorization: `Bearer ${TEST_DAEMON_TOKEN}`,
+};
+
 export async function request(
   app: Hono,
   path: string,
   init: RequestInit & { headers?: Record<string, string> } = {},
 ): Promise<Response> {
-  return app.request(path, { ...init, headers: { Host: "127.0.0.1", ...init.headers } });
+  return app.request(path, { ...init, headers: { ...AUTHORIZED_HEADERS, ...init.headers } });
 }
 
 export function post(app: Hono, path: string, body: unknown): Promise<Response> {
@@ -261,6 +268,7 @@ export function makeApiApp(
   return createApiApp({
     db: t.db,
     dbPath: t.dbPath,
+    token: TEST_DAEMON_TOKEN,
     name: "test-daemon",
     version: "9.9.9",
     build: "abc1234",

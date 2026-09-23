@@ -1,8 +1,9 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { get } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { DAEMON_TOKEN_FILE, daemonAuthorization } from "@otomat/domain";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { startDaemon, type DaemonHandle } from "#server";
@@ -83,4 +84,16 @@ it("exposes the daemon before the development Linear connection settles", async 
   expect(process.env.OTOMAT_LINEAR_API_KEY).toBeUndefined();
 
   linearResponse.resolve(response);
+});
+
+it("publishes the token it minted once it listens, and requires it", async () => {
+  scratch = mkdtempSync(join(tmpdir(), "otomat-server-"));
+  daemon = await startDaemon({ port: 0, dbPath: join(scratch, "otomat.db") });
+  const url = `http://127.0.0.1:${daemon.port}/api/repositories`;
+  const token = readFileSync(join(scratch, DAEMON_TOKEN_FILE), "utf8");
+
+  expect((await fetch(url)).status).toBe(401);
+  expect(
+    (await fetch(url, { headers: { authorization: daemonAuthorization(token) } })).status,
+  ).toBe(200);
 });

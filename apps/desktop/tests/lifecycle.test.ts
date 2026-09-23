@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { daemonAuthorization } from "@otomat/domain";
 import { afterEach, expect, it } from "vitest";
 
 import { DaemonController } from "#main/daemon";
@@ -37,6 +38,10 @@ function isAlive(pid: number): boolean {
   }
 }
 
+function authorization(token: string) {
+  return { authorization: daemonAuthorization(token) };
+}
+
 let dir: string | null = null;
 
 afterEach(() => {
@@ -60,7 +65,7 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
       baseEnv: envWithoutVitest(),
     });
 
-    const url = await controller.start();
+    const { baseUrl: url, token } = await controller.start();
     expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
     const pid = controller.pid;
     if (pid === undefined) throw new Error("Daemon did not expose its process id");
@@ -68,6 +73,9 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
     const health = await fetch(`${url}/api/health`);
     expect(health.ok).toBe(true);
     expect(await health.json()).toMatchObject({ status: "ok" });
+    expect((await fetch(`${url}/api/issues`)).status).toBe(401);
+    const issues = await fetch(`${url}/api/issues`, { headers: authorization(token) });
+    expect(issues.status).toBe(200);
 
     await controller.stop();
     expect(controller.running).toBe(false);
@@ -117,10 +125,10 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
       baseEnv: envWithoutVitest(),
     });
 
-    const firstUrl = await controller.start();
-    const before = await fetch(`${firstUrl}/api/issues`, {
+    const first = await controller.start();
+    const before = await fetch(`${first.baseUrl}/api/issues`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { ...authorization(first.token), "content-type": "application/json" },
       body: JSON.stringify({ project_id: "local-default", title: "Before backup" }),
     });
     expect(before.status).toBe(201);
@@ -134,19 +142,22 @@ it.skipIf(!existsSync(DAEMON_ENTRY))(
     );
     copyFileSync(dbPath, backupPath);
 
-    const secondUrl = await controller.start();
-    const after = await fetch(`${secondUrl}/api/issues`, {
+    const second = await controller.start();
+    const after = await fetch(`${second.baseUrl}/api/issues`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { ...authorization(second.token), "content-type": "application/json" },
       body: JSON.stringify({ project_id: "local-default", title: "After backup" }),
     });
     expect(after.status).toBe(201);
     await controller.stop();
 
     await controller.restoreBackup(backupPath);
-    const restoredUrl = await controller.start();
+    const restored = await controller.start();
+    const response = await fetch(`${restored.baseUrl}/api/issues`, {
+      headers: authorization(restored.token),
+    });
     // SAFETY: the daemon answers the issues route with an array of issue contracts.
-    const issues = (await (await fetch(`${restoredUrl}/api/issues`)).json()) as {
+    const issues = (await response.json()) as {
       title: string;
     }[];
     expect(issues.map((issue) => issue.title)).toContain("Before backup");

@@ -1,4 +1,9 @@
-import { createDaemonClient, DaemonRequestError, DaemonTransportError } from "@otomat/client";
+import {
+  createDaemonClient,
+  DaemonRequestError,
+  DaemonTransportError,
+  type DaemonEndpoint,
+} from "@otomat/client";
 import {
   repositoryDeletionErrorSchema,
   repositoryRegistrationErrorSchema,
@@ -17,28 +22,26 @@ import {
   type WorkspaceReconcileReport,
 } from "@otomat/domain";
 
-import type { RemoteSessionHandle } from "../session.js";
-import { resolveCommandBaseUrl, type ResolvedDaemonUrl } from "./command-url.js";
+import {
+  currentEndpoint,
+  resolveCommandEndpoint,
+  type CommandEndpointOptions,
+  type ResolvedDaemonEndpoint,
+} from "./command-endpoint.js";
 import { hostCommandRefusal } from "./refusal.js";
-
-export type { ResolvedDaemonUrl } from "./command-url.js";
 
 type DaemonClient = ReturnType<typeof createDaemonClient>;
 
-/** One configured host with the URL its own daemon answers on, or null while it cannot be reached. */
+/** One configured host with the endpoint its own daemon answers on, or null while it cannot be reached. */
 export interface HostTarget {
   host: ExecutionHostDescriptor;
   active: boolean;
   status: RemoteHostStatus | null;
-  url: string | null;
+  endpoint: DaemonEndpoint | null;
 }
 
-export interface HostCatalogOptions {
-  localDaemonUrl(): string;
+export interface HostCatalogOptions extends CommandEndpointOptions {
   activeHostId(): ExecutionHostId;
-  remoteSshAlias(): string | null;
-  remoteSession(): RemoteSessionHandle | null;
-  warmRemote(): Promise<RemoteHostStatus | null>;
   fetchImpl: typeof fetch;
   log(message: string): void;
 }
@@ -48,19 +51,22 @@ export class HostCatalog {
 
   async listProjects(): Promise<ExecutionHostProjectsEntry[]> {
     return Promise.all(
-      this.targets().map(async ({ url, ...entry }) => ({
+      this.targets().map(async ({ endpoint, ...entry }) => ({
         ...entry,
-        projects: url === null ? null : await this.read(url, "projects", (c) => c.listProjects()),
+        projects:
+          endpoint === null ? null : await this.read(endpoint, "projects", (c) => c.listProjects()),
       })),
     );
   }
 
   async listRepositories(): Promise<ExecutionHostRepositoriesEntry[]> {
     return Promise.all(
-      this.targets().map(async ({ url, ...entry }) => ({
+      this.targets().map(async ({ endpoint, ...entry }) => ({
         ...entry,
         repositories:
-          url === null ? null : await this.read(url, "repositories", (c) => c.listRepositories()),
+          endpoint === null
+            ? null
+            : await this.read(endpoint, "repositories", (c) => c.listRepositories()),
       })),
     );
   }
@@ -71,10 +77,10 @@ export class HostCatalog {
     path: string,
   ): Promise<ExecutionHostRegisterProjectResult> {
     if (path.trim() === "") return { ok: false, message: "Enter a repository path on the host." };
-    const target = await resolveCommandBaseUrl(this.options, hostId);
+    const target = await resolveCommandEndpoint(this.options, hostId);
     if ("message" in target) return { ok: false, message: target.message };
     try {
-      const created = await this.client(target.url).registerRepository({ path: path.trim() });
+      const created = await this.client(target).registerRepository({ path: path.trim() });
       return { ok: true, project: created.project };
     } catch (error) {
       const refusal = hostCommandRefusal(
@@ -103,10 +109,10 @@ export class HostCatalog {
     hostId: ExecutionHostId,
     repositoryId: string,
   ): Promise<ExecutionHostOperationResult> {
-    const target = await resolveCommandBaseUrl(this.options, hostId);
+    const target = await resolveCommandEndpoint(this.options, hostId);
     if ("message" in target) return { ok: false, message: target.message };
     try {
-      await this.client(target.url).deleteRepository(repositoryId);
+      await this.client(target).deleteRepository(repositoryId);
       return { ok: true };
     } catch (error) {
       const refusal = hostCommandRefusal(
@@ -158,31 +164,21 @@ export class HostCatalog {
   }
 
   /** Asking warms an idle remote host. */
-  resolveBaseUrl(hostId: ExecutionHostId): ResolvedDaemonUrl {
-    if (hostId === "local") {
-      const url = this.options.localDaemonUrl();
-      return url === "" ? { message: "The local daemon is not running yet." } : { url };
+  resolveEndpoint(hostId: ExecutionHostId): ResolvedDaemonEndpoint {
+    if (hostId === "remote" && this.options.remoteSshAlias() !== null) {
+      void this.options.warmRemote();
     }
-    if (this.options.remoteSshAlias() === null) {
-      return { message: "No remote host is configured." };
-    }
-    void this.options.warmRemote();
-    const session = this.options.remoteSession();
-    if (session === null || session.status.phase !== "connected" || session.url === null) {
-      return { message: "The remote host is not connected yet. Try again once its tunnel is up." };
-    }
-    return { url: session.url };
+    return currentEndpoint(this.options, hostId);
   }
 
   /** Asking is what brings an idle remote tunnel back up. */
   targets(): HostTarget[] {
-    const localUrl = this.options.localDaemonUrl();
     const targets: HostTarget[] = [
       {
         host: { id: "local", label: "Local", kind: "local" },
         active: this.options.activeHostId() === "local",
         status: null,
-        url: localUrl === "" ? null : localUrl,
+        endpoint: this.options.localDaemon(),
       },
     ];
     const alias = this.options.remoteSshAlias();
@@ -193,13 +189,13 @@ export class HostCatalog {
       host: { id: "remote", label: alias, kind: "ssh" },
       active: this.options.activeHostId() === "remote",
       status: session?.status ?? { phase: "disconnected", detail: null },
-      url: session !== null && session.status.phase === "connected" ? session.url : null,
+      endpoint: session?.endpoint ?? null,
     });
     return targets;
   }
 
-  private client(baseUrl: string): DaemonClient {
-    return createDaemonClient({ baseUrl, fetch: this.options.fetchImpl });
+  private client(endpoint: DaemonEndpoint): DaemonClient {
+    return createDaemonClient({ ...endpoint, fetch: this.options.fetchImpl });
   }
 
   /** Runs one call on the owning host's daemon alone; an unreachable or refusing host answers with prose. */
@@ -207,10 +203,10 @@ export class HostCatalog {
     hostId: ExecutionHostId,
     run: (client: DaemonClient) => Promise<T>,
   ): Promise<ExecutionHostCallResult<T>> {
-    const target = await resolveCommandBaseUrl(this.options, hostId);
+    const target = await resolveCommandEndpoint(this.options, hostId);
     if ("message" in target) return { ok: false, message: target.message };
     try {
-      return { ok: true, value: await run(this.client(target.url)) };
+      return { ok: true, value: await run(this.client(target)) };
     } catch (error) {
       const refusal = hostCommandRefusal(
         error,
@@ -227,19 +223,19 @@ export class HostCatalog {
 
   /** Unreachable, refused or invalid reads null (never a throw), so one dead host cannot blank a listing. */
   private async read<T>(
-    baseUrl: string,
+    endpoint: DaemonEndpoint,
     what: string,
     call: (client: DaemonClient) => Promise<T[]>,
   ): Promise<T[] | null> {
     try {
-      return await call(this.client(baseUrl));
+      return await call(this.client(endpoint));
     } catch (error) {
       if (error instanceof DaemonRequestError) return null;
       if (error instanceof DaemonTransportError) {
-        this.options.log(`Could not list ${what} from ${baseUrl}: ${String(error.cause)}`);
+        this.options.log(`Could not list ${what} from ${endpoint.baseUrl}: ${String(error.cause)}`);
         return null;
       }
-      this.options.log(`Host at ${baseUrl} returned an invalid ${what} list`);
+      this.options.log(`Host at ${endpoint.baseUrl} returned an invalid ${what} list`);
       return null;
     }
   }

@@ -1,4 +1,5 @@
 import {
+  DAEMON_TOKEN_ENV,
   MAINTENANCE_ACTION_ENV,
   RESTORE_BACKUP_ENV,
   WORKER_JOB_FILE_ENV,
@@ -22,6 +23,7 @@ export interface DaemonEnvOptions {
   runAsNode?: boolean;
   /** Build the shell knows itself to be; an unstamped daemon bundle reports it from `/api/health`. */
   buildSha?: string;
+  token?: string;
 }
 
 export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
@@ -41,8 +43,10 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
   delete env.OTOMAT_WORKTREES_ROOT;
   delete env.OTOMAT_ALLOWED_ORIGINS;
   delete env.OTOMAT_BUILD_SHA;
+  delete env[DAEMON_TOKEN_ENV];
   if (options.allowedOrigin !== undefined) env.OTOMAT_ALLOWED_ORIGINS = options.allowedOrigin;
   if (options.runAsNode === true) env.ELECTRON_RUN_AS_NODE = "1";
   if (options.buildSha !== undefined) env.OTOMAT_BUILD_SHA = options.buildSha;
+  if (options.token !== undefined) env[DAEMON_TOKEN_ENV] = options.token;
   return env;
 }

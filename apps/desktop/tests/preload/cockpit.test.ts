@@ -1,7 +1,10 @@
+import type { OtomatDesktopBridge } from "@otomat/domain";
 import { afterEach, expect, it, vi } from "vitest";
 
 import {
   BUILD_SYNC_CHANNEL,
+  DAEMON_TOKEN_CHANGED_CHANNEL,
+  DAEMON_TOKEN_CHANNEL,
   DAEMON_URL_CHANNEL,
   EXECUTION_HOST_SYNC_CHANNEL,
   PREVIEW_SYNC_CHANNEL,
@@ -15,17 +18,18 @@ afterEach(() => {
 });
 
 function mockElectron(sendSync: (typeof import("electron"))["ipcRenderer"]["sendSync"]) {
-  const exposeInMainWorld = vi.fn();
+  const exposeInMainWorld = vi.fn<(key: string, api: OtomatDesktopBridge) => void>();
+  const on = vi.fn<(channel: string, listener: (event: unknown, token: string) => void) => void>();
   vi.doMock("electron", () => ({
     contextBridge: { exposeInMainWorld },
     ipcRenderer: {
       invoke: vi.fn(),
-      on: vi.fn(),
+      on,
       off: vi.fn(),
       sendSync,
     },
   }));
-  return { exposeInMainWorld };
+  return { exposeInMainWorld, on };
 }
 
 it("rejects an invalid daemon URL before exposing the cockpit bridge", async () => {
@@ -67,12 +71,44 @@ it("rejects invalid build metadata before exposing the cockpit bridge", async ()
   expect(exposeInMainWorld).not.toHaveBeenCalled();
 });
 
+it("rejects an invalid daemon token before exposing the cockpit bridge", async () => {
+  const { exposeInMainWorld } = mockElectron((channel) => {
+    if (channel === DAEMON_URL_CHANNEL) return "http://127.0.0.1:4319";
+    if (channel === EXECUTION_HOST_SYNC_CHANNEL) return { id: "local", ssh_alias: null };
+    if (channel === PREVIEW_SYNC_CHANNEL) return false;
+    if (channel === BUILD_SYNC_CHANNEL) return BUILD;
+    return null;
+  });
+
+  await expect(import("#preload/cockpit")).rejects.toThrow(/daemon token/i);
+  expect(exposeInMainWorld).not.toHaveBeenCalled();
+});
+
+it("hands the renderer the token the main process last pushed", async () => {
+  const { exposeInMainWorld, on } = mockElectron((channel) => {
+    if (channel === DAEMON_URL_CHANNEL) return "http://127.0.0.1:4319";
+    if (channel === EXECUTION_HOST_SYNC_CHANNEL) return { id: "local", ssh_alias: null };
+    if (channel === PREVIEW_SYNC_CHANNEL) return false;
+    if (channel === BUILD_SYNC_CHANNEL) return BUILD;
+    if (channel === DAEMON_TOKEN_CHANNEL) return "first-token";
+    return undefined;
+  });
+
+  await import("#preload/cockpit");
+  const bridge = exposeInMainWorld.mock.calls[0]?.[1];
+  const follow = on.mock.calls.find(([channel]) => channel === DAEMON_TOKEN_CHANGED_CHANNEL)?.[1];
+  expect(bridge?.daemonToken()).toBe("first-token");
+  follow?.(null, "restarted-token");
+  expect(bridge?.daemonToken()).toBe("restarted-token");
+});
+
 it("exposes the daemon URL, host identity, build and support actions synchronously", async () => {
   const { exposeInMainWorld } = mockElectron((channel) => {
     if (channel === DAEMON_URL_CHANNEL) return "http://127.0.0.1:45010";
     if (channel === EXECUTION_HOST_SYNC_CHANNEL) return { id: "remote", ssh_alias: "otomat-vps" };
     if (channel === PREVIEW_SYNC_CHANNEL) return true;
     if (channel === BUILD_SYNC_CHANNEL) return BUILD;
+    if (channel === DAEMON_TOKEN_CHANNEL) return "remote-token";
     return undefined;
   });
 

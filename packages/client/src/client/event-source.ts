@@ -1,5 +1,5 @@
 import type { DaemonClientConfig, DaemonEventSource } from "./config.js";
-import { resolveUrl } from "./http.js";
+import { resolveAuthorizedUrl } from "./http.js";
 
 /** Throws rather than degrading: a platform without SSE has to be configured, not silently left without live updates. */
 export function openEventSource(config: DaemonClientConfig, path: string): DaemonEventSource {
@@ -9,7 +9,7 @@ export function openEventSource(config: DaemonClientConfig, path: string): Daemo
   if (!Source) {
     throw new Error("EventSource is unavailable in this environment; pass config.EventSource");
   }
-  return new Source(resolveUrl(config, path));
+  return new Source(resolveAuthorizedUrl(config, path));
 }
 
 /** EventSource swallows listener throws, so a frame that fails validation is surfaced instead of silently gapping the stream. */

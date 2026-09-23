@@ -12,7 +12,7 @@ import {
 import { LINEAR_DEFAULT_CONNECTION_ID, type LinearLifecycleSync } from "@otomat/domain";
 
 import { rescanSkills } from "#agents";
-import { createApiApp, logApiRoutes } from "#api";
+import { createApiApp, logApiRoutes, publishDaemonToken, takeDaemonToken } from "#api";
 import { createRepositoryResolver } from "#git";
 import {
   createGitHubCli,
@@ -77,6 +77,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
 
   try {
     const dataDir = dirname(dbPath);
+    const { token, minted } = takeDaemonToken();
     const projectRoot = process.env.OTOMAT_PROJECT_ROOT ?? process.cwd();
     const defaultProjectId = ensureDefaultProject(db, projectRoot);
     await ensureDefaultRepository(db, defaultProjectId);
@@ -174,6 +175,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       build: daemonBuild(),
       startedAt: new Date().toISOString(),
       dbPath,
+      token,
       schemaMetadata: () => readSchemaMetadata(sqlite),
       repositories,
       supervisor,
@@ -201,6 +203,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       console.error(`[otomat] daemon server failed on port ${listening.port}`, error);
       process.exit(1);
     });
+    if (minted) publishDaemonToken(dataDir, token);
 
     const close = createDaemonClose({
       stopMaintenancePasses: () => maintenance.stop(),

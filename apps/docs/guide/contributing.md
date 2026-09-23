@@ -18,7 +18,8 @@ pnpm desktop:dev    # Electron shell + Vite dev server + a daemon built from sou
 ```
 
 `pnpm dev` and `pnpm back` in two terminals run the cockpit in a browser against a standalone
-daemon instead.
+daemon instead. That daemon answers only callers presenting the token it writes to
+`apps/local-daemon/.data/daemon-token`; the Vite proxy presents it for the cockpit.
 
 `pnpm check` is the gate every pull request must pass;
 [`AGENTS.md`](https://github.com/alimtunc/otomat/blob/main/AGENTS.md) defines it, the commit

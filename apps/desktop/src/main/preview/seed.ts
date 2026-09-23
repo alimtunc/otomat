@@ -1,5 +1,8 @@
 import { realpathSync } from "node:fs";
 
+import type { DaemonEndpoint } from "@otomat/client";
+import { daemonAuthorization } from "@otomat/domain";
+
 const FIXTURE_ISSUES: ReadonlyArray<{ title: string; body: string }> = [
   {
     title: "greet() mangles empty names",
@@ -20,12 +23,17 @@ const FIXTURE_ISSUES: ReadonlyArray<{ title: string; body: string }> = [
 ];
 
 export interface SeedSandboxOptions {
-  daemonUrl: string;
+  daemon: DaemonEndpoint;
   repoPath: string;
   fetchImpl?: typeof fetch;
   /** Canonicalizer for `repoPath`; a remote sandbox path is already canonical and has no local file. */
   realpath?: (path: string) => string;
 }
+
+type DaemonRequest = (
+  path: string,
+  init?: { method?: string; headers?: Record<string, string>; body?: string },
+) => Promise<Response>;
 
 export interface SeedSandboxResult {
   /** False when the repository was already registered with its issues intact; nothing was touched. */
@@ -40,19 +48,24 @@ export interface SeedSandboxResult {
  */
 export async function seedSandbox(options: SeedSandboxOptions): Promise<SeedSandboxResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const registered = await fetchImpl(`${options.daemonUrl}/api/repositories`, {
+  const request: DaemonRequest = (path, init = {}) =>
+    fetchImpl(`${options.daemon.baseUrl}${path}`, {
+      ...init,
+      headers: { ...init.headers, authorization: daemonAuthorization(options.daemon.token) },
+    });
+  const registered = await request("/api/repositories", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ path: options.repoPath }),
   });
-  if (registered.status === 409) return reconcile(options, fetchImpl);
+  if (registered.status === 409) return reconcile(options, request);
   if (!registered.ok) {
     throw new Error(
       `Sandbox repository registration failed (${registered.status}): ${await registered.text()}`,
     );
   }
   const projectId = projectIdOf(await registered.json());
-  await fileFixtureIssues(options.daemonUrl, projectId, fetchImpl);
+  await fileFixtureIssues(request, projectId);
   return { seeded: true, issues: FIXTURE_ISSUES.length };
 }
 
@@ -63,31 +76,27 @@ export async function seedSandbox(options: SeedSandboxOptions): Promise<SeedSand
  */
 async function reconcile(
   options: SeedSandboxOptions,
-  fetchImpl: typeof fetch,
+  request: DaemonRequest,
 ): Promise<SeedSandboxResult> {
   const rootPath = (options.realpath ?? realpathSync)(options.repoPath);
-  const projects = await getRecords(fetchImpl, `${options.daemonUrl}/api/projects`);
+  const projects = await getRecords(request, "/api/projects");
   const project = projects.find((entry) => entry.root_path === rootPath);
   if (project === undefined || typeof project.id !== "string" || project.id === "") {
     throw new Error(`The sandbox repository is registered but no project owns ${rootPath}.`);
   }
   const projectId = project.id;
   const issues = await getRecords(
-    fetchImpl,
-    `${options.daemonUrl}/api/issues?projectId=${encodeURIComponent(projectId)}`,
+    request,
+    `/api/issues?projectId=${encodeURIComponent(projectId)}`,
   );
   if (issues.length > 0) return { seeded: false, issues: 0 };
-  await fileFixtureIssues(options.daemonUrl, projectId, fetchImpl);
+  await fileFixtureIssues(request, projectId);
   return { seeded: true, issues: FIXTURE_ISSUES.length };
 }
 
-async function fileFixtureIssues(
-  daemonUrl: string,
-  projectId: string,
-  fetchImpl: typeof fetch,
-): Promise<void> {
+async function fileFixtureIssues(request: DaemonRequest, projectId: string): Promise<void> {
   for (const issue of FIXTURE_ISSUES) {
-    const response = await fetchImpl(`${daemonUrl}/api/issues`, {
+    const response = await request("/api/issues", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ project_id: projectId, ...issue }),
@@ -101,12 +110,12 @@ async function fileFixtureIssues(
 }
 
 async function getRecords(
-  fetchImpl: typeof fetch,
-  url: string,
+  request: DaemonRequest,
+  path: string,
 ): Promise<Record<string, unknown>[]> {
-  const response = await fetchImpl(url);
+  const response = await request(path);
   if (!response.ok) {
-    throw new Error(`Sandbox lookup ${url} failed (${response.status}): ${await response.text()}`);
+    throw new Error(`Sandbox lookup ${path} failed (${response.status}): ${await response.text()}`);
   }
   return recordsOf(await response.json());
 }

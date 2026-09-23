@@ -1,3 +1,4 @@
+import type { DaemonEndpoint } from "@otomat/client";
 import type { RemoteHostStatus } from "@otomat/domain";
 
 import { waitForHealth } from "#shared/health";
@@ -38,6 +39,7 @@ export interface RemoteSessionHandle {
   readonly alias: string;
   readonly status: RemoteHostStatus;
   readonly url: string | null;
+  readonly endpoint: DaemonEndpoint | null;
   readonly remoteBuild: string | null;
   ensureLocalPort(): Promise<number>;
   connect(retryOnFailure: boolean): Promise<RemoteHostStatus>;
@@ -53,6 +55,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
   private disposed = false;
   private inFlight: Promise<RemoteHostStatus> | null = null;
   private lastRemoteBuild: string | null = null;
+  private token = "";
   private readonly retry: ReconnectLoop;
 
   constructor(private readonly options: RemoteSessionOptions) {
@@ -76,6 +79,11 @@ export class RemoteHostSession implements RemoteSessionHandle {
 
   get url(): string | null {
     return this.localPort === null ? null : `http://127.0.0.1:${this.localPort}`;
+  }
+
+  get endpoint(): DaemonEndpoint | null {
+    if (this.currentStatus.phase !== "connected" || this.url === null) return null;
+    return { baseUrl: this.url, token: this.token };
   }
 
   async ensureLocalPort(): Promise<number> {
@@ -129,6 +137,7 @@ export class RemoteHostSession implements RemoteSessionHandle {
       const bootstrap = await this.bootstrapDaemon();
       if (this.disposed) return this.settleDisposed();
       if ("failure" in bootstrap) return this.settleFailure(bootstrap.failure, retryOnFailure);
+      this.token = bootstrap.token;
       const tunnelFailure = await this.openTunnel(localPort);
       if (tunnelFailure !== null) return this.settleFailure(tunnelFailure, retryOnFailure);
       if (this.disposed) {

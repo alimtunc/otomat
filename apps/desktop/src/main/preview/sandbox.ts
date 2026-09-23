@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 
+import type { DaemonEndpoint } from "@otomat/client";
 import { DATABASE_INITIALIZED_MARKER_SUFFIX, type PreviewSandboxResetResult } from "@otomat/domain";
 
 import { prepareDataDirectory, type ManagedDataDirectory } from "../data-safety/index.js";
@@ -26,7 +27,7 @@ export const SANDBOX_NOT_READY: PreviewSandboxResetResult = {
 export interface SandboxDaemon {
   readonly running: boolean;
   stop(): Promise<void>;
-  start(): Promise<string>;
+  start(): Promise<DaemonEndpoint>;
 }
 
 export interface PreviewSandboxDeps {
@@ -37,7 +38,7 @@ export interface PreviewSandboxDeps {
   templateDir: string;
   daemon: SandboxDaemon;
   /** Re-points the renderer at the restarted daemon whenever a reset started one. */
-  onDaemonStarted(url: string): void;
+  onDaemonStarted(daemon: DaemonEndpoint): void;
   /** `~`-relative home of this preview's own instance on the host; its sandbox lives inside it. */
   remoteHomeSuffix: string;
   log(message: string): void;
@@ -56,21 +57,21 @@ export class PreviewSandbox {
   constructor(private readonly deps: PreviewSandboxDeps) {}
 
   /** Boot-time entry: a seeding failure degrades to a log line, never a blocked startup. */
-  async ensure(daemonUrl: string): Promise<void> {
+  async ensure(daemon: DaemonEndpoint): Promise<void> {
     if (!this.deps.enabled) return;
     try {
-      await this.ensureNow(daemonUrl);
+      await this.ensureNow(daemon);
     } catch (error) {
       this.deps.log(`Preview sandbox setup failed: ${String(error)}`);
     }
   }
 
   /** The manager announces every `connected` status, so the per-alias memo collapses repeats. */
-  ensureRemote(alias: string, daemonUrl: string): Promise<void> {
+  ensureRemote(alias: string, daemon: DaemonEndpoint): Promise<void> {
     if (!this.deps.enabled) return Promise.resolve();
     const pending = this.remote;
     if (pending !== null && pending.alias === alias) return pending.done;
-    const done = this.ensureRemoteNow(alias, daemonUrl).catch((error: unknown) => {
+    const done = this.ensureRemoteNow(alias, daemon).catch((error: unknown) => {
       if (this.remote?.alias === alias) this.remote = null;
       this.deps.log(`Remote sandbox setup failed: ${String(error)}`);
     });
@@ -78,7 +79,7 @@ export class PreviewSandbox {
     return done;
   }
 
-  private async ensureRemoteNow(alias: string, daemonUrl: string): Promise<void> {
+  private async ensureRemoteNow(alias: string, daemon: DaemonEndpoint): Promise<void> {
     const script = sandboxRepoScript(
       this.deps.remoteHomeSuffix,
       readSandboxTemplate(this.deps.templateDir),
@@ -95,7 +96,7 @@ export class PreviewSandbox {
     if (outcome === null) throw new Error("The remote sandbox script reported nothing.");
     if (outcome.kind !== "ready") throw new Error(describeRemoteFailure(outcome));
     const seeded = await seedSandbox({
-      daemonUrl,
+      daemon,
       repoPath: outcome.path,
       realpath: (path) => path,
       fetchImpl: this.deps.fetchImpl,
@@ -113,13 +114,13 @@ export class PreviewSandbox {
     }
     if (this.resetting) return { ok: false, message: "A reset is already running." };
     this.resetting = true;
-    let url: string | null = null;
+    let started: DaemonEndpoint | null = null;
     try {
       if (this.deps.daemon.running) await this.deps.daemon.stop();
       this.wipe();
       prepareDataDirectory(this.deps.dataDirectory.root);
-      url = await this.deps.daemon.start();
-      await this.ensureNow(url);
+      started = await this.deps.daemon.start();
+      await this.ensureNow(started);
       return { ok: true, message: null };
     } catch (error) {
       this.deps.log(`Sandbox reset failed: ${String(error)}`);
@@ -128,18 +129,18 @@ export class PreviewSandbox {
         message: error instanceof Error ? error.message : "The sandbox reset failed.",
       };
     } finally {
-      if (url !== null) this.deps.onDaemonStarted(url);
+      if (started !== null) this.deps.onDaemonStarted(started);
       this.resetting = false;
     }
   }
 
-  private async ensureNow(daemonUrl: string): Promise<void> {
+  private async ensureNow(daemon: DaemonEndpoint): Promise<void> {
     const repoDir = join(this.deps.dataDirectory.root, SANDBOX_REPO_DIRECTORY);
     if (ensureTestRepo(repoDir, this.deps.templateDir)) {
       this.deps.log(`Sandbox repository created at ${repoDir}.`);
     }
     const result = await seedSandbox({
-      daemonUrl,
+      daemon,
       repoPath: repoDir,
       fetchImpl: this.deps.fetchImpl,
     });

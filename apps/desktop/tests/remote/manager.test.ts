@@ -1,5 +1,6 @@
 import { mkdirSync, rmSync } from "node:fs";
 
+import type { DaemonEndpoint } from "@otomat/client";
 import type { RemoteHostStatus } from "@otomat/domain";
 import { expect, it, vi } from "vitest";
 
@@ -17,6 +18,7 @@ const CONNECTED: RemoteHostStatus = { phase: "connected", detail: null };
 class FakeSession implements RemoteSessionHandle {
   status: RemoteHostStatus = { phase: "disconnected", detail: null };
   url: string | null = null;
+  token = "remote-token";
   remoteBuild: string | null = null;
   disposeCount = 0;
   refreshCount = 0;
@@ -27,6 +29,10 @@ class FakeSession implements RemoteSessionHandle {
     private readonly connectResult: RemoteHostStatus,
     private readonly onStatus: (status: RemoteHostStatus) => void = () => {},
   ) {}
+  get endpoint(): DaemonEndpoint | null {
+    if (this.status.phase !== "connected" || this.url === null) return null;
+    return { baseUrl: this.url, token: this.token };
+  }
   ensureLocalPort(): Promise<number> {
     this.portReservations += 1;
     this.url = "http://127.0.0.1:45010";
@@ -60,21 +66,29 @@ function scratch(): string {
 function makeManager(options?: {
   dataDir?: string;
   connectResult?: RemoteHostStatus;
-  localUrl?: string;
+  localDaemon?: DaemonEndpoint | null;
   expectedBuild?: string | null;
   fetchImpl?: typeof fetch;
 }) {
   const dataDir = options?.dataDir ?? scratch();
   const applied: string[] = [];
+  const appliedTokens: string[] = [];
   const sessions: FakeSession[] = [];
   const connected: Array<{ alias: string; url: string }> = [];
+  const localDaemon =
+    options?.localDaemon === undefined
+      ? { baseUrl: "http://127.0.0.1:49152", token: "local-token" }
+      : options.localDaemon;
   const manager = new ExecutionHostManager({
     dataDir,
     log: () => {},
-    localDaemonUrl: () => options?.localUrl ?? "http://127.0.0.1:49152",
+    localDaemon: () => localDaemon,
     onRemoteStatus: () => {},
-    onRemoteConnected: (alias, url) => connected.push({ alias, url }),
-    applyRendererUrl: (url) => applied.push(url),
+    onRemoteConnected: (alias, endpoint) => connected.push({ alias, url: endpoint.baseUrl }),
+    applyRendererEndpoint: (endpoint) => {
+      applied.push(endpoint.baseUrl);
+      appliedTokens.push(endpoint.token);
+    },
     expectedBuild: options?.expectedBuild ?? null,
     repo: "alimtunc/otomat",
     createSession: (sessionOptions) => {
@@ -89,7 +103,7 @@ function makeManager(options?: {
     listAliases: () => ["otomat-vps"],
     fetchImpl: options?.fetchImpl,
   });
-  return { manager, applied, sessions, connected, dataDir };
+  return { manager, applied, appliedTokens, sessions, connected, dataDir };
 }
 
 function projectsResponse(projects: unknown): Response {
@@ -117,9 +131,9 @@ it("refuses an alias change while a host switch is in flight", async () => {
   const manager = new ExecutionHostManager({
     dataDir: scratch(),
     log: () => {},
-    localDaemonUrl: () => "http://127.0.0.1:49152",
+    localDaemon: () => ({ baseUrl: "http://127.0.0.1:49152", token: "local-token" }),
     onRemoteStatus: () => {},
-    applyRendererUrl: () => {},
+    applyRendererEndpoint: () => {},
     expectedBuild: null,
     repo: "alimtunc/otomat",
     createSession: (sessionOptions) => {
@@ -365,6 +379,22 @@ it("announces a connected session with its tunnel origin, and never a failed one
   expect(failed.connected).toEqual([]);
 });
 
+it("hands the active remote's new token to the renderer whenever its daemon reconnects", async () => {
+  const { manager, appliedTokens, sessions } = makeManager();
+  manager.configureRemote("otomat-vps");
+  await manager.select("remote");
+  const session = sessions[0];
+  if (session === undefined) throw new Error("no session");
+
+  session.token = "restarted-token";
+  await session.refreshDaemon();
+  await manager.select("local");
+  session.token = "ignored-token";
+  await session.refreshDaemon();
+
+  expect(appliedTokens).toEqual(["remote-token", "restarted-token", "local-token"]);
+});
+
 it("keeps the local selection and never re-points the renderer when the remote connect fails", async () => {
   const { manager, applied, dataDir } = makeManager({
     connectResult: { phase: "error", code: "ssh_unreachable", detail: "no route" },
@@ -381,7 +411,7 @@ it("keeps the local selection and never re-points the renderer when the remote c
 });
 
 it("refuses to switch to a local daemon that is not running", async () => {
-  const { manager, applied } = makeManager({ localUrl: "" });
+  const { manager, applied } = makeManager({ localDaemon: null });
   const result = await manager.select("local");
   expect(result).toEqual({
     ok: false,
@@ -410,9 +440,20 @@ it("boot-activates a persisted remote selection with a stable URL and background
     active: "remote",
   });
   const { manager, sessions } = makeManager({ dataDir });
-  const url = await manager.bootActivate();
-  expect(url).toBe("http://127.0.0.1:45010");
+  expect(await manager.bootActivate()).toEqual({
+    baseUrl: "http://127.0.0.1:45010",
+    token: "remote-token",
+  });
   expect(sessions[0]?.lastRetryFlag).toBe(true);
+
+  const pending = makeManager({
+    dataDir,
+    connectResult: { phase: "reconnecting", detail: "ssh_unreachable" },
+  });
+  expect(await pending.manager.bootActivate()).toEqual({
+    baseUrl: "http://127.0.0.1:45010",
+    token: "",
+  });
 });
 
 it("stays on local at boot when nothing was persisted", async () => {

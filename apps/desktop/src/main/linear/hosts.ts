@@ -1,3 +1,4 @@
+import type { DaemonEndpoint } from "@otomat/client";
 import type { ConnectLinearRequest, LinearConnectionContract } from "@otomat/domain";
 
 import {
@@ -18,9 +19,9 @@ export function describeFailure(error: unknown, fallback: string): string {
 /** That daemon's whole catalogue; only a `connected` row still holds a usable key. */
 export async function cataloguedConnections(
   ledger: LinearDeliveryLedger,
-  url: string,
+  endpoint: DaemonEndpoint,
 ): Promise<LinearConnectionContract[]> {
-  const catalogued = await readLinearConnections(url);
+  const catalogued = await readLinearConnections(endpoint);
   for (const connection of catalogued) ledger.name(connection.id, connection.label);
   return catalogued;
 }
@@ -32,11 +33,11 @@ export type PushOutcome =
 export async function pushToHost(
   ledger: LinearDeliveryLedger,
   target: LinearDaemonTarget,
-  url: string,
+  endpoint: DaemonEndpoint,
   request: ConnectLinearRequest,
 ): Promise<PushOutcome> {
   try {
-    await pushLinearKey(url, request);
+    await pushLinearKey(endpoint, request);
     ledger.set(request.id, target.id, holdsKey());
     return { delivered: true };
   } catch (error) {
@@ -52,22 +53,22 @@ export async function pushToHost(
 export async function restoreOnHost(
   ledger: LinearDeliveryLedger,
   target: LinearDaemonTarget,
-  url: string,
+  endpoint: DaemonEndpoint,
   request: ConnectLinearRequest,
   daemonHoldsKey: boolean,
 ): Promise<void> {
   if (daemonHoldsKey && ledger.get(request.id, target.id)?.holdsCurrentKey === true) return;
-  await pushToHost(ledger, target, url, request);
+  await pushToHost(ledger, target, endpoint, request);
 }
 
 export async function revokeOnHost(
   ledger: LinearDeliveryLedger,
   target: LinearDaemonTarget,
-  url: string,
+  endpoint: DaemonEndpoint,
   connectionId: string,
 ): Promise<boolean> {
   try {
-    await clearLinearKey(url, connectionId);
+    await clearLinearKey(endpoint, connectionId);
   } catch (error) {
     // A daemon that never catalogued the connection owes nothing: that revocation is complete.
     if (!(error instanceof LinearHandoffError && error.code === "linear_connection_not_found")) {

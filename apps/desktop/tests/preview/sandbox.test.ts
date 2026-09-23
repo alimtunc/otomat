@@ -38,11 +38,15 @@ function okFetch(recordRegistration?: (body: string) => void): typeof fetch {
   }) as typeof fetch;
 }
 
+const LOCAL = { baseUrl: "http://127.0.0.1:4319", token: "local-token" };
+const RESTARTED = { baseUrl: "http://127.0.0.1:43999", token: "restarted-token" };
+const TUNNEL = { baseUrl: "http://127.0.0.1:43110", token: "remote-token" };
+
 function fakeDaemon(): SandboxDaemon & { stop: ReturnType<typeof vi.fn> } {
   return {
     running: true,
     stop: vi.fn(() => Promise.resolve()),
-    start: vi.fn(() => Promise.resolve("http://127.0.0.1:43999")),
+    start: vi.fn(() => Promise.resolve(RESTARTED)),
   };
 }
 
@@ -67,7 +71,7 @@ describe("PreviewSandbox", () => {
       },
     });
 
-    await sandbox.ensure("http://127.0.0.1:4319");
+    await sandbox.ensure(LOCAL);
     const result = await sandbox.reset();
 
     expect(result.ok).toBe(false);
@@ -88,7 +92,7 @@ describe("PreviewSandbox", () => {
       fetchImpl: () => Promise.resolve(new Response("boom", { status: 500 })),
     });
 
-    await expect(sandbox.ensure("http://127.0.0.1:4319")).resolves.toBeUndefined();
+    await expect(sandbox.ensure(LOCAL)).resolves.toBeUndefined();
 
     expect(log).toHaveBeenCalledWith(expect.stringMatching(/Preview sandbox setup failed/));
   });
@@ -119,7 +123,7 @@ describe("PreviewSandbox", () => {
     expect(existsSync(join(directory.root, "runs"))).toBe(false);
     expect(existsSync(join(directory.root, "worktrees"))).toBe(false);
     expect(existsSync(join(directory.root, "test-repo", ".git"))).toBe(true);
-    expect(onDaemonStarted).toHaveBeenCalledWith("http://127.0.0.1:43999");
+    expect(onDaemonStarted).toHaveBeenCalledWith(RESTARTED);
   });
 
   it("still re-points the renderer when reseeding fails after the restart", async () => {
@@ -138,7 +142,7 @@ describe("PreviewSandbox", () => {
     const result = await sandbox.reset();
 
     expect(result.ok).toBe(false);
-    expect(onDaemonStarted).toHaveBeenCalledWith("http://127.0.0.1:43999");
+    expect(onDaemonStarted).toHaveBeenCalledWith(RESTARTED);
   });
 });
 
@@ -177,8 +181,8 @@ describe("PreviewSandbox.ensureRemote", () => {
     const registered: string[] = [];
     const sandbox = remoteSandbox({ scripts, registered });
 
-    await sandbox.ensureRemote("otomat-vps", "http://127.0.0.1:43110");
-    await sandbox.ensureRemote("otomat-vps", "http://127.0.0.1:43110");
+    await sandbox.ensureRemote("otomat-vps", TUNNEL);
+    await sandbox.ensureRemote("otomat-vps", TUNNEL);
 
     expect(scripts).toHaveLength(1);
     expect(scripts[0]).toContain('DIR="$HOME/.otomat/instances/92584b0/test-repo"');
@@ -189,10 +193,7 @@ describe("PreviewSandbox.ensureRemote", () => {
     const scripts: string[] = [];
     const registered: string[] = [];
 
-    await remoteSandbox({ enabled: false, scripts, registered }).ensureRemote(
-      "otomat-vps",
-      "http://127.0.0.1:43110",
-    );
+    await remoteSandbox({ enabled: false, scripts, registered }).ensureRemote("otomat-vps", TUNNEL);
 
     expect(scripts).toEqual([]);
     expect(registered).toEqual([]);
@@ -209,8 +210,8 @@ describe("PreviewSandbox.ensureRemote", () => {
       stdout: "OTOMAT_SANDBOX:NO_GIT:-",
     });
 
-    await sandbox.ensureRemote("otomat-vps", "http://127.0.0.1:43110");
-    await sandbox.ensureRemote("otomat-vps", "http://127.0.0.1:43110");
+    await sandbox.ensureRemote("otomat-vps", TUNNEL);
+    await sandbox.ensureRemote("otomat-vps", TUNNEL);
 
     expect(log).toHaveBeenCalledWith(expect.stringMatching(/Remote sandbox setup failed.*git/));
     expect(scripts).toHaveLength(2);

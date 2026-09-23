@@ -1,3 +1,4 @@
+import type { DaemonEndpoint } from "@otomat/client";
 import {
   sameRemoteHostStatus,
   type ExecutionHostId,
@@ -27,11 +28,11 @@ const SWITCH_IN_PROGRESS = "A host switch is in progress. Try again in a moment.
 export interface ExecutionHostManagerOptions {
   dataDir: string;
   log(message: string): void;
-  localDaemonUrl(): string;
+  localDaemon(): DaemonEndpoint | null;
   onRemoteStatus(status: RemoteHostStatus): void;
-  /** Fires whenever a session reaches `connected`, with the tunnel's local origin. */
-  onRemoteConnected?(alias: string, url: string): void;
-  applyRendererUrl(url: string): void;
+  /** Fires whenever a session reaches `connected`, with the tunnel's local endpoint. */
+  onRemoteConnected?(alias: string, endpoint: DaemonEndpoint): void;
+  applyRendererEndpoint(endpoint: DaemonEndpoint): void;
   expectedBuild?: string | null;
   /** Daemon location and port this app targets on the host; the stable deployment when omitted. */
   deployment?: RemoteDeployment;
@@ -55,7 +56,7 @@ export class ExecutionHostManager {
   constructor(private readonly options: ExecutionHostManagerOptions) {
     this.selection = new HostSelection(options.dataDir, options.log);
     this.catalog = new HostCatalog({
-      localDaemonUrl: options.localDaemonUrl,
+      localDaemon: options.localDaemon,
       activeHostId: () => this.activeHostId,
       remoteSshAlias: () => this.remoteSshAlias,
       remoteSession: () => this.session,
@@ -140,14 +141,15 @@ export class ExecutionHostManager {
     }
   }
 
-  /** Reserves the tunnel port before the cockpit loads, so its CSP can name the origin a later switch targets. */
-  async bootActivate(): Promise<string | null> {
+  /** Reserves the tunnel port before the cockpit loads, so its CSP can name the origin; the token follows the connection. */
+  async bootActivate(): Promise<DaemonEndpoint | null> {
     const alias = this.remoteSshAlias;
     if (alias === null) return null;
     this.session ??= this.createSession(alias);
     await this.session.ensureLocalPort();
     void this.session.connect(true);
-    return this.activeHostId === "remote" ? this.session.url : null;
+    if (this.activeHostId !== "remote" || this.session.url === null) return null;
+    return this.session.endpoint ?? { baseUrl: this.session.url, token: "" };
   }
 
   removeRemote(): ExecutionHostOperationResult {
@@ -186,22 +188,22 @@ export class ExecutionHostManager {
     const status = await session.connect(false);
     if (this.session !== session) return errorResult("switch_in_progress");
     if (status.phase !== "connected") return { ok: false, status };
-    const url = session.url;
-    if (url === null) return errorResult("tunnel_failed");
+    const endpoint = session.endpoint;
+    if (endpoint === null) return errorResult("tunnel_failed");
     const committed = this.selection.commit({ active: "remote" });
     if (!committed.ok) return committed;
-    this.options.applyRendererUrl(url);
-    return { ok: true, url };
+    this.options.applyRendererEndpoint(endpoint);
+    return { ok: true, url: endpoint.baseUrl };
   }
 
   /** The remote session survives a switch to local, so the switcher keeps listing that host. */
   private async selectLocal(): Promise<ExecutionHostSelectResult> {
-    const url = this.options.localDaemonUrl();
-    if (url === "") return errorResult("local_daemon_unavailable");
+    const endpoint = this.options.localDaemon();
+    if (endpoint === null) return errorResult("local_daemon_unavailable");
     const committed = this.selection.commit({ active: "local" });
     if (!committed.ok) return committed;
-    this.options.applyRendererUrl(url);
-    return { ok: true, url };
+    this.options.applyRendererEndpoint(endpoint);
+    return { ok: true, url: endpoint.baseUrl };
   }
 
   private ensureBackgroundRemote(): Promise<RemoteHostStatus | null> {
@@ -229,7 +231,11 @@ export class ExecutionHostManager {
     this.publishStatus();
     const current = this.session !== null && this.session.alias === alias ? this.session : null;
     if (status.phase !== "connected" || current === null) return;
-    if (current.url !== null) this.options.onRemoteConnected?.(alias, current.url);
+    const endpoint = current.endpoint;
+    if (endpoint !== null) {
+      this.options.onRemoteConnected?.(alias, endpoint);
+      if (this.activeHostId === "remote") this.options.applyRendererEndpoint(endpoint);
+    }
     // Build verification is host lifecycle — it may restart the daemon and reconnect the
     // tunnel — so it hangs off the connected transition, never off a catalog read.
     this.upgrade.observe();

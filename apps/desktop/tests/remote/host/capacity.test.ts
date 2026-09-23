@@ -1,24 +1,24 @@
 import { expect, it, vi } from "vitest";
 
-import { HostCapacityActions } from "#main/remote/host/capacity";
+import { HostCapacityActions, type HostCapacityActionsOptions } from "#main/remote/host/capacity";
 
 const CAPACITY = { max_concurrent_sessions: 6, active_sessions: 2, waiting_sessions: 0 };
 
-const CONNECTED = { url: "http://127.0.0.1:4319" };
+const CONNECTED = { baseUrl: "http://127.0.0.1:4319", token: "remote-token" };
 
 const OFFLINE = () => ({ message: "The remote host is not connected yet." });
 
-type DaemonUrl = () => { url: string } | { message: string };
+type DaemonTarget = HostCapacityActionsOptions["daemon"];
 
 /** `fetchImpl` arrives as the raw vitest mock so the tests can assert on it; only the seam is cast. */
-function actions(fetchImpl: unknown, daemonUrl: DaemonUrl = () => CONNECTED) {
+function actions(fetchImpl: unknown, daemon: DaemonTarget = () => CONNECTED) {
   const logs: string[] = [];
   const log = (message: string): void => {
     logs.push(message);
   };
   // SAFETY: the raw vitest mock stands in for fetch so the tests can assert on it.
   return {
-    capacity: new HostCapacityActions({ daemonUrl, fetchImpl: fetchImpl as typeof fetch, log }),
+    capacity: new HostCapacityActions({ daemon, fetchImpl: fetchImpl as typeof fetch, log }),
     logs,
   };
 }
@@ -37,7 +37,10 @@ it("reads the cap from the host's own daemon", async () => {
     ok: true,
     capacity: CAPACITY,
   });
-  expect(fetchImpl).toHaveBeenCalledWith("http://127.0.0.1:4319/api/settings/capacity", undefined);
+  expect(fetchImpl).toHaveBeenCalledWith(
+    "http://127.0.0.1:4319/api/settings/capacity",
+    expect.objectContaining({ headers: new Headers({ authorization: "Bearer remote-token" }) }),
+  );
 });
 
 it("writes the cap to the host that enforces it, as a PUT it can validate", async () => {

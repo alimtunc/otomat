@@ -24,7 +24,7 @@ import {
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, postForm, postJson, queryString, resolveUrl } from "./http.js";
+import { getJson, postForm, postJson, queryString, resolveAuthorizedUrl } from "./http.js";
 
 function contributionForm(
   request: CreateRunContributionRequest,
@@ -110,7 +110,7 @@ export function createRunsClient(config: DaemonClientConfig) {
       );
     },
     runContributionImageUrl(id: string, contributionId: string, imageId: string) {
-      return resolveUrl(
+      return resolveAuthorizedUrl(
         config,
         `/api/runs/${encodeURIComponent(id)}/contributions/${encodeURIComponent(contributionId)}/images/${encodeURIComponent(imageId)}`,
       );

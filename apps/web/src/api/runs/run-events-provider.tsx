@@ -5,6 +5,7 @@ import { mergeEvent, mergeEventWindow } from "@web/api/runs/events";
 import { invalidateForEvent } from "@web/api/runs/invalidate-for-event";
 import { RunEventsContext, type RunStreamState } from "@web/api/runs/run-event-stream";
 import { useEventHistory } from "@web/api/runs/use-event-history";
+import { useDaemonToken } from "@web/api/use-daemon-token";
 import { useQueryKeys } from "@web/api/use-query-keys";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -17,6 +18,7 @@ export interface RunEventsProviderProps {
 export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
   const client = useQueryClient();
   const keys = useQueryKeys();
+  const token = useDaemonToken();
   const history = useEventHistory(runId);
   const [live, setLive] = useState<EventEnvelope[]>([]);
   const [state, setState] = useState<RunStreamState>("connecting");
@@ -25,7 +27,7 @@ export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
   const anchored = history.status === "ready";
   const { tailSeq } = history;
 
-  // otomat-allow-effect: open the single daemon SSE run-event stream and tear it down on unmount / run change.
+  // otomat-allow-effect: open the single daemon SSE run-event stream and tear it down on unmount / run or token change.
   useEffect(() => {
     closedRef.current = false;
     setLive([]);
@@ -55,7 +57,7 @@ export function RunEventsProvider({ runId, children }: RunEventsProviderProps) {
       onParseError: () => setDegraded(true),
     });
     return () => subscription.close();
-  }, [runId, client, keys, anchored, tailSeq]);
+  }, [runId, client, keys, token, anchored, tailSeq]);
 
   const events = mergeEventWindow(history.events, live);
 

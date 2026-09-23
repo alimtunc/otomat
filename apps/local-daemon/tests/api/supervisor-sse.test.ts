@@ -1,7 +1,7 @@
 import { eventEnvelopeSchema, runEndPayloadSchema, type EventEnvelope } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { json, makeApiApp } from "../support/api.js";
+import { AUTHORIZED_HEADERS, json, makeApiApp } from "../support/api.js";
 import { setupDaemonDb, type DaemonTestDb } from "../support/daemon-db.js";
 import { makeSupervisor } from "../support/supervisor.js";
 
@@ -45,14 +45,14 @@ it(
 
     const started = await app.request("/api/runs", {
       method: "POST",
-      headers: { Host: "127.0.0.1", "content-type": "application/json" },
+      headers: { ...AUTHORIZED_HEADERS, "content-type": "application/json" },
       body: JSON.stringify({ prompt: "integration turn" }),
     });
     expect(started.status).toBe(201);
     const { run } = await json<{ run: { id: string } }>(started);
 
     const sse = await app.request(`/api/runs/${run.id}/events`, {
-      headers: { Host: "127.0.0.1" },
+      headers: AUTHORIZED_HEADERS,
     });
     expect(sse.status).toBe(200);
     const reader = sse.body?.getReader();
@@ -80,7 +80,7 @@ it(
         aborted = true;
         const res = await app.request(`/api/runs/${run.id}/abort`, {
           method: "POST",
-          headers: { Host: "127.0.0.1" },
+          headers: AUTHORIZED_HEADERS,
         });
         expect(res.status).toBe(200);
       }
