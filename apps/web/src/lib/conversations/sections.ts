@@ -1,7 +1,7 @@
 import type { ConversationEntry } from "@otomat/domain";
 
 const SECTIONS = [
-  { key: "active", label: "Active" },
+  { key: "active", label: "Following" },
   { key: "finished", label: "Recently finished" },
 ] as const;
 

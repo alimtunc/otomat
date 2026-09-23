@@ -1,6 +1,10 @@
 import type { ConversationEntry } from "@otomat/domain";
 import {
   cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   FOCUS_RING_INSET,
   Icon,
   IconButton,
@@ -10,6 +14,7 @@ import {
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { conversationLine } from "@web/lib/conversations/line";
+import { conversationStatus } from "@web/lib/conversations/status";
 import type { InboxMarkPatch } from "@web/lib/inbox/marks";
 import type { KeyboardEvent } from "react";
 
@@ -17,27 +22,28 @@ export interface ConversationRowProps {
   entry: ConversationEntry;
   selected: boolean;
   pending: boolean;
+  showIssue?: boolean;
   onMark: (patch: InboxMarkPatch) => void;
 }
 
-function runtimeModelLabel(participant: ConversationEntry["participant"]): string | null {
-  if (participant === null) return null;
-  return participant.model === null
-    ? participant.runtime
-    : `${participant.runtime} · ${participant.model}`;
-}
-
-export function ConversationRow({ entry, selected, pending, onMark }: ConversationRowProps) {
-  const who = runtimeModelLabel(entry.participant);
+export function ConversationRow({
+  entry,
+  selected,
+  pending,
+  showIssue = false,
+  onMark,
+}: ConversationRowProps) {
+  const status = conversationStatus([entry]);
   const onKeyDown = (event: KeyboardEvent<HTMLAnchorElement>): void => {
+    if (pending || event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.key === "u") onMark({ read: !entry.read });
     else if (event.key === "e") onMark({ archived: true });
   };
   return (
     <div
       className={cn(
-        "group flex items-start gap-1 rounded-md hover:bg-hover",
-        selected && "bg-selected",
+        "flex items-start gap-1 rounded-md border-l-2",
+        selected ? "border-l-iris bg-selected" : "border-l-transparent hover:bg-hover",
       )}
     >
       <Link
@@ -54,6 +60,14 @@ export function ConversationRow({ entry, selected, pending, onMark }: Conversati
           {entry.read ? null : <span className="sr-only">Unread</span>}
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          {showIssue ? (
+            <span className="flex min-w-0 items-center gap-2 text-xs text-text-tertiary">
+              <span className="truncate font-mono">{entry.issue.identifier}</span>
+              <span className="ml-auto shrink-0">
+                <RelativeTime date={entry.updated_at} addSuffix={false} />
+              </span>
+            </span>
+          ) : null}
           <span className="flex min-w-0 items-center gap-1.5">
             <span
               className={cn(
@@ -61,14 +75,16 @@ export function ConversationRow({ entry, selected, pending, onMark }: Conversati
                 entry.read ? "text-text-secondary" : "font-medium text-foreground",
               )}
             >
-              {entry.step_name}
+              {showIssue ? entry.issue.title : entry.step_name}
             </span>
-            <StepStatusChip status={entry.step_status} showLabel={false} />
-            <span className="ml-auto shrink-0 text-xs text-text-tertiary">
-              <RelativeTime date={entry.updated_at} addSuffix={false} />
-            </span>
+            {showIssue ? null : (
+              <span className="ml-auto shrink-0 text-xs text-text-tertiary">
+                <RelativeTime date={entry.updated_at} addSuffix={false} />
+              </span>
+            )}
           </span>
           <span className="flex min-w-0 items-center gap-2 text-xs">
+            {status === null ? null : <StepStatusChip status={status} className="shrink-0" />}
             <span
               className={cn(
                 "min-w-0 flex-1 truncate",
@@ -77,26 +93,30 @@ export function ConversationRow({ entry, selected, pending, onMark }: Conversati
             >
               {conversationLine(entry)}
             </span>
-            {who === null ? null : <span className="shrink-0 text-text-tertiary">{who}</span>}
           </span>
         </span>
       </Link>
-      <span className="mr-1 flex shrink-0 items-center self-center opacity-0 focus-within:opacity-100 group-hover:opacity-100">
-        <IconButton
-          size="sm"
-          label={entry.read ? "Mark as unread" : "Mark as read"}
-          icon={<Icon name={entry.read ? "mail" : "mail-open"} aria-hidden />}
+      <DropdownMenu>
+        <DropdownMenuTrigger
           disabled={pending}
-          onClick={() => onMark({ read: !entry.read })}
+          render={
+            <IconButton
+              size="sm"
+              label="Conversation actions"
+              icon={<Icon name="more-horizontal" aria-hidden />}
+              className="mr-1 self-center text-text-tertiary"
+            />
+          }
         />
-        <IconButton
-          size="sm"
-          label="Archive"
-          icon={<Icon name="archive" aria-hidden />}
-          disabled={pending}
-          onClick={() => onMark({ archived: true })}
-        />
-      </span>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem disabled={pending} onClick={() => onMark({ read: !entry.read })}>
+            {entry.read ? "Mark as unread" : "Mark as read"}
+          </DropdownMenuItem>
+          <DropdownMenuItem disabled={pending} onClick={() => onMark({ archived: true })}>
+            Archive
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

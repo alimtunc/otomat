@@ -38,7 +38,7 @@ it("sections by the issue's cycle, one group per issue, and hides an empty secti
     ]),
   ).toEqual([
     [
-      "Active",
+      "Following",
       [
         ["issue-1", ["step-1", "step-2"]],
         ["issue-3", ["step-4"]],

@@ -18,7 +18,7 @@ export const NO_CONVERSATION_FILTERS: ConversationFilters = {
 
 export const CONVERSATION_STATE_OPTIONS: { value: ConversationStateFilter; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "active", label: "Active" },
+  { value: "active", label: "Following" },
   { value: "waiting", label: "Waiting on you" },
   { value: "finished", label: "Finished" },
 ];

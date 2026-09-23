@@ -7,6 +7,7 @@ const HEADING_CLASS = "flex h-8 items-center gap-2 px-2.5 text-sm font-medium te
 export interface InboxGroupProps {
   label: string;
   count: number;
+  unreadCount?: number;
   collapsed?: boolean;
   onToggle?: () => void;
   children: ReactNode;
@@ -15,6 +16,7 @@ export interface InboxGroupProps {
 export function InboxGroup({
   label,
   count,
+  unreadCount = 0,
   collapsed = false,
   onToggle,
   children,
@@ -24,6 +26,9 @@ export function InboxGroup({
     <>
       <span className="truncate">{label}</span>
       <CountBadge count={count} tone="neutral" />
+      {collapsed && unreadCount > 0 ? (
+        <span className="ml-auto text-xs font-normal text-iris-text">{unreadCount} unread</span>
+      ) : null}
     </>
   );
 
