@@ -1,5 +1,9 @@
 import type { CheckoutTarget } from "@otomat/domain";
 
+export const FILE_TREE_WIDTH = 264;
+
+export const EDITOR_PLACEHOLDER_LINES = 14;
+
 interface FilesSurface {
   layout: string;
   panel: string;

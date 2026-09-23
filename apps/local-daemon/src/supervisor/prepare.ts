@@ -41,6 +41,7 @@ import {
   runDefaultConfig,
   runDefaultOverrides,
 } from "./freeze-plan.js";
+import { requireLaunchable } from "./launch-hold.js";
 import { LaunchRefusedError, resolveLaunchTarget } from "./launch-target.js";
 import { preflightRunPlan } from "./runtime-preflight.js";
 import { ensureRuntimeAgent } from "./runtime-selection.js";
@@ -182,6 +183,8 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
   });
 
   try {
+    // The hold counts runs by their rows, and this one has none until the insert below.
+    requireLaunchable(state);
     preflightRunPlan(plan, worktree.path);
     db.transaction(
       () => {

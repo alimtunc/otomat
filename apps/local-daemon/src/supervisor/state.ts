@@ -43,7 +43,7 @@ export interface SupervisorState {
   pending: Set<Promise<void>>;
   launchesByProject: Map<string, Promise<unknown>>;
   /** Run-level scheduler guard; sessions within one compete group remain independently claimable. */
-  advancing: Set<string>;
+  advancing: Map<string, Promise<unknown>>;
   /** Run-level delivery guard so two contribution posts never batch the same queue twice. */
   delivering: Set<string>;
   /** Steps the operator stopped mid-turn: their queued messages wait for an explicit message, retry or resume, never an automatic restart. */
@@ -74,7 +74,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     initInterrupts: new Map(),
     pending: new Set(),
     launchesByProject: new Map(),
-    advancing: new Set(),
+    advancing: new Map(),
     delivering: new Set(),
     stopHeld: new Set(),
     shuttingDown: false,

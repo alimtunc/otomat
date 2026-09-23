@@ -11,7 +11,6 @@ import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcu
 import { useShellData } from "@web/components/shell/use-shell-data";
 import { useCallback, useRef, useState, type ReactNode } from "react";
 
-/** Rendered once by the root route, so navigating swaps only the route's `AppShellMain`. */
 export function AppFrame({ children }: { children: ReactNode }) {
   const { density } = useTheme();
   const shell = useShellData();

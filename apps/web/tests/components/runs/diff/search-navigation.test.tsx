@@ -365,6 +365,16 @@ describe("searching the loaded hunks from the reviewer toolbar", () => {
     await mounted.cleanup();
   });
 
+  it("leaves the find shortcut to the browser while the diff is retained and inert", async () => {
+    const view = await mountReviewer();
+    view.field.closest("div")?.setAttribute("inert", "");
+
+    expect(await view.press({ key: "f", metaKey: true }, window)).toBe(false);
+
+    expect(document.activeElement).not.toBe(view.field);
+    await view.cleanup();
+  });
+
   it("ignores the find shortcut raised from a dialog over the diff", async () => {
     const view = await mountReviewer();
     await view.type("answer");

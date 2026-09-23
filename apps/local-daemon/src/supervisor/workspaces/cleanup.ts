@@ -8,14 +8,14 @@ import {
 } from "@otomat/domain";
 
 import { emitLedgerEvent } from "#events";
-import { isInsideRoot } from "#git";
+import { inCheckout, isInsideRoot } from "#git";
 import { deleteBranch } from "#git/branches";
 import { pruneWorktrees, removeWorktree } from "#git/worktree-cli";
 import { findWorktreeById, updateWorktreeStatus } from "#git/worktrees-store";
 
 import { buildWorkspaceCleanedEvent } from "../markers.js";
 import type { WorkspaceContext } from "./context.js";
-import { listWorkspaces, repositoryInventory } from "./inventory.js";
+import { cycleHolders, listWorkspaces, repositoryInventory } from "./inventory.js";
 
 /** Re-classified from git here, so a cleanup never acts on a verdict a caller has been holding. */
 export async function findWorkspaceEntry(
@@ -30,6 +30,17 @@ export async function findWorkspaceEntry(
     ? await repositoryInventory(context, repository, holders)
     : (await listWorkspaces(context)).entries;
   return entries.find((entry) => entry.id === workspaceId) ?? null;
+}
+
+/** Classifies under the checkout's lock, so no write to it lands between a cleanup's verdict and its act. */
+export function inWorkspaceCheckout<T>(
+  context: WorkspaceContext,
+  workspaceId: string,
+  operation: (entry: WorkspaceEntry | null) => Promise<T>,
+): Promise<T> {
+  return inCheckout(findWorktreeById(context.db, workspaceId)?.path ?? workspaceId, async () =>
+    operation(await findWorkspaceEntry(context, workspaceId, cycleHolders(context.db))),
+  );
 }
 
 function audit(context: WorkspaceContext, entry: WorkspaceEntry, forced: boolean): void {

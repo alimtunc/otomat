@@ -2,6 +2,7 @@ import { ErrorState, Icon } from "@otomat/ui";
 import { useRepositoryTree } from "@web/api/repositories/file-queries";
 import { branchLabel } from "@web/components/files/branch-label";
 import { FilesExplorer } from "@web/components/files/explorer";
+import { FILE_TREE_WIDTH } from "@web/components/files/surface";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { SplitSkeleton } from "@web/components/shell/split-skeleton";
 
@@ -16,7 +17,7 @@ export function ProjectExplorer({ repositoryId }: ProjectExplorerProps) {
   return (
     <QueryBoundary
       query={files}
-      pending={<SplitSkeleton side={264} />}
+      pending={<SplitSkeleton side={FILE_TREE_WIDTH} />}
       error={
         <ErrorState title="Could not list the repository" onRetry={() => void files.refetch()} />
       }

@@ -1,6 +1,7 @@
 import { EmptyState, ErrorState } from "@otomat/ui";
 import { useRepositories } from "@web/api/daemon/queries";
 import { ProjectExplorer } from "@web/components/files/project/explorer";
+import { FILE_TREE_WIDTH } from "@web/components/files/surface";
 import { FilesTabs } from "@web/components/files/tabs";
 import { FilesWorkspace } from "@web/components/files/workspace";
 import { useSelectedProject } from "@web/components/shell/project-selection/use-selected";
@@ -26,7 +27,7 @@ export function ProjectFilesView() {
       ) : (
         <QueryList
           query={repositories}
-          pending={<SplitSkeleton side={264} />}
+          pending={<SplitSkeleton side={FILE_TREE_WIDTH} />}
           error={
             <ErrorState
               title="Could not load the repository"

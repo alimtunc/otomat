@@ -41,15 +41,11 @@ export const SETTINGS_NAV: NavItem = {
 };
 
 const SECTION_BY_SEGMENT = new Map<string, ShellSection>([
-  ["issues", "issues"],
-  ["runs", "runs"],
-  ["reviews", "reviews"],
+  ...[...WORKSPACE_NAV, INBOX_NAV, SETTINGS_NAV].map((item): [string, ShellSection] => [
+    item.to.slice(1),
+    item.section,
+  ]),
   ["pull-requests", "reviews"],
-  ["usage", "usage"],
-  ["settings", "settings"],
-  ["inbox", "inbox"],
-  ["conversations", "conversations"],
-  ["files", "files"],
 ]);
 
 export function sectionForPath(pathname: string): ShellSection | null {

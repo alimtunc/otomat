@@ -9,9 +9,17 @@ import type {
 
 import { isPathAbsent, parentRefusal } from "./file-write.js";
 import { isIgnored } from "./ignored-file.js";
+import { inCheckout } from "./lock.js";
 
 /** `path` must already pass `isCreatableRepositoryPath`; a symlinked parent is refused because the entry would land where the tree does not show it. */
-export async function createWorktreeEntry(
+export function createWorktreeEntry(
+  cwd: string,
+  request: CreateWorktreeEntryRequest,
+): Promise<WorktreeFileEntry | WorktreeFileError> {
+  return inCheckout(cwd, () => createEntry(cwd, request));
+}
+
+async function createEntry(
   cwd: string,
   { path, kind }: CreateWorktreeEntryRequest,
 ): Promise<WorktreeFileEntry | WorktreeFileError> {

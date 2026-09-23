@@ -31,8 +31,8 @@ export function acquireWorktree(
   ctx: AcquireContext,
   input: AcquireWorktreeInput,
 ): Promise<WorktreeRecord> {
-  // The checks and the rollback below assume no other acquire can take this branch or path in between.
-  return inCheckout(ctx.repoRoot, () => forkWorktree(ctx, input));
+  // Acquires queue apart from the root checkout's changes: a branch created there meanwhile only makes `worktree add` refuse.
+  return inCheckout(`${ctx.repoRoot}\0worktrees`, () => forkWorktree(ctx, input));
 }
 
 async function forkWorktree(

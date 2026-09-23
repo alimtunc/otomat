@@ -145,6 +145,13 @@ export async function spawnTurn(
     resolveCarriedContributions(state, ctx.agentSessionId, { kind: "released" });
     slots.release();
   };
+  // A gone, settled or aborting run is settled by its owner; shutdown leaves the turn to this one.
+  const settleWithdrawn = async (exit?: ProcessExit): Promise<void> => {
+    const run = getRun(db, ctx.runId);
+    if (run && !isRunSettled(run.status) && !aborting.has(ctx.runId)) {
+      await settleLive(state, ctx, exit);
+    }
+  };
 
   let grant: SlotGrant | null = null;
   let proc: SessionProcess | undefined;
@@ -170,6 +177,11 @@ export async function spawnTurn(
     await capturePassStart(state, ctx);
     // Captured before the claim, so no await separates claiming a contribution from the spawn that carries it.
     const context = await captureTurnContext(state, ctx, mode);
+    // Abort and shutdown cannot see a turn that is neither starting nor in flight.
+    if (!runStillLive(state, ctx.runId)) {
+      await settleWithdrawn();
+      return abandon();
+    }
     clearWorkerStartEvidence(ctx.agentSessionDir);
     clearLiveInput(ctx.agentSessionDir);
     if (ctx.kind === "step") {
@@ -206,18 +218,9 @@ export async function spawnTurn(
     if (!(await waitForWorkerIdentity(ctx.agentSessionDir, proc.pid, proc.pgid))) {
       throw new Error(`worker ${proc.pid} exited before its identity could be recorded`);
     }
-    const readyRun = getRun(db, ctx.runId);
-    if (
-      !readyRun ||
-      isRunSettled(readyRun.status) ||
-      aborting.has(ctx.runId) ||
-      state.shuttingDown
-    ) {
+    if (!runStillLive(state, ctx.runId)) {
       proc.kill("SIGKILL");
-      const exit = await proc.exited;
-      if (readyRun && !isRunSettled(readyRun.status) && !aborting.has(ctx.runId)) {
-        await settleLive(state, ctx, exit);
-      }
+      await settleWithdrawn(await proc.exited);
       return abandon();
     }
     tail = startSessionTail(state.db, state.dataDir, ctx.runId, ctx.agentSessionId);

@@ -116,7 +116,7 @@ export {
   type SelectTriggerProps,
 } from "./primitives/select";
 
-export { Skeleton, type SkeletonProps } from "./primitives/skeleton";
+export { Skeleton, SkeletonGroup, type SkeletonProps } from "./primitives/skeleton";
 
 export { Switch, type SwitchProps } from "./primitives/switch";
 

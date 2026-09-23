@@ -24,6 +24,9 @@ import { SplitSkeleton } from "@web/components/shell/split-skeleton";
 import { selectedStepRunId } from "@web/lib/run/plan";
 import { STREAM_LABEL } from "@web/lib/run/stream";
 
+const STEPS_PANE_WIDTH = 226;
+const CONTEXT_PANE_WIDTH = 270;
+
 export function RunConversationView() {
   const { runId } = useParams({ from: "/runs/$runId/" });
   const { step: searchedStepId } = useSearch({ from: "/runs/$runId/" });
@@ -37,7 +40,9 @@ export function RunConversationView() {
   return (
     <QueryBoundary
       query={detail}
-      pending={<SplitSkeleton side={226} trailing={roomy ? 270 : undefined} />}
+      pending={
+        <SplitSkeleton side={STEPS_PANE_WIDTH} trailing={roomy ? CONTEXT_PANE_WIDTH : undefined} />
+      }
       error={
         <ErrorReport
           error={detail.error}
@@ -101,7 +106,7 @@ export function RunConversationView() {
               id="run-steps"
               label="Steps"
               side="left"
-              defaultSize={226}
+              defaultSize={STEPS_PANE_WIDTH}
               minSize={180}
               maxSize="30%"
             >
@@ -120,7 +125,7 @@ export function RunConversationView() {
               label="Run context"
               defaultCollapsed={!roomy}
               side="right"
-              defaultSize={270}
+              defaultSize={CONTEXT_PANE_WIDTH}
               minSize={220}
               maxSize="34%"
             >

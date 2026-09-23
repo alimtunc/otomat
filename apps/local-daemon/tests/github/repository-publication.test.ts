@@ -8,6 +8,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createRepositoryResolver, sourceControlSnapshot } from "#git";
 import { runGit } from "#git/git-cli";
 import { createGitHubService, GitHubCliError, type GitHubService } from "#github";
+import { runCommand } from "#github/process";
+import { fetchBranch } from "#github/remote";
 import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
 import { FakeGitHubCli } from "#test-support/github";
 
@@ -20,9 +22,9 @@ beforeEach(() => {
   fix.repo.write("manual.txt", "committed\n");
   fix.repo.commitAll("feat: manual changes");
   cli = new FakeGitHubCli();
-  vi.spyOn(cli, "fetchBranch").mockImplementation(async () => {
-    fix.repo.git("fetch", "origin", "main");
-  });
+  vi.spyOn(cli, "fetchBranch").mockImplementation((cwd, remote, branch) =>
+    fetchBranch(runCommand, cwd, remote, branch),
+  );
   vi.spyOn(cli, "push").mockImplementation(async (cwd, remote, branch, sha) => {
     if (cli.pushError !== null) throw cli.pushError;
     await runGit(["push", remote, `${sha}:refs/heads/${branch}`], { cwd });

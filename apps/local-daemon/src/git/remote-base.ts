@@ -14,6 +14,11 @@ interface RemoteBranch {
 /** A credential prompt would never be answered: an unauthenticated remote must fail so it can be classified. */
 const NO_PROMPT_ENV = { GIT_TERMINAL_PROMPT: "0" };
 
+const REMOTE_PROBE_TIMEOUT_MS = 10_000;
+
+/** Longer than a probe's bound, since a fetch transfers objects; bounded because the project's next launches queue behind it. */
+const LAUNCH_FETCH_TIMEOUT_MS = 60_000;
+
 const UNREACHABLE =
   /could not resolve host|name or service not known|nodename nor servname|temporary failure in name resolution|connection (?:refused|reset)|network is unreachable|no route to host|failed to connect|timed out/i;
 const ACCESS_DENIED =
@@ -97,17 +102,21 @@ export async function resolveBaseSha(
     cwd: repoPath,
     env: NO_PROMPT_ENV,
     allowFailure: true,
+    timeoutMs: LAUNCH_FETCH_TIMEOUT_MS,
   });
   if (fetched.exitCode === 0) {
-    const sha = await revParse(repoPath, landed);
-    await runGit(["update-ref", "-d", landed], { cwd: repoPath });
-    return sha;
+    try {
+      return await revParse(repoPath, landed);
+    } finally {
+      await runGit(["update-ref", "-d", landed], { cwd: repoPath });
+    }
   }
   // `--exit-code` answers 2 only for a ref the remote never advertised: local-only work.
   const advertised = await runGit(["ls-remote", "--exit-code", remote, ref], {
     cwd: repoPath,
     env: NO_PROMPT_ENV,
     allowFailure: true,
+    timeoutMs: REMOTE_PROBE_TIMEOUT_MS,
   });
   if (advertised.exitCode === 2) return revParse(repoPath, branch);
   const failure = classifyRemoteFailure(fetched.stderr);
@@ -117,8 +126,6 @@ export async function resolveBaseSha(
     detail: detail === "" ? null : detail,
   });
 }
-
-const REMOTE_PROBE_TIMEOUT_MS = 10_000;
 
 export type RemoteBranchProbe =
   | { status: "reachable"; remote: string }

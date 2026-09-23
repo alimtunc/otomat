@@ -11,6 +11,8 @@ import {
   GenerationTrace,
   type GitHubService,
 } from "#github";
+import { runCommand } from "#github/process";
+import { fetchBranch } from "#github/remote";
 import type { PullRequestGenerator } from "#github/types";
 import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
 import { FakeGitHubCli } from "#test-support/github";
@@ -37,9 +39,9 @@ beforeEach(() => {
   restorePath = stubRuntimeOnPath(fix.dataDir, "claude");
   writePullRequestGenerator(fix.db, { runtime: "claude", model: null, options: {} });
   cli = new FakeGitHubCli();
-  vi.spyOn(cli, "fetchBranch").mockImplementation(async () => {
-    fix.repo.git("fetch", "origin", "main");
-  });
+  vi.spyOn(cli, "fetchBranch").mockImplementation((cwd, remote, branch) =>
+    fetchBranch(runCommand, cwd, remote, branch),
+  );
   generate = vi.fn<PullRequestGenerator["generate"]>(async () => PROPOSAL);
   github = createGitHubService({
     db: fix.db,

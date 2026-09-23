@@ -116,7 +116,37 @@ it("refetches nothing on a streamed log line, message or tool call", () => {
 it("refreshes only the run detail and its report when a step or session moves", () => {
   const { client, keys } = fakeClient();
   invalidateForEvent(client, local, "run-1", event("step.lifecycle"));
-  expect(keys).toEqual([local.run("run-1"), local.runCompletionReport("run-1")]);
+  expect(keys).toEqual([local.runCompletionReport("run-1"), local.run("run-1")]);
+});
+
+it("refreshes the report when a command starts or a tool call finishes, and on no other tool call", () => {
+  const { client, keys } = fakeClient();
+  invalidateForEvent(
+    client,
+    local,
+    "run-1",
+    envelope({ type: "runtime.tool_call", payload: { phase: "call" } }),
+  );
+  expect(keys).toEqual([]);
+  invalidateForEvent(
+    client,
+    local,
+    "run-1",
+    envelope({ type: "runtime.tool_call", payload: { phase: "result" } }),
+  );
+  invalidateForEvent(
+    client,
+    local,
+    "run-1",
+    envelope({ type: "runtime.tool_call", payload: { phase: "call", tool: "Bash" } }),
+  );
+  invalidateForEvent(
+    client,
+    local,
+    "run-1",
+    envelope({ type: "runtime.tool_call", payload: { phase: "call", tool: "Read" } }),
+  );
+  expect(keys).toEqual([local.runCompletionReport("run-1"), local.runCompletionReport("run-1")]);
 });
 
 it("refreshes both usage reads on a reported turn, so the run and the dashboard move together", () => {

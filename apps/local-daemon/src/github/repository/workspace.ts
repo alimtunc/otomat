@@ -6,9 +6,11 @@ import type {
 
 import {
   computeCanonicalDiff,
+  inCheckout,
   isRepositoryRoot,
   isValidBranchName,
   mergeBase,
+  readCheckoutSnapshot,
   revParse,
   sourceControlSnapshot,
   switchToNewBranch,
@@ -146,7 +148,8 @@ export async function prepareRepositoryPublication(
       "Connect GitHub in Settings before creating a pull request.",
     );
   await config.cli.fetchBranch(cwd, remote.name, request.base_ref);
-  const diff = await publicationDiff(cwd, await revParse(cwd, "FETCH_HEAD"), snapshot.head);
+  const fetchedBase = await revParse(cwd, `refs/remotes/${remote.name}/${request.base_ref}`);
+  const diff = await publicationDiff(cwd, fetchedBase, snapshot.head);
   if (diff.files.length === 0)
     throw new GitHubPublicationError(
       "diff_empty",
@@ -181,12 +184,14 @@ export async function checkoutHeadBranch(
     );
   if (remoteHead !== null && (await config.cli.remoteBranchProtected(cwd, remote.repository, head)))
     throw new GitHubPublicationError("branch_protected", "Choose an unprotected source branch.");
-  assertCheckoutRevision(
-    await sourceControlSnapshot(cwd),
-    request.revision,
-    "The checkout changed during preparation. Refresh before publishing.",
-  );
-  if (head === snapshot.response.branch) return;
-  const failure = await switchToNewBranch(cwd, head);
-  if (failure !== null) throw new GitHubPublicationError("branch_unavailable", failure);
+  await inCheckout(cwd, async () => {
+    assertCheckoutRevision(
+      await readCheckoutSnapshot(cwd),
+      request.revision,
+      "The checkout changed during preparation. Refresh before publishing.",
+    );
+    if (head === snapshot.response.branch) return;
+    const failure = await switchToNewBranch(cwd, head);
+    if (failure !== null) throw new GitHubPublicationError("branch_unavailable", failure);
+  });
 }

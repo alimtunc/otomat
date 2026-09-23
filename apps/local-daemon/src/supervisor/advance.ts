@@ -4,21 +4,20 @@ import {
   getRun,
   getStepRun,
   listAgentSessionsForRun,
-  listCompeteGroupsForRun,
-  listStepRunsForRun,
   updateCompeteGroupBase,
   type RunRow,
 } from "@otomat/db";
 import { isRunWorking, readyPlanWork, type RunPlanCompetitor } from "@otomat/domain";
 
 import type { WorktreeRecord } from "#git";
+import { serializeByKey } from "#serialize";
 
 import { failIdleRun, failureReason } from "./fail-run.js";
-import { repositoryInitCommands } from "./init-commands.js";
+import { repositoryInitCommands, runStillLive } from "./init-commands.js";
 import { spawnTurn } from "./lifecycle.js";
 import { finishSettle } from "./pass-boundary.js";
 import { reopenSettledRun } from "./resume.js";
-import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
+import { planStatuses } from "./settle/context.js";
 import { settleRun } from "./settle/index.js";
 import { hasRunActivity, trackPending, type SupervisorState } from "./state.js";
 import { advanceSupervision } from "./supervision/advance.js";
@@ -56,6 +55,18 @@ async function startCompeteGroup(
 
   const initCommands = repositoryInitCommands(state.db, run.repository_id);
   const acquired: { competitor: RunPlanCompetitor; worktree: WorktreeRecord }[] = [];
+  const releaseAcquired = async (): Promise<void> => {
+    for (const { competitor } of acquired) {
+      try {
+        await binding.service.cleanup(competitor.id);
+      } catch (cleanupError) {
+        console.error(
+          `[otomat] worktree rollback for competitor ${competitor.id} failed`,
+          cleanupError,
+        );
+      }
+    }
+  };
   let contexts: TurnContext[];
   try {
     for (const competitor of unstarted) {
@@ -67,6 +78,11 @@ async function startCompeteGroup(
           baseRef: run.branch,
         }),
       });
+    }
+    // An abort or shutdown that landed during the acquisitions owns the run: nothing is inserted for it.
+    if (!runStillLive(state, run.id)) {
+      await releaseAcquired();
+      return true;
     }
     contexts = state.db.transaction(
       () =>
@@ -80,16 +96,7 @@ async function startCompeteGroup(
       { behavior: "immediate" },
     );
   } catch (error) {
-    for (const { competitor } of acquired) {
-      try {
-        await binding.service.cleanup(competitor.id);
-      } catch (cleanupError) {
-        console.error(
-          `[otomat] worktree rollback for competitor ${competitor.id} failed`,
-          cleanupError,
-        );
-      }
-    }
+    await releaseAcquired();
     driveCompeteGroupTo(state.db, group.id, group.status, "failed");
     throw error;
   }
@@ -102,11 +109,8 @@ async function startCompeteGroup(
 }
 
 function nextReadyWork(state: SupervisorState, run: RunRow) {
-  return readyPlanWork(
-    run.plan_json,
-    stepStatuses(listStepRunsForRun(state.db, run.id)),
-    competeGroupStatuses(listCompeteGroupsForRun(state.db, run.id)),
-  );
+  const { statuses, groups } = planStatuses(state.db, run.id);
+  return readyPlanWork(run.plan_json, statuses, groups);
 }
 
 /** Starts the next ready plan node; a compete node schedules all candidates under the global semaphore. */
@@ -152,7 +156,14 @@ export async function startNextStepOrConverge(state: SupervisorState, run: RunRo
 export function scheduleNextStep(state: SupervisorState, run: RunRow): Promise<void> {
   return trackPending(
     state,
-    startNextStepOrConverge(state, run).catch((error: unknown) => {
+    // Queued behind the run's pass in flight: a pass awaits git between reading its ready node and claiming it.
+    serializeByKey(state.advancing, run.id, async () => {
+      const current = getRun(state.db, run.id);
+      if (!current || !runStillLive(state, run.id)) return;
+      // A live turn owns the workspace: the work waits for it rather than starting beside it.
+      if (hasRunActivity(state, run.id)) return startAfterLiveTurns(state, run.id);
+      await startNextStepOrConverge(state, current);
+    }).catch((error: unknown) => {
       console.error(`[otomat] run ${run.id} failed to start its next step`, error);
       return failIdleRun(state, run.id, `next work failed to start: ${failureReason(error)}`);
     }),
@@ -166,12 +177,17 @@ export function startAfterLiveTurns(state: SupervisorState, runId: string): void
     .map((handle) => handle.monitor);
   void trackPending(
     state,
-    Promise.all(monitors).then(() => {
-      if (hasRunActivity(state, runId) || state.aborting.has(runId)) return;
-      const run = getRun(state.db, runId);
-      if (!run || isRunWorking(run.status) || nextReadyWork(state, run) === null) return;
-      return scheduleNextStep(state, reopenSettledRun(state, run));
-    }),
+    Promise.all(monitors)
+      .then(() => {
+        if (hasRunActivity(state, runId) || state.aborting.has(runId)) return;
+        const run = getRun(state.db, runId);
+        if (!run || isRunWorking(run.status) || nextReadyWork(state, run) === null) return;
+        return scheduleNextStep(state, reopenSettledRun(state, run));
+      })
+      .catch((error: unknown) => {
+        console.error(`[otomat] run ${runId} failed to start its appended step`, error);
+        return failIdleRun(state, runId, `next work failed to start: ${failureReason(error)}`);
+      }),
   );
 }
 
@@ -179,17 +195,17 @@ export function startAfterLiveTurns(state: SupervisorState, runId: string): void
 export async function advanceRun(state: SupervisorState, runId: string): Promise<void> {
   const run = getRun(state.db, runId);
   if (!run || run.status !== "running") return;
+  // A pass in flight reads the plan when it runs, and a turn's monitor must not wait behind it.
   if (hasRunActivity(state, runId) || state.aborting.has(runId) || state.advancing.has(runId)) {
     return;
   }
 
-  state.advancing.add(runId);
-  try {
-    await startNextStepOrConverge(state, run);
-  } catch (error) {
-    console.error(`[otomat] run ${runId} failed to start its next work`, error);
-    await failIdleRun(state, runId, `next work failed to start: ${failureReason(error)}`);
-  } finally {
-    state.advancing.delete(runId);
-  }
+  await serializeByKey(state.advancing, runId, async () => {
+    try {
+      await startNextStepOrConverge(state, run);
+    } catch (error) {
+      console.error(`[otomat] run ${runId} failed to start its next work`, error);
+      await failIdleRun(state, runId, `next work failed to start: ${failureReason(error)}`);
+    }
+  });
 }

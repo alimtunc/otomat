@@ -1,4 +1,4 @@
-import { Skeleton } from "@otomat/ui";
+import { Skeleton, SkeletonGroup } from "@otomat/ui";
 
 const TITLE_WIDTHS = ["58%", "44%", "66%", "51%", "38%", "62%", "47%"];
 
@@ -12,7 +12,7 @@ export function ListSkeleton({
   header?: boolean;
 }) {
   return (
-    <div className="flex flex-col">
+    <SkeletonGroup className="flex flex-col">
       {header ? (
         <div className="flex h-7.5 items-center gap-8 border-b border-border-subtle px-3">
           <Skeleton className="h-2.5 w-10" />
@@ -31,6 +31,6 @@ export function ListSkeleton({
           <Skeleton className="ml-auto h-5 w-16 shrink-0" />
         </div>
       ))}
-    </div>
+    </SkeletonGroup>
   );
 }

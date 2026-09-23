@@ -33,8 +33,7 @@ import type { Supervisor, SupervisorConfig } from "./types.js";
 import { workspaceClosureFacts } from "./workspace-summary.js";
 import {
   cleanupWorkspace,
-  cycleHolders,
-  findWorkspaceEntry,
+  inWorkspaceCheckout,
   listWorkspaces,
   reconcileWorkspaces,
   supervisorWorkspaces,
@@ -110,10 +109,10 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       }
       return workspacePass;
     },
-    cleanupWorkspace: async (workspaceId, force) => {
-      const entry = await findWorkspaceEntry(workspaces, workspaceId, cycleHolders(state.db));
-      return entry === null ? null : cleanupWorkspace(workspaces, entry, { force });
-    },
+    cleanupWorkspace: (workspaceId, force) =>
+      inWorkspaceCheckout(workspaces, workspaceId, async (entry) =>
+        entry === null ? null : cleanupWorkspace(workspaces, entry, { force }),
+      ),
     settle: async () => {
       while (state.inflight.size > 0 || state.pending.size > 0) {
         await Promise.all([

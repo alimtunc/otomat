@@ -19,6 +19,7 @@ import {
 import { readRunEvents, sessionDir } from "#events";
 import type { CanonicalDiff } from "#git";
 
+import { runStillLive } from "../init-commands.js";
 import { spawnTurn } from "../lifecycle.js";
 import { requireWorktreePath } from "../resume.js";
 import { preflightRuntimeConfig } from "../runtime-preflight.js";
@@ -73,6 +74,8 @@ export async function spawnSupervisionTurn(
   const runtime = ensureRuntimeAgent(state.db, supervision.config.runtime);
   preflightRuntimeConfig(runtime, supervision.config, worktreePath);
   const prompt = buildSupervisionPrompt(await buildBrief(state, run, step));
+  // An abort or shutdown during the brief owns the run; its pending verdict stays for the next pass.
+  if (!runStillLive(state, run.id)) return;
   const agentSessionId = randomUUID();
   insertAgentSession(state.db, {
     id: agentSessionId,

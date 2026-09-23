@@ -1,9 +1,11 @@
+import { existsSync } from "node:fs";
+
 import { listRepositories } from "@otomat/db";
 import type { WorkspaceReconcileReport } from "@otomat/domain";
 
 import { isRepositoryRoot } from "#git";
 import { pruneWorktrees } from "#git/worktree-cli";
-import { updateWorktreeStatus } from "#git/worktrees-store";
+import { findWorktreeById, updateWorktreeStatus } from "#git/worktrees-store";
 
 import type { WorkspaceContext } from "./context.js";
 import { cycleHolders, listWorkspaces, repositoryInventory } from "./inventory.js";
@@ -34,6 +36,9 @@ export async function reconcileWorkspaces(
     pruned += await pruneWorktrees(binding.rootPath);
     for (const entry of await repositoryInventory(context, repository, holders)) {
       if (entry.state !== "missing") continue;
+      // An archive or cleanup still in flight writes its own status after the listing above.
+      const record = findWorktreeById(context.db, entry.id);
+      if (record?.status !== "active" || existsSync(record.path)) continue;
       updateWorktreeStatus(context.db, entry.id, { status: "removed" });
       converged += 1;
       console.log(`[otomat] worktree record ${entry.id} converged: ${entry.path} is gone`);

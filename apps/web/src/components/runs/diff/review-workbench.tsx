@@ -22,6 +22,7 @@ import { DiffEmptyRegion } from "@web/components/runs/diff/empty-region";
 import { DiffFileNav } from "@web/components/runs/diff/files/nav";
 import { DiffFixBar } from "@web/components/runs/diff/fix-bar";
 import { RunDiffHeader } from "@web/components/runs/diff/header";
+import { DIFF_FILE_LIST_WIDTH } from "@web/components/runs/diff/layout";
 import { diffPrefsStore } from "@web/components/runs/diff/prefs/store";
 import { diffScopeSummary } from "@web/components/runs/diff/scope/label";
 import { DiffSearchField } from "@web/components/runs/diff/search/field";
@@ -39,6 +40,7 @@ export interface ReviewWorkbenchProps {
   diff: ReviewDiffContract;
   review: ReviewDetail;
   notice: ReactNode;
+  retained: boolean;
 }
 
 export function ReviewWorkbench({
@@ -50,6 +52,7 @@ export function ReviewWorkbench({
   diff,
   review,
   notice,
+  retained,
 }: ReviewWorkbenchProps) {
   const addComment = useAddReviewComment(target);
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
@@ -63,6 +66,7 @@ export function ReviewWorkbench({
     sort: prefs.sort,
     grouping: prefs.grouping,
     hideReviewed: prefs.hideReviewed,
+    retained,
   });
   const { partition, ordered, visible, reviewed, active, collapsed } = interactions;
 
@@ -109,7 +113,7 @@ export function ReviewWorkbench({
         id="diff-files"
         label="Changed files"
         side="left"
-        defaultSize={264}
+        defaultSize={DIFF_FILE_LIST_WIDTH}
         minSize={168}
         maxSize="40%"
       >

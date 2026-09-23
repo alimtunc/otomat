@@ -1,9 +1,17 @@
-import type { EventEnvelope, EventType } from "@otomat/domain";
+import { changesReportedCommands, type EventEnvelope, type EventType } from "@otomat/domain";
 import type { QueryClient } from "@tanstack/react-query";
 import { invalidateWriteback } from "@web/api/linear/writeback";
 import type { HostQueryKeys } from "@web/api/query-keys";
 
-// Log lines, messages and tool calls reach the timeline through the stream itself; refetching on them storms the daemon.
+// Streamed output reaches the timeline through the stream itself; refetching on it storms the daemon.
+const STREAMED_EVENTS: ReadonlySet<EventType> = new Set([
+  "runtime.log",
+  "runtime.message",
+  "runtime.permission_request",
+  "runtime.permission_response",
+  "runtime.tool_call",
+]);
+
 const RUN_DETAIL_EVENTS: ReadonlySet<EventType> = new Set([
   "step.lifecycle",
   "session.lifecycle",
@@ -49,31 +57,28 @@ export function invalidateForEvent(
     client.invalidateQueries({ queryKey: keys.inbox });
     return;
   }
+  if (STREAMED_EVENTS.has(event.type) && !changesReportedCommands(event)) return;
+  client.invalidateQueries({ queryKey: keys.runCompletionReport(runId) });
   if (RUN_DETAIL_EVENTS.has(event.type)) {
     client.invalidateQueries({ queryKey: keys.run(runId), exact: true });
-    client.invalidateQueries({ queryKey: keys.runCompletionReport(runId) });
     return;
   }
   if (event.type === "runtime.usage") {
-    client.invalidateQueries({ queryKey: keys.runCompletionReport(runId) });
     client.invalidateQueries({ queryKey: keys.runUsage(runId) });
     client.invalidateQueries({ queryKey: keys.usage });
     return;
   }
   if (event.type === "git.diff_updated") {
-    client.invalidateQueries({ queryKey: keys.runCompletionReport(runId) });
     client.invalidateQueries({ queryKey: keys.reviewDiffs({ kind: "run", id: runId }) });
     client.invalidateQueries({ queryKey: keys.runFiles(runId) });
     client.invalidateQueries({ queryKey: keys.sourceControl({ kind: "run", id: runId }) });
     return;
   }
   if (event.type.startsWith("review.")) {
-    client.invalidateQueries({ queryKey: keys.runCompletionReport(runId) });
     client.invalidateQueries({ queryKey: keys.reviewDetail({ kind: "run", id: runId }) });
     return;
   }
   if (event.type.startsWith("linear.")) {
-    client.invalidateQueries({ queryKey: keys.runCompletionReport(runId) });
     const issueId = issueIdOf(event);
     if (issueId === null) return;
     void invalidateWriteback(client, keys, issueId);
@@ -81,7 +86,6 @@ export function invalidateForEvent(
     return;
   }
   if (event.type.startsWith("pr.")) {
-    client.invalidateQueries({ queryKey: keys.runCompletionReport(runId) });
     client.invalidateQueries({ queryKey: keys.runPullRequest(runId) });
     client.invalidateQueries({ queryKey: keys.reviewDiffs({ kind: "run", id: runId }) });
     client.invalidateQueries({ queryKey: keys.issues });

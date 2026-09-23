@@ -9,6 +9,7 @@ import {
   type CompeteGroupRow,
   type RunRow,
 } from "@otomat/db";
+import { isRunSettled } from "@otomat/domain";
 
 import { competeGroupStatuses, stepStatuses } from "./settle/context.js";
 import { resolveIdleRun } from "./settle/idle.js";
@@ -93,6 +94,12 @@ export async function selectCompeteWinner(
   driveCompeteGroupTo(state.db, groupId, claimed.status, "selected");
   const current = getRun(state.db, runId);
   if (!current) throw new Error(`run ${runId} vanished after winner promotion`);
+  // An abort that landed during the promotion owns the run: its candidates are archived, its dependents stay locked.
+  const abortedMeanwhile =
+    (!isRunSettled(scoped.run.status) && isRunSettled(current.status)) || state.aborting.has(runId);
+  if (abortedMeanwhile) {
+    return archiveCandidates(state, current, groupId);
+  }
   driveRunTo(state.db, runId, current.status, "running", new Date().toISOString());
   return unlockAfterSelection(state, current, groupId);
 }

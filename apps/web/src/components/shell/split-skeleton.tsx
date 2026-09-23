@@ -1,9 +1,9 @@
-import { Skeleton } from "@otomat/ui";
+import { Skeleton, SkeletonGroup } from "@otomat/ui";
 import { LinesSkeleton } from "@web/components/shell/lines-skeleton";
 
 export function SplitSkeleton({ side, trailing }: { side: number; trailing?: number }) {
   return (
-    <div className="flex h-full min-h-0">
+    <SkeletonGroup className="flex h-full min-h-0">
       <div
         className="flex shrink-0 flex-col gap-2 border-r border-border-subtle p-3"
         style={{ width: side }}
@@ -24,6 +24,6 @@ export function SplitSkeleton({ side, trailing }: { side: number; trailing?: num
           <LinesSkeleton lines={4} className="p-3.5" />
         </div>
       )}
-    </div>
+    </SkeletonGroup>
   );
 }

@@ -2,6 +2,7 @@ import { Button, EmptyState, ErrorState } from "@otomat/ui";
 import { useParams } from "@tanstack/react-router";
 import { usePullRequestReviewContext } from "@web/api/prs/queries";
 import { usePullRequestReconciliation } from "@web/api/prs/use-reconciliation";
+import { DIFF_FILE_LIST_WIDTH } from "@web/components/runs/diff/layout";
 import { ReviewDiffView } from "@web/components/runs/diff/review-view";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
@@ -22,7 +23,7 @@ export function PullRequestDiffView() {
   return (
     <QueryBoundary
       query={query}
-      pending={<SplitSkeleton side={264} />}
+      pending={<SplitSkeleton side={DIFF_FILE_LIST_WIDTH} />}
       error={
         <CenteredState>
           <ErrorState

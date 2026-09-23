@@ -70,7 +70,7 @@ it("abort honors a worker that already completed, never faking a cancel", async 
 it("does not spawn a worker for a run aborted while queued on the semaphore", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, "linger", { concurrency: 1 });
   const holder = await supervisor.start({ prompt: "holds the only slot" });
-  expect(await waitFor(() => getRun(fix.db, holder.id)?.status === "running")).toBe(true);
+  expect(await waitFor(() => spawn.calls === 1)).toBe(true);
 
   seedRun(fix.db, {
     runId: "rqa",

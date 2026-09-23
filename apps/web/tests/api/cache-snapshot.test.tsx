@@ -270,3 +270,35 @@ it("does not serialize again for invalidations or page exits without new data", 
   expect(write).toHaveBeenCalledTimes(1);
   write.mockRestore();
 });
+
+it("does not serialize again for a refetch that answers the same data", async () => {
+  vi.useFakeTimers();
+  const store = memorySnapshotStore();
+  const write = vi.spyOn(store, "set");
+  const client = testQueryClient();
+  await attachQuerySnapshot(client, store);
+  client.setQueryData(keys.issueCatalog("p1"), [issueContract({ id: "i1" })]);
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(write).toHaveBeenCalledTimes(1);
+  client.setQueryData(keys.issueCatalog("p1"), [issueContract({ id: "i1" })]);
+  await vi.advanceTimersByTimeAsync(30_000);
+  window.dispatchEvent(new Event("pagehide"));
+  expect(write).toHaveBeenCalledTimes(1);
+  write.mockRestore();
+});
+
+it("revalidates only what a late restore supplied, leaving a newer read alone", async () => {
+  const store = memorySnapshotStore();
+  const source = testQueryClient();
+  source.setQueryData(keys.issueCatalog("p1"), [issueContract({ id: "stored" })]);
+  source.setQueryData(keys.issueCatalog("p2"), [issueContract({ id: "stored" })]);
+  await saveQuerySnapshot(source, store);
+  const client = testQueryClient();
+  client.setQueryData(keys.issueCatalog("p1"), [issueContract({ id: "fresh" })], {
+    updatedAt: Date.now() + HOUR_MS,
+  });
+  await restoreQuerySnapshot(client, store);
+  expect(listedIssues(client)?.map((issue) => issue.id)).toEqual(["fresh"]);
+  expect(client.getQueryState(keys.issueCatalog("p1"))?.isInvalidated).toBe(false);
+  expect(client.getQueryState(keys.issueCatalog("p2"))?.isInvalidated).toBe(true);
+});

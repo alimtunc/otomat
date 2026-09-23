@@ -43,6 +43,8 @@ export interface DiffInteractionsInput {
   sort: DiffSortMode;
   grouping: DiffGroupingMode;
   hideReviewed: boolean;
+  /** Window-level shortcuts reach past `inert`, so a retained diff must not answer them. */
+  retained: boolean;
 }
 
 export interface DiffInteractions {
@@ -119,7 +121,7 @@ export function useDiffInteractions(input: DiffInteractionsInput): DiffInteracti
   useSearchReveal(search, showFile);
 
   useDiffKeyboardNav({
-    enabled: ordered.length > 0,
+    enabled: ordered.length > 0 && !input.retained,
     files: visible.files,
     activePath: active.path,
     onJumpToFile: (file) => revealFile(file.path),

@@ -54,6 +54,8 @@ async function attachToProject(
   if (existing && (await isRepositoryRoot(project.root_path))) {
     return { ok: false, error: "project_already_has_repository" };
   }
+  // A delete that landed during the probe refuses here rather than failing the writes below.
+  if (!getProject(db, projectId)) return { ok: false, error: "project_not_found" };
   const owner = findRegisteredProject(db, probe.rootPath);
   if (owner && owner.id !== projectId) {
     return { ok: false, error: "repository_already_registered" };

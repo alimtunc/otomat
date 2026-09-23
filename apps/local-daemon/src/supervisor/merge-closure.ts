@@ -17,7 +17,7 @@ import type { RepositoryResolver } from "#git";
 
 import { signalIssueLifecycle } from "./issue-lifecycle.js";
 import { driveIssueTo, driveRunTo } from "./transitions.js";
-import { cleanupWorkspace, cycleHolders, findWorkspaceEntry } from "./workspaces/index.js";
+import { cleanupWorkspace, inWorkspaceCheckout } from "./workspaces/index.js";
 
 export interface MergeClosureConfig {
   db: Db;
@@ -68,14 +68,15 @@ async function releaseWorkspace(
     busyRuns: () => false,
     refreshPullRequests: null,
   };
-  const entry = await findWorkspaceEntry(context, worktreeId, cycleHolders(config.db));
-  if (entry === null || entry.state === "removed" || entry.pull_request?.merged !== true) return;
-  const repository = getRepository(config.db, entry.repository_id);
-  if (!repository || !readAutoDeleteWorkspaces(config.db, repository.project_id)) return;
-  const result = await cleanupWorkspace(context, entry);
-  if (result.outcome !== "cleaned") {
-    console.error(
-      `[otomat] workspace ${worktreeId} kept after merge (${result.outcome}): ${result.message}`,
-    );
-  }
+  await inWorkspaceCheckout(context, worktreeId, async (entry) => {
+    if (entry === null || entry.state === "removed" || entry.pull_request?.merged !== true) return;
+    const repository = getRepository(config.db, entry.repository_id);
+    if (!repository || !readAutoDeleteWorkspaces(config.db, repository.project_id)) return;
+    const result = await cleanupWorkspace(context, entry);
+    if (result.outcome !== "cleaned") {
+      console.error(
+        `[otomat] workspace ${worktreeId} kept after merge (${result.outcome}): ${result.message}`,
+      );
+    }
+  });
 }

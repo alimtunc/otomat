@@ -2452,13 +2452,18 @@ Moving between screens repaints what is already known rather than a loader:
 - **A daemon that never freezes.** Every git call runs asynchronously, so a slow
   diff, worktree inventory or networked fetch holds only its own request, never
   SSE or the fast SQLite reads beside it. Sequences that read then write one
-  checkout — source-control changes, file saves, snapshot, archive, promotion,
-  acquire — are serialized per working directory; reads stay lock-free. JSON
+  checkout — source-control changes, file saves and creations, snapshot, archive,
+  promotion, workspace cleanup — are serialized per working directory, and
+  worktree acquisitions per repository; reads stay lock-free. A run's scheduling
+  passes (appended work, worktree init, resume) queue on one chain per run, which
+  a turn's advance joins only when it is idle; a queued pass that finds a turn
+  live waits for it rather than starting beside it. JSON
   responses above 1 KB are gzipped for a renderer that reaches its host through a
   tunnel, and event streams are never encoded.
-- **No self-inflicted refetch.** Streamed log lines, messages and tool calls
-  reach the timeline through the run stream and invalidate nothing; step,
-  session and supervision events refresh only the run's own detail and report.
+- **No self-inflicted refetch.** Streamed log lines, messages, permissions and
+  tool calls reach the timeline through the run stream and invalidate nothing,
+  except a command's call or a tool result, which refresh the completion report;
+  step, session and supervision events refresh only the run's own detail and report.
   While its stream is open a run's detail polls every 5 s, only to catch
   scheduler-side waits, and a refused read stops the poll. Per-file diff blobs
   are keyed outside the diff prefix: they are addressed by sha and never change.

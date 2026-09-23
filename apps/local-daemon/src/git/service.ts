@@ -48,6 +48,19 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     return row;
   }
 
+  // Re-read under the lock: an archive queued ahead of this snapshot has already retired the row.
+  const snapshotActive = (
+    owner: string,
+    message: string,
+  ): Promise<WorktreeRow & { head_sha: string }> =>
+    inCheckout(requireActive(owner).path, async () => {
+      const row = requireActive(owner);
+      await snapshotWorktree(row.path, message);
+      const head = await headSha(row.path);
+      updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
+      return { ...row, head_sha: head };
+    });
+
   const scope = { repoRoot, defaultBranch };
   const acquireCtx = { db, repositoryId, repoRoot, defaultBranch, worktreesRoot, idFactory };
 
@@ -123,13 +136,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     },
 
     async snapshot(owner, message = snapshotSubject("snapshot", owner)) {
-      const row = requireActive(owner);
-      return inCheckout(row.path, async () => {
-        await snapshotWorktree(row.path, message);
-        const head = await headSha(row.path);
-        updateWorktreeStatus(db, row.id, { status: "active", head_sha: head });
-        return toRecord({ ...row, head_sha: head });
-      });
+      return toRecord(await snapshotActive(owner, message));
     },
 
     async commitStaged(owner, request) {
@@ -143,12 +150,9 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
       const source = requireActive(sourceOwner);
       const canonical = requireActive(canonicalOwner);
 
-      const sourceHead = await inCheckout(source.path, async () => {
-        await snapshotWorktree(source.path, snapshotSubject("promote", sourceOwner));
-        const head = await headSha(source.path);
-        updateWorktreeStatus(db, source.id, { status: "active", head_sha: head });
-        return head;
-      });
+      const sourceHead = (
+        await snapshotActive(sourceOwner, snapshotSubject("promote", sourceOwner))
+      ).head_sha;
 
       if (!(await isAncestor(repoRoot, expectedBaseSha, sourceHead))) {
         throw new WorktreeConflictError(

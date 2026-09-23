@@ -226,6 +226,20 @@ describe("GitWorktreeService", () => {
     expect(diff.files.some((f) => f.path === "work.txt")).toBe(true);
   });
 
+  it("refuses a snapshot queued behind the archive that retired its worktree", async () => {
+    const wt = await env.service.acquire({ owner: "late", branch: "feat-late" });
+    writeFileSync(join(wt.path, "work.txt"), "late work\n");
+
+    const archiving = env.service.archive("late");
+    const snapshotting = env.service.snapshot("late");
+
+    expect((await archiving).status).toBe("archived");
+    await expect(snapshotting).rejects.toThrow(WorktreeNotFoundError);
+    expect(env.service.list({ status: "archived" }).map((record) => record.owner)).toContain(
+      "late",
+    );
+  });
+
   it("cleans up a worktree: removes dir and branch, leaves no orphan", async () => {
     const wt = await env.service.acquire({ owner: "step-1", branch: "feat-x" });
     await env.service.cleanup("step-1");

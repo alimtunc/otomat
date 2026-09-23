@@ -1,6 +1,7 @@
 import type { ReviewDiffContract, RunDiffScope, RunDiffScopeSelector } from "@otomat/domain";
 import { cn, EmptyState, ErrorState, STALE_CONTENT_CLASS } from "@otomat/ui";
 import { useReviewDetail, useReviewDiff } from "@web/api/reviews/queries";
+import { DIFF_FILE_LIST_WIDTH } from "@web/components/runs/diff/layout";
 import {
   ReviewWorkbench,
   type ReviewWorkbenchProps,
@@ -34,7 +35,8 @@ export function ReviewDiffView({
     void reviewQuery.refetch();
   };
 
-  if (diffQuery.isPending || reviewQuery.isPending) return <SplitSkeleton side={264} />;
+  if (diffQuery.isPending || reviewQuery.isPending)
+    return <SplitSkeleton side={DIFF_FILE_LIST_WIDTH} />;
   const retained = diffQuery.isPlaceholderData;
   const review = reviewQuery.data;
   // Two queries share this view, so QueryBoundary's ladder is applied by hand: block only when a failing query has nothing retained.
@@ -53,19 +55,18 @@ export function ReviewDiffView({
   const answered = diffQuery.data.scope;
   const diff = diffQuery.data.diff;
   const control = scopeControl?.(answered, diff);
-  if (diff === null) {
-    return control === undefined ? (
+  const refreshFailed = diffQuery.isError || reviewQuery.isError;
+  let content: ReactNode;
+  if (diff === null && control === undefined) {
+    content = (
       <CenteredState>
         <EmptyState icon="git-compare" title="No diff to review" description={emptyDescription} />
       </CenteredState>
-    ) : (
-      <DiffScopeUnavailable scopeControl={control} reason={diffQuery.data.unavailable} />
     );
-  }
-
-  const refreshFailed = diffQuery.isError || reviewQuery.isError;
-  return (
-    <div inert={retained} className={cn("h-full", retained && STALE_CONTENT_CLASS)}>
+  } else if (diff === null) {
+    content = <DiffScopeUnavailable scopeControl={control} reason={diffQuery.data.unavailable} />;
+  } else {
+    content = (
       <ReviewWorkbench
         target={target}
         workspace={workspace}
@@ -83,7 +84,16 @@ export function ReviewDiffView({
             />
           ) : null
         }
+        retained={retained}
       />
-    </div>
+    );
+  }
+  return (
+    <>
+      {retained ? <output className="sr-only">Loading the diff</output> : null}
+      <div inert={retained} className={cn("h-full", retained && STALE_CONTENT_CLASS)}>
+        {content}
+      </div>
+    </>
   );
 }

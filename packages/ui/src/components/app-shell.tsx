@@ -22,7 +22,6 @@ const SHELL_LAYOUT_ID = "otomat.shell";
 export interface AppShellProps {
   sidebar: ReactNode;
   tabs?: ReactNode;
-  /** The route's `AppShellMain`; the frame around it stays mounted across navigations. */
   children: ReactNode;
   density?: Density;
   collapsed?: boolean;

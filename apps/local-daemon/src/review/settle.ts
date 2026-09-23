@@ -53,12 +53,15 @@ function resolveSettledComments(
   ctx: ReviewContext,
   outcome: RunSettledOutcome,
   open: ReviewCommentRow[],
+  requestedBefore: ReadonlyMap<string, string | null>,
   diff: CanonicalDiff | null,
   now: string,
 ): void {
   const fileShas = new Map(diff?.files.map((file) => [file.path, file.sha]) ?? []);
   for (const comment of open) {
     if (comment.fix_requested_at !== null) {
+      // A fix requested while the diff was computed belongs to the pass it queued, not to this one.
+      if (requestedBefore.get(comment.id) !== comment.fix_requested_at) continue;
       // Stamped before the transition: an addressed comment must never exist without
       // the pass that addressed it, or its proof would have to guess one.
       if (outcome.agentSessionId !== null) {
@@ -98,6 +101,9 @@ export async function onRunSettled(ctx: ReviewContext, outcome: RunSettledOutcom
     return;
   }
 
+  const requestedBefore = new Map(
+    openComments().map((comment) => [comment.id, comment.fix_requested_at]),
+  );
   const diff = await computeDiff(resolveReviewSubject(ctx, { kind: "run", id: run.id }));
   // Read after the diff: a comment the reviewer changed meanwhile must not transition from a stale status.
   const open = openComments();
@@ -105,6 +111,6 @@ export async function onRunSettled(ctx: ReviewContext, outcome: RunSettledOutcom
   if (diff !== null) {
     emitLedgerEvent(ctx.db, ctx.dataDir, run.id, buildDiffUpdatedEvent(run.id, diff, now));
   }
-  resolveSettledComments(ctx, outcome, open, diff, now);
+  resolveSettledComments(ctx, outcome, open, requestedBefore, diff, now);
   deriveReviewStatus(ctx, run.id);
 }

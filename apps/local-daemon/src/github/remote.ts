@@ -177,7 +177,8 @@ export async function fetchBranch(
 ): Promise<void> {
   const result = await run({
     command: "git",
-    args: ["fetch", "--no-tags", remote, `refs/heads/${branch}`],
+    // Onto its tracking ref rather than `FETCH_HEAD`, which any concurrent fetch in the repository rewrites.
+    args: ["fetch", "--no-tags", remote, `+refs/heads/${branch}:refs/remotes/${remote}/${branch}`],
     cwd,
   });
   assertPublicationSucceeded(

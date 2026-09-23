@@ -299,7 +299,7 @@ export class FakeGitHubCli implements GitHubCli {
     return this.remoteHeads.get(branch) ?? null;
   }
 
-  async fetchBranch(): Promise<void> {}
+  async fetchBranch(_cwd: string, _remote: string, _branch: string): Promise<void> {}
 
   async findPullRequest(input: PullRequestSelector): Promise<GitHubPullRequest | null> {
     const matchesSelector =

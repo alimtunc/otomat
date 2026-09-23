@@ -72,11 +72,15 @@ export async function restoreQuerySnapshot(
       })
     : [];
   hydrate(client, { mutations: [], queries });
-  // A restored `dataUpdatedAt` can satisfy `staleTime`, so invalidate to force a revalidation.
-  void client.invalidateQueries({ predicate: (query) => isSnapshotEntry(query.queryKey) });
+  // A restored `dataUpdatedAt` can satisfy `staleTime`; a read that landed before this late restore is newer and keeps its fetch.
+  void client.invalidateQueries(
+    {
+      predicate: (query) => isSnapshotEntry(query.queryKey) && query.state.dataUpdatedAt <= savedAt,
+    },
+    { cancelRefetch: false },
+  );
 }
 
-/** Resolves once the stored snapshot is in the cache, so the first paint already shows it. */
 export async function attachQuerySnapshot(
   client: QueryClient,
   store: SnapshotStore = indexedDbSnapshotStore,
@@ -95,10 +99,19 @@ export async function attachQuerySnapshot(
     saveQuerySnapshot(client, store).catch(reportError);
   };
   let pending: ReturnType<typeof setTimeout> | null = null;
+  // Structural sharing keeps an unchanged refetch's data by reference, so a poll alone never re-serializes the snapshot.
+  const lastData = new WeakMap<Query, unknown>();
   client.getQueryCache().subscribe((event) => {
     if (!isSnapshotEntry(event.query.queryKey)) return;
-    if (event.type !== "removed" && !(event.type === "updated" && event.action.type === "success"))
+    // A save made while the query failed left it out, so the success it recovers with is new to the snapshot.
+    if (event.type === "updated" && event.action.type === "error") {
+      lastData.delete(event.query);
       return;
+    }
+    if (event.type === "updated" && event.action.type === "success") {
+      if (lastData.get(event.query) === event.query.state.data) return;
+      lastData.set(event.query, event.query.state.data);
+    } else if (event.type !== "removed") return;
     dirty = true;
     if (pending !== null) return;
     pending = setTimeout(() => {
