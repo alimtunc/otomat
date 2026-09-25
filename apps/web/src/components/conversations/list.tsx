@@ -3,6 +3,7 @@ import { ConversationIssueGroupItem } from "@web/components/conversations/issue-
 import { ConversationRow } from "@web/components/conversations/row";
 import { InboxGroup } from "@web/components/inbox/group";
 import type { ConversationSection } from "@web/lib/conversations/sections";
+import { conversationStatus } from "@web/lib/conversations/status";
 import type { InboxMarkPatch } from "@web/lib/inbox/marks";
 import { type KeyboardEvent, useState } from "react";
 
@@ -68,7 +69,9 @@ export function ConversationList({ sections, selectedId, pending, onMark }: Conv
           >
             {section.groups.map((group) => {
               const groupKey = `issue:${group.issue.id}`;
-              const defaultGroupCollapsed = group.issue.id !== selectedIssue;
+              const defaultGroupCollapsed =
+                group.issue.id !== selectedIssue &&
+                !group.entries.some((entry) => conversationStatus([entry]) === "running");
               const single = group.entries.length === 1;
               const rows = group.entries.map((entry) => (
                 <li key={entry.id}>

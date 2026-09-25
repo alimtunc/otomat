@@ -72,7 +72,13 @@ describe("projectConversations", () => {
 
   it("moves on an actionable step state, a pending question and a failed delivery, never on running", () => {
     expect(updatedAtOf({ step_status: "running", step_updated_at: T2 })).toBe(T0);
-    expect(updatedAtOf({ step_status: "succeeded", step_updated_at: T2 })).toBe(T2);
+    expect(
+      updatedAtOf({
+        step_status: "succeeded",
+        latest_session_status: "terminated",
+        step_updated_at: T2,
+      }),
+    ).toBe(T2);
     expect(updatedAtOf({ step_status: "awaiting_permission", step_updated_at: T2 })).toBe(T2);
     expect(
       updatedAtOf({
@@ -160,6 +166,28 @@ describe("projectConversations", () => {
 
     expect(followed?.issue.cycle).toBe("reviewing");
     expect(done?.issue.cycle).toBeNull();
+  });
+
+  it("reads a succeeded step as running only while its next turn is live", () => {
+    const statusOf = (overrides: Parameters<typeof conversationEvidence>[0]) =>
+      projectConversations([conversationEvidence(overrides)], [], NO_CYCLES)[0]?.step_status;
+
+    expect(statusOf({ step_status: "running" })).toBe("running");
+    expect(statusOf({ step_status: "queued", latest_session_status: null })).toBe("queued");
+    expect(statusOf({ step_status: "succeeded", latest_session_status: "terminated" })).toBe(
+      "succeeded",
+    );
+    expect(statusOf({ step_status: "succeeded", latest_session_status: "active" })).toBe("running");
+    expect(statusOf({ step_status: "succeeded", latest_session_status: "created" })).toBe(
+      "succeeded",
+    );
+    expect(statusOf({ step_status: "succeeded", latest_session_status: "awaiting_input" })).toBe(
+      "succeeded",
+    );
+    expect(statusOf({ step_status: "failed", latest_session_status: "failed" })).toBe("failed");
+    expect(statusOf({ step_status: "canceled", latest_session_status: "terminated" })).toBe(
+      "canceled",
+    );
   });
 });
 

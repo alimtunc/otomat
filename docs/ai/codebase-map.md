@@ -1557,8 +1557,13 @@ the last day. `repositories/conversations.ts` lists the steps in that scope that
 hold a session or a message — a queued step nobody wrote to has no thread yet,
 and a withdrawn one never will — and `conversation-facts.ts` attaches the facts
 the row is built from: the newest non-thinking `runtime.message` per step, the
-pending interaction, the queued and failed contributions, and the latest turn's
-frozen configuration (the plan node's, for a step that has not started).
+pending interaction, the queued and failed contributions, and the newest step
+turn's frozen configuration (the plan node's, for a step that has not started)
+and status — a supervision turn is not one of the step's turns. `succeeded` is
+final in the step machine, so a message to a succeeded step runs its next turn on
+a new session while the step row stays `succeeded`; `liveStepStatus` reads such a
+step as `running` while that session is `active`, and the entry's `step_status`,
+`ConversationHeader` and the thread's working row all go through it.
 `projectConversations` stamps each entry with its issue's followed cycle
 (`issue.cycle`, null once nothing is left to follow) and derives one `updated_at`
 per thread from the moves that are worth reading — an agent answer, a step
@@ -1570,7 +1575,9 @@ stream frame. A cancelled step and an abandoned run read as already read: they
 are the operator's act. The web groups entries by issue and sections the groups
 by `issue.cycle` alone — an unread finished thread sits in *Recently finished*
 with its dot, never in *Active* — and the state filter reads `sectionOf`, so a
-filter and a section cannot disagree.
+filter and a section cannot disagree. An issue group opens by default while one of
+its threads is running and folds back when none is; a manual fold or unfold
+overrides that default for the rest of the visit.
 
 Reading marks reuse `inbox_marks` and `POST /api/inbox/marks` unchanged; the
 projection only ever looks up its own ids, so the two projections cannot see

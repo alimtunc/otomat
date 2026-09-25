@@ -117,7 +117,6 @@ export function attachInteractions(db: Db, runIds: string[], threads: Conversati
   }
 }
 
-/** The latest turn's frozen configuration; a step that has not started yet reads the plan node it was launched with. */
 export function attachParticipants(
   db: Db,
   steps: ConversationThreadStep[],
@@ -126,20 +125,26 @@ export function attachParticipants(
   for (const row of db
     .select({
       step_run_id: agentSessions.step_run_id,
+      status: agentSessions.status,
       config: agentSessions.config_json,
       reported_model: agentSessions.reported_model,
     })
     .from(agentSessions)
     .where(
-      inArray(
-        agentSessions.step_run_id,
-        steps.map((step) => step.step_run_id),
+      and(
+        inArray(
+          agentSessions.step_run_id,
+          steps.map((step) => step.step_run_id),
+        ),
+        eq(agentSessions.kind, "step"),
       ),
     )
     .orderBy(desc(agentSessions.turn_index))
     .all()) {
     const thread = threads.get(row.step_run_id);
-    if (thread === undefined || thread.config !== null) continue;
+    if (thread === undefined) continue;
+    thread.latest_session_status ??= row.status;
+    if (thread.config !== null) continue;
     thread.config = row.config;
     thread.reported_model = row.reported_model;
   }

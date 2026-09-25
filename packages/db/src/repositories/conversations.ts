@@ -85,6 +85,7 @@ export function listConversationEvidence(db: Db, scope: ConversationScope): Conv
         step_status: row.step_status,
         step_created_at: sqliteToIso(row.step_created_at),
         step_updated_at: sqliteToIso(row.step_updated_at),
+        latest_session_status: null,
         run_id: row.run_id,
         run_status: row.run_status,
         run_abandoned_at: row.run_abandoned_at,

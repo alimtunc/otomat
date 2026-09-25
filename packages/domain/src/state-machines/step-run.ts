@@ -1,3 +1,4 @@
+import type { AgentSessionState } from "./agent-session.js";
 import { defineMachine } from "./machine.js";
 
 export const STEP_RUN_STATES = [
@@ -69,4 +70,12 @@ const stepBusySet: ReadonlySet<StepRunState> = new Set([
 
 export function isStepBusy(status: StepRunState): boolean {
   return stepBusySet.has(status);
+}
+
+/** Only `active` counts: an abandoned spawn can leave a `created` session behind. */
+export function liveStepStatus(
+  status: StepRunState,
+  latestSessionStatus: AgentSessionState | null,
+): StepRunState {
+  return status === "succeeded" && latestSessionStatus === "active" ? "running" : status;
 }
