@@ -27,7 +27,7 @@ invocation before confirmation and send no issue context. Each project keeps its
 own session when you navigate away or switch projects. **Copy terminal command**
 provides the external fallback (an SSH command on a remote host).
 
-Find current and ended terminal sessions in [Conversations](./conversations).
+Find current and ended terminal sessions in [Conversations](./conversations.md).
 Their recent output is saved locally, including after a restart; an ended session
 opens read-only. Claude/Codex terminal output keeps its terminal format.
 
