@@ -26,6 +26,7 @@ import {
   unpushedCommitCount,
   type RepositoryBinding,
 } from "#git";
+import { hasInteractiveWriter } from "#git/interactive-worktrees";
 import { listWorktrees } from "#git/worktree-cli";
 
 import { isProcessAlive } from "../process.js";
@@ -70,9 +71,11 @@ async function toEntry(
     registered: attached.registered,
     present,
     record_status: record?.status ?? null,
-    cycle_open: issueId !== null && holders.get(issueId) === record?.run_id,
+    cycle_open:
+      record?.prepared === true || (issueId !== null && holders.get(issueId) === record?.run_id),
     uncommitted_files: present ? await readUncommitted(attached.path) : 0,
-    writer_alive: writerAlive(context, record?.run_id ?? null),
+    writer_alive:
+      hasInteractiveWriter(attached.path) || writerAlive(context, record?.run_id ?? null),
   };
   const verdict = projectWorkspaceState(facts);
   const provenance = projectWorkspaceProvenance(facts);

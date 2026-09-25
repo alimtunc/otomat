@@ -1,4 +1,7 @@
-import type { ConversationEntry, MarkInboxRequest } from "@otomat/domain";
+import type {
+  ConversationThreadEntry as ConversationEntry,
+  MarkInboxRequest,
+} from "@otomat/domain";
 import { markInboxRequest } from "@web/lib/inbox/marks";
 import { useEffect, useRef } from "react";
 

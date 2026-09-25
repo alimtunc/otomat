@@ -6,6 +6,8 @@ import { ConversationsView } from "@web/components/conversations/view";
 export const Route = createFileRoute("/conversations")({
   // A step is only addressable through its run: a bare `step` cannot open a thread.
   validateSearch: (search: Record<string, unknown>): ConversationsSearch => {
+    if (typeof search.terminal === "string" && search.terminal !== "")
+      return { terminal: search.terminal };
     const run = typeof search.run === "string" ? search.run : undefined;
     return {
       run,

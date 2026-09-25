@@ -1,4 +1,4 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
 import {
   cn,
   DropdownMenu,
@@ -33,6 +33,9 @@ export function ConversationRow({
   showIssue = false,
   onMark,
 }: ConversationRowProps) {
+  const isTerminal = "terminal" in entry;
+  const title = isTerminal ? `${entry.terminal.tool ?? "Shell"} terminal` : entry.step_name;
+  const kindLabel = isTerminal ? "Terminal" : "Cockpit · chat";
   const status = conversationStatus([entry]);
   const onKeyDown = (event: KeyboardEvent<HTMLAnchorElement>): void => {
     if (pending || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -48,7 +51,11 @@ export function ConversationRow({
     >
       <Link
         to="/conversations"
-        search={{ run: entry.run_id, step: entry.step_run_id }}
+        search={
+          isTerminal
+            ? { terminal: entry.terminal.id }
+            : { run: entry.run_id, step: entry.step_run_id }
+        }
         replace
         aria-current={selected ? "true" : undefined}
         data-conversation-row
@@ -62,20 +69,25 @@ export function ConversationRow({
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           {showIssue ? (
             <span className="flex min-w-0 items-center gap-2 text-xs text-text-tertiary">
-              <span className="truncate font-mono">{entry.issue.identifier}</span>
+              <span className="truncate font-mono">
+                {entry.issue?.identifier ?? entry.project.name}
+              </span>
               <span className="ml-auto shrink-0">
                 <RelativeTime date={entry.updated_at} addSuffix={false} />
               </span>
             </span>
           ) : null}
           <span className="flex min-w-0 items-center gap-1.5">
+            <span title={kindLabel} aria-label={kindLabel} className="shrink-0 text-text-tertiary">
+              <Icon name={isTerminal ? "terminal" : "monitor"} size="xs" aria-hidden />
+            </span>
             <span
               className={cn(
                 "min-w-0 truncate text-sm",
                 entry.read ? "text-text-secondary" : "font-medium text-foreground",
               )}
             >
-              {showIssue ? entry.issue.title : entry.step_name}
+              {showIssue ? (entry.issue?.title ?? title) : title}
             </span>
             {showIssue ? null : (
               <span className="ml-auto shrink-0 text-xs text-text-tertiary">
@@ -84,6 +96,11 @@ export function ConversationRow({
             )}
           </span>
           <span className="flex min-w-0 items-center gap-2 text-xs">
+            {isTerminal ? (
+              <span className="shrink-0 text-text-tertiary">
+                {entry.terminal.state === "exited" ? "Ended" : "Active"}
+              </span>
+            ) : null}
             {status === null ? null : <StepStatusChip status={status} className="shrink-0" />}
             <span
               className={cn(

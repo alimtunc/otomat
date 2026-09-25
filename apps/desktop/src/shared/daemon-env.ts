@@ -34,6 +34,7 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
     OTOMAT_DAEMON_PORT: String(options.port),
     OTOMAT_DB_PATH: options.dbPath,
     OTOMAT_PROJECT_ROOT: options.projectRoot,
+    OTOMAT_TERMINAL_ENABLED: "1",
   };
   delete env.OTOMAT_LINEAR_API_KEY;
   delete env[MAINTENANCE_ACTION_ENV];

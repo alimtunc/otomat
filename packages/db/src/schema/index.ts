@@ -8,3 +8,4 @@ export * from "./runs.js";
 export * from "./settings.js";
 export * from "./workflow-presets.js";
 export * from "./workspace.js";
+export * from "./terminals.js";

@@ -1,22 +1,12 @@
 import type { WorktreeStatus } from "@otomat/domain";
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, uniqueIndex, type AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 
+import { issues } from "./issues.js";
+import { projects } from "./projects.js";
 import { timestamps } from "./shared.js";
 
-export const projects = sqliteTable(
-  "projects",
-  {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    root_path: text("root_path").notNull(),
-    auto_delete_workspaces: integer("auto_delete_workspaces", { mode: "boolean" })
-      .notNull()
-      .default(sql`1`),
-    ...timestamps,
-  },
-  (table) => [uniqueIndex("projects_root_path_unique").on(table.root_path)],
-);
+export { projects } from "./projects.js";
 
 export const repositories = sqliteTable("repositories", {
   id: text("id").primaryKey(),
@@ -50,10 +40,12 @@ export const worktrees = sqliteTable(
     base_ref: text("base_ref").notNull().default(""),
     // The partial index makes mutable worktree ownership exclusive.
     owner_token: text("owner_token"),
+    prepared_issue_id: text("prepared_issue_id").references((): AnySQLiteColumn => issues.id),
     status: text("status").$type<WorktreeStatus>().notNull().default("active"),
     ...timestamps,
   },
   (table) => [
+    uniqueIndex("worktrees_prepared_issue_unique").on(table.prepared_issue_id),
     uniqueIndex("worktrees_owner_active_unique")
       .on(table.owner_token)
       .where(sql`status = 'active'`),

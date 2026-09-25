@@ -1,17 +1,16 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
 
 const SECTIONS = [
   { key: "active", label: "Following" },
   { key: "finished", label: "Recently finished" },
 ] as const;
 
-/** The finished section is a glance at the day, not an archive. */
-const FINISHED_GROUP_LIMIT = 10;
-
 export type ConversationSectionKey = (typeof SECTIONS)[number]["key"];
 
 export interface ConversationIssueGroup {
+  id: string;
   issue: ConversationEntry["issue"];
+  project: ConversationEntry["project"];
   entries: ConversationEntry[];
 }
 
@@ -22,6 +21,7 @@ export interface ConversationSection {
 }
 
 export function sectionOf(entry: ConversationEntry): ConversationSectionKey {
+  if ("terminal" in entry) return entry.terminal.state === "exited" ? "finished" : "active";
   return entry.issue.cycle === null ? "finished" : "active";
 }
 
@@ -29,8 +29,10 @@ export function sectionOf(entry: ConversationEntry): ConversationSectionKey {
 function groupByIssue(entries: readonly ConversationEntry[]): ConversationIssueGroup[] {
   const groups = new Map<string, ConversationIssueGroup>();
   for (const entry of entries) {
-    const group = groups.get(entry.issue.id);
-    if (group === undefined) groups.set(entry.issue.id, { issue: entry.issue, entries: [entry] });
+    const id = entry.issue === null ? `project:${entry.project.id}` : `issue:${entry.issue.id}`;
+    const group = groups.get(id);
+    if (group === undefined)
+      groups.set(id, { id, project: entry.project, issue: entry.issue, entries: [entry] });
     else group.entries.push(entry);
   }
   return [...groups.values()];
@@ -42,7 +44,7 @@ export function groupConversations(entries: readonly ConversationEntry[]): Conve
     return {
       key: section.key,
       label: section.label,
-      groups: section.key === "finished" ? groups.slice(0, FINISHED_GROUP_LIMIT) : groups,
+      groups,
     };
   }).filter((section) => section.groups.length > 0);
 }

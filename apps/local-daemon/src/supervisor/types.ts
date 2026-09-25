@@ -128,6 +128,7 @@ export interface WorkspaceScope {
 }
 
 export interface Supervisor {
+  prepareIssueWorkspace(issueId: string): Promise<string>;
   /** Create the run/step/session rows and return once they are durable; the first step claims its slot in the background. */
   start(request: StartRunRequest): Promise<RunRow>;
   /** Why a run is not progressing right now — this host's session cap, or a plan dependency — or null while it is. */

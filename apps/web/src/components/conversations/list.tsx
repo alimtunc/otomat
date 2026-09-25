@@ -1,4 +1,4 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
 import { ConversationIssueGroupItem } from "@web/components/conversations/issue-group";
 import { ConversationRow } from "@web/components/conversations/row";
 import { InboxGroup } from "@web/components/inbox/group";
@@ -27,9 +27,9 @@ export function ConversationList({ sections, selectedId, pending, onMark }: Conv
   const selectedSection = sections.find((section) =>
     section.groups.some((group) => group.entries.some((entry) => entry.id === selectedId)),
   );
-  const selectedIssue = selectedSection?.groups.find((group) =>
+  const selectedGroup = selectedSection?.groups.find((group) =>
     group.entries.some((entry) => entry.id === selectedId),
-  )?.issue.id;
+  )?.id;
   const selectionKey =
     selectedSection === undefined ? null : `${selectedSection.key}:${selectedId}`;
   const [state, setState] = useState(() => ({
@@ -39,7 +39,7 @@ export function ConversationList({ sections, selectedId, pending, onMark }: Conv
   if (state.selectionKey !== selectionKey) {
     const collapsed = new Map(state.collapsed);
     if (selectedSection !== undefined) collapsed.delete(`section:${selectedSection.key}`);
-    if (selectedIssue !== undefined) collapsed.delete(`issue:${selectedIssue}`);
+    if (selectedGroup !== undefined) collapsed.delete(selectedGroup);
     setState({ selectionKey, collapsed });
   }
   const toggle = (key: string, defaultCollapsed: boolean): void => {
@@ -68,9 +68,9 @@ export function ConversationList({ sections, selectedId, pending, onMark }: Conv
             onToggle={() => toggle(key, defaultCollapsed)}
           >
             {section.groups.map((group) => {
-              const groupKey = `issue:${group.issue.id}`;
+              const groupKey = group.id;
               const defaultGroupCollapsed =
-                group.issue.id !== selectedIssue &&
+                group.id !== selectedGroup &&
                 !group.entries.some((entry) => conversationStatus([entry]) === "running");
               const single = group.entries.length === 1;
               const rows = group.entries.map((entry) => (
@@ -88,7 +88,7 @@ export function ConversationList({ sections, selectedId, pending, onMark }: Conv
                 rows
               ) : (
                 <ConversationIssueGroupItem
-                  key={group.issue.id}
+                  key={group.id}
                   group={group}
                   collapsed={state.collapsed.get(groupKey) ?? defaultGroupCollapsed}
                   onToggle={() => toggle(groupKey, defaultGroupCollapsed)}

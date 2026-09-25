@@ -1,4 +1,4 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
 import {
   EmptyState,
   ResizablePanel,
@@ -9,12 +9,14 @@ import {
   WIDE_VIEWPORT_MEDIA_QUERY,
 } from "@otomat/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 import { useMarkConversations } from "@web/api/conversations/mutations";
 import { useConversations } from "@web/api/conversations/queries";
 import { useConversationsStream } from "@web/api/conversations/use-conversations-stream";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { ConversationFiltersMenu } from "@web/components/conversations/filters-menu";
 import { ConversationList } from "@web/components/conversations/list";
+import { TerminalConversationBody } from "@web/components/conversations/terminal-body";
 import { ConversationThreadBody } from "@web/components/conversations/thread-body";
 import { useMarkConversationSeen } from "@web/components/conversations/use-mark-seen";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
@@ -22,6 +24,7 @@ import { CenteredState } from "@web/components/shell/centered-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { RouteShell } from "@web/components/shell/route-shell";
+import { activeHost, activeHostStore } from "@web/lib/active-host";
 import {
   activeConversationFilterCount,
   applyConversationFilters,
@@ -35,8 +38,12 @@ import { useState } from "react";
 export function ConversationsView() {
   useConversationsStream();
   const conversations = useConversations();
+  const hostUrl = useSelector(
+    activeHostStore,
+    (state) => state?.daemonUrl ?? activeHost().daemonUrl,
+  );
   const mark = useMarkConversations();
-  const { run, step } = useSearch({ from: "/conversations" });
+  const { run, step, terminal } = useSearch({ from: "/conversations" });
   const navigate = useNavigate();
   const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
   const panesLayout = usePanelGroupLayout("otomat.conversations");
@@ -44,7 +51,9 @@ export function ConversationsView() {
   const filtered = activeConversationFilterCount(filters) > 0;
 
   const entries = conversations.data?.entries ?? [];
-  const selected = entries.find((entry) => entry.step_run_id === step);
+  const selected = entries.find((entry) =>
+    "terminal" in entry ? entry.terminal.id === terminal : entry.step_run_id === step,
+  );
   useMarkConversationSeen(selected, mark.mutate);
 
   const markEntry = (entry: ConversationEntry, patch: InboxMarkPatch): void => {
@@ -76,7 +85,7 @@ export function ConversationsView() {
               description={
                 filtered
                   ? "Clear a filter to see the other threads."
-                  : "Launch a run from an issue and its step conversations appear here."
+                  : "Open a terminal or launch a run. Their sessions appear here."
               }
             />
           </CenteredState>
@@ -92,28 +101,34 @@ export function ConversationsView() {
     </QueryBoundary>
   );
 
-  const thread =
-    run === undefined || step === undefined ? (
-      <CenteredState>
-        <EmptyState
-          icon="message-square"
-          title="Select a conversation"
-          description="Its thread opens here, with the composer already aimed at that step."
-        />
-      </CenteredState>
-    ) : (
-      <RunEventsProvider runId={run}>
-        <ConversationThreadBody runId={run} stepRunId={step} />
-      </RunEventsProvider>
-    );
+  let thread;
+  if (terminal !== undefined)
+    thread = <TerminalConversationBody key={`${hostUrl}:${terminal}`} terminalId={terminal} />;
+  else
+    thread =
+      run === undefined || step === undefined ? (
+        <CenteredState>
+          <EmptyState
+            icon="message-square"
+            title="Select a conversation"
+            description="Read a cockpit chat or return to a terminal session."
+          />
+        </CenteredState>
+      ) : (
+        <RunEventsProvider runId={run}>
+          <ConversationThreadBody runId={run} stepRunId={step} />
+        </RunEventsProvider>
+      );
 
   return (
     <RouteShell
       titleIcon="message-square"
-      titleNote="Read and answer the step conversations of every project on this host."
+      titleNote="Cockpit chats and terminal sessions on this host."
       breadcrumbs={[{ label: "Conversations", current: true }]}
       back={
-        !wide && step !== undefined ? { label: "Back to conversations", goBack: closeThread } : null
+        !wide && (step !== undefined || terminal !== undefined)
+          ? { label: "Back to conversations", goBack: closeThread }
+          : null
       }
       actions={
         <ConversationFiltersMenu
@@ -141,7 +156,7 @@ export function ConversationsView() {
         </ResizablePanelGroup>
       ) : (
         <div className="flex h-full min-h-0 flex-col overflow-auto">
-          {step === undefined ? list : thread}
+          {step === undefined && terminal === undefined ? list : thread}
         </div>
       )}
     </RouteShell>

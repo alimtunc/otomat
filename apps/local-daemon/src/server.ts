@@ -29,6 +29,7 @@ import {
 } from "#linear";
 import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor, type Supervisor } from "#supervisor";
+import { TerminalService } from "#terminal/service";
 
 import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
 import { lateBinding } from "./late-binding.js";
@@ -155,6 +156,10 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       refreshPullRequests: () => github.refreshTrackedPullRequests(),
     });
     supervisorBinding.bind(supervisor);
+    const terminals =
+      process.env.OTOMAT_TERMINAL_ENABLED === "1" && process.platform !== "win32"
+        ? new TerminalService(db, repositories, supervisor)
+        : undefined;
 
     const report = await supervisor.reconcile();
     if (report.reconciled.length > 0) {
@@ -169,6 +174,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     const maintenance = startMaintenancePasses(supervisor);
 
     const app = createApiApp({
+      terminals,
       db,
       name: DAEMON_NAME,
       version: DAEMON_VERSION,
@@ -211,6 +217,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
       server,
       settlePublications: () => github.settlePublications(),
       closeDatabase: () => sqlite.close(),
+      closeTerminals: () => terminals?.shutdown() ?? Promise.resolve(),
     });
 
     return { port: listening.port, close };

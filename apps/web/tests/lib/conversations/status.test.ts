@@ -1,7 +1,7 @@
 import { conversationStatus } from "@web/lib/conversations/status";
 import { expect, it } from "vitest";
 
-import { conversationEntry } from "#support/conversations";
+import { conversationEntry, terminalConversationEntry } from "#support/conversations";
 
 it("keeps attention visible when a collapsed issue also has running and completed threads", () => {
   const entries = [
@@ -34,5 +34,14 @@ it("omits settled states while retaining running and provider wait labels", () =
   expect(conversationStatus([conversationEntry()])).toBe("running");
   expect(conversationStatus([conversationEntry({ step_status: "waiting_for_provider" })])).toBe(
     "waiting_for_provider",
+  );
+});
+
+it("does not treat terminal state as a cockpit step state", () => {
+  const entry = terminalConversationEntry();
+  const terminal = { ...entry, terminal: { ...entry.terminal, state: "running" as const } };
+  expect(conversationStatus([terminal])).toBeNull();
+  expect(conversationStatus([terminal, conversationEntry({ step_status: "failed" })])).toBe(
+    "failed",
   );
 });

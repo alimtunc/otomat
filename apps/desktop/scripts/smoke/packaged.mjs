@@ -136,6 +136,32 @@ function assertBundleLayout(appPath) {
     throw new Error(`the shipped SQLite binding is not a ${expected} Mach-O object.`);
   }
 
+  for (const name of ["pty.node", "spawn-helper"]) {
+    const path = join(daemonDir, "node_modules/node-pty/prebuilds", `darwin-${process.arch}`, name);
+    if (!existsSync(path) || capture("lipo", ["-archs", path]).trim() !== expected)
+      throw new Error(`Missing or incompatible PTY binary: ${path}`);
+  }
+  const ptySmoke = spawnSync(
+    join(appPath, "Contents", "MacOS", PRODUCT_NAME),
+    [
+      "-e",
+      `
+    const pty = require(process.argv[1]).spawn('/bin/sh', ['-c', 'printf PTY_READY'], { env: process.env });
+    let output = '';
+    pty.onData(data => { output += data; });
+    pty.onExit(({ exitCode }) => { process.exitCode = exitCode === 0 && output.includes('PTY_READY') ? 0 : 1; });
+  `,
+      join(daemonDir, "node_modules/node-pty"),
+    ],
+    {
+      env: isolatedEnv({ ELECTRON_RUN_AS_NODE: "1" }),
+      encoding: "utf8",
+      timeout: 10000,
+    },
+  );
+  if (ptySmoke.error || ptySmoke.status !== 0)
+    throw new Error(`The packaged PTY could not run: ${ptySmoke.error ?? ptySmoke.stderr}`);
+
   capture("codesign", ["--verify", "--deep", "--strict", appPath]);
   return `${String(plist.CFBundleShortVersionString)} (${String(plist.CFBundleVersion)})`;
 }

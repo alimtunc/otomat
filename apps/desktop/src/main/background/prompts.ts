@@ -15,8 +15,8 @@ export async function askCloseChoice(
     type: "question",
     icon: iconPath,
     message: "Keep Otomat running in the background?",
-    detail: `${localWorkLines(items).join(" · ")}\n\nOtomat can keep the local runs going without a window; quitting stops them.`,
-    buttons: ["Keep Running in Background", "Stop Runs and Quit", "Cancel"],
+    detail: `${localWorkLines(items).join(" · ")}\n\nOtomat can keep local runs and terminals going without a window; quitting stops them.`,
+    buttons: ["Keep Running in Background", "Stop Work and Quit", "Cancel"],
     defaultId: 0,
     cancelId: 2,
   });

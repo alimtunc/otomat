@@ -1,10 +1,11 @@
-import { schema, type Db } from "@otomat/db";
+import { getIssue, schema, type Db } from "@otomat/db";
 import type { WorktreeStatus } from "@otomat/domain";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
 const { issues, pullRequests, runs, stepRuns, worktrees } = schema;
 
 export interface WorkspaceRecord {
+  prepared?: boolean;
   worktree_id: string;
   path: string;
   branch: string;
@@ -128,12 +129,22 @@ export function listWorkspaceRecords(db: Db, repositoryId: string): WorkspaceRec
   const { byRun, byBranch } = pullRequestsByBranch(db, runIds);
   return rows.map((row) => {
     const runId = owners.get(row.id) ?? null;
-    const context = runId === null ? undefined : contexts.get(runId);
+    const preparedIssue =
+      row.prepared_issue_id === null ? undefined : getIssue(db, row.prepared_issue_id);
+    let context = runId === null ? undefined : contexts.get(runId);
+    if (runId === null && preparedIssue) {
+      context = {
+        issue_id: preparedIssue.id,
+        issue_identifier: preparedIssue.source_identifier,
+        issue_title: preparedIssue.title,
+      };
+    }
     const onRun = runId === null ? undefined : byRun.get(runId);
     const onBranch =
       context === undefined ? undefined : byBranch.get(`${context.issue_id}\u0000${row.branch}`);
     return {
       worktree_id: row.id,
+      prepared: row.prepared_issue_id !== null,
       path: row.path,
       branch: row.branch,
       status: row.status,

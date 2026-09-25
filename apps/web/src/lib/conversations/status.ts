@@ -1,4 +1,4 @@
-import type { ConversationEntry, StepRunState } from "@otomat/domain";
+import type { ConversationThreadEntry as ConversationEntry, StepRunState } from "@otomat/domain";
 
 const STATUS_PRIORITY: readonly StepRunState[] = [
   "awaiting_permission",
@@ -12,11 +12,13 @@ const STATUS_PRIORITY: readonly StepRunState[] = [
 ];
 
 export function conversationStatus(entries: readonly ConversationEntry[]): StepRunState | null {
-  const statuses = entries.map((entry) => {
-    if (entry.pending_interaction === null) return entry.step_status;
-    return entry.pending_interaction.kind === "permission"
-      ? "awaiting_permission"
-      : "awaiting_human";
-  });
+  const statuses = entries
+    .filter((entry) => "step_status" in entry)
+    .map((entry) => {
+      if (entry.pending_interaction === null) return entry.step_status;
+      return entry.pending_interaction.kind === "permission"
+        ? "awaiting_permission"
+        : "awaiting_human";
+    });
   return STATUS_PRIORITY.find((status) => statuses.includes(status)) ?? null;
 }

@@ -129,3 +129,4 @@ export {
   type StepRunContract,
   type WorktreeStatus,
 } from "./entities/index.js";
+export * from "./terminal.js";

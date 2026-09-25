@@ -42,10 +42,10 @@ export function ConversationIssueGroupItem({
                 unread ? "font-medium text-foreground" : "text-text-secondary",
               )}
             >
-              {group.issue.title}
+              {group.issue?.title ?? group.project.name}
             </span>
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">
-              <span className="font-mono">{group.issue.identifier}</span>
+              <span className="font-mono">{group.issue?.identifier}</span>
               <span>{group.entries.length} conversations</span>
               {status === null ? null : <StepStatusChip status={status} />}
             </span>

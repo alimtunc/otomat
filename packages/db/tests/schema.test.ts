@@ -4,6 +4,8 @@ import { createTempDb, type TempDb } from "./support/temp-db.js";
 
 const EXPECTED_TABLES = [
   "projects",
+  "terminal_sessions",
+  "terminal_frames",
   "repositories",
   "worktrees",
   "issues",

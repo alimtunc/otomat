@@ -30,6 +30,7 @@ export interface GitWorktreeServiceConfig {
 }
 
 export interface AcquireWorktreeInput {
+  preparedIssueId?: string;
   /** Exclusive owner token (e.g. step_run_id). */
   owner: string;
   /** Dedicated branch to create for this worktree. */

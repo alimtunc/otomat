@@ -1,5 +1,7 @@
 import { Icon, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
+import { desktopBridge } from "@web/lib/desktop-bridge";
+import { previewSession } from "@web/preview/session";
 
 const COCKPIT_TABS = [
   { value: "conversation", icon: "list-tree", to: "/runs/$runId", label: "Conversation" },
@@ -7,6 +9,7 @@ const COCKPIT_TABS = [
   { value: "logs", icon: "terminal", to: "/runs/$runId/logs", label: "Logs" },
   { value: "diff", icon: "git-compare", to: "/runs/$runId/diff", label: "Diff" },
   { value: "files", icon: "folder", to: "/runs/$runId/files", label: "Files" },
+  { value: "terminal", icon: "terminal", to: "/runs/$runId/terminal", label: "Terminal" },
   { value: "pr", icon: "git-pull-request", to: "/runs/$runId/pr", label: "PR" },
 ] as const;
 
@@ -15,7 +18,10 @@ export function CockpitTabs({ runId }: { runId: string }) {
   const value = COCKPIT_TABS.find((tab) => matchRoute({ to: tab.to }))?.value ?? "conversation";
   return (
     <SegmentedControl type="single" value={value} aria-label="Run cockpit tabs">
-      {COCKPIT_TABS.map((tab) => (
+      {COCKPIT_TABS.filter(
+        (tab) =>
+          tab.value !== "terminal" || (desktopBridge() !== null && previewSession() === null),
+      ).map((tab) => (
         <SegmentedItem
           key={tab.value}
           value={tab.value}

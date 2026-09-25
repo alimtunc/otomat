@@ -181,6 +181,9 @@ export function interactionRow(
 /** Un-overridden commands throw, never fake-succeed. */
 export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor {
   return {
+    prepareIssueWorkspace: async () => {
+      throw new Error("prepareIssueWorkspace stub not configured");
+    },
     start: async () => {
       throw new Error("start stub not configured");
     },

@@ -230,7 +230,7 @@ needs it.
 ## Verifying on a clean Mac
 
 Automated coverage stops at the artifact: `pnpm desktop:smoke` mounts the DMG, copies the app out
-with `ditto`, checks the bundle identity, the shipped SQLite binding's architecture and that the
+with `ditto`, checks the bundle identity, the shipped SQLite and PTY binaries' architecture, runs a PTY with the packaged Electron binary, and checks that the
 installed copy still passes `codesign --verify --deep --strict`, boots the installed daemon through
 the app's own Electron binary until `/api/health` answers, stops it, then launches the whole app and
 quits it, failing if a daemon process survives. What it cannot cover is a machine that has never

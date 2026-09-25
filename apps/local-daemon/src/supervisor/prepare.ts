@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  adoptPreparedWorkspace,
+  preparedWorkspace,
   getIssue,
   insertCompeteGroup,
   insertIssue,
@@ -31,6 +33,7 @@ import {
   type GitWorktreeService,
   type WorktreeRecord,
 } from "#git";
+import { toRecord } from "#git/record";
 import { serializeByKey } from "#serialize";
 
 import { issueBranchName } from "./branch-name.js";
@@ -48,18 +51,12 @@ import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 import { freezeSupervision } from "./supervision/freeze.js";
 
-function firstLine(text: string): string {
-  const [first = ""] = text.split("\n");
-  return first.trim().slice(0, 120);
-}
-
 interface LaunchIssue {
   row: ContextIssueRow;
   /** Set only when the launch owns the issue: a prompt-only run creates the one it works on. */
   create: LocalIssue | null;
 }
 
-/** The issue a run works on, resolved before the transaction so the plan can freeze it as its context. */
 function launchIssue(
   projectId: string,
   request: StartRunRequest,
@@ -70,7 +67,7 @@ function launchIssue(
   const created = {
     id: randomUUID(),
     project_id: projectId,
-    title: firstLine(prompt) || "Local run",
+    title: prompt.split("\n")[0]?.trim().slice(0, 120) || "Local run",
     body: prompt,
     status: issueMachine.transition(issueMachine.initial, "ready"),
     source: "local",
@@ -116,7 +113,6 @@ function insertPlanRows(db: Db, runId: string, plan: RunPlan): void {
   });
 }
 
-/** Launches into one project are prepared one at a time: the open-workspace refusal and the branch pick read what an earlier launch has not written yet. */
 export async function prepareRun(
   state: SupervisorState,
   request: StartRunRequest,
@@ -126,7 +122,6 @@ export async function prepareRun(
   return serializeByKey(state.launchesByProject, project, () => prepareLaunch(state, request));
 }
 
-/** A launched run always owns a worktree: every precondition refuses before any row is written. */
 async function prepareLaunch(state: SupervisorState, request: StartRunRequest): Promise<string> {
   const { db } = state;
   const runDefault = runDefaultConfig(request, readExecutionDefaults(db).runtime);
@@ -154,13 +149,15 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
     existingIssue,
   );
   const issue = launchIssue(projectId, request, existingIssue);
-  const branch = await availableBranchName(
-    binding.rootPath,
-    issueBranchName(issue.row, runId),
-    runId.slice(0, 8),
-  );
+  const prepared = preparedWorkspace(db, issue.row.id);
+  const branch =
+    prepared?.branch ??
+    (await availableBranchName(
+      binding.rootPath,
+      issueBranchName(issue.row, runId),
+      runId.slice(0, 8),
+    ));
 
-  // The plan freezes attached files from the base tree: the run's own worktree does not exist yet.
   const plan = await freezePlan(
     request,
     defaultConfig,
@@ -169,18 +166,22 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
       createContextFreezer({
         db,
         issue: issue.row,
-        snapshot: await binding.service.treeSnapshot(baseSha),
+        snapshot: prepared?.owner_token
+          ? await binding.service.worktreeTree(prepared.owner_token)
+          : await binding.service.treeSnapshot(baseSha),
         capturedAt: new Date().toISOString(),
       }),
     ),
   );
 
-  const worktree = await acquireRunWorktree(binding.service, {
-    owner: runId,
-    branch,
-    baseRef,
-    baseSha,
-  });
+  const worktree = prepared
+    ? toRecord(prepared)
+    : await acquireRunWorktree(binding.service, {
+        owner: runId,
+        branch,
+        baseRef,
+        baseSha,
+      });
 
   try {
     // The hold counts runs by their rows, and this one has none until the insert below.
@@ -189,6 +190,11 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
     db.transaction(
       () => {
         if (issue.create) insertIssue(db, issue.create);
+        if (prepared) {
+          if (preparedWorkspace(db, issue.row.id)?.id !== prepared.id)
+            throw new WorktreeConflictError("The prepared workspace changed during launch.");
+          adoptPreparedWorkspace(db, issue.row.id, runId);
+        }
         insertRun(db, {
           id: runId,
           issue_id: issue.row.id,
@@ -206,7 +212,7 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
     );
   } catch (error) {
     try {
-      await binding.service.cleanup(runId);
+      if (!prepared) await binding.service.cleanup(runId);
     } catch (cleanupError) {
       console.error(`[otomat] worktree rollback for aborted run ${runId} failed`, cleanupError);
     }
@@ -216,17 +222,10 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
   return runId;
 }
 
-/** Node reports an unwritable or full data dir with a `syscall`; the launch cannot proceed, but the daemon is not broken. */
 function isSystemError(error: unknown): boolean {
   return error instanceof Error && "syscall" in error && typeof error.syscall === "string";
 }
 
-/**
- * Turns an acquire failure the user can act on — git refused, the branch is
- * taken, the worktrees dir is unwritable — into a typed launch refusal carrying
- * the reason. Anything else is a daemon bug and keeps its own stack rather than
- * being reported as a repository the caller should go repair.
- */
 async function acquireRunWorktree(
   service: GitWorktreeService,
   input: AcquireWorktreeInput,

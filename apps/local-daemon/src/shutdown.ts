@@ -3,6 +3,7 @@ import type { Supervisor } from "#supervisor";
 import type { CloseOptions } from "./server-contract.js";
 
 export interface DaemonShutdownDeps {
+  closeTerminals?: () => Promise<void>;
   stopMaintenancePasses: () => void;
   supervisor: Supervisor;
   server: { close: (callback: (error?: Error) => void) => void };
@@ -25,6 +26,7 @@ export function createDaemonClose(
     };
 
     await collect(deps.stopMaintenancePasses);
+    if (deps.closeTerminals) await collect(deps.closeTerminals);
     if (options.terminateInFlightMs !== undefined) {
       const grace = options.terminateInFlightMs;
       await collect(() => deps.supervisor.shutdown(grace));

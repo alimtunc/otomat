@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { ISSUE_EXECUTION_STATES } from "./entities/issue-execution.js";
 import { RUN_INTERACTION_KINDS, RUN_STATES, STEP_RUN_STATES } from "./entity-states.js";
+import { terminalSessionSchema } from "./terminal.js";
 
 const conversationParticipantSchema = z.object({
   runtime: z.string().min(1),
@@ -47,8 +48,24 @@ export const conversationEntrySchema = z.object({
 });
 export type ConversationEntry = z.infer<typeof conversationEntrySchema>;
 
+export const terminalConversationEntrySchema = z.object({
+  id: z.string().min(1),
+  project: conversationEntrySchema.shape.project,
+  issue: conversationEntrySchema.shape.issue.nullable(),
+  terminal: terminalSessionSchema,
+  updated_at: z.iso.datetime(),
+  read: z.boolean(),
+  archived: z.boolean(),
+});
+export type TerminalConversationEntry = z.infer<typeof terminalConversationEntrySchema>;
+export const conversationThreadEntrySchema = z.union([
+  conversationEntrySchema,
+  terminalConversationEntrySchema,
+]);
+export type ConversationThreadEntry = z.infer<typeof conversationThreadEntrySchema>;
+
 export const conversationSnapshotSchema = z.object({
-  entries: z.array(conversationEntrySchema),
+  entries: z.array(conversationThreadEntrySchema),
   observed_at: z.iso.datetime(),
 });
 export type ConversationSnapshot = z.infer<typeof conversationSnapshotSchema>;

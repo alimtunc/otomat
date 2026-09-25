@@ -1,4 +1,4 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
 import { sectionOf } from "@web/lib/conversations/sections";
 
 const STATES = ["all", "active", "waiting", "finished"] as const;
@@ -30,6 +30,7 @@ export interface ConversationProjectOption {
 
 /** A pending question waits on the operator whatever state the step reads. */
 function isWaitingOnOperator(entry: ConversationEntry): boolean {
+  if ("terminal" in entry) return false;
   return (
     entry.pending_interaction !== null ||
     entry.step_status === "awaiting_permission" ||

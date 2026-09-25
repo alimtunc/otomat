@@ -6,6 +6,9 @@ import { validateJson } from "../guards.js";
 
 export function createWorkspaceRoutes(deps: ApiDeps): Hono {
   const routes = new Hono();
+  routes.post("/prepare/:issueId", async (c) =>
+    c.json({ workspace_id: await deps.supervisor.prepareIssueWorkspace(c.req.param("issueId")) }),
+  );
 
   routes.get("/", async (c) => {
     return c.json(

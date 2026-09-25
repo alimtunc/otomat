@@ -5,7 +5,7 @@ export const LOCAL_WORK_STATES = ["waiting", "running", "failed"] as const;
 export type LocalWorkState = (typeof LOCAL_WORK_STATES)[number];
 
 export interface LocalWorkItem {
-  run_id: string;
+  run_id: string | null;
   project: string;
   issue: string;
   state: LocalWorkState;

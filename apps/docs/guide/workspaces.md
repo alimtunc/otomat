@@ -18,6 +18,46 @@ the branch you left it on.
 - Otomat reads the real git state on every read; nothing about a workspace is cached in a way a
   restart could make stale.
 
+## Use a terminal
+
+The sidebar’s **Terminal** opens a session in the selected project’s registered
+checkout, without creating an issue or run. Changes happen directly in that
+folder. Choose **Open shell**, **Claude** or **Codex**; CLI launches show their
+invocation before confirmation and send no issue context. Each project keeps its
+own session when you navigate away or switch projects. **Copy terminal command**
+provides the external fallback (an SSH command on a remote host).
+
+Find current and ended terminal sessions in [Conversations](./conversations).
+Their recent output is saved locally, including after a restart; an ended session
+opens read-only. Claude/Codex terminal output keeps its terminal format.
+
+In the desktop app, open **Terminal** on an issue or in its run cockpit, then choose
+**Open shell**. The shell starts in that issue's worktree. If no workflow has
+started yet, Otomat prepares the worktree; the first workflow will reuse it and
+keep your changes. Opening the tab alone starts nothing. The Terminal tab uses
+the full content area; switch back to **Activity** for the issue details. The branch
+stays visible above the terminal, with a button to copy the worktree path.
+
+**Claude** and **Codex** open a confirmation with the issue context. Expand
+**Executable & arguments** to inspect the exact invocation before starting. Turn
+off **Include issue context** to open the CLI without sending the issue title or
+description. It still starts in the same worktree and can read its files and local
+CLI instructions. They require the CLI to be
+installed on the local host. End an existing shell before starting a CLI this way.
+These are your sessions: they neither advance a workflow nor contribute to its
+recorded cost. Provider charges still apply to CLI usage.
+
+Switching tabs keeps the process alive. After a connection interruption, the tab
+reattaches to the same session and shows recent output; input is never retried
+silently. If older output was discarded, the terminal says so. **End session** asks
+for confirmation before stopping the shell and its active command. Closing the window offers to keep active work in the background or stop it and
+quit. A daemon restart ends the session; starting another is an explicit action.
+Worktree cleanup is blocked while its terminal is active.
+
+**Open in external terminal** opens macOS Terminal. On a VPS, use **Copy SSH command**
+and paste the inspected command into your own terminal; the integrated terminal is
+local only. External terminals have their own lifecycle.
+
 ## Edit files
 
 The run cockpit's **Files** tab lists the whole worktree — uncommitted and untracked work included,

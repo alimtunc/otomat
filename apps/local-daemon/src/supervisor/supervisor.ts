@@ -30,6 +30,7 @@ import { runResumePlan } from "./resume-plan.js";
 import { createState, trackPending } from "./state.js";
 import { stopStepTurn } from "./stop-step.js";
 import type { Supervisor, SupervisorConfig } from "./types.js";
+import { prepareIssueWorkspace } from "./workspace-preparation.js";
 import { workspaceClosureFacts } from "./workspace-summary.js";
 import {
   cleanupWorkspace,
@@ -91,6 +92,7 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
       for (const outcome of reconciled) await finishSettle(state, outcome);
       return { reconciled };
     },
+    prepareIssueWorkspace: (issueId) => prepareIssueWorkspace(state, issueId),
     workspaces: (scope) => listWorkspaces(workspaces, scope),
     reconcileWorkspaces: () => {
       if (workspacePass === null) {

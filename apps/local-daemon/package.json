@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#terminal/*": "./src/terminal/*.ts",
     "#bootstrap": "./src/bootstrap.ts",
     "#agents": "./src/agents/index.ts",
     "#agents/*": "./src/agents/*.ts",
@@ -50,6 +51,7 @@
     "@otomat/domain": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.8",
+    "node-pty": "1.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

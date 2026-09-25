@@ -26,6 +26,8 @@
     "@tanstack/react-store": "^0.11.1",
     "@tanstack/react-table": "^9.2.4",
     "@tanstack/react-virtual": "^3.14.13",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
     "monaco-editor": "^0.56.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

@@ -1,4 +1,8 @@
-import type { ConversationEntry, ConversationParticipant } from "../contracts/conversations.js";
+import type {
+  ConversationEntry,
+  ConversationParticipant,
+  ConversationThreadEntry,
+} from "../contracts/conversations.js";
 import type { ResolvedAgentConfig } from "../contracts/entities/agents.js";
 import type { InboxMark } from "../contracts/inbox.js";
 import type { AgentSessionState } from "../state-machines/agent-session.js";
@@ -151,6 +155,6 @@ export function projectConversations(
     );
 }
 
-export function countUnreadConversations(entries: readonly ConversationEntry[]): number {
+export function countUnreadConversations(entries: readonly ConversationThreadEntry[]): number {
   return entries.filter((entry) => !entry.read && !entry.archived).length;
 }

@@ -8,7 +8,8 @@ export type ShellSection =
   | "settings"
   | "inbox"
   | "conversations"
-  | "files";
+  | "files"
+  | "terminal";
 
 export interface NavItem {
   section: ShellSection;
@@ -20,6 +21,7 @@ export interface NavItem {
 export const WORKSPACE_NAV: NavItem[] = [
   { section: "issues", icon: "list-todo", label: "Issues", to: "/issues" },
   { section: "files", icon: "folder", label: "Files", to: "/files" },
+  { section: "terminal", icon: "terminal", label: "Terminal", to: "/terminal" },
   { section: "runs", icon: "activity", label: "Runs", to: "/runs" },
   { section: "reviews", icon: "git-pull-request", label: "Reviews", to: "/reviews" },
   { section: "usage", icon: "bar-chart", label: "Usage", to: "/usage" },

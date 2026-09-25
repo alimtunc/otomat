@@ -119,11 +119,15 @@ describe("GET /api/conversations", () => {
 
     const snapshot = await readSnapshot();
 
-    expect(snapshot.entries.map((entry) => entry.step_run_id).toSorted()).toEqual([
-      "plan",
-      "review",
-    ]);
-    const review = snapshot.entries.find((entry) => entry.step_run_id === "review");
+    expect(
+      snapshot.entries
+        .filter((entry) => "step_run_id" in entry)
+        .map((entry) => entry.step_run_id)
+        .toSorted(),
+    ).toEqual(["plan", "review"]);
+    const review = snapshot.entries.find(
+      (entry) => "step_run_id" in entry && entry.step_run_id === "review",
+    );
     expect(review).toMatchObject({
       participant: { runtime: "fake" },
       last: { kind: "user", text: "Check the anchors too." },
@@ -151,7 +155,8 @@ describe("GET /api/conversations", () => {
 
     const [entry] = (await readSnapshot()).entries;
 
-    expect(entry?.last).toEqual({ kind: "agent", text: "Root cause found.", at: SPOKE_AT });
+    if (!entry || !("last" in entry)) throw new Error("Missing cockpit thread");
+    expect(entry.last).toEqual({ kind: "agent", text: "Root cause found.", at: SPOKE_AT });
     expect(entry?.updated_at).toBe(SPOKE_AT);
   });
 
@@ -235,9 +240,11 @@ describe("GET /api/conversations", () => {
 
     const snapshot = await readSnapshot();
 
-    expect(snapshot.entries.map((entry) => [entry.run_id, entry.issue.cycle])).toEqual([
-      ["run-live", "reviewing"],
-    ]);
+    expect(
+      snapshot.entries
+        .filter((entry) => "run_id" in entry)
+        .map((entry) => [entry.run_id, entry.issue.cycle]),
+    ).toEqual([["run-live", "reviewing"]]);
   });
 
   it("stops following a thread on the read after its cycle closes", async () => {
@@ -247,7 +254,7 @@ describe("GET /api/conversations", () => {
       stepStatus: "running",
       sessionStatus: "active",
     });
-    expect((await readSnapshot()).entries[0]?.issue.cycle).toBe("running");
+    expect((await readSnapshot()).entries[0]?.issue?.cycle).toBe("running");
 
     t.db.update(schema.runs).set({ status: "completed" }).where(eq(schema.runs.id, "run-5")).run();
     t.db

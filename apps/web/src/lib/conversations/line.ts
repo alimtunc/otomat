@@ -1,4 +1,4 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
 
 const INTERACTION_LABEL = {
   permission: "Permission",
@@ -13,6 +13,7 @@ function firstLine(text: string): string {
 
 /** One line to orient by: a question outranks a waiting message, which outranks the last thing said. */
 export function conversationLine(entry: ConversationEntry): string {
+  if ("terminal" in entry) return `${entry.terminal.tool ?? "Shell"} · ${entry.terminal.branch}`;
   if (entry.pending_interaction !== null) {
     const label = INTERACTION_LABEL[entry.pending_interaction.kind];
     return `${label}: ${firstLine(entry.pending_interaction.prompt)}`;

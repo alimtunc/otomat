@@ -3,7 +3,7 @@ import { ConversationRow, type ConversationRowProps } from "@web/components/conv
 import { act } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { conversationEntry } from "#support/conversations";
+import { conversationEntry, terminalConversationEntry } from "#support/conversations";
 import { findLabelled, findMenuItem } from "#support/dom-queries";
 import { mountRouted } from "#support/router";
 
@@ -35,6 +35,7 @@ describe("ConversationRow", () => {
 
     expect(container.textContent).not.toContain("OTO-1");
     expect(container.textContent).toContain("Implement");
+    expect(container.querySelector('[aria-label="Cockpit · chat"]')).not.toBeNull();
     expect(container.textContent).toContain("Running");
     expect(container.textContent).toContain("Root cause found.");
     expect(container.textContent).not.toContain("claude");
@@ -114,4 +115,20 @@ describe("ConversationRow", () => {
     expect(onMark).not.toHaveBeenCalled();
     await cleanup();
   });
+});
+
+it("identifies a project terminal and keeps its actions separate from a run", async () => {
+  const entry = terminalConversationEntry();
+  const { link, container, onMark, cleanup } = await render({ entry, showIssue: true });
+  expect(container.querySelector('[aria-label="Terminal"]')).not.toBeNull();
+  expect(container.textContent).toContain("Otomat");
+  expect(container.textContent).toContain("codex terminal");
+  expect(container.textContent).toContain("Ended");
+  expect(link.getAttribute("href")).toBe(`/conversations?terminal=${entry.terminal.id}`);
+  await act(async () => control("Conversation actions").click());
+  const archive = findMenuItem("Archive");
+  if (archive === undefined) throw new Error("no archive menu item");
+  await act(async () => archive.click());
+  expect(onMark).toHaveBeenCalledWith({ archived: true });
+  await cleanup();
 });

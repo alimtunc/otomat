@@ -89,6 +89,7 @@ async function forkWorktree(
       base_sha: baseSha,
       base_ref: baseRef,
       owner_token: input.owner,
+      prepared_issue_id: input.preparedIssueId ?? null,
       status: "active",
     });
   } catch (error) {

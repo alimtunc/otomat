@@ -1,4 +1,4 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationEntry, TerminalConversationEntry } from "@otomat/domain";
 
 const UPDATED_AT = "2026-09-19T10:00:00.000Z";
 
@@ -16,6 +16,33 @@ export function conversationEntry(overrides: Partial<ConversationEntry> = {}): C
     last: { kind: "agent", text: "Root cause found.", at: UPDATED_AT },
     pending_interaction: null,
     queued_contributions: 0,
+    updated_at: UPDATED_AT,
+    read: false,
+    archived: false,
+    ...overrides,
+  };
+}
+
+export function terminalConversationEntry(
+  overrides: Partial<TerminalConversationEntry> = {},
+): TerminalConversationEntry {
+  return {
+    id: "terminal:00000000-0000-4000-8000-000000000002",
+    project: { id: "p1", name: "Otomat" },
+    issue: null,
+    terminal: {
+      id: "00000000-0000-4000-8000-000000000002",
+      project_id: "p1",
+      issue_id: null,
+      worktree_id: null,
+      path: "/tmp/otomat",
+      branch: "main",
+      tool: "codex",
+      started_at: UPDATED_AT,
+      state: "exited",
+      exit_code: 0,
+      signal: null,
+    },
     updated_at: UPDATED_AT,
     read: false,
     archived: false,

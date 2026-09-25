@@ -5,7 +5,7 @@ import { ConversationsView } from "@web/components/conversations/view";
 import { act, type ReactNode } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
-import { conversationEntry } from "#support/conversations";
+import { conversationEntry, terminalConversationEntry } from "#support/conversations";
 import type { FakeQueryState } from "#support/fake-query";
 import { mount } from "#support/mount";
 
@@ -43,6 +43,12 @@ vi.mock("@web/components/shell/route-shell", () => ({
 
 vi.mock("@web/api/runs/run-events-provider", () => ({
   RunEventsProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
+vi.mock("@web/components/conversations/terminal-body", () => ({
+  TerminalConversationBody: ({ terminalId }: { terminalId: string }) => (
+    <div>terminal {terminalId}</div>
+  ),
 }));
 
 vi.mock("@web/components/conversations/thread-body", () => ({
@@ -257,5 +263,24 @@ it("drops the loader and folds its issue back on the frame the thread settles", 
   expect(groupHeader(container, "Live").getAttribute("aria-expanded")).toBe("false");
   expect(container.textContent).toContain("Solo");
   expect(container.querySelector(".animate-spin")).toBeNull();
+  await cleanup();
+});
+
+it("opens and marks a terminal without selecting a cockpit step", async () => {
+  const entry = terminalConversationEntry();
+  conversations = {
+    data: snapshot([conversationEntry(), entry]),
+    dataUpdatedAt: Date.now(),
+    refetch: vi.fn(),
+  };
+  search = { terminal: entry.terminal.id };
+  const { container, cleanup } = await mount(<ConversationsView />);
+  expect(container.textContent).toContain(`terminal ${entry.terminal.id}`);
+  expect(container.textContent).not.toContain("thread run-1/step-1");
+  expect(mutate).toHaveBeenCalledWith({
+    marks: [
+      { entry_id: entry.id, read: true, archived: false, evidence_updated_at: entry.updated_at },
+    ],
+  });
   await cleanup();
 });
