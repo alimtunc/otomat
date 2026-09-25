@@ -4,8 +4,9 @@ import { appendTerminalFrame, finishTerminalRecord, type Db } from "@otomat/db";
 import type { TerminalSession } from "@otomat/domain";
 import type { IPty } from "node-pty";
 
-import { WorktreeConflictError } from "#git";
 import { providerProcessEnv } from "#runtime/cli/environment";
+
+import { TerminalRefusedError } from "./errors.js";
 
 export class UserTerminal {
   private readonly pty: IPty;
@@ -77,14 +78,14 @@ export class UserTerminal {
   write(data: string): void {
     this.checkRecording();
     if (this.info.state !== "running")
-      throw new WorktreeConflictError("The terminal session has ended.");
+      throw new TerminalRefusedError("The terminal session has ended.");
     this.pty.write(data);
   }
 
   resize(cols: number, rows: number): void {
     this.checkRecording();
     if (this.info.state !== "running")
-      throw new WorktreeConflictError("The terminal session has ended.");
+      throw new TerminalRefusedError("The terminal session has ended.");
     this.pty.resize(cols, rows);
   }
 

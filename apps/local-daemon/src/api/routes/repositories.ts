@@ -92,7 +92,7 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
         409,
       );
     }
-    if (deps.terminals?.hasRepositorySessions(repository.id))
+    if (deps.terminals?.hasRepositorySessions(repository))
       return c.json(
         {
           error: "repository_has_active_terminals",

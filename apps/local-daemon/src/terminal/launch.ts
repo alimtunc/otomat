@@ -4,9 +4,9 @@ import { userInfo } from "node:os";
 import { createTerminalRecord, deleteTerminalRecord, type Db } from "@otomat/db";
 import type { TerminalSession } from "@otomat/domain";
 
-import { WorktreeConflictError } from "#git";
 import { holdInteractiveWorktree } from "#git/interactive-worktrees";
 
+import { TerminalRefusedError } from "./errors.js";
 import { UserTerminal } from "./session.js";
 
 export type TerminalLaunchTarget = Pick<
@@ -26,6 +26,11 @@ export function launchTerminal(db: Db, target: TerminalLaunchTarget, argv: strin
   const release = holdInteractiveWorktree(info.path);
   try {
     createTerminalRecord(db, info);
+  } catch (error) {
+    release();
+    throw error;
+  }
+  try {
     return new UserTerminal(
       info,
       info.tool ?? userInfo().shell ?? "/bin/sh",
@@ -33,11 +38,13 @@ export function launchTerminal(db: Db, target: TerminalLaunchTarget, argv: strin
       release,
       db,
     );
-  } catch {
+  } catch (error) {
+    console.error("[otomat] terminal spawn failed", error);
     release();
     deleteTerminalRecord(db, info.id);
-    throw new WorktreeConflictError(
+    throw new TerminalRefusedError(
       "The terminal could not start. Check the shell or CLI installation, or open an external terminal.",
+      { cause: error },
     );
   }
 }

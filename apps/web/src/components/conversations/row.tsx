@@ -1,4 +1,4 @@
-import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry } from "@otomat/domain";
 import {
   cn,
   DropdownMenu,
@@ -16,10 +16,11 @@ import { Link } from "@tanstack/react-router";
 import { conversationLine } from "@web/lib/conversations/line";
 import { conversationStatus } from "@web/lib/conversations/status";
 import type { InboxMarkPatch } from "@web/lib/inbox/marks";
+import { terminalToolLabel } from "@web/lib/terminal-tool";
 import type { KeyboardEvent } from "react";
 
 export interface ConversationRowProps {
-  entry: ConversationEntry;
+  entry: ConversationThreadEntry;
   selected: boolean;
   pending: boolean;
   showIssue?: boolean;
@@ -34,8 +35,8 @@ export function ConversationRow({
   onMark,
 }: ConversationRowProps) {
   const isTerminal = "terminal" in entry;
-  const title = isTerminal ? `${entry.terminal.tool ?? "Shell"} terminal` : entry.step_name;
-  const kindLabel = isTerminal ? "Terminal" : "Cockpit · chat";
+  const title = isTerminal ? `${terminalToolLabel(entry.terminal.tool)} terminal` : entry.step_name;
+  const kindLabel = isTerminal ? "Terminal" : "Cockpit chat";
   const status = conversationStatus([entry]);
   const onKeyDown = (event: KeyboardEvent<HTMLAnchorElement>): void => {
     if (pending || event.metaKey || event.ctrlKey || event.altKey) return;
@@ -78,8 +79,13 @@ export function ConversationRow({
             </span>
           ) : null}
           <span className="flex min-w-0 items-center gap-1.5">
-            <span title={kindLabel} aria-label={kindLabel} className="shrink-0 text-text-tertiary">
-              <Icon name={isTerminal ? "terminal" : "monitor"} size="xs" aria-hidden />
+            <span title={kindLabel} className="shrink-0 text-text-tertiary">
+              <Icon
+                name={isTerminal ? "terminal" : "monitor"}
+                role="img"
+                aria-label={kindLabel}
+                size="xs"
+              />
             </span>
             <span
               className={cn(

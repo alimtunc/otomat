@@ -7,10 +7,9 @@ export function localWorkLines(items: readonly LocalWorkItem[] | null): string[]
   const count = (state: LocalWorkState): number =>
     items.filter((item) => item.run_id !== null && item.state === state).length;
   const active = count("running");
+  const terminals = items.filter((item) => item.run_id === null).length;
   return [
-    ...(items.some((item) => item.run_id === null)
-      ? [`${items.filter((item) => item.run_id === null).length} terminal session(s) active`]
-      : []),
+    ...(terminals > 0 ? [`${terminals} terminal${plural(terminals)} active`] : []),
     `${active} run${plural(active)} active`,
     `${count("waiting")} awaiting you`,
     `${count("failed")} failed`,

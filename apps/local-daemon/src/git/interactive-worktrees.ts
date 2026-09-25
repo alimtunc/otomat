@@ -1,16 +1,16 @@
 import { WorktreeConflictError } from "./errors.js";
-import { tryRealpath } from "./probe.js";
+import { canonicalPath } from "./probe.js";
 
 const interactive = new Set<string>();
 
 export function hasInteractiveWriter(path: string): boolean {
-  return interactive.has(tryRealpath(path) ?? path);
+  return interactive.has(canonicalPath(path));
 }
 
 export function holdInteractiveWorktree(path: string): () => void {
-  if (hasInteractiveWriter(path))
+  const canonical = canonicalPath(path);
+  if (interactive.has(canonical))
     throw new WorktreeConflictError("This worktree already has a terminal.");
-  const canonical = tryRealpath(path) ?? path;
   interactive.add(canonical);
   return () => {
     interactive.delete(canonical);

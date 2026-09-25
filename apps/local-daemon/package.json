@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#terminal/*": "./src/terminal/*.ts",
     "#bootstrap": "./src/bootstrap.ts",
     "#agents": "./src/agents/index.ts",
     "#agents/*": "./src/agents/*.ts",
@@ -34,7 +33,9 @@
     "#serialize": "./src/serialize.ts",
     "#server": "./src/server.ts",
     "#supervisor": "./src/supervisor/index.ts",
-    "#supervisor/*": "./src/supervisor/*.ts"
+    "#supervisor/*": "./src/supervisor/*.ts",
+    "#terminal": "./src/terminal/index.ts",
+    "#terminal/*": "./src/terminal/*.ts"
   },
   "scripts": {
     "build": "tsdown",

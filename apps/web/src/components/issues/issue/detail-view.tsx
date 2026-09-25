@@ -16,6 +16,7 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
+import { userTerminalsAvailable } from "@web/api/terminals/client";
 import { IssueHeader } from "@web/components/issues/issue/header";
 import { CycleSummary } from "@web/components/issues/workspace/cycle-summary";
 import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
@@ -26,9 +27,8 @@ import { IconLink } from "@web/components/shell/icon-link";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { useBackNavigation } from "@web/components/shell/use-back-navigation";
 import { TerminalWorkspace } from "@web/components/terminal/workspace";
-import { desktopBridge } from "@web/lib/desktop-bridge";
+import { asMember } from "@web/lib/coerce";
 import { resolveFollowedRun } from "@web/lib/run/activity";
-import { previewSession } from "@web/preview/session";
 import { useState } from "react";
 
 import { RunsArea } from "./runs-area";
@@ -43,9 +43,12 @@ function RailPlaceholder() {
   );
 }
 
+const ISSUE_TABS = ["activity", "terminal"] as const;
+type IssueTab = (typeof ISSUE_TABS)[number];
+
 export function IssueDetailView() {
-  const [tab, setTab] = useState("activity");
-  const terminalsAvailable = desktopBridge() !== null && previewSession() === null;
+  const [tab, setTab] = useState<IssueTab>("activity");
+  const terminalsAvailable = userTerminalsAvailable();
   const { issueId } = useParams({ from: "/issues/$issueId" });
   const { run: selectedRunId, step: selectedStepId } = useSearch({ from: "/issues/$issueId" });
   const navigate = useNavigate();
@@ -157,7 +160,8 @@ export function IssueDetailView() {
             type="single"
             value={tab}
             onValueChange={(value) => {
-              if (value) setTab(value);
+              const next = asMember(value, ISSUE_TABS);
+              if (next !== null) setTab(next);
             }}
             aria-label="Issue workspace tabs"
           >
@@ -193,7 +197,7 @@ export function IssueDetailView() {
               {issue.data?.title ?? idLabel}
             </h1>
             <div className="min-h-0 flex-1">
-              <TerminalWorkspace issueId={issueId} />
+              <TerminalWorkspace issueId={issueId} runId={null} />
             </div>
           </div>
         ) : (

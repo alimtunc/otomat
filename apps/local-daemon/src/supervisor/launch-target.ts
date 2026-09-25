@@ -12,6 +12,7 @@ import {
   isRepositoryRoot,
   RemoteBaseError,
   resolveBaseSha,
+  WorktreeConflictError,
   type RepositoryBinding,
 } from "#git";
 import { validateInteractiveWorktree } from "#git/validate-worktree";
@@ -152,12 +153,17 @@ export async function resolveLaunchTarget(
         "The prepared workspace is unavailable or uses a different repository/base.",
       );
     }
-    await validateInteractiveWorktree(
-      state.repositories.worktreesRoot,
-      binding.rootPath,
-      prepared.path,
-      prepared.branch,
-    );
+    try {
+      await validateInteractiveWorktree(
+        state.repositories.worktreesRoot,
+        binding.rootPath,
+        prepared.path,
+        prepared.branch,
+      );
+    } catch (error) {
+      if (!(error instanceof WorktreeConflictError)) throw error;
+      throw new LaunchRefusedError("worktree_unavailable", error.message, { cause: error });
+    }
     return { projectId, binding, baseRef: prepared.base_ref, baseSha: prepared.base_sha };
   }
   const baseRef = request.base_branch ?? binding.defaultBranch;

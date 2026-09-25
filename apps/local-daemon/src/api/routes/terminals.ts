@@ -8,7 +8,7 @@ import {
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 
-import { terminalContext } from "#terminal/context";
+import { terminalContext } from "#terminal";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";

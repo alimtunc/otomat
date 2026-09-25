@@ -5,32 +5,23 @@ import { delimiter, join } from "node:path";
 import { schema, updateIssueStatus } from "@otomat/db";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { createRepositoryResolver } from "#git";
 import { hasInteractiveWriter } from "#git/interactive-worktrees";
 import { findWorktreeById } from "#git/worktrees-store";
-import { terminalContext } from "#terminal/context";
-import { TerminalService } from "#terminal/service";
-import { makeApiApp, post } from "#test-support/api";
-import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
-import { makeSupervisor } from "#test-support/supervisor";
+import { TerminalService, terminalContext } from "#terminal";
+import { json, makeApiApp, post, request } from "#test-support/api";
+import type { DaemonTestDb } from "#test-support/daemon-db";
+import { closeTerminals, setupTerminals, type TerminalFixture } from "#test-support/terminals";
 
 let fix: DaemonTestDb;
 let terminals: TerminalService;
-let repositories: ReturnType<typeof createRepositoryResolver>;
-let harness: ReturnType<typeof makeSupervisor>;
+let repositories: TerminalFixture["repositories"];
+let harness: TerminalFixture["harness"];
 beforeEach(() => {
-  fix = setupDaemonDb();
-  repositories = createRepositoryResolver({
-    db: fix.db,
-    worktreesRoot: join(fix.dataDir, "worktrees"),
-  });
-  harness = makeSupervisor(fix, "complete", { repositories });
-  terminals = new TerminalService(fix.db, repositories, harness.supervisor);
+  ({ fix, terminals, repositories, harness } = setupTerminals());
 });
 afterEach(async () => {
-  await terminals.shutdown();
-  fix.cleanup();
   vi.unstubAllEnvs();
+  await closeTerminals(terminals, fix);
 });
 
 it("owns a real PTY independently of runs, reattaches, resizes and retains its exit", async () => {
@@ -119,12 +110,45 @@ it("keeps all terminal API operations behind authentication and rejects arbitrar
   expect(session.state).toBe("exited");
 });
 
+it("serves the context preview, cursor, resize and workspace preparation routes", async () => {
+  const app = makeApiApp(fix, { terminals, supervisor: harness.supervisor, repositories });
+  expect(await json(await request(makeApiApp(fix), "/api/terminals"))).toEqual({
+    instance: null,
+    sessions: [],
+  });
+  const preview = await request(app, "/api/terminals/context/i1?tool=claude");
+  expect(preview.status).toBe(200);
+  expect(await preview.json()).toMatchObject({ executable: "claude" });
+  expect((await request(app, "/api/terminals/context/i1?tool=bash")).status).toBe(400);
+  const prepared = await post(app, "/api/workspaces/prepare/i1", {});
+  expect(prepared.status).toBe(200);
+  const { workspace_id } = await json<{ workspace_id: string }>(prepared);
+  expect(findWorktreeById(fix.db, workspace_id)?.prepared_issue_id).toBe("i1");
+  const opened = await terminals.open({
+    instance: terminals.instance,
+    issue_id: "i1",
+    run_id: null,
+    tool: null,
+    context_hash: null,
+  });
+  expect(opened.worktree_id).toBe(workspace_id);
+  const output = `/api/terminals/${opened.id}/output?instance=${terminals.instance}`;
+  expect((await request(app, `${output}&after=-1`)).status).toBe(400);
+  expect((await request(app, `${output}&after=0`)).status).toBe(200);
+  const resize = `/api/terminals/${opened.id}/resize`;
+  expect(
+    (await post(app, resize, { instance: terminals.instance, cols: 90, rows: 30 })).status,
+  ).toBe(200);
+  const stale = await post(app, resize, { instance: randomUUID(), cols: 90, rows: 30 });
+  expect(stale.status).toBe(409);
+  expect(await stale.json()).toMatchObject({ error: "terminal_refused" });
+});
+
 it("refuses unavailable hosts and requires re-inspection when context changes", async () => {
   expect((await post(makeApiApp(fix), "/api/terminals", {})).status).toBe(503);
   const preview = terminalContext(fix.db, "i1", "codex");
   expect(preview.argv).toHaveLength(1);
   expect(preview.argv[0]).toMatch(/^Issue: /);
-  expect(() => terminalContext(fix.db, "i1", "bash")).toThrow();
   await expect(
     terminals.open({
       instance: terminals.instance,
@@ -169,20 +193,20 @@ it("stops a foreground command on daemon shutdown and refuses the stale instance
 });
 
 it("keeps the previous issue session reachable until it ends across a new cycle", async () => {
-  const request = {
+  const input = {
     instance: terminals.instance,
     issue_id: "i1",
     run_id: null,
     tool: null,
     context_hash: null,
   };
-  const first = await terminals.open(request);
+  const first = await terminals.open(input);
   updateIssueStatus(fix.db, "i1", "done");
   updateIssueStatus(fix.db, "i1", "ready");
-  await expect(terminals.open(request)).rejects.toThrow(/previous terminal session/);
+  await expect(terminals.open(input)).rejects.toThrow(/previous terminal session/);
   expect(terminals.list()).toHaveLength(1);
   await terminals.get(terminals.instance, first.id).close();
-  const next = await terminals.open(request);
+  const next = await terminals.open(input);
   expect(next.worktree_id).not.toBe(first.worktree_id);
   expect(next.id).not.toBe(first.id);
 });

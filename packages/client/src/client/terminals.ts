@@ -1,14 +1,14 @@
 import {
-  preparedWorkspaceResponseSchema,
   terminalInventorySchema,
   terminalOutputSchema,
   terminalPreviewSchema,
   terminalSessionSchema,
   type TerminalOpenRequest,
+  type TerminalTool,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
-import { getJson, postJson } from "./http.js";
+import { getJson, postJson, queryString } from "./http.js";
 
 export function createTerminalClient(config: DaemonClientConfig) {
   return {
@@ -18,16 +18,19 @@ export function createTerminalClient(config: DaemonClientConfig) {
     async openTerminal(input: TerminalOpenRequest) {
       return terminalSessionSchema.parse(await postJson(config, "/api/terminals", input));
     },
-    async terminalPreview(issueId: string, tool: "claude" | "codex") {
+    async terminalPreview(issueId: string, tool: TerminalTool) {
       return terminalPreviewSchema.parse(
-        await getJson(config, `/api/terminals/context/${encodeURIComponent(issueId)}?tool=${tool}`),
+        await getJson(
+          config,
+          `/api/terminals/context/${encodeURIComponent(issueId)}${queryString({ tool })}`,
+        ),
       );
     },
     async terminalOutput(id: string, instance: string, after: number) {
       return terminalOutputSchema.parse(
         await getJson(
           config,
-          `/api/terminals/${encodeURIComponent(id)}/output?instance=${encodeURIComponent(instance)}&after=${after}`,
+          `/api/terminals/${encodeURIComponent(id)}/output${queryString({ instance, after: String(after) })}`,
         ),
       );
     },
@@ -43,11 +46,6 @@ export function createTerminalClient(config: DaemonClientConfig) {
     },
     async closeTerminal(id: string, instance: string) {
       await postJson(config, `/api/terminals/${encodeURIComponent(id)}/close`, { instance });
-    },
-    async prepareIssueWorkspace(issueId: string) {
-      return preparedWorkspaceResponseSchema.parse(
-        await postJson(config, `/api/workspaces/prepare/${encodeURIComponent(issueId)}`, {}),
-      );
     },
   };
 }

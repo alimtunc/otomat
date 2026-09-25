@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const terminalToolSchema = z.enum(["claude", "codex"]);
+export type TerminalTool = z.infer<typeof terminalToolSchema>;
+export const TERMINAL_INPUT_MAX = 8192;
 export const preparedWorkspaceResponseSchema = z.object({ workspace_id: z.string() });
 export const terminalSessionSchema = z.object({
   id: z.string().uuid(),
@@ -20,6 +22,7 @@ export const terminalInventorySchema = z.object({
   instance: z.string().uuid().nullable(),
   sessions: z.array(terminalSessionSchema),
 });
+export type TerminalInventory = z.infer<typeof terminalInventorySchema>;
 const issueTerminalOpenSchema = z
   .object({
     instance: z.string().uuid(),
@@ -42,7 +45,7 @@ export const terminalOpenSchema = z.union([
 export type TerminalOpenRequest = z.infer<typeof terminalOpenSchema>;
 export const terminalIdentitySchema = z.object({ instance: z.string().uuid() }).strict();
 export const terminalInputSchema = terminalIdentitySchema.extend({
-  data: z.string().min(1).max(8192),
+  data: z.string().min(1).max(TERMINAL_INPUT_MAX),
 });
 export const terminalResizeSchema = terminalIdentitySchema.extend({
   cols: z.number().int().min(2).max(500),

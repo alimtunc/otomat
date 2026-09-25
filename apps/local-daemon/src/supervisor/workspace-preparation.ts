@@ -1,13 +1,21 @@
 import { randomUUID } from "node:crypto";
 
-import { getIssue, getRun, preparedWorkspace, releasePreparedWorkspace, type Db } from "@otomat/db";
-import { startRunRequestSchema } from "@otomat/domain";
+import {
+  getIssue,
+  getRun,
+  preparedWorkspace,
+  releasePreparedWorkspace,
+  type Db,
+  type IssueRow,
+} from "@otomat/db";
+import { isIssueClosed, startRunRequestSchema } from "@otomat/domain";
 
 import { availableBranchName, inCheckout, WorktreeConflictError } from "#git";
 import { validateInteractiveWorktree } from "#git/validate-worktree";
 import { findWorktreeById } from "#git/worktrees-store";
 import { serializeByKey } from "#serialize";
 
+import { acquireRunWorktree } from "./acquire-worktree.js";
 import { issueBranchName } from "./branch-name.js";
 import { resolveLaunchTarget } from "./launch-target.js";
 import type { SupervisorState } from "./state.js";
@@ -30,14 +38,11 @@ export async function prepareIssueWorkspace(
 ): Promise<string> {
   const issue = getIssue(state.db, issueId);
   if (!issue) throw new WorktreeConflictError("Issue not found.");
+  const stillOpen = (row: IssueRow | undefined): row is IssueRow =>
+    row !== undefined && row.project_id === issue.project_id && !isIssueClosed(row.status);
   return serializeByKey(state.launchesByProject, issue.project_id, async () => {
     const current = getIssue(state.db, issueId);
-    if (
-      !current ||
-      current.project_id !== issue.project_id ||
-      current.status === "done" ||
-      current.status === "canceled"
-    ) {
+    if (!stillOpen(current)) {
       throw new WorktreeConflictError(
         "This issue is closed or has moved; refresh before opening its workspace.",
       );
@@ -55,7 +60,7 @@ export async function prepareIssueWorkspace(
         issueBranchName(current, owner),
         owner.slice(0, 8),
       );
-      const created = await target.binding.service.acquire({
+      const created = await acquireRunWorktree(target.binding.service, {
         owner,
         branch,
         baseRef: target.baseRef,
@@ -78,13 +83,7 @@ export async function prepareIssueWorkspace(
         workspace.branch,
       ),
     );
-    const latest = getIssue(state.db, issueId);
-    if (
-      !latest ||
-      latest.project_id !== current.project_id ||
-      latest.status === "done" ||
-      latest.status === "canceled"
-    ) {
+    if (!stillOpen(getIssue(state.db, issueId))) {
       releasePreparedWorkspace(state.db, issueId);
       throw new WorktreeConflictError("The issue changed while preparing its workspace.");
     }

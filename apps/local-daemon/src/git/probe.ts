@@ -24,6 +24,10 @@ export function tryRealpath(path: string): string | null {
   }
 }
 
+export function canonicalPath(path: string): string {
+  return tryRealpath(path) ?? path;
+}
+
 /** Resolves as far as the path exists, so a root reached through a symlink still matches a deleted worktree. */
 function resolveExisting(path: string): string {
   const real = tryRealpath(path);

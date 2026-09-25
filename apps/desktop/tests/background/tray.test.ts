@@ -105,6 +105,20 @@ it("opens the run the operator picked", () => {
   expect(given.openRun).toHaveBeenCalledWith("run-42");
 });
 
+it("opens Otomat for a terminal row, which has no run", () => {
+  const given = actions();
+  const template = trayMenuTemplate(
+    [item("running", { run_id: null, issue: "User terminal", project: "main" })],
+    given,
+    NOW,
+  );
+
+  click(template, "User terminal · main · Local · 12m");
+
+  expect(given.open).toHaveBeenCalledOnce();
+  expect(given.openRun).not.toHaveBeenCalled();
+});
+
 it("caps the list and offers the rest inside Otomat", () => {
   const many = Array.from({ length: 7 }, (_, index) =>
     item("running", { run_id: `run-${index}`, issue: `OTO-${index}` }),

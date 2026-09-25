@@ -46,8 +46,8 @@ vi.mock("@web/api/runs/run-events-provider", () => ({
 }));
 
 vi.mock("@web/components/conversations/terminal-body", () => ({
-  TerminalConversationBody: ({ terminalId }: { terminalId: string }) => (
-    <div>terminal {terminalId}</div>
+  TerminalConversationBody: ({ session }: { session: { id: string } }) => (
+    <div>terminal {session.id}</div>
   ),
 }));
 

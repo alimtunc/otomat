@@ -1,5 +1,5 @@
-import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
-import { ConversationIssueGroupItem } from "@web/components/conversations/issue-group";
+import type { ConversationThreadEntry } from "@otomat/domain";
+import { ConversationGroupItem } from "@web/components/conversations/group-item";
 import { ConversationRow } from "@web/components/conversations/row";
 import { InboxGroup } from "@web/components/inbox/group";
 import type { ConversationSection } from "@web/lib/conversations/sections";
@@ -11,7 +11,7 @@ export interface ConversationListProps {
   sections: ConversationSection[];
   selectedId: string | null;
   pending: boolean;
-  onMark: (entry: ConversationEntry, patch: InboxMarkPatch) => void;
+  onMark: (entry: ConversationThreadEntry, patch: InboxMarkPatch) => void;
 }
 
 function walkRows(event: KeyboardEvent<HTMLDivElement>): void {
@@ -27,9 +27,13 @@ export function ConversationList({ sections, selectedId, pending, onMark }: Conv
   const selectedSection = sections.find((section) =>
     section.groups.some((group) => group.entries.some((entry) => entry.id === selectedId)),
   );
-  const selectedGroup = selectedSection?.groups.find((group) =>
+  const selectedGroupId = selectedSection?.groups.find((group) =>
     group.entries.some((entry) => entry.id === selectedId),
   )?.id;
+  const selectedGroup =
+    selectedSection === undefined || selectedGroupId === undefined
+      ? undefined
+      : `${selectedSection.key}:${selectedGroupId}`;
   const selectionKey =
     selectedSection === undefined ? null : `${selectedSection.key}:${selectedId}`;
   const [state, setState] = useState(() => ({
@@ -68,9 +72,9 @@ export function ConversationList({ sections, selectedId, pending, onMark }: Conv
             onToggle={() => toggle(key, defaultCollapsed)}
           >
             {section.groups.map((group) => {
-              const groupKey = group.id;
+              const groupKey = `${section.key}:${group.id}`;
               const defaultGroupCollapsed =
-                group.id !== selectedGroup &&
+                groupKey !== selectedGroup &&
                 !group.entries.some((entry) => conversationStatus([entry]) === "running");
               const single = group.entries.length === 1;
               const rows = group.entries.map((entry) => (
@@ -87,14 +91,14 @@ export function ConversationList({ sections, selectedId, pending, onMark }: Conv
               return single ? (
                 rows
               ) : (
-                <ConversationIssueGroupItem
+                <ConversationGroupItem
                   key={group.id}
                   group={group}
                   collapsed={state.collapsed.get(groupKey) ?? defaultGroupCollapsed}
                   onToggle={() => toggle(groupKey, defaultGroupCollapsed)}
                 >
                   {rows}
-                </ConversationIssueGroupItem>
+                </ConversationGroupItem>
               );
             })}
           </InboxGroup>

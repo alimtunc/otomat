@@ -1,8 +1,8 @@
 import type { WorkflowPresetScope } from "@otomat/domain";
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import { projects } from "./projects.js";
 import { timestamps } from "./shared.js";
-import { projects } from "./workspace.js";
 
 /** A saved workflow structure. `project_id` is set exactly when `scope` is `project`. */
 export const workflowPresets = sqliteTable("workflow_presets", {

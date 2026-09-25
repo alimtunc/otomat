@@ -1,9 +1,8 @@
-import { realpath } from "node:fs/promises";
 import { join, relative } from "node:path";
 
 import { WorktreeConflictError } from "./errors.js";
 import { runGit } from "./git-cli.js";
-import { isInsideRoot, tryRealpath } from "./probe.js";
+import { canonicalPath, isInsideRoot, tryRealpath } from "./probe.js";
 import { listWorktrees } from "./worktree-cli.js";
 
 export async function validateInteractiveWorktree(
@@ -28,13 +27,16 @@ export async function validateInteractiveWorktree(
     [repository, canonical].map(async (cwd) => {
       const result = await runGit(["rev-parse", "--path-format=absolute", "--git-common-dir"], {
         cwd,
+        allowFailure: true,
       });
-      return realpath(result.stdout.trim());
+      return result.exitCode === 0 ? canonicalPath(result.stdout.trim()) : null;
     }),
   );
-  if (commonDirectories[0] !== commonDirectories[1])
+  if (commonDirectories[0] === null || commonDirectories[0] !== commonDirectories[1])
     throw new WorktreeConflictError("The worktree belongs to a different Git repository.");
-  const entry = (await listWorktrees(repository)).find((row) => row.path === canonical);
+  const entry = (await listWorktrees(repository)).find(
+    (row) => canonicalPath(row.path) === canonical,
+  );
   if (!entry || entry.branch !== branch || entry.bare || entry.detached) {
     throw new WorktreeConflictError("Git no longer registers the canonical worktree and branch.");
   }

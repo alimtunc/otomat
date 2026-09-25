@@ -6,9 +6,11 @@ import { HTTPException } from "hono/http-exception";
 
 import { correlatedRequestLog, DiagnosticLogRing, recordThrownFailure } from "#diagnostics";
 import { WorktreeConflictError } from "#git";
+import { TerminalRefusedError } from "#terminal";
 
 import type { ApiDeps } from "./deps.js";
 import { jsonCompression } from "./json-compression.js";
+import { launchRefusalResponse } from "./launch-refusal.js";
 import { createActivityRoutes } from "./routes/activity.js";
 import { createAgentProfileRoutes } from "./routes/agent-profiles.js";
 import { createCatalogRoutes } from "./routes/catalog.js";
@@ -103,8 +105,13 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.notFound((c) => c.json({ error: "not_found" }, 404));
   app.onError((err, c) => {
     if (err instanceof HTTPException) return err.getResponse();
+    const launchRefusal = launchRefusalResponse(c, err);
+    if (launchRefusal) return launchRefusal;
     if (err instanceof WorktreeConflictError) {
       return c.json({ error: "worktree_conflict", message: err.message }, 409);
+    }
+    if (err instanceof TerminalRefusedError) {
+      return c.json({ error: "terminal_refused", message: err.message }, 409);
     }
     console.error("[otomat] api error", err);
     recordThrownFailure(diagnosticLog, c, err);

@@ -1,7 +1,6 @@
 import { Icon, SegmentedControl, SegmentedItem } from "@otomat/ui";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { desktopBridge } from "@web/lib/desktop-bridge";
-import { previewSession } from "@web/preview/session";
+import { userTerminalsAvailable } from "@web/api/terminals/client";
 
 const COCKPIT_TABS = [
   { value: "conversation", icon: "list-tree", to: "/runs/$runId", label: "Conversation" },
@@ -18,22 +17,25 @@ export function CockpitTabs({ runId }: { runId: string }) {
   const value = COCKPIT_TABS.find((tab) => matchRoute({ to: tab.to }))?.value ?? "conversation";
   return (
     <SegmentedControl type="single" value={value} aria-label="Run cockpit tabs">
-      {COCKPIT_TABS.filter(
-        (tab) =>
-          tab.value !== "terminal" || (desktopBridge() !== null && previewSession() === null),
-      ).map((tab) => (
-        <SegmentedItem
-          key={tab.value}
-          value={tab.value}
-          icon={<Icon name={tab.icon} className="max-lg:hidden" />}
-          nativeButton={false}
-          render={
-            <Link to={tab.to} params={{ runId }} search={(previous) => ({ step: previous.step })} />
-          }
-        >
-          {tab.label}
-        </SegmentedItem>
-      ))}
+      {COCKPIT_TABS.filter((tab) => tab.value !== "terminal" || userTerminalsAvailable()).map(
+        (tab) => (
+          <SegmentedItem
+            key={tab.value}
+            value={tab.value}
+            icon={<Icon name={tab.icon} className="max-lg:hidden" />}
+            nativeButton={false}
+            render={
+              <Link
+                to={tab.to}
+                params={{ runId }}
+                search={(previous) => ({ step: previous.step })}
+              />
+            }
+          >
+            {tab.label}
+          </SegmentedItem>
+        ),
+      )}
     </SegmentedControl>
   );
 }

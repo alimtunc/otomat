@@ -3,7 +3,7 @@ import { expect, it } from "vitest";
 import type { LocalWorkItem, LocalWorkState } from "#main/background/work-items";
 import { localWorkLines } from "#main/background/work-lines";
 
-function item(state: LocalWorkState, runId = `run-${state}`): LocalWorkItem {
+function item(state: LocalWorkState, runId: string | null = `run-${state}`): LocalWorkItem {
   return {
     run_id: runId,
     project: "Otomat",
@@ -29,4 +29,13 @@ it("names each count once, singular or plural", () => {
 
 it("says the activity is unreadable rather than reporting a count it does not have", () => {
   expect(localWorkLines(null)).toEqual(["Otomat could not read the local daemon's activity."]);
+});
+
+it("counts live terminals apart from runs", () => {
+  expect(localWorkLines([item("running", null), item("running", null), item("running")])).toEqual([
+    "2 terminals active",
+    "1 run active",
+    "0 awaiting you",
+    "0 failed",
+  ]);
 });

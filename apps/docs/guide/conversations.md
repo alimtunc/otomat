@@ -30,7 +30,7 @@ A cockpit thread is **unread** when an agent answered, a question was asked, a m
 or the step reached an actionable state — a permission, a question, a quota wait, a failure or a
 success — since you last had it open. Tool calls, reasoning and logs never make a thread unread,
 and the sidebar badge counts threads, not messages. A step you cancelled and a run you abandoned
-are never news. A terminal becomes unread when new output arrives or its session ends.
+are never news. A terminal session is unread when it starts and again when it ends.
 
 **Filters** narrow the list by state (active, waiting on you, finished), to unread threads only,
 or by project. Archived threads stay hidden until they speak again.

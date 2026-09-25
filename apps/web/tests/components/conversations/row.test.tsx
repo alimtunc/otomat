@@ -35,7 +35,7 @@ describe("ConversationRow", () => {
 
     expect(container.textContent).not.toContain("OTO-1");
     expect(container.textContent).toContain("Implement");
-    expect(container.querySelector('[aria-label="Cockpit · chat"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Cockpit chat"]')).not.toBeNull();
     expect(container.textContent).toContain("Running");
     expect(container.textContent).toContain("Root cause found.");
     expect(container.textContent).not.toContain("claude");
@@ -122,7 +122,7 @@ it("identifies a project terminal and keeps its actions separate from a run", as
   const { link, container, onMark, cleanup } = await render({ entry, showIssue: true });
   expect(container.querySelector('[aria-label="Terminal"]')).not.toBeNull();
   expect(container.textContent).toContain("Otomat");
-  expect(container.textContent).toContain("codex terminal");
+  expect(container.textContent).toContain("Codex terminal");
   expect(container.textContent).toContain("Ended");
   expect(link.getAttribute("href")).toBe(`/conversations?terminal=${entry.terminal.id}`);
   await act(async () => control("Conversation actions").click());

@@ -26,7 +26,7 @@ modules of `apps/local-daemon`, not workspace packages.
 apps/
   web/                  React + Vite cockpit
   local-daemon/         Node backend process
-    src/{agents,api,context,data-safety,diagnostics,events,git,health,review,runtime,supervisor}/
+    src/{agents,api,context,data-safety,diagnostics,events,git,health,review,runtime,supervisor,terminal}/
   desktop/              Electron shell: manages the daemon lifecycle, serves the web build
     src/{main,preload,shared}/
   docs/                 VitePress user documentation, published from main
@@ -45,7 +45,7 @@ a dangerous dependency that must be isolated, or a stable interface between two
 current systems. Reuse that is merely planned is not sufficient.
 
 `agents`, `api`, `context`, `data-safety`, `diagnostics`, `events`, `git`, `health`,
-`review`, `runtime`, and `supervisor` stay internal to `apps/local-daemon` while they have
+`review`, `runtime`, `supervisor`, and `terminal` stay internal to `apps/local-daemon` while they have
 no cross-app consumer. Promoting one requires an explicit current justification.
 
 ## Import boundaries
@@ -317,7 +317,7 @@ changing a package's public surface, run `pnpm build` before `pnpm typecheck`.
 - Tests and daemon modules use public Node subpath imports, never deep relative
   imports. Daemon modules expose `#agents`, `#api`, `#context`, `#data-safety`,
   `#diagnostics`, `#events`, `#git`, `#github`, `#health`, `#linear`, `#review`,
-  `#runtime`, and `#supervisor`; other packages expose private `#<package>/<path>`
+  `#runtime`, `#supervisor`, and `#terminal`; other packages expose private `#<package>/<path>`
   test maps.
 - The daemon must work from source and from `dist`. Its production build is
   bundled by `tsdown`; `smoke:dist` protects the emitted artifact.

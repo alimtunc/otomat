@@ -52,9 +52,7 @@ export function ConversationThreadBody({ runId, stepRunId }: ConversationThreadB
         return (
           <div className="flex h-full min-h-0 flex-col">
             <PaneHeader>
-              <span title="Chat view" aria-label="Chat view">
-                <Icon name="message-square" aria-hidden />
-              </span>
+              <Icon name="monitor" role="img" aria-label="Cockpit chat" />
               <span className="truncate">{step.name}</span>
               {stream.state === "open" ? (
                 <span className="font-normal normal-case text-text-tertiary">

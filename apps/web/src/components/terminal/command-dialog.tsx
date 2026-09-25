@@ -1,5 +1,5 @@
 import type { DaemonClient } from "@otomat/client";
-import type { TerminalPreview } from "@otomat/domain";
+import type { TerminalTool } from "@otomat/domain";
 import {
   Button,
   Dialog,
@@ -15,9 +15,10 @@ import {
   Switch,
 } from "@otomat/ui";
 import { useForm, useStore } from "@tanstack/react-form";
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { useTerminalPreview } from "@web/api/terminals/queries";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
-import { activeHost } from "@web/lib/active-host";
+import { runtimeMark } from "@web/lib/runtimes";
+import { terminalToolLabel } from "@web/lib/terminal-tool";
 
 import { terminalError } from "./error";
 
@@ -32,7 +33,7 @@ export function TerminalCommandDialog({
 }: {
   client: DaemonClient;
   issueId: string | null;
-  tool: TerminalPreview["executable"];
+  tool: TerminalTool;
   busy: boolean;
   error: string | null;
   onCancel: () => void;
@@ -48,13 +49,9 @@ export function TerminalCommandDialog({
     },
   });
   const includeContext = useStore(form.store, (state) => state.values.includeContext);
-  const preview = useQuery({
-    queryKey: ["terminal-context", activeHost().id, activeHost().daemonUrl, issueId, tool],
-    queryFn: issueId === null ? skipToken : () => client.terminalPreview(issueId, tool),
-    enabled: includeContext,
-    retry: false,
-  });
-  const label = tool === "claude" ? "Claude" : "Codex";
+  const preview = useTerminalPreview(client, issueId, tool, includeContext);
+  const label = terminalToolLabel(tool);
+  const mark = runtimeMark(tool);
   const ready =
     !includeContext || (preview.data !== undefined && !preview.isFetching && !preview.isError);
   return (
@@ -74,7 +71,7 @@ export function TerminalCommandDialog({
         >
           <DialogHeader className="shrink-0 flex-col items-start gap-1.5 pr-10">
             <DialogTitle className="flex items-center gap-2">
-              <ProviderMark name={tool === "claude" ? "claude" : "openai"} />
+              {mark === null ? null : <ProviderMark name={mark} />}
               Start {label}
             </DialogTitle>
             <DialogDescription>

@@ -1,102 +1,95 @@
-import type { ExecutionHostDescriptor, TerminalSession } from "@otomat/domain";
+import type { DaemonClient } from "@otomat/client";
 import {
-  Button,
-  CopyButton,
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Icon,
-  IconButton,
-  ProviderMark,
-} from "@otomat/ui";
-import { useState } from "react";
+  terminalToolSchema,
+  type ExecutionHostDescriptor,
+  type TerminalSession,
+  type TerminalTool,
+} from "@otomat/domain";
+import { Button, CopyButton, Icon, IconButton, LiveDot, ProviderMark } from "@otomat/ui";
+import { runtimeMark } from "@web/lib/runtimes";
+import { terminalToolLabel } from "@web/lib/terminal-tool";
+
+import { EndSessionDialog } from "./end-session-dialog";
 
 export function TerminalToolbar({
+  client,
   host,
-  project = false,
+  project,
   session,
-  available,
+  instance,
   busy,
   stale,
-  closeError,
   onOpen,
   onInspect,
   onExternal,
-  onClose,
 }: {
+  client: DaemonClient;
   host: ExecutionHostDescriptor;
-  project?: boolean;
+  project: boolean;
   session: TerminalSession | null;
-  available: boolean;
+  instance: string | null;
   busy: boolean;
   stale: boolean;
-  closeError: string | null;
-  onOpen: () => void;
-  onInspect: (tool: "claude" | "codex") => void;
+  onOpen: (instance: string) => void;
+  onInspect: (tool: TerminalTool) => void;
   onExternal: () => void;
-  onClose: (onSuccess: () => void) => void;
 }) {
-  const [confirmClose, setConfirmClose] = useState(false);
+  const remote = host.id === "remote";
   const localFallbackLabel = project ? "Copy terminal command" : "Open in external terminal";
   const live = session !== null && session.state !== "exited";
-  const tool = { claude: "Claude", codex: "Codex", shell: "Shell" }[session?.tool ?? "shell"];
   return (
     <>
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border-subtle bg-surface-1 px-3 py-2">
         <div className="flex min-w-0 items-center gap-2 text-xs">
           <Icon name="terminal" className="size-3.5 text-text-secondary" aria-hidden />
-          <span className="font-medium">{live ? tool : "Terminal"}</span>
+          <span className="font-medium">{live ? terminalToolLabel(session.tool) : "Terminal"}</span>
           <span className="text-text-tertiary">/</span>
           <span className="max-w-32 truncate text-text-secondary" title={host.label}>
             {host.label}
           </span>
           {live ? (
-            <span className="size-1.5 rounded-full bg-success" aria-label="Session active" />
+            <>
+              <LiveDot tone="success" live size={6} />
+              <span className="sr-only">Session active</span>
+            </>
           ) : null}
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          {!live && available ? (
+          {!live && instance !== null ? (
             <>
-              <Button size="sm" disabled={busy || stale} onClick={onOpen}>
+              <Button size="sm" disabled={busy || stale} onClick={() => onOpen(instance)}>
                 <Icon name="terminal" aria-hidden />
                 Open shell
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy || stale}
-                onClick={() => onInspect("claude")}
-              >
-                <ProviderMark name="claude" />
-                Claude
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={busy || stale}
-                onClick={() => onInspect("codex")}
-              >
-                <ProviderMark name="openai" />
-                Codex
-              </Button>
+              {terminalToolSchema.options.map((tool) => {
+                const mark = runtimeMark(tool);
+                return (
+                  <Button
+                    key={tool}
+                    size="sm"
+                    variant="ghost"
+                    disabled={busy || stale}
+                    onClick={() => onInspect(tool)}
+                  >
+                    {mark === null ? null : <ProviderMark name={mark} />}
+                    {terminalToolLabel(tool)}
+                  </Button>
+                );
+              })}
             </>
           ) : null}
           <IconButton
-            label={host.id === "remote" ? "Copy SSH command" : localFallbackLabel}
-            icon={<Icon name={project ? "copy" : "external-link"} aria-hidden />}
+            label={remote ? "Copy SSH command" : localFallbackLabel}
+            icon={<Icon name={remote || project ? "copy" : "external-link"} aria-hidden />}
             disabled={busy || stale}
             onClick={onExternal}
           />
-          {live ? (
-            <IconButton
-              label="End session"
-              icon={<Icon name="square" aria-hidden />}
-              disabled={busy || session.state === "closing"}
-              onClick={() => setConfirmClose(true)}
+          {live && instance !== null ? (
+            <EndSessionDialog
+              client={client}
+              instance={instance}
+              session={session}
+              disabled={busy}
             />
           ) : null}
         </div>
@@ -113,42 +106,6 @@ export function TerminalToolbar({
           />
         </div>
       ) : null}
-      <Dialog
-        open={confirmClose}
-        onOpenChange={(open) => {
-          if (!busy) setConfirmClose(open);
-        }}
-      >
-        <DialogContent>
-          <DialogHeader className="flex-col items-start gap-1.5 pr-10">
-            <DialogTitle>End this session?</DialogTitle>
-            <DialogDescription>
-              This stops the shell and its active command. Your worktree and saved files stay in
-              place.
-            </DialogDescription>
-          </DialogHeader>
-          {closeError ? (
-            <DialogBody>
-              <p role="alert" className="text-sm text-danger">
-                {closeError}
-              </p>
-            </DialogBody>
-          ) : null}
-          <DialogFooter className="justify-end">
-            <Button variant="ghost" disabled={busy} onClick={() => setConfirmClose(false)}>
-              Keep working
-            </Button>
-            <Button
-              variant="destructive"
-              loading={busy}
-              disabled={busy}
-              onClick={() => onClose(() => setConfirmClose(false))}
-            >
-              End session
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

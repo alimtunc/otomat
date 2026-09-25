@@ -1550,9 +1550,13 @@ own metadata, project and optional issue; they carry no fabricated run or step I
 Their pane reuses `TerminalScreen`, interactive only while the owner reports a live
 session. Cockpit rows have a monitor icon and retain the chat view; terminal rows
 have a terminal icon. All saved terminals remain listed regardless of age, grouped
-under the project when no issue owns them. Their state alone selects Following or
-Recently finished, and output or exit advances their reading mark. No terminal
-output is parsed into provider messages. The list does not cap finished groups.
+under the project when no issue owns them. A project terminal's state selects
+Following or Recently finished; an issue terminal follows while it runs or while
+its issue's cycle is open, so an ended terminal stays grouped with its issue's
+open cycle, and list collapse keys are scoped per section. Only
+the session's start and exit advance its reading mark: PTY output never writes
+the session row. No terminal output is parsed into provider messages. The list
+does not cap finished groups.
 
 **For cockpit chats, listing and active state follow the issue cycle.** `readConversations` first reduces every issue's execution evidence
 (`listIssueExecutionEvidenceByIssue`) through `projectFollowedCycle`: the open

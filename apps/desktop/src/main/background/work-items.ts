@@ -1,4 +1,4 @@
-import type { ActivityContract, RunState } from "@otomat/domain";
+import type { ActivityContract, RunState, TerminalSession } from "@otomat/domain";
 
 /** Ordered by how much they need the operator, which is the order the menu bar lists them in. */
 export const LOCAL_WORK_STATES = ["waiting", "running", "failed"] as const;
@@ -29,7 +29,10 @@ function workState(activity: ActivityContract): LocalWorkState | null {
 }
 
 /** A run and the operations the daemon carries out for it share one `run_id`; that workspace is one item. */
-export function localWorkItems(activities: readonly ActivityContract[]): LocalWorkItem[] {
+export function localWorkItems(
+  activities: readonly ActivityContract[],
+  terminals: readonly TerminalSession[],
+): LocalWorkItem[] {
   const items = new Map<string, LocalWorkItem>();
   for (const activity of activities) {
     const state = workState(activity);
@@ -49,7 +52,16 @@ export function localWorkItems(activities: readonly ActivityContract[]): LocalWo
     if (rank(state) < rank(held.state)) held.state = state;
     held.started_at ??= startedAt;
   }
-  return [...items.values()].toSorted((a, b) => rank(a.state) - rank(b.state));
+  const sessions = terminals
+    .filter((session) => session.state !== "exited")
+    .map((session): LocalWorkItem => ({
+      run_id: null,
+      project: session.branch,
+      issue: "User terminal",
+      state: "running",
+      started_at: session.started_at,
+    }));
+  return [...items.values(), ...sessions].toSorted((a, b) => rank(a.state) - rank(b.state));
 }
 
 /** Work a quit would cut short. A failure loses nothing by quitting. */

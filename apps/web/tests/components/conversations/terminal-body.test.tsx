@@ -20,6 +20,9 @@ vi.mock("@xterm/xterm", () => ({
     loadAddon() {}
     focus() {}
     dispose() {}
+    onResize() {
+      return { dispose: () => undefined };
+    }
     onData(callback: typeof input) {
       input = callback;
       return { dispose: () => undefined };
@@ -59,19 +62,18 @@ it("replays a saved terminal read-only without spawning or sending input", async
         : { instance: "00000000-0000-4000-8000-000000000001", sessions: [] },
     );
   });
-  const mounted = await mountWithQuery(<TerminalConversationBody terminalId={session.id} />);
+  const mounted = await mountWithQuery(<TerminalConversationBody session={session} />);
   cleanup = mounted.cleanup;
   await vi.waitFor(() => expect(writes).toContain("saved terminal output"));
   expect(options.disableStdin).toBe(true);
   input("echo should-not-run\r");
   expect(methods.every((method) => method === "GET")).toBe(true);
-  expect(mounted.container.textContent).toContain("Session ended");
+  await vi.waitFor(() => expect(mounted.container.textContent).toContain("Session ended"));
 });
 
-it("shows a readable failure when the desktop connection is missing", async () => {
-  const mounted = await mountWithQuery(<TerminalConversationBody terminalId="missing" />);
+it("points to the desktop app when no desktop connection exists", async () => {
+  const session = terminalConversationEntry().terminal;
+  const mounted = await mountWithQuery(<TerminalConversationBody session={session} />);
   cleanup = mounted.cleanup;
-  await vi.waitFor(() =>
-    expect(mounted.container.textContent).toContain("Couldn’t read this terminal"),
-  );
+  expect(mounted.container.textContent).toContain("available in the desktop app");
 });

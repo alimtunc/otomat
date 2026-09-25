@@ -34,7 +34,11 @@ it.each(["Claude", "Codex"])(
       return Response.json({ instance: "00000000-0000-4000-8000-000000000001", sessions: [] });
     });
     const mounted = await mountWithQuery(
-      <TerminalPanel projectId="p2" host={{ id: "local", label: "Local", kind: "local" }} />,
+      <TerminalPanel
+        projectId="p2"
+        rootPath="/repo"
+        host={{ id: "local", label: "Local", kind: "local" }}
+      />,
     );
     cleanups.push(mounted.cleanup);
     expect(findLabelled("Copy terminal command")).toBeDefined();
@@ -90,7 +94,11 @@ it("does not attach a different project's terminal or an issue terminal", async 
     }),
   );
   const mounted = await mountWithQuery(
-    <TerminalPanel projectId="p2" host={{ id: "local", label: "Local", kind: "local" }} />,
+    <TerminalPanel
+      projectId="p2"
+      rootPath="/repo"
+      host={{ id: "local", label: "Local", kind: "local" }}
+    />,
   );
   cleanups.push(mounted.cleanup);
   expect(findButton("Open shell")).toBeDefined();

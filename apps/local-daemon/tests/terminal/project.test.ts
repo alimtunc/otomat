@@ -1,33 +1,27 @@
 import { renameSync, symlinkSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
 
 import { schema } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { createRepositoryResolver } from "#git";
-import { TerminalService } from "#terminal/service";
+import { TerminalService } from "#terminal";
 import { makeApiApp, post } from "#test-support/api";
-import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
+import type { DaemonTestDb } from "#test-support/daemon-db";
 import { setupTestRepo } from "#test-support/git";
-import { makeSupervisor } from "#test-support/supervisor";
+import { closeTerminals, setupTerminals } from "#test-support/terminals";
 
 let fix: DaemonTestDb;
 let terminals: TerminalService;
 let app: ReturnType<typeof makeApiApp>;
 beforeEach(() => {
-  fix = setupDaemonDb();
-  const repositories = createRepositoryResolver({
-    db: fix.db,
-    worktreesRoot: join(fix.dataDir, "worktrees"),
+  const setup = setupTerminals();
+  ({ fix, terminals } = setup);
+  app = makeApiApp(fix, {
+    terminals,
+    supervisor: setup.harness.supervisor,
+    repositories: setup.repositories,
   });
-  const { supervisor } = makeSupervisor(fix, "complete", { repositories });
-  terminals = new TerminalService(fix.db, repositories, supervisor);
-  app = makeApiApp(fix, { terminals, supervisor, repositories });
 });
-afterEach(async () => {
-  await terminals.shutdown();
-  fix.cleanup();
-});
+afterEach(() => closeTerminals(terminals, fix));
 
 it("opens and reattaches the project checkout without creating issues, runs or worktrees", async () => {
   const input = { instance: terminals.instance, project_id: "p1", tool: null };
@@ -54,7 +48,7 @@ it("opens and reattaches the project checkout without creating issues, runs or w
   });
   expect(issue.path).not.toBe(first.path);
   expect(terminals.list()).toHaveLength(2);
-  expect(terminals.hasRepositorySessions(fix.repositoryId)).toBe(true);
+  expect(terminals.hasRepositorySessions({ id: fix.repositoryId, project_id: "p1" })).toBe(true);
   const deletion = await app.request(`/api/repositories/${fix.repositoryId}`, {
     method: "DELETE",
     headers: { Host: "127.0.0.1", Authorization: "Bearer test-daemon-token" },

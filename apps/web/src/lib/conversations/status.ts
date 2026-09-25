@@ -1,4 +1,4 @@
-import type { ConversationThreadEntry as ConversationEntry, StepRunState } from "@otomat/domain";
+import type { ConversationThreadEntry, StepRunState } from "@otomat/domain";
 
 const STATUS_PRIORITY: readonly StepRunState[] = [
   "awaiting_permission",
@@ -11,7 +11,9 @@ const STATUS_PRIORITY: readonly StepRunState[] = [
   "queued",
 ];
 
-export function conversationStatus(entries: readonly ConversationEntry[]): StepRunState | null {
+export function conversationStatus(
+  entries: readonly ConversationThreadEntry[],
+): StepRunState | null {
   const statuses = entries
     .filter((entry) => "step_status" in entry)
     .map((entry) => {

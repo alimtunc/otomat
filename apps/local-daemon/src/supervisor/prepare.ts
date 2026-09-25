@@ -25,17 +25,11 @@ import {
 
 import { resolveAgentConfig } from "#agents";
 import { createContextFreezer, type ContextIssueRow } from "#context";
-import {
-  availableBranchName,
-  GitCommandError,
-  WorktreeConflictError,
-  type AcquireWorktreeInput,
-  type GitWorktreeService,
-  type WorktreeRecord,
-} from "#git";
+import { availableBranchName } from "#git";
 import { toRecord } from "#git/record";
 import { serializeByKey } from "#serialize";
 
+import { acquireRunWorktree } from "./acquire-worktree.js";
 import { issueBranchName } from "./branch-name.js";
 import { withContextBudget } from "./context-budget.js";
 import {
@@ -51,12 +45,18 @@ import { ensureRuntimeAgent } from "./runtime-selection.js";
 import type { SupervisorState } from "./state.js";
 import { freezeSupervision } from "./supervision/freeze.js";
 
+function firstLine(text: string): string {
+  const [first = ""] = text.split("\n");
+  return first.trim().slice(0, 120);
+}
+
 interface LaunchIssue {
   row: ContextIssueRow;
   /** Set only when the launch owns the issue: a prompt-only run creates the one it works on. */
   create: LocalIssue | null;
 }
 
+/** The issue a run works on, resolved before the transaction so the plan can freeze it as its context. */
 function launchIssue(
   projectId: string,
   request: StartRunRequest,
@@ -67,7 +67,7 @@ function launchIssue(
   const created = {
     id: randomUUID(),
     project_id: projectId,
-    title: prompt.split("\n")[0]?.trim().slice(0, 120) || "Local run",
+    title: firstLine(prompt) || "Local run",
     body: prompt,
     status: issueMachine.transition(issueMachine.initial, "ready"),
     source: "local",
@@ -113,6 +113,7 @@ function insertPlanRows(db: Db, runId: string, plan: RunPlan): void {
   });
 }
 
+/** Launches into one project are prepared one at a time: the open-workspace refusal and the branch pick read what an earlier launch has not written yet. */
 export async function prepareRun(
   state: SupervisorState,
   request: StartRunRequest,
@@ -122,6 +123,7 @@ export async function prepareRun(
   return serializeByKey(state.launchesByProject, project, () => prepareLaunch(state, request));
 }
 
+/** A launched run always owns a worktree: every precondition refuses before any row is written. */
 async function prepareLaunch(state: SupervisorState, request: StartRunRequest): Promise<string> {
   const { db } = state;
   const runDefault = runDefaultConfig(request, readExecutionDefaults(db).runtime);
@@ -192,7 +194,10 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
         if (issue.create) insertIssue(db, issue.create);
         if (prepared) {
           if (preparedWorkspace(db, issue.row.id)?.id !== prepared.id)
-            throw new WorktreeConflictError("The prepared workspace changed during launch.");
+            throw new LaunchRefusedError(
+              "worktree_unavailable",
+              "The prepared workspace changed during launch.",
+            );
           adoptPreparedWorkspace(db, issue.row.id, runId);
         }
         insertRun(db, {
@@ -220,28 +225,4 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
   }
 
   return runId;
-}
-
-function isSystemError(error: unknown): boolean {
-  return error instanceof Error && "syscall" in error && typeof error.syscall === "string";
-}
-
-async function acquireRunWorktree(
-  service: GitWorktreeService,
-  input: AcquireWorktreeInput,
-): Promise<WorktreeRecord> {
-  try {
-    return await service.acquire(input);
-  } catch (error) {
-    const actionable =
-      error instanceof GitCommandError ||
-      error instanceof WorktreeConflictError ||
-      isSystemError(error);
-    if (!actionable) throw error;
-    throw new LaunchRefusedError(
-      "worktree_unavailable",
-      `could not create the run's worktree: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
-  }
 }

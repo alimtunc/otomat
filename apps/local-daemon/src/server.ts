@@ -29,7 +29,7 @@ import {
 } from "#linear";
 import { createReviewService } from "#review";
 import { createReexecSpawn, createSupervisor, type Supervisor } from "#supervisor";
-import { TerminalService } from "#terminal/service";
+import { TerminalService } from "#terminal";
 
 import { ensureDefaultProject, ensureDefaultRepository } from "./bootstrap.js";
 import { lateBinding } from "./late-binding.js";

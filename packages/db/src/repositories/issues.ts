@@ -1,4 +1,9 @@
-import type { ExternalIssueSource, IssueState, SourceLabel } from "@otomat/domain";
+import {
+  isIssueClosed,
+  type ExternalIssueSource,
+  type IssueState,
+  type SourceLabel,
+} from "@otomat/domain";
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
 
 import type { Db } from "../client.js";
@@ -57,6 +62,7 @@ export function getIssueBySourceExternalId(
 
 export function upsertMirroredIssue(db: Db, value: MirroredIssue): void {
   db.transaction(() => {
+    const previous = getIssueBySourceExternalId(db, value.source, value.source_external_id);
     db.insert(issues)
       .values(value)
       .onConflictDoUpdate({
@@ -78,10 +84,8 @@ export function upsertMirroredIssue(db: Db, value: MirroredIssue): void {
         }),
       })
       .run();
-    if (value.status === "done" || value.status === "canceled") {
-      const row = getIssueBySourceExternalId(db, value.source, value.source_external_id);
-      if (row) releasePreparedWorkspace(db, row.id);
-    }
+    if (previous && (isIssueClosed(value.status) || previous.project_id !== value.project_id))
+      releasePreparedWorkspace(db, previous.id);
   });
 }
 
@@ -93,16 +97,20 @@ export function getIssue(db: Db, id: string): IssueRow | undefined {
 export function updateIssueStatus(db: Db, id: string, status: IssueState): void {
   db.transaction(() => {
     db.update(issues).set(touch({ status })).where(eq(issues.id, id)).run();
-    if (status === "done" || status === "canceled") releasePreparedWorkspace(db, id);
+    if (isIssueClosed(status)) releasePreparedWorkspace(db, id);
   });
 }
 
 /** Re-points a local issue at another project; mirrored issues are refused by the caller. */
 export function updateIssueProject(db: Db, id: string, projectId: string): void {
-  db.update(issues)
-    .set(touch({ project_id: projectId }))
-    .where(eq(issues.id, id))
-    .run();
+  db.transaction(() => {
+    const previous = getIssue(db, id);
+    db.update(issues)
+      .set(touch({ project_id: projectId }))
+      .where(eq(issues.id, id))
+      .run();
+    if (previous && previous.project_id !== projectId) releasePreparedWorkspace(db, id);
+  });
 }
 
 export function listIssues(

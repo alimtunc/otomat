@@ -1,7 +1,13 @@
-import { terminalSessionSchema, type TerminalSession } from "@otomat/domain";
-import { and, asc, eq, lt } from "drizzle-orm";
+import {
+  terminalSessionSchema,
+  type TerminalConversationEvidence,
+  type TerminalSession,
+} from "@otomat/domain";
+import { and, asc, eq, inArray, lt } from "drizzle-orm";
 
 import type { Db } from "../client.js";
+import { issues } from "../schema/issues.js";
+import { projects } from "../schema/projects.js";
 import { terminalFrames, terminalSessions } from "../schema/terminals.js";
 
 export function createTerminalRecord(db: Db, session: TerminalSession): void {
@@ -28,6 +34,38 @@ export function listTerminalRecords(db: Db) {
       session: terminalSessionSchema.parse(row.session),
       updated_at: row.updated_at,
     }));
+}
+
+export function listTerminalConversationEvidence(db: Db): TerminalConversationEvidence[] {
+  const rows = db
+    .select({
+      session: terminalSessions.session,
+      updated_at: terminalSessions.updated_at,
+      project_name: projects.name,
+    })
+    .from(terminalSessions)
+    .innerJoin(projects, eq(terminalSessions.project_id, projects.id))
+    .all()
+    .map((row) => ({ ...row, session: terminalSessionSchema.parse(row.session) }));
+  const issueIds = [
+    ...new Set(
+      rows.flatMap((row) => (row.session.issue_id === null ? [] : [row.session.issue_id])),
+    ),
+  ];
+  const issueById = new Map(
+    issueIds.length === 0
+      ? []
+      : db
+          .select({ id: issues.id, identifier: issues.source_identifier, title: issues.title })
+          .from(issues)
+          .where(inArray(issues.id, issueIds))
+          .all()
+          .map((issue) => [issue.id, issue]),
+  );
+  return rows.map((row) => ({
+    ...row,
+    issue: row.session.issue_id === null ? null : (issueById.get(row.session.issue_id) ?? null),
+  }));
 }
 
 export function finishTerminalRecord(db: Db, session: TerminalSession): void {
@@ -57,10 +95,6 @@ export function appendTerminalFrame(
     tx.insert(terminalFrames).values({ terminal_id: id, seq, data }).run();
     tx.delete(terminalFrames)
       .where(and(eq(terminalFrames.terminal_id, id), lt(terminalFrames.seq, firstSeq)))
-      .run();
-    tx.update(terminalSessions)
-      .set({ updated_at: new Date().toISOString() })
-      .where(eq(terminalSessions.id, id))
       .run();
   });
 }

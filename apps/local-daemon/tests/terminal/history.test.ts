@@ -1,36 +1,21 @@
-import { join } from "node:path";
-
 import { appendTerminalFrame, createTerminalRecord, listTerminalRecords, schema } from "@otomat/db";
 import { conversationSnapshotSchema, terminalOutputSchema } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { createRepositoryResolver } from "#git";
 import { hasInteractiveWriter } from "#git/interactive-worktrees";
-import { TerminalService } from "#terminal/service";
+import { TerminalService } from "#terminal";
 import { makeApiApp, post, request } from "#test-support/api";
-import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
-import { makeSupervisor } from "#test-support/supervisor";
+import type { DaemonTestDb } from "#test-support/daemon-db";
+import { closeTerminals, setupTerminals, type TerminalFixture } from "#test-support/terminals";
 
 let fix: DaemonTestDb;
 let terminals: TerminalService;
-let repositories: ReturnType<typeof createRepositoryResolver>;
-let harness: ReturnType<typeof makeSupervisor>;
+let repositories: TerminalFixture["repositories"];
+let harness: TerminalFixture["harness"];
 beforeEach(() => {
-  fix = setupDaemonDb();
-  repositories = createRepositoryResolver({
-    db: fix.db,
-    worktreesRoot: join(fix.dataDir, "worktrees"),
-  });
-  harness = makeSupervisor(fix, "complete", { repositories });
-  terminals = new TerminalService(fix.db, repositories, harness.supervisor);
+  ({ fix, terminals, repositories, harness } = setupTerminals());
 });
-afterEach(async () => {
-  try {
-    await terminals.shutdown();
-  } finally {
-    fix.cleanup();
-  }
-});
+afterEach(() => closeTerminals(terminals, fix));
 
 it("lists project and issue terminals without runs and reads their output after restart", async () => {
   const project = await terminals.open({

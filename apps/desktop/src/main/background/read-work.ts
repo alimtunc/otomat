@@ -24,21 +24,7 @@ export async function readLocalWork(
       client.listActivity(),
       client.listTerminals(),
     ]);
-    return {
-      ok: true,
-      items: [
-        ...localWorkItems(activity.activities),
-        ...terminals.sessions
-          .filter((session) => session.state !== "exited")
-          .map((session): LocalWorkItem => ({
-            run_id: null,
-            project: session.branch,
-            issue: "User terminal",
-            state: "running",
-            started_at: session.started_at,
-          })),
-      ],
-    };
+    return { ok: true, items: localWorkItems(activity.activities, terminals.sessions) };
   } catch (error) {
     const reason = error instanceof DaemonTransportError ? error.cause : error;
     return { ok: false, message: `Could not read the local daemon's activity: ${String(reason)}` };

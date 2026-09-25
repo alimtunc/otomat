@@ -91,7 +91,7 @@ it("folds finished conversations by default while keeping their unread count vis
   await cleanup();
 });
 
-it("reveals the selected archived project terminal without an issue", async () => {
+it("reveals the selected project terminal group without an issue", async () => {
   const first = terminalConversationEntry();
   const second = terminalConversationEntry({
     id: "terminal:second",

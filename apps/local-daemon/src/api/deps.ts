@@ -6,7 +6,7 @@ import type { GitHubService } from "#github";
 import type { LinearService } from "#linear";
 import type { ReviewService } from "#review";
 import type { Supervisor } from "#supervisor";
-import type { TerminalService } from "#terminal/service";
+import type { TerminalService } from "#terminal";
 
 export interface ApiDeps {
   terminals?: TerminalService;

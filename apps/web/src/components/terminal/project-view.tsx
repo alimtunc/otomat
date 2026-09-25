@@ -5,10 +5,11 @@ import { RouteShell } from "@web/components/shell/route-shell";
 import { TerminalWorkspace } from "./workspace";
 
 export function ProjectTerminalView() {
-  const { projectId } = useSelectedProject();
+  const { projectId, projects } = useSelectedProject();
+  const project = projects.data?.find((item) => item.id === projectId);
   return (
     <RouteShell titleIcon="terminal" breadcrumbs={[{ label: "Terminal", current: true }]}>
-      {projectId === undefined ? (
+      {project === undefined ? (
         <EmptyState
           icon="terminal"
           title="No project selected"
@@ -16,7 +17,7 @@ export function ProjectTerminalView() {
         />
       ) : (
         <div className="h-full min-h-0 p-4">
-          <TerminalWorkspace projectId={projectId} />
+          <TerminalWorkspace projectId={project.id} rootPath={project.root_path} />
         </div>
       )}
     </RouteShell>

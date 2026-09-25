@@ -6,8 +6,6 @@ import { issues } from "./issues.js";
 import { projects } from "./projects.js";
 import { timestamps } from "./shared.js";
 
-export { projects } from "./projects.js";
-
 export const repositories = sqliteTable("repositories", {
   id: text("id").primaryKey(),
   project_id: text("project_id")

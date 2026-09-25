@@ -4,23 +4,31 @@ import {
   interruptTerminalRecords,
   readTerminalOutput,
   getIssue,
-  getRepository,
   getRun,
   type Db,
 } from "@otomat/db";
-import type { TerminalOpenRequest, TerminalSession } from "@otomat/domain";
+import { isIssueClosed, type TerminalOpenRequest, type TerminalSession } from "@otomat/domain";
 
 import { inCheckout, WorktreeConflictError, type RepositoryResolver } from "#git";
 import { probeLocalRepository } from "#git/probe";
 import { validateInteractiveWorktree } from "#git/validate-worktree";
 import { findWorktreeById } from "#git/worktrees-store";
-import type { Supervisor } from "#supervisor";
-import { issueWorkspace } from "#supervisor/workspace";
-import { canonicalIssueWorktree } from "#supervisor/workspace-preparation";
+import { canonicalIssueWorktree, issueWorkspace, type Supervisor } from "#supervisor";
 
 import { terminalContext } from "./context.js";
+import { TerminalRefusedError } from "./errors.js";
 import { launchTerminal, type TerminalLaunchTarget } from "./launch.js";
 import type { UserTerminal } from "./session.js";
+
+function requireRunOwnsWorkspace(db: Db, issueId: string, runId: string): void {
+  const canonical = issueWorkspace(db, issueId);
+  if (
+    canonical.state !== "open" ||
+    canonical.run_id !== runId ||
+    getRun(db, runId)?.issue_id !== issueId
+  )
+    throw new WorktreeConflictError("This run no longer owns the issue workspace.");
+}
 
 export class TerminalService {
   readonly instance = randomUUID();
@@ -39,20 +47,19 @@ export class TerminalService {
     return [...this.sessions.values()].map((session) => session.info);
   }
 
-  hasRepositorySessions(repositoryId: string): boolean {
-    const repository = getRepository(this.db, repositoryId);
+  hasRepositorySessions(repository: { id: string; project_id: string }): boolean {
     return this.list().some(
       (session) =>
         session.state !== "exited" &&
         ((session.worktree_id !== null &&
-          findWorktreeById(this.db, session.worktree_id)?.repository_id === repositoryId) ||
-          session.project_id === repository?.project_id),
+          findWorktreeById(this.db, session.worktree_id)?.repository_id === repository.id) ||
+          session.project_id === repository.project_id),
     );
   }
 
   requireInstance(instance: string): void {
     if (this.stopping || instance !== this.instance)
-      throw new WorktreeConflictError(
+      throw new TerminalRefusedError(
         "The host or daemon changed. Reconnect before using the terminal.",
       );
   }
@@ -60,16 +67,7 @@ export class TerminalService {
   async open(request: TerminalOpenRequest): Promise<TerminalSession> {
     this.requireInstance(request.instance);
     if ("project_id" in request) return this.openProject(request);
-    if (request.run_id !== null) {
-      const run = getRun(this.db, request.run_id);
-      const canonical = issueWorkspace(this.db, request.issue_id);
-      if (
-        canonical.state !== "open" ||
-        run?.issue_id !== request.issue_id ||
-        canonical.run_id !== run.id
-      )
-        throw new WorktreeConflictError("This run no longer owns the issue workspace.");
-    }
+    if (request.run_id !== null) requireRunOwnsWorkspace(this.db, request.issue_id, request.run_id);
     const id = await this.supervisor.prepareIssueWorkspace(request.issue_id);
     const row = findWorktreeById(this.db, id);
     if (!row) throw new WorktreeConflictError("Worktree unavailable.");
@@ -79,8 +77,7 @@ export class TerminalService {
       const binding = issue ? this.repositories.forProject(issue.project_id) : null;
       if (
         !issue ||
-        issue.status === "done" ||
-        issue.status === "canceled" ||
+        isIssueClosed(issue.status) ||
         !binding ||
         binding.repositoryId !== row.repository_id
       )
@@ -96,21 +93,18 @@ export class TerminalService {
         throw new WorktreeConflictError(
           "The canonical issue workspace changed. Reopen the terminal.",
         );
-      if (request.run_id !== null) {
-        const canonical = issueWorkspace(this.db, request.issue_id);
-        if (canonical.state !== "open" || canonical.run_id !== request.run_id)
-          throw new WorktreeConflictError("This run no longer owns the issue workspace.");
-      }
+      if (request.run_id !== null)
+        requireRunOwnsWorkspace(this.db, request.issue_id, request.run_id);
       const existing = [...this.sessions.values()].find(
         (session) => session.info.issue_id === issue.id && session.info.state !== "exited",
       );
       if (existing) {
         if (existing.info.worktree_id !== id)
-          throw new WorktreeConflictError(
+          throw new TerminalRefusedError(
             "End this issue's previous terminal session before opening its new workspace.",
           );
         if (request.tool !== null)
-          throw new WorktreeConflictError(
+          throw new TerminalRefusedError(
             "End the existing terminal session before starting a CLI.",
           );
         return existing.info;
@@ -120,7 +114,7 @@ export class TerminalService {
           ? null
           : terminalContext(this.db, issue.id, request.tool);
       if (preview && preview.context_hash !== request.context_hash)
-        throw new WorktreeConflictError(
+        throw new TerminalRefusedError(
           "The issue context changed. Inspect it again before starting.",
         );
       const info = {
@@ -139,7 +133,7 @@ export class TerminalService {
     request: Extract<TerminalOpenRequest, { project_id: string }>,
   ): Promise<TerminalSession> {
     const binding = this.repositories.forProject(request.project_id);
-    if (!binding) throw new WorktreeConflictError("Connect a repository to this project first.");
+    if (!binding) throw new TerminalRefusedError("Connect a repository to this project first.");
     return inCheckout(binding.rootPath, async () => {
       const probe = await probeLocalRepository(binding.rootPath);
       this.requireInstance(request.instance);
@@ -161,7 +155,7 @@ export class TerminalService {
       );
       if (existing) {
         if (existing.path !== probe.rootPath || request.tool !== null)
-          throw new WorktreeConflictError(
+          throw new TerminalRefusedError(
             "End the existing project terminal before starting another.",
           );
         return existing;
@@ -182,7 +176,7 @@ export class TerminalService {
 
   private start(target: TerminalLaunchTarget, argv: string[]): TerminalSession {
     if (this.list().filter((session) => session.state !== "exited").length >= 8)
-      throw new WorktreeConflictError(
+      throw new TerminalRefusedError(
         "End a terminal before opening another (8 active sessions maximum).",
       );
     const session = launchTerminal(this.db, target, argv);
@@ -202,7 +196,7 @@ export class TerminalService {
     this.requireInstance(instance);
     const live = this.sessions.get(id);
     const output = live ? live.output(after) : readTerminalOutput(this.db, id, after);
-    if (!output) throw new WorktreeConflictError("This terminal session is not on this host.");
+    if (!output) throw new TerminalRefusedError("This terminal session is not on this host.");
     return output;
   }
 
@@ -210,7 +204,7 @@ export class TerminalService {
     this.requireInstance(instance);
     const session = this.sessions.get(id);
     if (!session)
-      throw new WorktreeConflictError("Session lost or expired. Open a new terminal explicitly.");
+      throw new TerminalRefusedError("Session lost or expired. Open a new terminal explicitly.");
     return session;
   }
 

@@ -5,6 +5,7 @@
 //  4. hoist it to the TOP-LEVEL node_modules — pnpm co-locates it under a private `.pnpm` dir that
 //     survives symlinks but NOT the symlink-flattening the app bundle needs, so `@otomat/db`'s
 //     `import "better-sqlite3"` would otherwise be unresolvable.
+//  5. keep only node-pty's host prebuild (plus the macOS spawn helper) and hoist it the same way.
 // mac-build.mjs dereferences `.daemon` when staging (asar cannot ship the pnpm symlink farm).
 //
 // CI=true on `pnpm deploy` only skips its interactive modules-purge confirmation for the staging

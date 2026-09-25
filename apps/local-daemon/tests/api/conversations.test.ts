@@ -291,6 +291,6 @@ describe("GET /api/conversations", () => {
     });
 
     updateAgentSessionStatus(t.db, "run-6-turn", "terminated");
-    expect((await readSnapshot()).entries[0]?.step_status).toBe("succeeded");
+    expect((await readSnapshot()).entries[0]).toMatchObject({ step_status: "succeeded" });
   });
 });

@@ -1,4 +1,4 @@
-import type { ConversationThreadEntry as ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry } from "@otomat/domain";
 import {
   EmptyState,
   ResizablePanel,
@@ -14,6 +14,7 @@ import { useMarkConversations } from "@web/api/conversations/mutations";
 import { useConversations } from "@web/api/conversations/queries";
 import { useConversationsStream } from "@web/api/conversations/use-conversations-stream";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
+import { useDaemonToken } from "@web/api/use-daemon-token";
 import { ConversationFiltersMenu } from "@web/components/conversations/filters-menu";
 import { ConversationList } from "@web/components/conversations/list";
 import { TerminalConversationBody } from "@web/components/conversations/terminal-body";
@@ -42,6 +43,7 @@ export function ConversationsView() {
     activeHostStore,
     (state) => state?.daemonUrl ?? activeHost().daemonUrl,
   );
+  const token = useDaemonToken();
   const mark = useMarkConversations();
   const { run, step, terminal } = useSearch({ from: "/conversations" });
   const navigate = useNavigate();
@@ -56,7 +58,7 @@ export function ConversationsView() {
   );
   useMarkConversationSeen(selected, mark.mutate);
 
-  const markEntry = (entry: ConversationEntry, patch: InboxMarkPatch): void => {
+  const markEntry = (entry: ConversationThreadEntry, patch: InboxMarkPatch): void => {
     mark.mutate(markInboxRequest([entry], patch));
   };
   const closeThread = (): void => {
@@ -101,24 +103,51 @@ export function ConversationsView() {
     </QueryBoundary>
   );
 
-  let thread;
-  if (terminal !== undefined)
-    thread = <TerminalConversationBody key={`${hostUrl}:${terminal}`} terminalId={terminal} />;
-  else
-    thread =
-      run === undefined || step === undefined ? (
+  const selectedTerminal =
+    selected !== undefined && "terminal" in selected ? selected.terminal : undefined;
+  const terminalThread = selectedTerminal ? (
+    <TerminalConversationBody
+      key={`${hostUrl}:${token}:${selectedTerminal.id}`}
+      session={selectedTerminal}
+    />
+  ) : (
+    <QueryBoundary
+      query={conversations}
+      pending={<ListSkeleton rows={3} height={40} />}
+      error={
+        <ErrorReport
+          error={conversations.error}
+          context="Couldn’t load conversations"
+          onRetry={() => void conversations.refetch()}
+        />
+      }
+    >
+      {() => (
         <CenteredState>
           <EmptyState
-            icon="message-square"
-            title="Select a conversation"
-            description="Read a cockpit chat or return to a terminal session."
+            icon="terminal"
+            title="Terminal session not found"
+            description="This session is no longer listed on this host."
           />
         </CenteredState>
-      ) : (
-        <RunEventsProvider runId={run}>
-          <ConversationThreadBody runId={run} stepRunId={step} />
-        </RunEventsProvider>
-      );
+      )}
+    </QueryBoundary>
+  );
+  const chatThread =
+    run === undefined || step === undefined ? (
+      <CenteredState>
+        <EmptyState
+          icon="message-square"
+          title="Select a conversation"
+          description="Read a cockpit chat or return to a terminal session."
+        />
+      </CenteredState>
+    ) : (
+      <RunEventsProvider runId={run}>
+        <ConversationThreadBody runId={run} stepRunId={step} />
+      </RunEventsProvider>
+    );
+  const thread = terminal === undefined ? chatThread : terminalThread;
 
   return (
     <RouteShell

@@ -11,7 +11,7 @@ import {
   type Db,
 } from "@otomat/db";
 
-import { detectDefaultBranch, tryRealpath } from "#git";
+import { canonicalPath, detectDefaultBranch } from "#git";
 
 export const DEFAULT_PROJECT_ID = "local-default";
 export const DEFAULT_REPOSITORY_ID = "local-default-repo";
@@ -23,7 +23,7 @@ export const DEFAULT_REPOSITORY_ID = "local-default-repo";
  * different checkout.
  */
 export function ensureDefaultProject(db: Db, rootPath: string): string {
-  const canonical = tryRealpath(rootPath) ?? rootPath;
+  const canonical = canonicalPath(rootPath);
   const registered = getProjectByRootPath(db, canonical);
   if (registered) return registered.id;
 

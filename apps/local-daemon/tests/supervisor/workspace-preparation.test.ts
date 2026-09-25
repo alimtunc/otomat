@@ -1,10 +1,10 @@
 import { readFileSync, renameSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { preparedWorkspace, schema, updateIssueStatus } from "@otomat/db";
+import { preparedWorkspace, schema, updateIssueProject, updateIssueStatus } from "@otomat/db";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
-import { findWorktreeById } from "#git/worktrees-store";
+import { findWorktreeById, updateWorktreeStatus } from "#git/worktrees-store";
 import { setupDaemonDb, type DaemonTestDb } from "#test-support/daemon-db";
 import { makeSupervisor } from "#test-support/supervisor";
 
@@ -54,7 +54,10 @@ it("keeps preparation across restart and refuses a missing or replaced path", as
   await expect(restarted.prepareIssueWorkspace("i1")).rejects.toThrow();
   symlinkSync(fix.repo.root, row.path);
   await expect(restarted.prepareIssueWorkspace("i1")).rejects.toThrow(/path has changed/);
-  await expect(restarted.start({ issue_id: "i1" })).rejects.toThrow();
+  await expect(restarted.start({ issue_id: "i1" })).rejects.toMatchObject({
+    name: "LaunchRefusedError",
+    code: "worktree_unavailable",
+  });
   expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(1);
 });
 
@@ -69,4 +72,16 @@ it("keeps manual work on a refused launch and closes preparation when the issue 
   await expect(supervisor.prepareIssueWorkspace("i1")).rejects.toThrow(/closed/);
   updateIssueStatus(fix.db, "i1", "ready");
   expect(await supervisor.prepareIssueWorkspace("i1")).not.toBe(id);
+});
+
+it("releases the reservation when its worktree is removed or its issue moves project", async () => {
+  const { supervisor } = makeSupervisor(fix, "complete");
+  const id = await supervisor.prepareIssueWorkspace("i1");
+  updateWorktreeStatus(fix.db, id, { status: "removed" });
+  expect(preparedWorkspace(fix.db, "i1")).toBeUndefined();
+  const next = await supervisor.prepareIssueWorkspace("i1");
+  expect(next).not.toBe(id);
+  fix.db.insert(schema.projects).values({ id: "p2", name: "Other", root_path: "/other" }).run();
+  updateIssueProject(fix.db, "i1", "p2");
+  expect(preparedWorkspace(fix.db, "i1")).toBeUndefined();
 });

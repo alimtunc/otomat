@@ -1,11 +1,11 @@
-import { getIssue, schema, type Db } from "@otomat/db";
+import { schema, type Db } from "@otomat/db";
 import type { WorktreeStatus } from "@otomat/domain";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 
 const { issues, pullRequests, runs, stepRuns, worktrees } = schema;
 
 export interface WorkspaceRecord {
-  prepared?: boolean;
+  prepared: boolean;
   worktree_id: string;
   path: string;
   branch: string;
@@ -77,6 +77,20 @@ function runContexts(db: Db, runIds: string[]): Map<string, RunContext> {
   );
 }
 
+function preparedContexts(db: Db, issueIds: string[]): Map<string, RunContext> {
+  if (issueIds.length === 0) return new Map();
+  const rows = db
+    .select({
+      issue_id: issues.id,
+      issue_identifier: issues.source_identifier,
+      issue_title: issues.title,
+    })
+    .from(issues)
+    .where(inArray(issues.id, issueIds))
+    .all();
+  return new Map(rows.map((row) => [row.issue_id, row]));
+}
+
 type WorkspacePullRequest = NonNullable<WorkspaceRecord["pull_request"]>;
 
 /** A merge is only ever read from a row naming this workspace, never from the issue at large. */
@@ -126,19 +140,16 @@ export function listWorkspaceRecords(db: Db, repositoryId: string): WorkspaceRec
   );
   const runIds = [...new Set(owners.values())];
   const contexts = runContexts(db, runIds);
+  const prepared = preparedContexts(
+    db,
+    rows.flatMap((row) => (row.prepared_issue_id === null ? [] : [row.prepared_issue_id])),
+  );
   const { byRun, byBranch } = pullRequestsByBranch(db, runIds);
   return rows.map((row) => {
     const runId = owners.get(row.id) ?? null;
-    const preparedIssue =
-      row.prepared_issue_id === null ? undefined : getIssue(db, row.prepared_issue_id);
-    let context = runId === null ? undefined : contexts.get(runId);
-    if (runId === null && preparedIssue) {
-      context = {
-        issue_id: preparedIssue.id,
-        issue_identifier: preparedIssue.source_identifier,
-        issue_title: preparedIssue.title,
-      };
-    }
+    const preparedContext =
+      row.prepared_issue_id === null ? undefined : prepared.get(row.prepared_issue_id);
+    const context = runId === null ? preparedContext : contexts.get(runId);
     const onRun = runId === null ? undefined : byRun.get(runId);
     const onBranch =
       context === undefined ? undefined : byBranch.get(`${context.issue_id}\u0000${row.branch}`);
