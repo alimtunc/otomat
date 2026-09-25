@@ -1,10 +1,11 @@
-import type { ProjectSummary } from "@otomat/ui";
+import type { IconName, ProjectSummary } from "@otomat/ui";
 import type { StoredProjectTab } from "@web/components/shell/project-tabs/state";
 
 export interface ProjectTab {
   id: string;
   name: string;
   tag?: string;
+  icon?: IconName;
   /** Unread Inbox entries for the project; absent while its host is not the connected one. */
   attention?: number;
 }
@@ -22,6 +23,7 @@ export function visibleProjectTabs(input: VisibleProjectTabsInput): ProjectTab[]
     if (project === undefined) return [];
     const tab: ProjectTab = { id: storedTab.key, name: project.name };
     if (project.tag !== undefined) tab.tag = project.tag;
+    if (project.icon !== undefined) tab.icon = project.icon;
     const attention = input.attention.get(storedTab.key);
     if (attention !== undefined) tab.attention = attention;
     return [tab];

@@ -2,12 +2,19 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import type { ComponentPropsWithoutRef } from "react";
 
 import { cn } from "../lib/utils";
-import { FIELD_TRANSITION, POPUP_MOTION_CLASS, POPUP_MOTION_STYLE } from "./styles";
+import {
+  FIELD_TRANSITION,
+  MENU_LABEL_CLASS,
+  POPUP_MOTION_CLASS,
+  POPUP_MOTION_STYLE,
+} from "./styles";
 
 export const Combobox = ComboboxPrimitive.Root;
 export const ComboboxTrigger = ComboboxPrimitive.Trigger;
 export const ComboboxValue = ComboboxPrimitive.Value;
 export const ComboboxItemIndicator = ComboboxPrimitive.ItemIndicator;
+export const ComboboxGroup = ComboboxPrimitive.Group;
+export const ComboboxCollection = ComboboxPrimitive.Collection;
 
 export type ComboboxInputProps = ComponentPropsWithoutRef<typeof ComboboxPrimitive.Input>;
 
@@ -100,6 +107,17 @@ export function ComboboxItem({ className, ...props }: ComboboxItemProps) {
         "[&_svg]:size-3.75 [&_svg]:shrink-0 [&_svg]:text-text-tertiary",
         className,
       )}
+      {...props}
+    />
+  );
+}
+
+export type ComboboxGroupLabelProps = ComponentPropsWithoutRef<typeof ComboboxPrimitive.GroupLabel>;
+
+export function ComboboxGroupLabel({ className, ...props }: ComboboxGroupLabelProps) {
+  return (
+    <ComboboxPrimitive.GroupLabel
+      className={cn(MENU_LABEL_CLASS, "px-2.5", className)}
       {...props}
     />
   );

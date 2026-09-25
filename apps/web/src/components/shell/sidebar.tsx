@@ -7,6 +7,7 @@ import {
   type ProjectSummary,
 } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { useSelector } from "@tanstack/react-store";
 import {
   CONVERSATIONS_NAV,
   INBOX_NAV,
@@ -14,6 +15,8 @@ import {
   WORKSPACE_NAV,
   type ShellSection,
 } from "@web/components/shell/nav-items";
+import { switcherSections } from "@web/components/shell/project-layout/arrange";
+import { projectLayoutStore } from "@web/components/shell/project-layout/store";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import type { ReactNode, Ref } from "react";
 
@@ -24,6 +27,7 @@ interface SidebarProps {
   currentProjectId?: string;
   onProjectSelect: (id: string) => void;
   onAddProject?: () => void;
+  onOrganizeProjects: () => void;
   onSearch: () => void;
   onNewIssue: () => void;
   hasLiveRun?: boolean;
@@ -57,6 +61,7 @@ export function Sidebar({
   currentProjectId,
   onProjectSelect,
   onAddProject,
+  onOrganizeProjects,
   onSearch,
   onNewIssue,
   hasLiveRun = false,
@@ -65,14 +70,16 @@ export function Sidebar({
   conversationCount = 0,
 }: SidebarProps) {
   const collapsed = useSidebarCollapsed();
+  const layout = useSelector(projectLayoutStore);
   const projectSwitcher = (
     <ProjectSwitcher
-      projects={projects}
+      sections={switcherSections(layout, projects)}
       triggerRef={projectTriggerRef}
       currentId={currentProjectId}
       onSelect={onProjectSelect}
       collapsed={collapsed}
       onOpenTab={projectTabsStore.actions.open}
+      onOrganize={onOrganizeProjects}
       {...(onAddProject === undefined ? {} : { onAddProject })}
     />
   );

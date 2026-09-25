@@ -1,3 +1,4 @@
+import { withItemMoved } from "@web/lib/array";
 import type { ContextDraft } from "@web/lib/context/draft";
 import { EMPTY_EXECUTION_SELECTION, type ExecutionSelection } from "@web/lib/execution/selection";
 import type { WorkflowNodeDraft } from "@web/lib/workflow-draft";
@@ -17,14 +18,8 @@ export function moveWorkflowStep(
   index: number,
   direction: -1 | 1,
 ): WorkflowNodeDraft[] {
-  const target = index + direction;
-  if (index < 0 || index >= steps.length || target < 0 || target >= steps.length) {
-    return [...steps];
-  }
-  const next = [...steps];
-  const [moved] = next.splice(index, 1);
-  next.splice(target, 0, moved);
-  return sanitizeWorkflowSteps(next);
+  const next = withItemMoved(steps, index, direction);
+  return next === null ? [...steps] : sanitizeWorkflowSteps(next);
 }
 
 export function removeWorkflowStep(
