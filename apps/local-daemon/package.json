@@ -33,7 +33,9 @@
     "#serialize": "./src/serialize.ts",
     "#server": "./src/server.ts",
     "#supervisor": "./src/supervisor/index.ts",
-    "#supervisor/*": "./src/supervisor/*.ts"
+    "#supervisor/*": "./src/supervisor/*.ts",
+    "#terminal": "./src/terminal/index.ts",
+    "#terminal/*": "./src/terminal/*.ts"
   },
   "scripts": {
     "build": "tsdown",
@@ -50,6 +52,7 @@
     "@otomat/domain": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.8",
+    "node-pty": "1.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

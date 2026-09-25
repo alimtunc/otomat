@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  adoptPreparedWorkspace,
+  preparedWorkspace,
   getIssue,
   insertCompeteGroup,
   insertIssue,
@@ -23,16 +25,11 @@ import {
 
 import { resolveAgentConfig } from "#agents";
 import { createContextFreezer, type ContextIssueRow } from "#context";
-import {
-  availableBranchName,
-  GitCommandError,
-  WorktreeConflictError,
-  type AcquireWorktreeInput,
-  type GitWorktreeService,
-  type WorktreeRecord,
-} from "#git";
+import { availableBranchName } from "#git";
+import { toRecord } from "#git/record";
 import { serializeByKey } from "#serialize";
 
+import { acquireRunWorktree } from "./acquire-worktree.js";
 import { issueBranchName } from "./branch-name.js";
 import { withContextBudget } from "./context-budget.js";
 import {
@@ -154,13 +151,15 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
     existingIssue,
   );
   const issue = launchIssue(projectId, request, existingIssue);
-  const branch = await availableBranchName(
-    binding.rootPath,
-    issueBranchName(issue.row, runId),
-    runId.slice(0, 8),
-  );
+  const prepared = preparedWorkspace(db, issue.row.id);
+  const branch =
+    prepared?.branch ??
+    (await availableBranchName(
+      binding.rootPath,
+      issueBranchName(issue.row, runId),
+      runId.slice(0, 8),
+    ));
 
-  // The plan freezes attached files from the base tree: the run's own worktree does not exist yet.
   const plan = await freezePlan(
     request,
     defaultConfig,
@@ -169,18 +168,22 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
       createContextFreezer({
         db,
         issue: issue.row,
-        snapshot: await binding.service.treeSnapshot(baseSha),
+        snapshot: prepared?.owner_token
+          ? await binding.service.worktreeTree(prepared.owner_token)
+          : await binding.service.treeSnapshot(baseSha),
         capturedAt: new Date().toISOString(),
       }),
     ),
   );
 
-  const worktree = await acquireRunWorktree(binding.service, {
-    owner: runId,
-    branch,
-    baseRef,
-    baseSha,
-  });
+  const worktree = prepared
+    ? toRecord(prepared)
+    : await acquireRunWorktree(binding.service, {
+        owner: runId,
+        branch,
+        baseRef,
+        baseSha,
+      });
 
   try {
     // The hold counts runs by their rows, and this one has none until the insert below.
@@ -189,6 +192,14 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
     db.transaction(
       () => {
         if (issue.create) insertIssue(db, issue.create);
+        if (prepared) {
+          if (preparedWorkspace(db, issue.row.id)?.id !== prepared.id)
+            throw new LaunchRefusedError(
+              "worktree_unavailable",
+              "The prepared workspace changed during launch.",
+            );
+          adoptPreparedWorkspace(db, issue.row.id, runId);
+        }
         insertRun(db, {
           id: runId,
           issue_id: issue.row.id,
@@ -206,7 +217,7 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
     );
   } catch (error) {
     try {
-      await binding.service.cleanup(runId);
+      if (!prepared) await binding.service.cleanup(runId);
     } catch (cleanupError) {
       console.error(`[otomat] worktree rollback for aborted run ${runId} failed`, cleanupError);
     }
@@ -214,35 +225,4 @@ async function prepareLaunch(state: SupervisorState, request: StartRunRequest): 
   }
 
   return runId;
-}
-
-/** Node reports an unwritable or full data dir with a `syscall`; the launch cannot proceed, but the daemon is not broken. */
-function isSystemError(error: unknown): boolean {
-  return error instanceof Error && "syscall" in error && typeof error.syscall === "string";
-}
-
-/**
- * Turns an acquire failure the user can act on — git refused, the branch is
- * taken, the worktrees dir is unwritable — into a typed launch refusal carrying
- * the reason. Anything else is a daemon bug and keeps its own stack rather than
- * being reported as a repository the caller should go repair.
- */
-async function acquireRunWorktree(
-  service: GitWorktreeService,
-  input: AcquireWorktreeInput,
-): Promise<WorktreeRecord> {
-  try {
-    return await service.acquire(input);
-  } catch (error) {
-    const actionable =
-      error instanceof GitCommandError ||
-      error instanceof WorktreeConflictError ||
-      isSystemError(error);
-    if (!actionable) throw error;
-    throw new LaunchRefusedError(
-      "worktree_unavailable",
-      `could not create the run's worktree: ${error instanceof Error ? error.message : String(error)}`,
-      { cause: error },
-    );
-  }
 }

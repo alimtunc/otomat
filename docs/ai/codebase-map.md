@@ -1545,8 +1545,20 @@ cockpit's own `ConversationHeader` and `StepConversationThread` under a
 `RunEventsProvider` for the selected run, so a message posted there targets the
 selected step exactly as it would in the cockpit.
 
-**Which threads are listed, and which are active, is the issue cycle's call, not
-the step's.** `readConversations` first reduces every issue's execution evidence
+Terminal entries (`terminal:<session_id>`) extend the snapshot as a union with their
+own metadata, project and optional issue; they carry no fabricated run or step IDs.
+Their pane reuses `TerminalScreen`, interactive only while the owner reports a live
+session. Cockpit rows have a monitor icon and retain the chat view; terminal rows
+have a terminal icon. All saved terminals remain listed regardless of age, grouped
+under the project when no issue owns them. A project terminal's state selects
+Following or Recently finished; an issue terminal follows while it runs or while
+its issue's cycle is open, so an ended terminal stays grouped with its issue's
+open cycle, and list collapse keys are scoped per section. Only
+the session's start and exit advance its reading mark: PTY output never writes
+the session row. No terminal output is parsed into provider messages. The list
+does not cap finished groups.
+
+**For cockpit chats, listing and active state follow the issue cycle.** `readConversations` first reduces every issue's execution evidence
 (`listIssueExecutionEvidenceByIssue`) through `projectFollowedCycle`: the open
 cycle `projectOpenCycleExecution` already gives the board —
 a busy run, a quota wait, a review or a pull request awaiting its verdict, a stop
@@ -1574,7 +1586,7 @@ never move a thread, which is why the badge counts threads and cannot tick per
 stream frame. A cancelled step and an abandoned run read as already read: they
 are the operator's act. The web groups entries by issue and sections the groups
 by `issue.cycle` alone — an unread finished thread sits in *Recently finished*
-with its dot, never in *Active* — and the state filter reads `sectionOf`, so a
+with its dot, never in *Following* — and the state filter reads `sectionOf`, so a
 filter and a section cannot disagree. An issue group opens by default while one of
 its threads is running and folds back when none is; a manual fold or unfold
 overrides that default for the rest of the visit.
@@ -2026,6 +2038,61 @@ serialized per repository and reject a checkout that changed during generation.
 Confirmed provider data is mirrored through the existing PR import store without
 inventing an issue or run. A failed push leaves the local branch available for
 retry; a failed create leaves pushed commits available for retry.
+
+## User Terminal
+
+The sidebar also exposes a project terminal in the registered checkout. The owner
+resolves the project, verifies its canonical Git root and rechecks its registration
+under the checkout lock before starting. Project launches carry no issue, run or
+context hash; they create no workspace rows and share the authenticated transport,
+PTY lifecycle and session limit with issue terminals. Session inventory identifies
+the project explicitly, so navigation reattaches only its own session. Closing the
+window counts project terminals as active work. Conversations lists these sessions
+alongside issue terminals and cockpit chats.
+
+The desktop issue view and run cockpit expose an explicit **Terminal** tab. Opening
+it only reads inventory; creating a shell or launching Claude/Codex requires an
+action. `apps/local-daemon/src/terminal` owns `node-pty`; the renderer owns only
+xterm and calls the authenticated typed client. The desktop enables the local
+terminal service through its daemon environment. Other hosts return an unavailable
+inventory and offer the external terminal fallback. No terminal writes a run,
+step, provider-session or cost row.
+
+The owner resolves an issue to its canonical worktree, validates its realpath under
+the host's worktree root and its registered Git repository/branch, and checks the
+daemon instance identifier on every session operation. The API accepts no cwd,
+shell, environment or executable supplied by the renderer. Claude/Codex launches
+use an allowlisted executable. A null `context_hash` explicitly requests zero
+arguments; otherwise inspection returns one literal issue-context argument and a
+hash, and changed context requires a new inspection. Both modes keep the same
+canonical-worktree and daemon-instance checks.
+The terminal is an intentional user shell with the daemon account's permissions,
+not a filesystem sandbox or an agent instruction channel.
+
+`worktrees.prepared_issue_id` uniquely reserves an issue's worktree before its first
+run. Preparation and launch share the project launch queue. The first run adopts
+that same row, branch and dirty tree; a refused launch leaves preparation intact.
+Closing the issue releases the reservation without deleting files. Active terminals
+hold a worktree writer guard that blocks cleanup, including forced cleanup.
+
+Terminal transport uses bounded cursor-based HTTP polling behind the existing
+Host, Origin and bearer checks. A reconnect replays up to 256 KiB of recent output;
+truncation is visible and stdin is never replayed. There is one live terminal per
+issue or project, at most eight per daemon; an old cycle's session must end before
+opening the next. `terminal_sessions` retains session metadata and `terminal_frames`
+retains the same bounded PTY output, keyed by session and cursor. Only PTY output is
+recorded, never raw stdin. A recording failure stops the writer and is returned to
+the client. Startup marks interrupted records ended. Saved IDs remain readable
+through the authenticated output endpoint with the current daemon instance; they
+cannot receive input or restart a process. A new shell requires an explicit action. Tab unmount detaches xterm; window close includes
+terminals in the background/quit choice; daemon shutdown hangs up terminal processes.
+A deliberately detached external job is outside that lifecycle. VPS integrated
+PTYs and process survival across daemon restarts are not supported.
+
+`prepare-daemon.mjs` stages the host's native PTY binding and macOS spawn helper
+outside asar. The node-pty patch prevents a second `.unpacked` suffix when the
+whole daemon is already unpacked. The packaged smoke launches a real PTY through
+the shipped Electron binary, covering helper resolution as well as native loading.
 
 ## Opening a Worktree Outside Otomat
 

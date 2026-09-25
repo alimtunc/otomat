@@ -4,6 +4,7 @@ import {
   type ExecutionHostId,
   type ReviewTarget,
   type RunDiffScopeSelector,
+  type TerminalTool,
   type UsageFilters,
   type CheckoutTarget,
 } from "@otomat/domain";
@@ -127,6 +128,9 @@ export function hostKeys(host: ExecutionHostId) {
     pullRequestOverview: (id: string) => [host, "pull-request", id, "overview"] as const,
     pullRequestMerge: (id: string) => [host, "pull-request", id, "merge"] as const,
     pullRequestRefresh: (id: string) => [host, "pull-request", id, "refresh"] as const,
+    terminals: (daemonUrl: string) => [host, "terminals", daemonUrl] as const,
+    terminalContext: (daemonUrl: string, issueId: string | null, tool: TerminalTool) =>
+      [host, "terminals", daemonUrl, "context", issueId, tool] as const,
     workspaces: [host, "workspaces"] as const,
     workspacesForProject: (projectId?: string) =>
       [host, "workspaces", "project", projectId ?? null] as const,

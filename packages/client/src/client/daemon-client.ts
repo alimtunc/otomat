@@ -18,6 +18,7 @@ import { createRunStepsClient } from "./run-steps.js";
 import { createRunsClient } from "./runs.js";
 import { createSourceControlClient } from "./source-control.js";
 import { createSystemClient } from "./system.js";
+import { createTerminalClient } from "./terminals.js";
 import { createUsageClient } from "./usage.js";
 import { createWorkflowPresetsClient } from "./workflow-presets.js";
 import { createWorkspaceClient } from "./workspace.js";
@@ -27,6 +28,7 @@ export function createDaemonClient(config: DaemonClientConfig = {}) {
     ...createSystemClient(config),
     ...createActivityClient(config),
     ...createWorkspaceClient(config),
+    ...createTerminalClient(config),
     ...createGitHubClient(config),
     ...createLinearClient(config),
     ...createAgentsClient(config),

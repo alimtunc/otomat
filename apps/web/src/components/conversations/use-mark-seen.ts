@@ -1,10 +1,10 @@
-import type { ConversationEntry, MarkInboxRequest } from "@otomat/domain";
+import type { ConversationThreadEntry, MarkInboxRequest } from "@otomat/domain";
 import { markInboxRequest } from "@web/lib/inbox/marks";
 import { useEffect, useRef } from "react";
 
 /** Reading happens once per thread state: a thread that speaks again while open is read again, one in a hidden tab is not. */
 export function useMarkConversationSeen(
-  entry: ConversationEntry | undefined,
+  entry: ConversationThreadEntry | undefined,
   mark: (request: MarkInboxRequest) => void,
 ): void {
   const seen = useRef<string | null>(null);

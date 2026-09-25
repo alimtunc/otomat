@@ -5,12 +5,13 @@
 //  4. hoist it to the TOP-LEVEL node_modules — pnpm co-locates it under a private `.pnpm` dir that
 //     survives symlinks but NOT the symlink-flattening the app bundle needs, so `@otomat/db`'s
 //     `import "better-sqlite3"` would otherwise be unresolvable.
+//  5. keep only node-pty's host prebuild (plus the macOS spawn helper) and hoist it the same way.
 // mac-build.mjs dereferences `.daemon` when staging (asar cannot ship the pnpm symlink farm).
 //
 // CI=true on `pnpm deploy` only skips its interactive modules-purge confirmation for the staging
 // dir it creates.
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, readdirSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -78,5 +79,31 @@ cpSync(sqliteDir, join(STAGE, "node_modules", "better-sqlite3"), {
   recursive: true,
   dereference: true,
 });
+
+const ptyDirs = readdirSync(DEPLOYED_STORE).filter((dir) => dir.startsWith("node-pty@"));
+if (ptyDirs.length !== 1) throw new Error("Expected one deployed node-pty package.");
+const ptyDir = join(DEPLOYED_STORE, ptyDirs[0], "node_modules", "node-pty");
+const ptyPlatform = `${process.platform}-${process.arch}`;
+const ptyBinary = join(ptyDir, "prebuilds", ptyPlatform, "pty.node");
+if (process.platform === "linux" && !existsSync(ptyBinary)) {
+  mkdirSync(join(ptyDir, "prebuilds", ptyPlatform), { recursive: true });
+  cpSync(join(ptyDir, "build", "Release", "pty.node"), ptyBinary);
+}
+if (!existsSync(ptyBinary)) {
+  throw new Error(`node-pty has no native prebuild for ${ptyPlatform}`);
+}
+if (
+  process.platform === "darwin" &&
+  !existsSync(join(ptyDir, "prebuilds", ptyPlatform, "spawn-helper"))
+) {
+  throw new Error("node-pty has no macOS spawn helper.");
+}
+for (const dir of readdirSync(join(ptyDir, "prebuilds"))) {
+  if (dir !== ptyPlatform) rmSync(join(ptyDir, "prebuilds", dir), { recursive: true });
+}
+rmSync(join(ptyDir, "build"), { recursive: true, force: true });
+rmSync(join(ptyDir, "third_party"), { recursive: true, force: true });
+rmSync(join(STAGE, "node_modules", "node-pty"), { recursive: true, force: true });
+cpSync(ptyDir, join(STAGE, "node_modules", "node-pty"), { recursive: true, dereference: true });
 
 console.log(`Daemon prepared at ${STAGE}`);

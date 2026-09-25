@@ -1,8 +1,8 @@
 import type { SkillInvalidReason, SkillStatus } from "@otomat/domain";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+import { projects } from "./projects.js";
 import { timestamps } from "./shared.js";
-import { projects } from "./workspace.js";
 
 export const agents = sqliteTable("agents", {
   id: text("id").primaryKey(),

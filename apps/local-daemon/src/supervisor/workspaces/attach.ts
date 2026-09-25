@@ -1,6 +1,6 @@
 import type { WorkspaceAttachment } from "@otomat/domain";
 
-import { isInsideRoot, tryRealpath } from "#git";
+import { canonicalPath, isInsideRoot } from "#git";
 import type { GitWorktreeEntry } from "#git/worktree-cli";
 
 import type { WorkspaceRecord } from "./evidence.js";
@@ -19,20 +19,18 @@ export interface AttachContext {
   worktreesRoot: string;
 }
 
-function canonical(path: string): string {
-  return tryRealpath(path) ?? path;
-}
-
 export function attachWorkspaces(
   entries: readonly GitWorktreeEntry[],
   records: readonly WorkspaceRecord[],
   context: AttachContext,
 ): AttachedWorkspace[] {
-  const byPath = new Map(records.map((record) => [canonical(record.path), record]));
-  const repoRoot = canonical(context.repoRoot);
-  const worktrees = entries.filter((entry) => !entry.bare && canonical(entry.path) !== repoRoot);
+  const byPath = new Map(records.map((record) => [canonicalPath(record.path), record]));
+  const repoRoot = canonicalPath(context.repoRoot);
+  const worktrees = entries.filter(
+    (entry) => !entry.bare && canonicalPath(entry.path) !== repoRoot,
+  );
   const matched = new Map(
-    worktrees.map((entry) => [entry.path, byPath.get(canonical(entry.path)) ?? null]),
+    worktrees.map((entry) => [entry.path, byPath.get(canonicalPath(entry.path)) ?? null]),
   );
   const claimed = new Set(
     [...matched.values()].filter((record) => record !== null).map((record) => record.worktree_id),

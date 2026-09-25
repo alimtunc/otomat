@@ -1,6 +1,12 @@
-import type { ConversationEntry, ConversationParticipant } from "../contracts/conversations.js";
+import type {
+  ConversationEntry,
+  ConversationParticipant,
+  ConversationThreadEntry,
+  TerminalConversationEntry,
+} from "../contracts/conversations.js";
 import type { ResolvedAgentConfig } from "../contracts/entities/agents.js";
 import type { InboxMark } from "../contracts/inbox.js";
+import type { TerminalSession } from "../contracts/terminal.js";
 import type { AgentSessionState } from "../state-machines/agent-session.js";
 import type { RunInteractionKind } from "../state-machines/run-interaction.js";
 import type { RunState } from "../state-machines/run.js";
@@ -86,15 +92,34 @@ function updatedAtOf(row: ConversationEvidence): string {
   return instants.toSorted().at(-1) ?? row.step_created_at;
 }
 
-/** A cancel and an abandon are the operator's own act, so their threads are never news; a mark made on older evidence is stale. */
+export interface TerminalConversationEvidence {
+  session: TerminalSession;
+  updated_at: string;
+  project_name: string;
+  issue: { id: string; identifier: string | null; title: string } | null;
+}
+
+/** A mark made on older evidence is stale. */
+function currentMark(mark: InboxMark | undefined, updatedAt: string): InboxMark | undefined {
+  return mark !== undefined && mark.evidence_updated_at >= updatedAt ? mark : undefined;
+}
+
+/** A cancel and an abandon are the operator's own act, so their threads are never news. */
 function readingOf(
   row: ConversationEvidence,
   updatedAt: string,
   mark: InboxMark | undefined,
 ): Pick<ConversationEntry, "read" | "archived"> {
-  const current = mark !== undefined && mark.evidence_updated_at >= updatedAt;
+  const current = currentMark(mark, updatedAt);
   const silenced = row.step_status === "canceled" || row.run_abandoned_at !== null;
-  return { read: silenced || (current && mark.read), archived: current && mark.archived };
+  return { read: silenced || (current?.read ?? false), archived: current?.archived ?? false };
+}
+
+export function compareConversations(
+  a: ConversationThreadEntry,
+  b: ConversationThreadEntry,
+): number {
+  return b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id);
 }
 
 /** A live run is followed before `preparing` creates the worktree that would open its cycle. */
@@ -145,12 +170,33 @@ export function projectConversations(
         ...readingOf(row, updated_at, markById.get(id)),
       };
     })
-    .toSorted(
-      (a, b) =>
-        b.updated_at.localeCompare(a.updated_at) || a.step_run_id.localeCompare(b.step_run_id),
-    );
+    .toSorted(compareConversations);
 }
 
-export function countUnreadConversations(entries: readonly ConversationEntry[]): number {
+export function projectTerminalConversations(
+  evidence: readonly TerminalConversationEvidence[],
+  marks: readonly InboxMark[],
+  cycles: ConversationCycles,
+): TerminalConversationEntry[] {
+  const markById = new Map(marks.map((mark) => [mark.entry_id, mark]));
+  return evidence.map((row) => {
+    const id = `terminal:${row.session.id}`;
+    const mark = currentMark(markById.get(id), row.updated_at);
+    return {
+      id,
+      project: { id: row.session.project_id, name: row.project_name },
+      issue:
+        row.issue === null
+          ? null
+          : { ...row.issue, cycle: cycles.get(row.issue.id)?.state ?? null },
+      terminal: row.session,
+      updated_at: row.updated_at,
+      read: mark?.read ?? false,
+      archived: mark?.archived ?? false,
+    };
+  });
+}
+
+export function countUnreadConversations(entries: readonly ConversationThreadEntry[]): number {
   return entries.filter((entry) => !entry.read && !entry.archived).length;
 }

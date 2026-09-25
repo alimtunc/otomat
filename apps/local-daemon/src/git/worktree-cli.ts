@@ -1,4 +1,5 @@
 import { runGit } from "./git-cli.js";
+import { refuseInteractiveWriter } from "./interactive-worktrees.js";
 
 export interface AddWorktreeInput {
   worktreePath: string;
@@ -23,6 +24,7 @@ export async function removeWorktree(
   worktreePath: string,
   options: { force: boolean },
 ): Promise<string | null> {
+  refuseInteractiveWriter(worktreePath);
   const flags = options.force ? ["--force"] : [];
   const result = await runGit(["worktree", "remove", ...flags, worktreePath], {
     cwd: repoPath,

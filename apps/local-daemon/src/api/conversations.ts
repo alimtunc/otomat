@@ -2,11 +2,14 @@ import {
   listConversationEvidence,
   listInboxMarks,
   listIssueExecutionEvidenceByIssue,
+  listTerminalConversationEvidence,
   type Db,
 } from "@otomat/db";
 import {
+  compareConversations,
   projectConversations,
   projectFollowedCycle,
+  projectTerminalConversations,
   type ConversationSnapshot,
   type OpenCycleExecution,
 } from "@otomat/domain";
@@ -25,8 +28,12 @@ export function readConversations(db: Db): ConversationSnapshot {
     followed_run_ids: [...cycles.values()].map((cycle) => cycle.run_id),
     since: new Date(observed.getTime() - FINISHED_WINDOW_MS).toISOString(),
   });
+  const marks = listInboxMarks(db);
   return {
-    entries: projectConversations(evidence, listInboxMarks(db), cycles),
+    entries: [
+      ...projectConversations(evidence, marks, cycles),
+      ...projectTerminalConversations(listTerminalConversationEvidence(db), marks, cycles),
+    ].toSorted(compareConversations),
     observed_at: observed.toISOString(),
   };
 }

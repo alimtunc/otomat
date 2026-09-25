@@ -34,7 +34,7 @@ it("offers the background first, names the work at stake, and cancels on dismiss
 
   const [options] = showMessageBox.mock.calls.at(-1) ?? [];
   expect(options).toMatchObject({
-    buttons: ["Keep Running in Background", "Stop Runs and Quit", "Cancel"],
+    buttons: ["Keep Running in Background", "Stop Work and Quit", "Cancel"],
     defaultId: 0,
     cancelId: 2,
     icon: "/tmp/app-icon.png",

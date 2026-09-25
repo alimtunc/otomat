@@ -1,4 +1,4 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry } from "@otomat/domain";
 import { sectionOf } from "@web/lib/conversations/sections";
 
 const STATES = ["all", "active", "waiting", "finished"] as const;
@@ -29,7 +29,8 @@ export interface ConversationProjectOption {
 }
 
 /** A pending question waits on the operator whatever state the step reads. */
-function isWaitingOnOperator(entry: ConversationEntry): boolean {
+function isWaitingOnOperator(entry: ConversationThreadEntry): boolean {
+  if ("terminal" in entry) return false;
   return (
     entry.pending_interaction !== null ||
     entry.step_status === "awaiting_permission" ||
@@ -37,7 +38,7 @@ function isWaitingOnOperator(entry: ConversationEntry): boolean {
   );
 }
 
-function inState(entry: ConversationEntry, state: ConversationStateFilter): boolean {
+function inState(entry: ConversationThreadEntry, state: ConversationStateFilter): boolean {
   switch (state) {
     case "all":
       return true;
@@ -59,9 +60,9 @@ export function activeConversationFilterCount(filters: ConversationFilters): num
 
 /** Archived threads stay out of every filter: they come back on their own when they speak again. */
 export function applyConversationFilters(
-  entries: readonly ConversationEntry[],
+  entries: readonly ConversationThreadEntry[],
   filters: ConversationFilters,
-): ConversationEntry[] {
+): ConversationThreadEntry[] {
   const projects = new Set(filters.projects);
   return entries.filter(
     (entry) =>
@@ -73,7 +74,7 @@ export function applyConversationFilters(
 }
 
 export function conversationProjectOptions(
-  entries: readonly ConversationEntry[],
+  entries: readonly ConversationThreadEntry[],
 ): ConversationProjectOption[] {
   const projects = new Map<string, ConversationProjectOption>();
   for (const entry of entries) {

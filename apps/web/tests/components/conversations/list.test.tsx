@@ -4,7 +4,7 @@ import { groupConversations } from "@web/lib/conversations/sections";
 import { act } from "react";
 import { expect, it, vi } from "vitest";
 
-import { conversationEntry } from "#support/conversations";
+import { conversationEntry, terminalConversationEntry } from "#support/conversations";
 import { mountRouted } from "#support/router";
 
 const sections = groupConversations([
@@ -88,5 +88,28 @@ it("folds finished conversations by default while keeping their unread count vis
   expect(container.querySelectorAll("[data-conversation-row]")).toHaveLength(0);
   await act(async () => history?.click());
   expect(container.textContent).toContain("Finished work");
+  await cleanup();
+});
+
+it("reveals the selected project terminal group without an issue", async () => {
+  const first = terminalConversationEntry();
+  const second = terminalConversationEntry({
+    id: "terminal:second",
+    terminal: { ...first.terminal, id: "second" },
+  });
+  const { container, cleanup } = await mountRouted(
+    <ConversationList
+      sections={groupConversations([first, second])}
+      selectedId={second.id}
+      pending={false}
+      onMark={vi.fn()}
+    />,
+  );
+  expect(headers(container)[0]?.textContent).toContain("Otomat");
+  expect(headers(container)[0]?.getAttribute("aria-expanded")).toBe("true");
+  expect(container.querySelectorAll("[data-conversation-row]")).toHaveLength(2);
+  expect(container.querySelector('[aria-current="true"]')?.getAttribute("href")).toBe(
+    "/conversations?terminal=second",
+  );
   await cleanup();
 });

@@ -1,48 +1,52 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry } from "@otomat/domain";
 
 const SECTIONS = [
   { key: "active", label: "Following" },
   { key: "finished", label: "Recently finished" },
 ] as const;
 
-/** The finished section is a glance at the day, not an archive. */
-const FINISHED_GROUP_LIMIT = 10;
-
 export type ConversationSectionKey = (typeof SECTIONS)[number]["key"];
 
-export interface ConversationIssueGroup {
-  issue: ConversationEntry["issue"];
-  entries: ConversationEntry[];
+export interface ConversationGroup {
+  id: string;
+  issue: ConversationThreadEntry["issue"];
+  project: ConversationThreadEntry["project"];
+  entries: ConversationThreadEntry[];
 }
 
 export interface ConversationSection {
   key: ConversationSectionKey;
   label: string;
-  groups: ConversationIssueGroup[];
+  groups: ConversationGroup[];
 }
 
-export function sectionOf(entry: ConversationEntry): ConversationSectionKey {
-  return entry.issue.cycle === null ? "finished" : "active";
+export function sectionOf(entry: ConversationThreadEntry): ConversationSectionKey {
+  const running = "terminal" in entry && entry.terminal.state !== "exited";
+  return running || (entry.issue !== null && entry.issue.cycle !== null) ? "active" : "finished";
 }
 
 /** Entries arrive newest first, so an issue's group takes the rank of its newest thread. */
-function groupByIssue(entries: readonly ConversationEntry[]): ConversationIssueGroup[] {
-  const groups = new Map<string, ConversationIssueGroup>();
+function groupByOwner(entries: readonly ConversationThreadEntry[]): ConversationGroup[] {
+  const groups = new Map<string, ConversationGroup>();
   for (const entry of entries) {
-    const group = groups.get(entry.issue.id);
-    if (group === undefined) groups.set(entry.issue.id, { issue: entry.issue, entries: [entry] });
+    const id = entry.issue === null ? `project:${entry.project.id}` : `issue:${entry.issue.id}`;
+    const group = groups.get(id);
+    if (group === undefined)
+      groups.set(id, { id, project: entry.project, issue: entry.issue, entries: [entry] });
     else group.entries.push(entry);
   }
   return [...groups.values()];
 }
 
-export function groupConversations(entries: readonly ConversationEntry[]): ConversationSection[] {
+export function groupConversations(
+  entries: readonly ConversationThreadEntry[],
+): ConversationSection[] {
   return SECTIONS.map((section) => {
-    const groups = groupByIssue(entries.filter((entry) => sectionOf(entry) === section.key));
+    const groups = groupByOwner(entries.filter((entry) => sectionOf(entry) === section.key));
     return {
       key: section.key,
       label: section.label,
-      groups: section.key === "finished" ? groups.slice(0, FINISHED_GROUP_LIMIT) : groups,
+      groups,
     };
   }).filter((section) => section.groups.length > 0);
 }

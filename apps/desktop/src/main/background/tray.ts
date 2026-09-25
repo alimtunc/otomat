@@ -43,7 +43,7 @@ function runRow(
   const age = item.started_at === null ? [] : [elapsed(item.started_at, now)];
   return {
     label: [item.issue, item.project, "Local", ...age].join(" · "),
-    click: () => actions.openRun(item.run_id),
+    click: () => (item.run_id === null ? actions.open() : actions.openRun(item.run_id)),
   };
 }
 

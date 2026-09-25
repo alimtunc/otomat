@@ -90,6 +90,7 @@ describe("Sidebar", () => {
       "/conversations",
       "/issues",
       "/files",
+      "/terminal",
       "/runs",
       "/reviews",
       "/usage",

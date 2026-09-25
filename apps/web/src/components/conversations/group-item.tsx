@@ -1,21 +1,21 @@
 import { cn, FOCUS_RING_INSET, Icon, LiveDot, StepStatusChip } from "@otomat/ui";
-import type { ConversationIssueGroup } from "@web/lib/conversations/sections";
+import type { ConversationGroup } from "@web/lib/conversations/sections";
 import { conversationStatus } from "@web/lib/conversations/status";
 import { type ReactNode, useId } from "react";
 
-export interface ConversationIssueGroupItemProps {
-  group: ConversationIssueGroup;
+export interface ConversationGroupItemProps {
+  group: ConversationGroup;
   collapsed: boolean;
   onToggle: () => void;
   children: ReactNode;
 }
 
-export function ConversationIssueGroupItem({
+export function ConversationGroupItem({
   group,
   collapsed,
   onToggle,
   children,
-}: ConversationIssueGroupItemProps) {
+}: ConversationGroupItemProps) {
   const rowsId = useId();
   const unread = group.entries.some((entry) => !entry.read);
   const status = conversationStatus(group.entries);
@@ -42,10 +42,12 @@ export function ConversationIssueGroupItem({
                 unread ? "font-medium text-foreground" : "text-text-secondary",
               )}
             >
-              {group.issue.title}
+              {group.issue?.title ?? group.project.name}
             </span>
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-text-tertiary">
-              <span className="font-mono">{group.issue.identifier}</span>
+              {group.issue?.identifier ? (
+                <span className="font-mono">{group.issue.identifier}</span>
+              ) : null}
               <span>{group.entries.length} conversations</span>
               {status === null ? null : <StepStatusChip status={status} />}
             </span>

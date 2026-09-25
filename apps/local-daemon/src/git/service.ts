@@ -6,6 +6,7 @@ import { deleteBranch } from "./branches.js";
 import { diffInputs, worktreeGitView } from "./diff-inputs.js";
 import { collectChangedFiles, computeCanonicalDiff, treeRangeSnapshot } from "./diff.js";
 import { WorktreeConflictError, WorktreeNotFoundError } from "./errors.js";
+import { refuseInteractiveWriter } from "./interactive-worktrees.js";
 import { inCheckout } from "./lock.js";
 import { toRecord } from "./record.js";
 import { commitsSince, fastForward, headSha, isAncestor, revParse } from "./repo.js";
@@ -186,6 +187,7 @@ export function createGitWorktreeService(config: GitWorktreeServiceConfig): GitW
     async archive(owner) {
       const row = requireActive(owner);
       return inCheckout(row.path, async () => {
+        refuseInteractiveWriter(row.path);
         let head: string;
         if (existsSync(row.path)) {
           await snapshotWorktree(row.path, snapshotSubject("archive", owner));

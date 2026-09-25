@@ -1,7 +1,7 @@
 import { groupConversations } from "@web/lib/conversations/sections";
 import { expect, it } from "vitest";
 
-import { conversationEntry } from "#support/conversations";
+import { conversationEntry, terminalConversationEntry } from "#support/conversations";
 
 const finished = (step: string, issueId: string) =>
   conversationEntry({
@@ -32,8 +32,8 @@ it("sections by the issue's cycle, one group per issue, and hides an empty secti
     sections.map((section) => [
       section.label,
       section.groups.map((group) => [
-        group.issue.id,
-        group.entries.map((entry) => entry.step_run_id),
+        group.issue?.id,
+        group.entries.filter((entry) => "step_run_id" in entry).map((entry) => entry.step_run_id),
       ]),
     ]),
   ).toEqual([
@@ -51,7 +51,7 @@ it("sections by the issue's cycle, one group per issue, and hides an empty secti
   ]);
 });
 
-it("keeps an unread finished thread out of Active and caps the finished issues", () => {
+it("keeps an unread finished thread out of Active and keeps all finished issues reachable", () => {
   const entries = Array.from({ length: 12 }, (_, index) =>
     finished(`step-${index}`, `issue-${index}`),
   );
@@ -59,6 +59,19 @@ it("keeps an unread finished thread out of Active and caps the finished issues",
   const [section] = groupConversations(entries);
 
   expect(section?.key).toBe("finished");
-  expect(section?.groups).toHaveLength(10);
+  expect(section?.groups).toHaveLength(12);
   expect(section?.groups[0]?.entries[0]?.read).toBe(false);
+});
+
+it("groups a project terminal without inventing an issue and keeps active terminals active", () => {
+  const ended = terminalConversationEntry();
+  const issue = conversationEntry().issue;
+  const live = terminalConversationEntry({
+    id: "terminal:live",
+    issue,
+    terminal: { ...ended.terminal, id: "live", issue_id: issue.id, state: "running" },
+  });
+  const sections = groupConversations([conversationEntry(), live, ended]);
+  expect(sections[0]?.groups[0]?.entries).toHaveLength(2);
+  expect(sections[1]?.groups[0]).toMatchObject({ id: "project:p1", issue: null, entries: [ended] });
 });

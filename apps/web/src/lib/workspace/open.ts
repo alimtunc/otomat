@@ -36,7 +36,11 @@ function shellQuote(value: string): string {
 
 /** Copy-only: Otomat never runs it, and every path byte is single-quoted so nothing in it is parsed. */
 export function remoteShellCommand(alias: string, path: string): string {
-  return `ssh -t ${alias} ${shellQuote(`cd ${shellQuote(path)} && exec "$SHELL" -l`)}`;
+  return `ssh -t ${alias} ${shellQuote(workspaceShellCommand(path))}`;
+}
+
+export function workspaceShellCommand(path: string): string {
+  return `cd ${shellQuote(path)} && exec "$SHELL" -l`;
 }
 
 export function codexResumeCommand(

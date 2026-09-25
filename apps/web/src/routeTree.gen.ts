@@ -17,6 +17,7 @@ import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as SkillsRouteImport } from './routes/skills'
+import { Route as TerminalRouteImport } from './routes/terminal'
 import { Route as UsageRouteImport } from './routes/usage'
 import { Route as AgentsIndexRouteImport } from './routes/agents/index'
 import { Route as AgentsProfileIdRouteImport } from './routes/agents/$profileId'
@@ -46,6 +47,7 @@ import { Route as RunsRunIdFilesRouteImport } from './routes/runs/$runId/files'
 import { Route as RunsRunIdLogsRouteImport } from './routes/runs/$runId/logs'
 import { Route as RunsRunIdPrRouteImport } from './routes/runs/$runId/pr'
 import { Route as RunsRunIdReportRouteImport } from './routes/runs/$runId/report'
+import { Route as RunsRunIdTerminalRouteImport } from './routes/runs/$runId/terminal'
 import { Route as SettingsAgentsIndexRouteImport } from './routes/settings/agents/index'
 import { Route as SettingsAgentsProfileIdRouteImport } from './routes/settings/agents/$profileId'
 import { Route as SettingsProjectIndexRouteImport } from './routes/settings/project/index'
@@ -91,6 +93,11 @@ const SettingsRouteRoute = SettingsRouteRouteImport.update({
 const SkillsRoute = SkillsRouteImport.update({
   id: '/skills',
   path: '/skills',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminalRoute = TerminalRouteImport.update({
+  id: '/terminal',
+  path: '/terminal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsageRoute = UsageRouteImport.update({
@@ -242,6 +249,11 @@ const RunsRunIdReportRoute = RunsRunIdReportRouteImport.update({
   path: '/report',
   getParentRoute: () => RunsRunIdRouteRoute,
 } as any)
+const RunsRunIdTerminalRoute = RunsRunIdTerminalRouteImport.update({
+  id: '/terminal',
+  path: '/terminal',
+  getParentRoute: () => RunsRunIdRouteRoute,
+} as any)
 const SettingsAgentsIndexRoute = SettingsAgentsIndexRouteImport.update({
   id: '/agents/',
   path: '/agents/',
@@ -283,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
+  '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
   '/pull-requests/$pullRequestId': typeof PullRequestsPullRequestIdRouteRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRouteRouteWithChildren
@@ -310,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
+  '/runs/$runId/terminal': typeof RunsRunIdTerminalRoute
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
@@ -326,6 +340,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
+  '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
   '/agents/$profileId': typeof AgentsProfileIdRoute
   '/issues/$issueId': typeof IssuesIssueIdRoute
@@ -351,6 +366,7 @@ export interface FileRoutesByTo {
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
+  '/runs/$runId/terminal': typeof RunsRunIdTerminalRoute
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
@@ -370,6 +386,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
+  '/terminal': typeof TerminalRoute
   '/usage': typeof UsageRoute
   '/pull-requests/$pullRequestId': typeof PullRequestsPullRequestIdRouteRouteWithChildren
   '/runs/$runId': typeof RunsRunIdRouteRouteWithChildren
@@ -397,6 +414,7 @@ export interface FileRoutesById {
   '/runs/$runId/logs': typeof RunsRunIdLogsRoute
   '/runs/$runId/pr': typeof RunsRunIdPrRoute
   '/runs/$runId/report': typeof RunsRunIdReportRoute
+  '/runs/$runId/terminal': typeof RunsRunIdTerminalRoute
   '/settings/agents/$profileId': typeof SettingsAgentsProfileIdRoute
   '/settings/project/agents': typeof SettingsProjectAgentsRoute
   '/settings/project/skills': typeof SettingsProjectSkillsRoute
@@ -417,6 +435,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/reviews'
     | '/skills'
+    | '/terminal'
     | '/usage'
     | '/pull-requests/$pullRequestId'
     | '/runs/$runId'
@@ -444,6 +463,7 @@ export interface FileRouteTypes {
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
+    | '/runs/$runId/terminal'
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
@@ -460,6 +480,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/reviews'
     | '/skills'
+    | '/terminal'
     | '/usage'
     | '/agents/$profileId'
     | '/issues/$issueId'
@@ -485,6 +506,7 @@ export interface FileRouteTypes {
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
+    | '/runs/$runId/terminal'
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
@@ -503,6 +525,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/reviews'
     | '/skills'
+    | '/terminal'
     | '/usage'
     | '/pull-requests/$pullRequestId'
     | '/runs/$runId'
@@ -530,6 +553,7 @@ export interface FileRouteTypes {
     | '/runs/$runId/logs'
     | '/runs/$runId/pr'
     | '/runs/$runId/report'
+    | '/runs/$runId/terminal'
     | '/settings/agents/$profileId'
     | '/settings/project/agents'
     | '/settings/project/skills'
@@ -549,6 +573,7 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   ReviewsRoute: typeof ReviewsRoute
   SkillsRoute: typeof SkillsRoute
+  TerminalRoute: typeof TerminalRoute
   UsageRoute: typeof UsageRoute
   PullRequestsPullRequestIdRouteRoute: typeof PullRequestsPullRequestIdRouteRouteWithChildren
   RunsRunIdRouteRoute: typeof RunsRunIdRouteRouteWithChildren
@@ -613,6 +638,13 @@ declare module '@tanstack/react-router' {
       path: '/skills'
       fullPath: '/skills'
       preLoaderRoute: typeof SkillsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminal': {
+      id: '/terminal'
+      path: '/terminal'
+      fullPath: '/terminal'
+      preLoaderRoute: typeof TerminalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/usage': {
@@ -818,6 +850,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RunsRunIdReportRouteImport
       parentRoute: typeof RunsRunIdRouteRoute
     }
+    '/runs/$runId/terminal': {
+      id: '/runs/$runId/terminal'
+      path: '/terminal'
+      fullPath: '/runs/$runId/terminal'
+      preLoaderRoute: typeof RunsRunIdTerminalRouteImport
+      parentRoute: typeof RunsRunIdRouteRoute
+    }
     '/settings/agents/': {
       id: '/settings/agents/'
       path: '/agents'
@@ -947,6 +986,7 @@ interface RunsRunIdRouteRouteChildren {
   RunsRunIdLogsRoute: typeof RunsRunIdLogsRoute
   RunsRunIdPrRoute: typeof RunsRunIdPrRoute
   RunsRunIdReportRoute: typeof RunsRunIdReportRoute
+  RunsRunIdTerminalRoute: typeof RunsRunIdTerminalRoute
   RunsRunIdIndexRoute: typeof RunsRunIdIndexRoute
 }
 
@@ -956,6 +996,7 @@ const RunsRunIdRouteRouteChildren: RunsRunIdRouteRouteChildren = {
   RunsRunIdLogsRoute: RunsRunIdLogsRoute,
   RunsRunIdPrRoute: RunsRunIdPrRoute,
   RunsRunIdReportRoute: RunsRunIdReportRoute,
+  RunsRunIdTerminalRoute: RunsRunIdTerminalRoute,
   RunsRunIdIndexRoute: RunsRunIdIndexRoute,
 }
 
@@ -972,6 +1013,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   ReviewsRoute: ReviewsRoute,
   SkillsRoute: SkillsRoute,
+  TerminalRoute: TerminalRoute,
   UsageRoute: UsageRoute,
   PullRequestsPullRequestIdRouteRoute:
     PullRequestsPullRequestIdRouteRouteWithChildren,

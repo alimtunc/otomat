@@ -1,4 +1,10 @@
-import { getProject, listRepositories, type Db, type IssueRow } from "@otomat/db";
+import {
+  getProject,
+  listRepositories,
+  preparedWorkspace,
+  type Db,
+  type IssueRow,
+} from "@otomat/db";
 import type { RemoteBaseRefusal, RunLaunchError, StartRunRequest } from "@otomat/domain";
 
 import {
@@ -6,8 +12,10 @@ import {
   isRepositoryRoot,
   RemoteBaseError,
   resolveBaseSha,
+  WorktreeConflictError,
   type RepositoryBinding,
 } from "#git";
+import { validateInteractiveWorktree } from "#git/validate-worktree";
 
 import type { SupervisorState } from "./state.js";
 import { issueWorkspace } from "./workspace.js";
@@ -133,6 +141,31 @@ export async function resolveLaunchTarget(
   if (issue) refuseSecondWorkspace(state, issue);
   const projectId = resolveProjectId(state.db, state.defaultProjectId, request, issue);
   const binding = await requireBinding(state, projectId);
+  const prepared = issue ? preparedWorkspace(state.db, issue.id) : undefined;
+  if (prepared) {
+    if (
+      prepared.status !== "active" ||
+      prepared.repository_id !== binding.repositoryId ||
+      (request.base_branch && request.base_branch !== prepared.base_ref)
+    ) {
+      throw new LaunchRefusedError(
+        "worktree_unavailable",
+        "The prepared workspace is unavailable or uses a different repository/base.",
+      );
+    }
+    try {
+      await validateInteractiveWorktree(
+        state.repositories.worktreesRoot,
+        binding.rootPath,
+        prepared.path,
+        prepared.branch,
+      );
+    } catch (error) {
+      if (!(error instanceof WorktreeConflictError)) throw error;
+      throw new LaunchRefusedError("worktree_unavailable", error.message, { cause: error });
+    }
+    return { projectId, binding, baseRef: prepared.base_ref, baseSha: prepared.base_sha };
+  }
   const baseRef = request.base_branch ?? binding.defaultBranch;
   if (!(await branchExists(binding.rootPath, baseRef))) {
     throw new LaunchRefusedError(

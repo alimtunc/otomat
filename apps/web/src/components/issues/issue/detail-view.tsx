@@ -1,12 +1,12 @@
-import { issueShortId, shortId, type RunContract } from "@otomat/domain";
+import { issueShortId, shortId } from "@otomat/domain";
 import {
   Icon,
   cn,
-  EmptyState,
-  ErrorState,
   ResizablePanel,
   ResizablePanelGroup,
   SidePanel,
+  SegmentedControl,
+  SegmentedItem,
   Skeleton,
   useMediaQuery,
   usePanelGroupLayout,
@@ -16,33 +16,22 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { useRunsForIssue } from "@web/api/runs/queries";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
+import { userTerminalsAvailable } from "@web/api/terminals/client";
 import { IssueHeader } from "@web/components/issues/issue/header";
 import { CycleSummary } from "@web/components/issues/workspace/cycle-summary";
 import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
 import { LinearCommentsSection } from "@web/components/issues/workspace/linear/comments";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
-import { RunConversations } from "@web/components/issues/workspace/run-conversations";
 import { RunActionsMenu } from "@web/components/runs/actions/run-actions-menu";
 import { IconLink } from "@web/components/shell/icon-link";
-import { QueryList } from "@web/components/shell/query-list";
 import { RouteShell } from "@web/components/shell/route-shell";
 import { useBackNavigation } from "@web/components/shell/use-back-navigation";
+import { TerminalWorkspace } from "@web/components/terminal/workspace";
+import { asMember } from "@web/lib/coerce";
 import { resolveFollowedRun } from "@web/lib/run/activity";
-import type { ReactNode } from "react";
+import { useState } from "react";
 
-function NoRunsEmptyState({ launchAction }: { launchAction: ReactNode }) {
-  return (
-    <div className="rounded-lg border border-border-subtle bg-card">
-      <EmptyState
-        icon="play"
-        variant="inline"
-        title="No runs yet"
-        description="This issue has no agent activity. Launch a run to follow its live ledger here."
-        action={launchAction}
-      />
-    </div>
-  );
-}
+import { RunsArea } from "./runs-area";
 
 function RailPlaceholder() {
   return (
@@ -54,48 +43,12 @@ function RailPlaceholder() {
   );
 }
 
-function RunsArea({
-  query,
-  launchAction,
-  followedRun,
-  onFollow,
-  selectedStepId,
-  onSelectStep,
-}: {
-  query: ReturnType<typeof useRunsForIssue>;
-  launchAction: ReactNode;
-  followedRun: RunContract | null;
-  onFollow: (runId: string) => void;
-  selectedStepId: string | null;
-  onSelectStep: (stepId: string) => void;
-}) {
-  return (
-    <QueryList
-      query={query}
-      pending={<Skeleton height={44} />}
-      error={
-        <ErrorState
-          variant="inline"
-          title="Couldn’t load runs"
-          onRetry={() => void query.refetch()}
-        />
-      }
-      empty={<NoRunsEmptyState launchAction={launchAction} />}
-    >
-      {(runs) => (
-        <RunConversations
-          runs={runs}
-          followedRunId={followedRun?.id ?? null}
-          selectedStepId={selectedStepId}
-          onFollow={onFollow}
-          onSelectStep={onSelectStep}
-        />
-      )}
-    </QueryList>
-  );
-}
+const ISSUE_TABS = ["activity", "terminal"] as const;
+type IssueTab = (typeof ISSUE_TABS)[number];
 
 export function IssueDetailView() {
+  const [tab, setTab] = useState<IssueTab>("activity");
+  const terminalsAvailable = userTerminalsAvailable();
   const { issueId } = useParams({ from: "/issues/$issueId" });
   const { run: selectedRunId, step: selectedStepId } = useSearch({ from: "/issues/$issueId" });
   const navigate = useNavigate();
@@ -130,6 +83,7 @@ export function IssueDetailView() {
     <LaunchRunDialog issue={issue.data} onLaunched={(run, stepId) => follow(run.id, stepId)} />
   );
   const cycleRunId = issue.data?.workspace.run_id ?? followedRun?.id ?? null;
+  const terminalSelected = terminalsAvailable && tab === "terminal";
 
   const main = (
     <div className={cn("min-w-0 px-4 py-6.5 sm:px-8", wide && "h-full overflow-auto")}>
@@ -200,23 +154,56 @@ export function IssueDetailView() {
         { label: "Issues", href: "/issues" },
         { label: idLabel, current: true },
       ]}
+      tabs={
+        terminalsAvailable ? (
+          <SegmentedControl
+            type="single"
+            value={tab}
+            onValueChange={(value) => {
+              const next = asMember(value, ISSUE_TABS);
+              if (next !== null) setTab(next);
+            }}
+            aria-label="Issue workspace tabs"
+          >
+            <SegmentedItem value="activity">Activity</SegmentedItem>
+            <SegmentedItem value="terminal" icon={<Icon name="terminal" aria-hidden />}>
+              Terminal
+            </SegmentedItem>
+          </SegmentedControl>
+        ) : null
+      }
       actions={
-        <>
-          {followedRun ? (
-            <IconLink
-              label="Open cockpit"
-              icon={<Icon name="monitor" aria-hidden />}
-              to="/runs/$runId"
-              params={{ runId: followedRun.id }}
-              search={{ step: selectedStepId }}
-            />
-          ) : null}
-          {launchAction}
-          {cycleRunId ? <RunActionsMenu runId={cycleRunId} /> : null}
-        </>
+        terminalSelected ? null : (
+          <>
+            {followedRun ? (
+              <IconLink
+                label="Open cockpit"
+                icon={<Icon name="monitor" aria-hidden />}
+                to="/runs/$runId"
+                params={{ runId: followedRun.id }}
+                search={{ step: selectedStepId }}
+              />
+            ) : null}
+            {launchAction}
+            {cycleRunId ? <RunActionsMenu runId={cycleRunId} /> : null}
+          </>
+        )
       }
     >
-      <RunEventsProvider runId={followedRun?.id ?? null}>{body}</RunEventsProvider>
+      <RunEventsProvider runId={followedRun?.id ?? null}>
+        {terminalSelected ? (
+          <div className="flex h-full min-h-0 flex-col gap-3 p-3 sm:p-4">
+            <h1 className="shrink-0 truncate text-sm font-medium" title={issue.data?.title}>
+              {issue.data?.title ?? idLabel}
+            </h1>
+            <div className="min-h-0 flex-1">
+              <TerminalWorkspace issueId={issueId} runId={null} />
+            </div>
+          </div>
+        ) : (
+          body
+        )}
+      </RunEventsProvider>
     </RouteShell>
   );
 }

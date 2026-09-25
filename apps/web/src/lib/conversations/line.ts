@@ -1,4 +1,5 @@
-import type { ConversationEntry } from "@otomat/domain";
+import type { ConversationThreadEntry } from "@otomat/domain";
+import { terminalToolLabel } from "@web/lib/terminal-tool";
 
 const INTERACTION_LABEL = {
   permission: "Permission",
@@ -12,7 +13,9 @@ function firstLine(text: string): string {
 }
 
 /** One line to orient by: a question outranks a waiting message, which outranks the last thing said. */
-export function conversationLine(entry: ConversationEntry): string {
+export function conversationLine(entry: ConversationThreadEntry): string {
+  if ("terminal" in entry)
+    return `${terminalToolLabel(entry.terminal.tool)} · ${entry.terminal.branch}`;
   if (entry.pending_interaction !== null) {
     const label = INTERACTION_LABEL[entry.pending_interaction.kind];
     return `${label}: ${firstLine(entry.pending_interaction.prompt)}`;

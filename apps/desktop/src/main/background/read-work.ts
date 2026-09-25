@@ -20,7 +20,11 @@ export async function readLocalWork(
   if (daemon === null) return { ok: true, items: [] };
   const client = createDaemonClient({ ...daemon, fetch: fetchImpl });
   try {
-    return { ok: true, items: localWorkItems((await client.listActivity()).activities) };
+    const [activity, terminals] = await Promise.all([
+      client.listActivity(),
+      client.listTerminals(),
+    ]);
+    return { ok: true, items: localWorkItems(activity.activities, terminals.sessions) };
   } catch (error) {
     const reason = error instanceof DaemonTransportError ? error.cause : error;
     return { ok: false, message: `Could not read the local daemon's activity: ${String(reason)}` };

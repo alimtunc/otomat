@@ -72,10 +72,11 @@ export interface WorktreeStatusPatch {
 }
 
 export function updateWorktreeStatus(db: Db, id: string, patch: WorktreeStatusPatch): void {
-  const changes: WorktreeStatusPatch & { updated_at: SQL } = {
+  const changes: WorktreeStatusPatch & { updated_at: SQL; prepared_issue_id?: null } = {
     status: patch.status,
     updated_at: sql`(CURRENT_TIMESTAMP)`,
   };
   if (patch.head_sha !== undefined) changes.head_sha = patch.head_sha;
+  if (patch.status === "removed") changes.prepared_issue_id = null;
   db.update(worktrees).set(changes).where(eq(worktrees.id, id)).run();
 }

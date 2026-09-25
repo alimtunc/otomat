@@ -34,3 +34,5 @@ export * from "./sync-state.js";
 export * from "./usage.js";
 export * from "./workflow-presets.js";
 export * from "./workspace-removal.js";
+export * from "./prepared-workspaces.js";
+export * from "./terminals.js";

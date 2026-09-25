@@ -26,8 +26,27 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("reads the daemon's own activity projection", async () => {
+it("reads activity and independent terminal sessions for window-close protection", async () => {
   const reading = await readLocalWork(LOCAL, async (input) => {
+    if (String(input).endsWith("/api/terminals"))
+      return Response.json({
+        instance: "00000000-0000-4000-8000-000000000000",
+        sessions: [
+          {
+            id: "00000000-0000-4000-8000-000000000001",
+            issue_id: "issue-1",
+            project_id: "local-default",
+            worktree_id: "workspace-1",
+            path: "/tmp/worktree",
+            branch: "feature",
+            tool: null,
+            state: "running",
+            started_at: "2026-09-03T09:00:00.000Z",
+            exit_code: null,
+            signal: null,
+          },
+        ],
+      });
     expect(String(input)).toBe("http://127.0.0.1:4310/api/activity");
     return new Response(JSON.stringify(SNAPSHOT));
   });
@@ -39,6 +58,13 @@ it("reads the daemon's own activity projection", async () => {
         run_id: "run-a",
         project: "Otomat",
         issue: "OTO-1",
+        state: "running",
+        started_at: "2026-09-03T09:00:00.000Z",
+      },
+      {
+        run_id: null,
+        project: "feature",
+        issue: "User terminal",
         state: "running",
         started_at: "2026-09-03T09:00:00.000Z",
       },

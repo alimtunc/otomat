@@ -1,4 +1,5 @@
 import {
+  preparedWorkspaceResponseSchema,
   projectContractSchema,
   projectHealthReportSchema,
   registerRepositoryResponseSchema,
@@ -63,6 +64,11 @@ export function createWorkspaceClient(config: DaemonClientConfig) {
     async listWorkspaces(params: { runId?: string; projectId?: string } = {}) {
       const query = queryString({ run_id: params.runId, project_id: params.projectId });
       return workspaceInventorySchema.parse(await getJson(config, `/api/workspaces${query}`));
+    },
+    async prepareIssueWorkspace(issueId: string) {
+      return preparedWorkspaceResponseSchema.parse(
+        await postJson(config, `/api/workspaces/prepare/${encodeURIComponent(issueId)}`, {}),
+      );
     },
     async reconcileWorkspaces() {
       return workspaceReconcileReportSchema.parse(

@@ -1,8 +1,8 @@
 import type { ExternalIssueSource, IssueSource, IssueState, SourceLabel } from "@otomat/domain";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
+import { projects } from "./projects.js";
 import { timestamps } from "./shared.js";
-import { projects } from "./workspace.js";
 
 export const issues = sqliteTable(
   "issues",

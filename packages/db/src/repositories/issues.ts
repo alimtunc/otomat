@@ -1,8 +1,14 @@
-import type { ExternalIssueSource, IssueState, SourceLabel } from "@otomat/domain";
+import {
+  isIssueClosed,
+  type ExternalIssueSource,
+  type IssueState,
+  type SourceLabel,
+} from "@otomat/domain";
 import { and, eq, getTableColumns, sql } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { issues } from "../schema/index.js";
+import { releasePreparedWorkspace } from "./prepared-workspaces.js";
 import { touch } from "./touch.js";
 
 export type NewIssue = typeof issues.$inferInsert;
@@ -55,27 +61,32 @@ export function getIssueBySourceExternalId(
 }
 
 export function upsertMirroredIssue(db: Db, value: MirroredIssue): void {
-  db.insert(issues)
-    .values(value)
-    .onConflictDoUpdate({
-      target: [issues.source, issues.source_external_id],
-      set: touch({
-        project_id: value.project_id,
-        title: value.title,
-        body: value.body,
-        status: value.status,
-        source_identifier: value.source_identifier,
-        source_url: value.source_url,
-        synced_at: value.synced_at,
-        source_updated_at: value.source_updated_at,
-        source_assignee_name: value.source_assignee_name,
-        source_priority: value.source_priority,
-        source_labels: value.source_labels,
-        source_state_name: value.source_state_name,
-        source_state_color: value.source_state_color,
-      }),
-    })
-    .run();
+  db.transaction(() => {
+    const previous = getIssueBySourceExternalId(db, value.source, value.source_external_id);
+    db.insert(issues)
+      .values(value)
+      .onConflictDoUpdate({
+        target: [issues.source, issues.source_external_id],
+        set: touch({
+          project_id: value.project_id,
+          title: value.title,
+          body: value.body,
+          status: value.status,
+          source_identifier: value.source_identifier,
+          source_url: value.source_url,
+          synced_at: value.synced_at,
+          source_updated_at: value.source_updated_at,
+          source_assignee_name: value.source_assignee_name,
+          source_priority: value.source_priority,
+          source_labels: value.source_labels,
+          source_state_name: value.source_state_name,
+          source_state_color: value.source_state_color,
+        }),
+      })
+      .run();
+    if (previous && (isIssueClosed(value.status) || previous.project_id !== value.project_id))
+      releasePreparedWorkspace(db, previous.id);
+  });
 }
 
 export function getIssue(db: Db, id: string): IssueRow | undefined {
@@ -84,15 +95,22 @@ export function getIssue(db: Db, id: string): IssueRow | undefined {
 
 /** Persists one issue state; callers validate the edge through `issueMachine` first. */
 export function updateIssueStatus(db: Db, id: string, status: IssueState): void {
-  db.update(issues).set(touch({ status })).where(eq(issues.id, id)).run();
+  db.transaction(() => {
+    db.update(issues).set(touch({ status })).where(eq(issues.id, id)).run();
+    if (isIssueClosed(status)) releasePreparedWorkspace(db, id);
+  });
 }
 
 /** Re-points a local issue at another project; mirrored issues are refused by the caller. */
 export function updateIssueProject(db: Db, id: string, projectId: string): void {
-  db.update(issues)
-    .set(touch({ project_id: projectId }))
-    .where(eq(issues.id, id))
-    .run();
+  db.transaction(() => {
+    const previous = getIssue(db, id);
+    db.update(issues)
+      .set(touch({ project_id: projectId }))
+      .where(eq(issues.id, id))
+      .run();
+    if (previous && previous.project_id !== projectId) releasePreparedWorkspace(db, id);
+  });
 }
 
 export function listIssues(
