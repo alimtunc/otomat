@@ -1,16 +1,21 @@
+import type { ProjectSummary } from "@otomat/ui";
 import { visibleProjectTabs } from "@web/components/shell/project-tabs/visible-tabs";
 import { describe, expect, it } from "vitest";
 
-const PROJECTS = [
+const PROJECTS: ProjectSummary[] = [
   { id: "local:project-1", name: "Otomat" },
   { id: "local:project-2", name: "Cockpit" },
   { id: "remote:project-3", name: "Daemon", tag: "vps" },
 ];
 
-function tabs(stored: string[], attention: Map<string, number> = new Map()) {
+function tabs(
+  stored: string[],
+  attention: Map<string, number> = new Map(),
+  projects: ProjectSummary[] = PROJECTS,
+) {
   return visibleProjectTabs({
     stored: stored.map((key) => ({ key, route: null })),
-    projects: PROJECTS,
+    projects,
     attention,
   });
 }
@@ -46,6 +51,14 @@ describe("visible project tabs", () => {
       { id: "local:project-1", name: "Otomat", attention: 3 },
       { id: "local:project-2", name: "Cockpit", attention: 0 },
       { id: "remote:project-3", name: "Daemon", tag: "vps" },
+    ]);
+  });
+
+  it("carries the presentation icon the operator chose", () => {
+    const projects = [{ id: "local:project-1", name: "Otomat", icon: "rocket" as const }];
+
+    expect(tabs(["local:project-1"], new Map(), projects)).toEqual([
+      { id: "local:project-1", name: "Otomat", icon: "rocket" },
     ]);
   });
 });

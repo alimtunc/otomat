@@ -1,6 +1,12 @@
 import { countUnreadInboxEntriesByProject } from "@otomat/domain";
 import { useRouterState } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
+import {
+  arrangeProjects,
+  withLayoutIcons,
+  type ArrangedSection,
+} from "@web/components/shell/project-layout/arrange";
+import { projectLayoutStore } from "@web/components/shell/project-layout/store";
 import { projectSwitcherKey } from "@web/components/shell/project-selection/host-key";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
@@ -13,15 +19,18 @@ import { isProjectRoute } from "@web/lib/project-navigation";
 import { useEffect } from "react";
 
 export interface ProjectTabsView {
+  sections: ArrangedSection<ProjectTab>[];
   tabs: ProjectTab[];
   activeKey: string | undefined;
   select: (key: string) => void;
   close: (key: string) => void;
+  toggleGroup: (groupId: string) => void;
 }
 
 export function useProjectTabs(): ProjectTabsView {
   const switcher = useProjectSwitcher();
   const stored = useSelector(projectTabsStore);
+  const layout = useSelector(projectLayoutStore);
   const inboxes = useOpenHostInboxes();
   const href = useRouterState({ select: (state) => state.location.href });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -34,7 +43,14 @@ export function useProjectTabs(): ProjectTabsView {
       ),
     ),
   );
-  const tabs = visibleProjectTabs({ stored, projects: switcher.projects, attention });
+  const sections = arrangeProjects(
+    layout,
+    visibleProjectTabs({
+      stored,
+      projects: withLayoutIcons(layout, switcher.projects),
+      attention,
+    }),
+  );
 
   // otomat-allow-effect: the committed location is the router's state, not a result of this render.
   useEffect(() => {
@@ -43,9 +59,11 @@ export function useProjectTabs(): ProjectTabsView {
   }, [activeKey, href, pathname]);
 
   return {
-    tabs,
+    sections,
+    tabs: sections.flatMap((section) => section.items),
     activeKey,
     select: switcher.selectProject,
     close: projectTabsStore.actions.close,
+    toggleGroup: projectLayoutStore.actions.toggleGroup,
   };
 }

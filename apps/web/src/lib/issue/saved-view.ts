@@ -1,3 +1,4 @@
+import { withItemMoved } from "@web/lib/array";
 import { asRecord, asString } from "@web/lib/coerce";
 import { parseIssuesViewConfig, type IssuesViewConfig } from "@web/lib/issue/view-config";
 
@@ -48,12 +49,12 @@ export function removeView(set: ViewSet, id: string): ViewSet {
 }
 
 export function moveView(set: ViewSet, id: string, offset: number): ViewSet {
-  const from = set.saved.findIndex((view) => view.id === id);
-  const to = from + offset;
-  if (from < 0 || to < 0 || to >= set.saved.length) return set;
-  const saved = [...set.saved];
-  saved.splice(to, 0, ...saved.splice(from, 1));
-  return { ...set, saved };
+  const saved = withItemMoved(
+    set.saved,
+    set.saved.findIndex((view) => view.id === id),
+    offset,
+  );
+  return saved === null ? set : { ...set, saved };
 }
 
 function parseSavedView(value: unknown): SavedView | null {

@@ -25,6 +25,23 @@ _Settings → Project → This project_ holds what belongs to that repository:
 _Settings → Project → Workspaces_ lists the branches and worktrees the project holds, and
 _Agents_ / _Skills_ the profiles and skills scoped to this project alone.
 
+## Organize the navigation
+
+Open the project switcher and choose **Organize projects…** to arrange how projects appear in the
+switcher and in the tab bar:
+
+- **Add group** creates a named group; each project's group picker moves it in or out, and dragging
+  a project onto another row or group does the same.
+- **Move up** / **Move down** reorder projects inside their group, and groups among themselves.
+- A group's name is edited in place; deleting a group puts its projects back under _Not grouped_.
+- The glyph before a project's name opens its icon choice; **Default icon** returns to the initial.
+
+In the tab bar, clicking a group's name folds it: the group keeps its host tags and unread count,
+and the project you are on stays visible. The arrangement is kept by this app on this machine. It
+changes nothing about the projects themselves — hosts, settings, runs and worktrees stay as they
+are. A newly added project appears at the end of the ungrouped projects, and a project on a host
+that is temporarily unreachable returns to its group when the host answers again.
+
 ## Connect Linear
 
 Local issues need no integration: **New issue** in the Issues view creates one. To work from

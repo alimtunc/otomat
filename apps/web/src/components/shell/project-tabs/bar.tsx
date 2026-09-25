@@ -1,66 +1,48 @@
-import {
-  Badge,
-  cn,
-  FOCUS_RING_INSET,
-  HostTag,
-  Icon,
-  IconButton,
-  ProjectGlyph,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@otomat/ui";
+import { ProjectGroupChip } from "@web/components/shell/project-tabs/group-chip";
+import { OpenProjectTab } from "@web/components/shell/project-tabs/tab";
 import { useProjectTabs } from "@web/components/shell/project-tabs/use-project-tabs";
 import { useProjectTabShortcuts } from "@web/components/shell/project-tabs/use-tab-shortcuts";
+import type { ProjectTab } from "@web/components/shell/project-tabs/visible-tabs";
+import { Fragment } from "react";
 
 export function ProjectTabsBar() {
-  const { tabs, activeKey, select, close } = useProjectTabs();
+  const { sections, tabs, activeKey, select, close, toggleGroup } = useProjectTabs();
   useProjectTabShortcuts(tabs, activeKey, select);
   if (tabs.length === 0) return null;
+
+  const renderTab = (tab: ProjectTab) => (
+    <OpenProjectTab
+      key={tab.id}
+      tab={tab}
+      active={tab.id === activeKey}
+      onSelect={select}
+      onClose={close}
+    />
+  );
 
   return (
     <nav
       aria-label="Open projects"
       className="flex h-9.5 flex-none items-center gap-1 overflow-x-auto border-b border-border-subtle bg-surface-1 px-2"
     >
-      {tabs.map((tab) => {
-        const active = tab.id === activeKey;
-        const trigger = (
-          <button
-            type="button"
-            onClick={() => select(tab.id)}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex h-7 min-w-0 items-center gap-1.75 rounded-md pl-1 pr-1.5 text-sm",
-              FOCUS_RING_INSET,
-              active ? "text-foreground" : "text-text-secondary",
-            )}
-          >
-            <ProjectGlyph name={tab.name} />
-            <span className="truncate">{tab.name}</span>
-            {tab.tag === undefined ? null : <HostTag tag={tab.tag} />}
-            {tab.attention ? <Badge variant="warning">{tab.attention}</Badge> : null}
-          </button>
-        );
+      {sections.map(({ group, items }) => {
+        if (group === null) return <Fragment key="ungrouped">{items.map(renderTab)}</Fragment>;
+        if (items.length === 0) return null;
+        const shown = group.collapsed ? items.filter((tab) => tab.id === activeKey) : items;
         return (
           <div
-            key={tab.id}
-            className={cn(
-              "group flex h-7 max-w-52 flex-none items-center rounded-md pr-0.5",
-              active ? "bg-selected" : "hover:bg-hover",
-            )}
+            key={group.id}
+            role="group"
+            aria-label={group.name}
+            className="flex flex-none items-center gap-1 rounded-lg border border-border-subtle p-px"
           >
-            <Tooltip>
-              <TooltipTrigger render={trigger} />
-              <TooltipContent side="bottom">{tab.name}</TooltipContent>
-            </Tooltip>
-            <IconButton
-              size="sm"
-              label={`Close ${tab.name}`}
-              icon={<Icon name="x" aria-hidden />}
-              onClick={() => close(tab.id)}
-              className="opacity-0 group-focus-within:opacity-100 group-hover:opacity-100"
+            <ProjectGroupChip
+              name={group.name}
+              collapsed={group.collapsed}
+              hiddenTabs={items.filter((tab) => !shown.includes(tab))}
+              onToggle={() => toggleGroup(group.id)}
             />
+            {shown.map(renderTab)}
           </div>
         );
       })}

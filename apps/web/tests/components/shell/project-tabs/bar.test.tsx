@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 import type { InboxEntry } from "@otomat/domain";
 import type { ProjectSummary } from "@otomat/ui";
+import { projectLayoutStore } from "@web/components/shell/project-layout/store";
 import { ProjectTabsBar } from "@web/components/shell/project-tabs/bar";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import { act } from "react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { stubAnimations } from "#support/animations";
 import { findLabelled } from "#support/dom-queries";
@@ -49,6 +50,7 @@ beforeEach(() => {
     { key: "local:p1", route: null },
     { key: "local:p2", route: null },
   ]);
+  projectLayoutStore.setState(() => ({ ungrouped: [], groups: [], icons: {} }));
 });
 
 afterEach(async () => {
@@ -202,4 +204,87 @@ it("leaves an unopened project out of the bar, active or not", async () => {
 
   expect(tabLabels()).toEqual(["Cockpit"]);
   expect(projectTabsStore.state).toEqual([{ key: "local:p2", route: null }]);
+});
+
+it("shows the presentation icon the operator chose instead of the initial", async () => {
+  projectLayoutStore.setState((layout) => ({ ...layout, icons: { "local:p1": "rocket" } }));
+
+  await renderBar();
+
+  expect(tabButtons().map((button) => button.querySelector("svg") !== null)).toEqual([true, false]);
+});
+
+function groupChip(): HTMLButtonElement | null {
+  return document.body.querySelector<HTMLButtonElement>("[role='group'] button[aria-expanded]");
+}
+
+describe("with an organized layout", () => {
+  beforeEach(() => {
+    projects = [...PROJECTS, { id: "local:p3", name: "Daemon", tag: "vps" }];
+    currentSwitcherId = "local:p2";
+    projectTabsStore.setState(() => [
+      { key: "local:p1", route: null },
+      { key: "local:p2", route: null },
+      { key: "local:p3", route: null },
+    ]);
+    projectLayoutStore.setState(() => ({
+      ungrouped: ["local:p2"],
+      groups: [{ id: "crm", name: "CRM", collapsed: false, projects: ["local:p3", "local:p1"] }],
+      icons: {},
+    }));
+  });
+
+  it("orders the tabs as the operator arranged them, groups included", async () => {
+    await renderBar();
+
+    expect(tabLabels()).toEqual(["Cockpit", "Daemon", "Otomat"]);
+    const group = document.body.querySelector("[role='group'][aria-label='CRM']");
+    expect(group?.textContent).toContain("Daemon");
+    expect(group?.textContent).toContain("Otomat");
+  });
+
+  it("folds a group into a chip that keeps its host and unread signals", async () => {
+    entries = [
+      inboxEntry({ id: "run:a", project: { id: "p1", name: "Otomat" } }),
+      inboxEntry({ id: "run:b", project: { id: "p1", name: "Otomat" } }),
+    ];
+    await renderBar();
+
+    await act(async () => {
+      groupChip()?.click();
+    });
+
+    expect(tabLabels()).toEqual(["Cockpit"]);
+    expect(groupChip()?.getAttribute("aria-expanded")).toBe("false");
+    expect(groupChip()?.getAttribute("aria-label")).toBe("CRM group, 2 hidden, on vps, 2 unread");
+    expect(projectLayoutStore.state.groups[0]?.collapsed).toBe(true);
+    expect(window.localStorage.getItem("otomat.project-layout")).toContain('"collapsed":true');
+  });
+
+  it("keeps the active project on screen inside a folded group", async () => {
+    currentSwitcherId = "local:p1";
+    projectLayoutStore.setState((layout) => ({
+      ...layout,
+      groups: layout.groups.map((group) => ({ ...group, collapsed: true })),
+    }));
+
+    await renderBar();
+
+    expect(tabLabels()).toEqual(["Cockpit", "Otomat"]);
+    expect(groupChip()?.getAttribute("aria-label")).toBe("CRM group, 1 hidden, on vps");
+  });
+
+  it("numbers the shortcuts in arranged order, folded tabs included", async () => {
+    projectLayoutStore.setState((layout) => ({
+      ...layout,
+      groups: layout.groups.map((group) => ({ ...group, collapsed: true })),
+    }));
+    await renderBar();
+
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "3", metaKey: true }));
+    });
+
+    expect(selectProject).toHaveBeenCalledWith("local:p1");
+  });
 });

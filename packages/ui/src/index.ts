@@ -16,7 +16,7 @@ export { usePanelGroupLayout, type PanelGroupLayout } from "./lib/use-panel-grou
 export { useSidePanel, type SidePanelState } from "./lib/side-panel-context";
 export { ROOMY_VIEWPORT_MEDIA_QUERY, WIDE_VIEWPORT_MEDIA_QUERY } from "./lib/viewport";
 export type { ConnectionState } from "./lib/connection-state";
-export type { ProjectSummary } from "./lib/project-summary";
+export type { ProjectSection, ProjectSummary } from "./lib/project-summary";
 
 export {
   ThemeProvider,

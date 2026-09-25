@@ -1,3 +1,5 @@
+import type { IconName } from "./icon-registry";
+
 export interface ProjectSummary {
   id: string;
   name: string;
@@ -6,4 +8,11 @@ export interface ProjectSummary {
   /** Short badge distinguishing entries from different execution hosts. */
   tag?: string;
   health?: "healthy" | "degraded" | "unknown";
+  icon?: IconName;
+}
+
+export interface ProjectSection {
+  id: string;
+  label?: string;
+  items: ProjectSummary[];
 }

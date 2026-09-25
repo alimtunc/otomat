@@ -4,6 +4,7 @@ import { QuickOpen } from "@web/components/files/quick-open";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
 import { sectionForPath } from "@web/components/shell/nav-items";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
+import { OrganizeProjectsDialog } from "@web/components/shell/project-layout/organize-dialog";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { ProjectTabsBar } from "@web/components/shell/project-tabs/bar";
 import { Sidebar } from "@web/components/shell/sidebar";
@@ -17,6 +18,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const palette = useCommandPalette();
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
+  const [organizeOpen, setOrganizeOpen] = useState(false);
   const projectTrigger = useRef<HTMLButtonElement>(null);
   const openNewIssue = useCallback(() => setNewIssueOpen(true), []);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
@@ -40,6 +42,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           currentProjectId={shell.currentSwitcherId}
           onProjectSelect={shell.selectProject}
           onAddProject={() => setAddProjectOpen(true)}
+          onOrganizeProjects={() => setOrganizeOpen(true)}
           onSearch={() => palette.setOpen(true)}
           onNewIssue={openNewIssue}
           hasLiveRun={shell.hasLiveRun}
@@ -70,6 +73,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
         onOpenChange={setAddProjectOpen}
         hosts={shell.hostOptions}
         onSelect={shell.selectProject}
+      />
+      <OrganizeProjectsDialog
+        open={organizeOpen}
+        onOpenChange={setOrganizeOpen}
+        finalFocus={projectTrigger}
+        projects={shell.projects}
       />
     </AppShell>
   );

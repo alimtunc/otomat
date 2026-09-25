@@ -2182,6 +2182,27 @@ Closing a tab is a view operation and nothing else: it drops the tab and its
 remembered route while the selection stays where it is — the project outlives
 its tab — and touches no run, branch or worktree.
 
+The operator's arrangement of projects — order, named groups, a presentation
+icon — is one web-only preference (`project-layout/`, localStorage
+`otomat.project-layout`) keyed by the same switcher key, so no daemon, host or
+project setting ever hears of it and nothing synchronizes it between machines.
+The switcher and the tab bar both read it through `arrangeProjects`: ungrouped
+projects first, then each group in order. It reconciles at read and never
+prunes: a key the catalog does not list — a removed project, or one on a host
+that is unreachable right now — is skipped, so a VPS that answers again gets its
+projects back in place, and a project the layout never held joins the end of the
+ungrouped section in the order it was given (catalog order in the switcher, open
+order in the bar), which is also why an operator who never organizes sees no
+change. A rename needs nothing, because a key is an id. Every project move is
+one write, `withSectionOrder`: the target section takes the order the operator
+sees, keys it holds but did not show stay behind them, and the moved keys leave
+every other list. A folded group collapses to a chip carrying its hidden tabs'
+host tags and summed attention, and still shows the active project's tab so the
+bar never hides where the cockpit is; keyboard shortcuts number the arranged
+tabs, folded ones included. Organizing happens in an explicit dialog opened from
+the switcher, where every action is a labelled control and drag-and-drop is only
+a shortcut for the same writes.
+
 ## One Renderer For Every Host
 
 A host switch used to reload the renderer, which emptied the query cache, tore
