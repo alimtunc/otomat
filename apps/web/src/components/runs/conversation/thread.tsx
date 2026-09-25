@@ -1,4 +1,4 @@
-import { isRunSettled, type RunDetail } from "@otomat/domain";
+import { isRunSettled, latestSessionForStep, liveStepStatus, type RunDetail } from "@otomat/domain";
 import { EmptyState, ErrorState } from "@otomat/ui";
 import { useRunContributions, useRunInteractions } from "@web/api/runs/queries";
 import type { RunEventStream } from "@web/api/runs/run-event-stream";
@@ -36,8 +36,13 @@ export function ConversationThread({
   const autoscroll = useThreadAutoscroll(`${detail.run.id}:${stepRunId}`, events[0]?.seq ?? null);
   const loadOlderRef = useLoadOlder(history, !autoscroll.pinned);
   const step = detail.steps.find((candidate) => candidate.id === stepRunId);
-  // `awaiting_permission` is out: the turn is live, but it is waiting on the operator, and its card already says so.
-  const working = step?.status === "starting" || step?.status === "running";
+  const status =
+    step === undefined
+      ? null
+      : liveStepStatus(
+          step.status,
+          latestSessionForStep(detail.sessions, stepRunId)?.status ?? null,
+        );
 
   if (history.status === "error") return loadErrorState(history.retry);
   if (history.status === "pending") return LOADING;
@@ -65,6 +70,13 @@ export function ConversationThread({
               history.hasOlder,
               asked.interactions,
             );
+            // A pending question is out: the turn is live, but it is waiting on the operator, and its card already says so.
+            const working =
+              (status === "starting" || status === "running") &&
+              !asked.interactions.some(
+                (interaction) =>
+                  interaction.step_run_id === stepRunId && interaction.state === "pending",
+              );
 
             return (
               <div className="flex min-h-0 flex-1 flex-col">

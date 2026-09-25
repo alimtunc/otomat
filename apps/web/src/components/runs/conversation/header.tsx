@@ -1,4 +1,4 @@
-import type { RunDetail } from "@otomat/domain";
+import { isStepBusy, liveStepStatus, type RunDetail } from "@otomat/domain";
 import {
   Badge,
   Button,
@@ -34,10 +34,8 @@ export function ConversationHeader({
     pending,
   } = stepParticipant(detail, stepRunId);
   if (!step || current === null) return null;
-  const live =
-    step.status === "starting" ||
-    step.status === "running" ||
-    step.status === "awaiting_permission";
+  const status = liveStepStatus(step.status, session?.status ?? null);
+  const live = isStepBusy(status);
   const cancelable = step.status === "queued" && step.compete_group_id === null;
   const runtime = runtimes.data?.find(
     (descriptor) => descriptor.id === (launched?.agent_id ?? current.runtime),
@@ -61,7 +59,7 @@ export function ConversationHeader({
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-subtle px-4 py-2 [overflow-wrap:anywhere]">
-      <StepStatusChip status={step.status} />
+      <StepStatusChip status={status} />
       <span className="text-xs font-medium text-foreground">
         {agentLabel(current)} · {runtime?.display_name ?? current.runtime}
       </span>

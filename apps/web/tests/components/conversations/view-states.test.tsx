@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
-import type { ConversationSnapshot } from "@otomat/domain";
+import type { ConversationEntry, ConversationSnapshot, StepRunState } from "@otomat/domain";
 import type { ConversationsSearch } from "@web/components/conversations/search";
 import { ConversationsView } from "@web/components/conversations/view";
-import type { ReactNode } from "react";
+import { act, type ReactNode } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
 import { conversationEntry } from "#support/conversations";
@@ -61,6 +61,31 @@ function snapshot(entries: ConversationSnapshot["entries"]): ConversationSnapsho
   return { entries, observed_at: "2026-09-19T10:00:00.000Z" };
 }
 
+function loaded(entries: ConversationEntry[]): FakeQueryState {
+  return { data: snapshot(entries), dataUpdatedAt: Date.now(), refetch: vi.fn() };
+}
+
+function thread(issue: string, step: string, step_status: StepRunState): ConversationEntry {
+  return conversationEntry({
+    id: `conversation:${step}`,
+    step_run_id: step,
+    step_name: step,
+    step_status,
+    issue: { id: issue, identifier: issue, title: issue, cycle: "running" },
+  });
+}
+
+function groupHeader(container: HTMLElement, title: string): HTMLButtonElement {
+  const header = [...container.querySelectorAll<HTMLButtonElement>("h3 button")].find((button) =>
+    button.textContent.includes(title),
+  );
+  if (header === undefined) throw new Error(`no group ${title}`);
+  return header;
+}
+
+const spinningRows = (container: HTMLElement): Element[] =>
+  [...container.querySelectorAll("a")].filter((row) => row.querySelector(".animate-spin") !== null);
+
 beforeEach(() => {
   mutate.mockReset();
   search = {};
@@ -76,7 +101,7 @@ it("waits on its skeleton rather than an empty list", async () => {
 });
 
 it("invites a launch when the host holds no thread, and a selection when it does", async () => {
-  conversations = { data: snapshot([]), dataUpdatedAt: Date.now(), refetch: vi.fn() };
+  conversations = loaded([]);
 
   const { container, cleanup } = await mount(<ConversationsView />);
 
@@ -104,14 +129,10 @@ it("keeps the loaded threads on screen when a refresh fails", async () => {
 });
 
 it("opens the thread the URL names and reads it once it is on screen", async () => {
-  conversations = {
-    data: snapshot([
-      conversationEntry(),
-      conversationEntry({ id: "conversation:step-2", step_run_id: "step-2" }),
-    ]),
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-  };
+  conversations = loaded([
+    conversationEntry(),
+    conversationEntry({ id: "conversation:step-2", step_run_id: "step-2" }),
+  ]);
   search = { run: "run-1", step: "step-2" };
 
   const { container, cleanup } = await mount(<ConversationsView />);
@@ -132,11 +153,7 @@ it("opens the thread the URL names and reads it once it is on screen", async () 
 });
 
 it("does not read a thread that is already read, nor one the host does not list", async () => {
-  conversations = {
-    data: snapshot([conversationEntry({ read: true })]),
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-  };
+  conversations = loaded([conversationEntry({ read: true })]);
   search = { run: "run-1", step: "step-1" };
   const read = await mount(<ConversationsView />);
   expect(mutate).not.toHaveBeenCalled();
@@ -150,28 +167,95 @@ it("does not read a thread that is already read, nor one the host does not list"
 });
 
 it("moves an issue out of Following on the frame that closes its cycle", async () => {
-  conversations = {
-    data: snapshot([conversationEntry()]),
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-  };
+  conversations = loaded([conversationEntry()]);
   const { container, rerender, cleanup } = await mount(<ConversationsView />);
   const sectionOf = () =>
     [...container.querySelectorAll("h2")].map((heading) => heading.textContent);
   expect(sectionOf()).toEqual(["Following1"]);
 
-  conversations = {
-    data: snapshot([
-      conversationEntry({
-        step_status: "succeeded",
-        issue: { id: "issue-1", identifier: "OTO-1", title: "Ship it", cycle: null },
-      }),
-    ]),
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-  };
+  conversations = loaded([
+    conversationEntry({
+      step_status: "succeeded",
+      issue: { id: "issue-1", identifier: "OTO-1", title: "Ship it", cycle: null },
+    }),
+  ]);
   await rerender(<ConversationsView />);
 
   expect(sectionOf()).toEqual(["Recently finished11 unread"]);
+  await cleanup();
+});
+
+it("opens only the issues holding a running thread, and keeps one the operator folded", async () => {
+  const entries = [
+    thread("Live", "live-run", "running"),
+    thread("Live", "live-done", "succeeded"),
+    thread("Queue", "queue-a", "queued"),
+    thread("Queue", "queue-b", "queued"),
+    thread("Done", "done-ok", "succeeded"),
+    thread("Done", "done-ko", "failed"),
+    thread("Stopped", "stopped-a", "canceled"),
+    thread("Stopped", "stopped-b", "canceled"),
+  ];
+  conversations = loaded(entries);
+  const { container, rerender, cleanup } = await mount(<ConversationsView />);
+  const expanded = (title: string) => groupHeader(container, title).getAttribute("aria-expanded");
+
+  expect(["Live", "Queue", "Done", "Stopped"].map(expanded)).toEqual([
+    "true",
+    "false",
+    "false",
+    "false",
+  ]);
+  expect(spinningRows(container)).toHaveLength(1);
+
+  await act(async () => groupHeader(container, "Live").click());
+  conversations = loaded([...entries]);
+  await rerender(<ConversationsView />);
+
+  expect(expanded("Live")).toBe("false");
+  await cleanup();
+});
+
+it("spins only on a row whose agent is working", async () => {
+  conversations = loaded([
+    thread("Working", "working", "running"),
+    {
+      ...thread("Asking", "asking", "running"),
+      pending_interaction: { kind: "permission", prompt: "Run?" },
+    },
+    thread("Queued", "queued", "queued"),
+    thread("Succeeded", "succeeded", "succeeded"),
+    thread("Failed", "failed", "failed"),
+    thread("Canceled", "canceled", "canceled"),
+  ]);
+  const { container, cleanup } = await mount(<ConversationsView />);
+
+  expect(container.querySelectorAll("a")).toHaveLength(6);
+  expect(spinningRows(container).map((row) => row.textContent)).toEqual([
+    expect.stringContaining("Working"),
+  ]);
+  await cleanup();
+});
+
+it("drops the loader and folds its issue back on the frame the thread settles", async () => {
+  conversations = loaded([
+    thread("Live", "a", "running"),
+    thread("Live", "b", "succeeded"),
+    thread("Solo", "solo", "running"),
+  ]);
+  const { container, rerender, cleanup } = await mount(<ConversationsView />);
+  expect(groupHeader(container, "Live").getAttribute("aria-expanded")).toBe("true");
+  expect(spinningRows(container)).toHaveLength(2);
+
+  conversations = loaded([
+    thread("Live", "a", "succeeded"),
+    thread("Live", "b", "succeeded"),
+    thread("Solo", "solo", "failed"),
+  ]);
+  await rerender(<ConversationsView />);
+
+  expect(groupHeader(container, "Live").getAttribute("aria-expanded")).toBe("false");
+  expect(container.textContent).toContain("Solo");
+  expect(container.querySelector(".animate-spin")).toBeNull();
   await cleanup();
 });

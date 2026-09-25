@@ -9,6 +9,7 @@ export function conversationEvidence(
     step_status: "running",
     step_created_at: "2026-09-19T10:00:00.000Z",
     step_updated_at: "2026-09-19T10:00:00.000Z",
+    latest_session_status: "active",
     run_id: "run-1",
     run_status: "running",
     run_abandoned_at: null,

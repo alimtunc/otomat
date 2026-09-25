@@ -8,8 +8,13 @@ import { conversationEntry } from "#support/conversations";
 import { mountRouted } from "#support/router";
 
 const sections = groupConversations([
-  conversationEntry(),
-  conversationEntry({ id: "conversation:step-2", step_run_id: "step-2", step_name: "Review" }),
+  conversationEntry({ step_status: "succeeded" }),
+  conversationEntry({
+    id: "conversation:step-2",
+    step_run_id: "step-2",
+    step_name: "Review",
+    step_status: "succeeded",
+  }),
   conversationEntry({
     id: "conversation:step-3",
     step_run_id: "step-3",

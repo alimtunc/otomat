@@ -1,9 +1,10 @@
 import type { ConversationEntry, ConversationParticipant } from "../contracts/conversations.js";
 import type { ResolvedAgentConfig } from "../contracts/entities/agents.js";
 import type { InboxMark } from "../contracts/inbox.js";
+import type { AgentSessionState } from "../state-machines/agent-session.js";
 import type { RunInteractionKind } from "../state-machines/run-interaction.js";
 import type { RunState } from "../state-machines/run.js";
-import type { StepRunState } from "../state-machines/step-run.js";
+import { liveStepStatus, type StepRunState } from "../state-machines/step-run.js";
 import type { IssueExecutionEvidence } from "./evidence.js";
 import { projectIssueExecution } from "./issue-execution.js";
 import { isCycleClosed, projectIssueWorkspace } from "./issue-workspace.js";
@@ -21,6 +22,7 @@ export interface ConversationEvidence {
   step_status: StepRunState;
   step_created_at: string;
   step_updated_at: string;
+  latest_session_status: AgentSessionState | null;
   run_id: string;
   run_status: RunState;
   run_abandoned_at: string | null;
@@ -131,7 +133,7 @@ export function projectConversations(
         run_status: row.run_status,
         step_run_id: row.step_run_id,
         step_name: row.step_name,
-        step_status: row.step_status,
+        step_status: liveStepStatus(row.step_status, row.latest_session_status),
         participant: participantOf(row),
         last: lastOf(row),
         pending_interaction:

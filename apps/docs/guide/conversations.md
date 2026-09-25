@@ -16,10 +16,13 @@ have not read stays unread there; it never holds an issue in Following. Recently
 collapsed by default, with its unread count still visible in the heading.
 
 A single-conversation issue opens directly from its row. Issues with several conversations
-start collapsed; click their heading to reveal the steps. Folding a group or section leaves
-the open thread on screen. Each row shows a short preview — a pending permission or question
-first, then a message waiting to be delivered, then the last thing said — and how long ago it
-moved. Running, waiting and failed steps have a named status; completed steps need no badge.
+stay open while one of their steps is running and fold again when none is; click a heading to
+fold or unfold it yourself, and your choice holds while you stay on the page. Folding a group or
+section leaves the open thread on screen. Each row shows a short preview — a pending permission
+or question first, then a message waiting to be delivered, then the last thing said — and how
+long ago it moved. Running, waiting and failed steps have a named status; a running one spins
+while the agent works, including a completed step answering a message you sent it. Completed
+steps need no badge.
 The selected row keeps a tinted background and a left-edge marker when the pointer moves away.
 
 A thread is **unread** when an agent answered, a question was asked, a message failed to deliver
@@ -35,8 +38,8 @@ or by project. Archived threads stay hidden until they speak again.
 
 Selecting a row opens its thread on the right: the same header, messages, question cards and
 composer as the run cockpit, aimed at that exact step. The composer names its recipient and says
-when the message will be delivered; a finished step explains why it can no longer take one and
-links to the run to append a follow-up step. Runtime and model details appear here.
+when the message will be delivered; a step that can no longer take one says why, and a finished
+run offers to add a follow-up step in place. Runtime and model details appear here.
 **Open issue** and **Open cockpit** lead to the surfaces that hold the plan, the diff and the
 pull request.
 

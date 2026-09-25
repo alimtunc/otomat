@@ -1,4 +1,10 @@
-import { appendRunContribution, recordRunInteraction, schema } from "@otomat/db";
+import {
+  appendRunContribution,
+  insertAgentSession,
+  recordRunInteraction,
+  schema,
+  updateAgentSessionStatus,
+} from "@otomat/db";
 import type { ConversationSnapshot } from "@otomat/domain";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -9,7 +15,7 @@ import { json, makeApiApp, post, request } from "../support/api.js";
 import { seedRepository, setupTestDb, type TestDb } from "../support/db.js";
 import { appendEvents } from "../support/ledger.js";
 import { makeEvent } from "../support/run-event-fixtures.js";
-import { seedRun, seedWorkflowRun, type SeededRun } from "../support/seed.js";
+import { seedConfig, seedRun, seedWorkflowRun, type SeededRun } from "../support/seed.js";
 
 let t: TestDb;
 
@@ -235,7 +241,7 @@ describe("GET /api/conversations", () => {
   });
 
   it("stops following a thread on the read after its cycle closes", async () => {
-    seedRun(t.db, {
+    const seed = seedRun(t.db, {
       runId: "run-5",
       runStatus: "running",
       stepStatus: "running",
@@ -249,10 +255,35 @@ describe("GET /api/conversations", () => {
       .set({ status: "succeeded" })
       .where(eq(schema.stepRuns.run_id, "run-5"))
       .run();
+    updateAgentSessionStatus(t.db, seed.agentSessionId, "terminated");
 
     expect((await readSnapshot()).entries[0]).toMatchObject({
       step_status: "succeeded",
       issue: { cycle: null },
     });
+  });
+
+  it("reads a succeeded step as running while its next turn is live, and never from a supervision turn", async () => {
+    const seed = seedRun(t.db, {
+      runId: "run-6",
+      runStatus: "running",
+      stepStatus: "succeeded",
+      sessionStatus: "terminated",
+    });
+    insertAgentSession(t.db, { id: "run-6-turn", step_run_id: seed.stepRunId, status: "active" });
+    insertAgentSession(t.db, {
+      id: "run-6-supervision",
+      step_run_id: seed.stepRunId,
+      kind: "supervision",
+      status: "terminated",
+      config_json: seedConfig("run-6-supervision", "codex"),
+    });
+    expect((await readSnapshot()).entries[0]).toMatchObject({
+      step_status: "running",
+      participant: { runtime: "fake" },
+    });
+
+    updateAgentSessionStatus(t.db, "run-6-turn", "terminated");
+    expect((await readSnapshot()).entries[0]?.step_status).toBe("succeeded");
   });
 });

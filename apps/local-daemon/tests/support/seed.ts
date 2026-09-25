@@ -73,7 +73,7 @@ function resolveSeedRepository(db: Db, requested: string | null | undefined): st
   return requested;
 }
 
-function seedConfig(stepId: string, runtime: string): ResolvedAgentConfig {
+export function seedConfig(stepId: string, runtime: string): ResolvedAgentConfig {
   return {
     runtime,
     profile_id: null,

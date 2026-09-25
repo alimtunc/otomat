@@ -1,5 +1,10 @@
 // @vitest-environment happy-dom
-import type { ResolvedAgentConfig, RunDetail, RuntimeDescriptor } from "@otomat/domain";
+import type {
+  AgentSessionState,
+  ResolvedAgentConfig,
+  RunDetail,
+  RuntimeDescriptor,
+} from "@otomat/domain";
 import { ConversationHeader } from "@web/components/runs/conversation/header";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -224,5 +229,29 @@ it("offers Cancel step only while the step is still queued, wired to the step id
   if (!button) throw new Error("expected a Cancel step action on a queued step");
   button.click();
   expect(cancelStep).toHaveBeenCalledWith("step-1");
+  await view.cleanup();
+});
+
+it("reads a succeeded step as running while its next turn is live, then settles with it", async () => {
+  const launched = DETAIL.sessions[0]!;
+  const reopened = (status: AgentSessionState): RunDetail => ({
+    ...DETAIL,
+    run: { ...DETAIL.run, status: status === "active" ? "running" : "review_ready" },
+    steps: [{ ...DETAIL.steps[0]!, status: "succeeded", next_turn_config: null }],
+    sessions: [
+      { ...launched, status: "terminated" },
+      { ...launched, id: "session-next", resumed_from_session_id: launched.id, status },
+    ],
+  });
+  const view = await mount(<ConversationHeader detail={reopened("active")} stepRunId="step-1" />);
+  expect(view.container.textContent).toContain("Running");
+  expect(view.container.textContent).not.toContain("Succeeded");
+  expect(view.container.textContent).toContain("Stop step");
+  expect(view.container.querySelector(".animate-spin")).not.toBeNull();
+
+  await view.rerender(<ConversationHeader detail={reopened("terminated")} stepRunId="step-1" />);
+  expect(view.container.textContent).toContain("Succeeded");
+  expect(view.container.textContent).not.toContain("Stop step");
+  expect(view.container.querySelector(".animate-spin")).toBeNull();
   await view.cleanup();
 });
