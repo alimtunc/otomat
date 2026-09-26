@@ -1,8 +1,8 @@
 import type { WorkflowPresetContract } from "@otomat/domain";
 import {
   Button,
+  ConfigMenuContent,
   DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -39,11 +39,12 @@ function ScopeGroup({
             key={preset.id}
             disabled={blocked !== null}
             onClick={() => onApply(preset)}
+            className="h-auto min-h-7.5 py-1"
           >
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate">{preset.name}</span>
+            <span className="flex min-w-0 flex-col break-words">
+              <span>{preset.name}</span>
               {blocked === null ? null : (
-                <span className="truncate text-xs text-text-tertiary">{blocked}</span>
+                <span className="text-xs text-text-tertiary">{blocked}</span>
               )}
             </span>
           </DropdownMenuItem>
@@ -72,7 +73,7 @@ export function WorkflowPresetPicker({
           </Button>
         }
       />
-      <DropdownMenuContent align="start" aria-label="Workflow presets">
+      <ConfigMenuContent align="start" aria-label="Workflow presets">
         {items.length === 0 ? (
           <DropdownMenuGroup>
             <DropdownMenuLabel>
@@ -92,7 +93,7 @@ export function WorkflowPresetPicker({
         />
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onSaveCurrent}>Save this workflow as a preset…</DropdownMenuItem>
-      </DropdownMenuContent>
+      </ConfigMenuContent>
     </DropdownMenu>
   );
 }
