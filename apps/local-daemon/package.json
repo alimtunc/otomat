@@ -50,7 +50,7 @@
     "@hono/zod-validator": "^0.9.1",
     "@otomat/db": "workspace:*",
     "@otomat/domain": "workspace:*",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.3",
     "hono": "^4.13.8",
     "node-pty": "1.1.0",
     "zod": "^4.6.5"
@@ -58,7 +58,7 @@
   "devDependencies": {
     "@types/node": "^26.4.1",
     "tsdown": "^0.23.0",
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "vitest": "^5.0.1"
   }
 }
