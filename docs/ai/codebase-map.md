@@ -2046,17 +2046,27 @@ resolves the project, verifies its canonical Git root and rechecks its registrat
 under the checkout lock before starting. Project launches carry no issue, run or
 context hash; they create no workspace rows and share the authenticated transport,
 PTY lifecycle and session limit with issue terminals. Session inventory identifies
-the project explicitly, so navigation reattaches only its own session. Closing the
-window counts project terminals as active work. Conversations lists these sessions
-alongside issue terminals and cockpit chats.
+the project explicitly, so navigation reattaches only its own session. Conversations
+lists these sessions alongside issue terminals and cockpit chats.
 
 The desktop issue view and run cockpit expose an explicit **Terminal** tab. Opening
 it only reads inventory; creating a shell or launching Claude/Codex requires an
 action. `apps/local-daemon/src/terminal` owns `node-pty`; the renderer owns only
-xterm and calls the authenticated typed client. The desktop enables the local
-terminal service through its daemon environment. Other hosts return an unavailable
-inventory and offer the external terminal fallback. No terminal writes a run,
-step, provider-session or cost row.
+xterm and calls the authenticated typed client. The desktop enables the terminal
+service in the environment of every daemon it starts: `buildDaemonEnv` locally,
+the start-or-verify script on a remote host. A remote daemon still running from a
+start without it returns an unavailable inventory, and the tab offers the external
+terminal fallback until that daemon restarts. Browser dev and web previews hide the tab.
+No terminal writes a run, step, provider-session or cost row.
+
+On a VPS the PTY runs on the host under the daemon account, in the host's canonical
+worktree or registered checkout, with every check below applied by that host's daemon.
+The renderer reaches the same routes through the tunnel and bearer token described in
+[remote host](remote-execution-host.md); ssh stays a child of the main process, so no
+ssh key or login shell reaches the renderer. Because the tunnel URL and the per-launch
+token survive a reconnect, a dropped tunnel reattaches the same session, while a
+restarted daemon's new token and instance are refused by the captured client and the
+instance check.
 
 The owner resolves an issue to its canonical worktree, validates its realpath under
 the host's worktree root and its registered Git repository/branch, and checks the
@@ -2085,9 +2095,10 @@ recorded, never raw stdin. A recording failure stops the writer and is returned 
 the client. Startup marks interrupted records ended. Saved IDs remain readable
 through the authenticated output endpoint with the current daemon instance; they
 cannot receive input or restart a process. A new shell requires an explicit action. Tab unmount detaches xterm; window close includes
-terminals in the background/quit choice; daemon shutdown hangs up terminal processes.
-A deliberately detached external job is outside that lifecycle. VPS integrated
-PTYs and process survival across daemon restarts are not supported.
+the local daemon's terminals in the background/quit choice, while remote ones keep
+running with their daemon; daemon shutdown hangs up terminal processes.
+A deliberately detached external job is outside that lifecycle. Process survival
+across daemon restarts is not supported.
 
 `prepare-daemon.mjs` stages the host's native PTY binding and macOS spawn helper
 outside asar. The node-pty patch prevents a second `.unpacked` suffix when the
@@ -2107,7 +2118,7 @@ rather than replaced by its parent. Nothing is created: the call is a read then 
 launch. VS Code opens through its URL scheme (`vscode://file/…` locally,
 `vscode://vscode-remote/ssh-remote+<alias>…` on the VPS) with every path segment
 percent-encoded; the local terminal is macOS Terminal via `open -a Terminal
-<path>` as an argument array. A remote terminal has no supported integration, so
+<path>` as an argument array. A remote host has no external terminal launcher, so
 the item is disabled with the reason and a single-quoted `ssh -t <alias> '…'`
 command is copyable — Otomat never runs it. The electron launchers are injected
 from `ipc.ts`, the renderer IPC edge, so the resolution and its tests stay

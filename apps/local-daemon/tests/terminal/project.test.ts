@@ -7,7 +7,7 @@ import { TerminalService } from "#terminal";
 import { makeApiApp, post } from "#test-support/api";
 import type { DaemonTestDb } from "#test-support/daemon-db";
 import { setupTestRepo } from "#test-support/git";
-import { closeTerminals, setupTerminals } from "#test-support/terminals";
+import { closeTerminals, issueShellRequest, setupTerminals } from "#test-support/terminals";
 
 let fix: DaemonTestDb;
 let terminals: TerminalService;
@@ -39,13 +39,7 @@ it("opens and reattaches the project checkout without creating issues, runs or w
   expect(fix.db.select().from(schema.issues).all()).toHaveLength(1);
   expect(fix.db.select().from(schema.runs).all()).toHaveLength(0);
   expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(0);
-  const issue = await terminals.open({
-    instance: terminals.instance,
-    issue_id: "i1",
-    run_id: null,
-    tool: null,
-    context_hash: null,
-  });
+  const issue = await terminals.open(issueShellRequest(terminals));
   expect(issue.path).not.toBe(first.path);
   expect(terminals.list()).toHaveLength(2);
   expect(terminals.hasRepositorySessions({ id: fix.repositoryId, project_id: "p1" })).toBe(true);

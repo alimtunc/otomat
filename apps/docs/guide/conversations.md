@@ -59,10 +59,10 @@ Select a terminal row to return to its interactive session while it is running, 
 output once it has ended. Opening a row starts no process. Terminal sessions remain independent
 of runs, their status and their recorded cost.
 
-Otomat saves up to 256 KiB of recent output per session locally. Earlier output may be truncated;
-the terminal shows a notice when this happens. This is the terminal display, including CLI output,
-not a structured chat transcript. Input that a program does not echo, such as a password, is not
-recorded. External terminal sessions are not recorded by Otomat.
+Otomat saves up to 256 KiB of recent output per session on the host that ran it. Earlier output
+may be truncated; the terminal shows a notice when this happens. This is the terminal display,
+including CLI output, not a structured chat transcript. Input that a program does not echo, such
+as a password, is not recorded. External terminal sessions are not recorded by Otomat.
 
 A daemon restart ends the process but keeps its saved output available read-only. Start a new
 session explicitly from **Terminal** or an issue's **Terminal** tab. Archiving hides an entry;

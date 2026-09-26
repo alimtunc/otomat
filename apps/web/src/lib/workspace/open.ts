@@ -24,7 +24,7 @@ export function workspaceOpenAvailability(
   if (target === "terminal" && host.kind === "ssh") {
     return {
       available: false,
-      reason: `No terminal integration exists for ${host.label}; copy the ssh command instead.`,
+      reason: `No external terminal opens on ${host.label}; copy the ssh command instead.`,
     };
   }
   return { available: true, reason: null };

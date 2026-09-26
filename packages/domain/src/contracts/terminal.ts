@@ -3,6 +3,7 @@ import { z } from "zod";
 export const terminalToolSchema = z.enum(["claude", "codex"]);
 export type TerminalTool = z.infer<typeof terminalToolSchema>;
 export const TERMINAL_INPUT_MAX = 8192;
+export const TERMINAL_ENABLED_ENV = "OTOMAT_TERMINAL_ENABLED";
 export const preparedWorkspaceResponseSchema = z.object({ workspace_id: z.string() });
 export const terminalSessionSchema = z.object({
   id: z.string().uuid(),

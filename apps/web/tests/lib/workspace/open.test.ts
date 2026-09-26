@@ -36,7 +36,7 @@ it("keeps VS Code for a remote worktree and disables the terminal with the way o
   expect(workspaceOpenAvailability(entry, REMOTE, "vscode").available).toBe(true);
   expect(workspaceOpenAvailability(entry, REMOTE, "terminal")).toEqual({
     available: false,
-    reason: "No terminal integration exists for otomat-vps; copy the ssh command instead.",
+    reason: "No external terminal opens on otomat-vps; copy the ssh command instead.",
   });
 });
 

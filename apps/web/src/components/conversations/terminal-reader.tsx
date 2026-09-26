@@ -25,7 +25,7 @@ export function TerminalReader({ session }: { session: TerminalSession }) {
         <CopyButton value={session.path} label="Copy terminal path" />
       </PaneHeader>
       <p className="px-3 py-2 text-xs text-text-tertiary">
-        Recent terminal output is saved locally. Ended sessions open read-only.
+        Recent terminal output is saved on the host that ran it. Ended sessions open read-only.
       </p>
       <QueryBoundary
         query={inventory}
@@ -41,7 +41,7 @@ export function TerminalReader({ session }: { session: TerminalSession }) {
         {({ instance }) =>
           instance === null ? (
             <p className="px-3 py-2 text-sm text-text-secondary">
-              Connect to the desktop host to read this terminal.
+              Integrated terminal unavailable on this host.
             </p>
           ) : (
             <Suspense fallback={<Skeleton className="m-4 h-24" />}>

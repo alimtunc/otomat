@@ -13,8 +13,9 @@ the branch you left it on.
 - **Refresh worktrees** rescans `git worktree list` and the host's pull requests, then updates the
   states shown. It deletes or changes no worktree, whatever the auto-delete setting says.
 - The run actions menu (`⋯`) and the issue header carry **Open in VS Code** and **Open in
-  terminal** for the run's worktree. A remote worktree opens through VS Code's SSH remote; a
-  remote terminal is a copyable `ssh` command Otomat never runs itself.
+  terminal** for the run's worktree. A remote worktree opens through VS Code's SSH remote; on a
+  remote host **Open in terminal** is disabled and **Copy ssh command** copies an `ssh` command
+  Otomat never runs itself.
 - Otomat reads the real git state on every read; nothing about a workspace is cached in a way a
   restart could make stale.
 
@@ -28,8 +29,8 @@ own session when you navigate away or switch projects. **Copy terminal command**
 provides the external fallback; on a remote host the button is **Copy SSH command**.
 
 Find current and ended terminal sessions in [Conversations](./conversations.md).
-Their recent output is saved locally, including after a restart; an ended session
-opens read-only. Claude/Codex terminal output keeps its terminal format.
+Their recent output is saved on the host that ran them, including after a restart; an
+ended session opens read-only. Claude/Codex terminal output keeps its terminal format.
 
 In the desktop app, open **Terminal** on an issue or in its run cockpit, then choose
 **Open shell**. The shell starts in that issue's worktree. If no workflow has
@@ -42,21 +43,24 @@ stays visible above the terminal, with a button to copy the worktree path.
 **Executable & arguments** to inspect the exact invocation before starting. Turn
 off **Include issue context** to open the CLI without sending the issue title or
 description. It still starts in the same worktree and can read its files and local
-CLI instructions. They require the CLI to be
-installed on the local host. End an existing shell before starting a CLI this way.
+CLI instructions. They require the CLI to be installed on the host that holds the
+worktree. End an existing shell before starting a CLI this way.
 These are your sessions: they neither advance a workflow nor contribute to its
 recorded cost. Provider charges still apply to CLI usage.
 
 Switching tabs keeps the process alive. After a connection interruption, the tab
 reattaches to the same session and shows recent output; input is never retried
 silently. If older output was discarded, the terminal says so. **End session** asks
-for confirmation before stopping the shell and its active command. Closing the window offers to keep active work in the background or stop it and
-quit. A daemon restart ends the session; starting another is an explicit action.
+for confirmation before stopping the shell and its active command. Closing the window
+offers to keep local work in the background or stop it and quit; a VPS session keeps
+running on the host. A daemon restart, including a VPS update, ends the session;
+starting another is an explicit action.
 Worktree cleanup is blocked while its terminal is active.
 
-**Open in external terminal** opens macOS Terminal. On a VPS, use **Copy SSH command**
-and paste the inspected command into your own terminal; the integrated terminal is
-local only. External terminals have their own lifecycle.
+On a VPS the integrated terminal runs on the host, in the worktree or checkout there, over
+the connection Otomat already holds. **Open in external terminal** opens macOS
+Terminal; on a VPS, **Copy SSH command** gives the command to paste into your own
+terminal instead. External terminals have their own lifecycle.
 
 ## Edit files
 

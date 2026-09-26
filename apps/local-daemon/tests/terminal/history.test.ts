@@ -6,7 +6,12 @@ import { hasInteractiveWriter } from "#git/interactive-worktrees";
 import { TerminalService } from "#terminal";
 import { makeApiApp, post, request } from "#test-support/api";
 import type { DaemonTestDb } from "#test-support/daemon-db";
-import { closeTerminals, setupTerminals, type TerminalFixture } from "#test-support/terminals";
+import {
+  closeTerminals,
+  issueShellRequest,
+  setupTerminals,
+  type TerminalFixture,
+} from "#test-support/terminals";
 
 let fix: DaemonTestDb;
 let terminals: TerminalService;
@@ -23,13 +28,7 @@ it("lists project and issue terminals without runs and reads their output after 
     project_id: "p1",
     tool: null,
   });
-  const issue = await terminals.open({
-    instance: terminals.instance,
-    issue_id: "i1",
-    run_id: null,
-    tool: null,
-    context_hash: null,
-  });
+  const issue = await terminals.open(issueShellRequest(terminals));
   const session = terminals.get(terminals.instance, project.id);
   session.write("printf 'saved-%s\\n' 'output'; exit 7\r");
   await expect.poll(() => session.info.state).toBe("exited");

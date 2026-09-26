@@ -60,6 +60,12 @@ it("keeps the remote daemon loopback-bound with the packaged renderer origin all
   expect(script).not.toContain("0.0.0.0");
 });
 
+it("starts the remote daemon with its integrated terminal service", () => {
+  expect(startOrVerifyDaemonScript(STABLE_DEPLOYMENT)).toContain(
+    "  OTOMAT_TERMINAL_ENABLED=1 \\\n  nohup node",
+  );
+});
+
 it("starts the daemon with a fresh owner-only token and reports it only over ssh", () => {
   const script = startOrVerifyDaemonScript(STABLE_DEPLOYMENT);
   expect(script).toContain('DAEMON_TOKEN_PATH="$OTOMAT_HOME/data/daemon-token"');

@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { terminalConversationEntry } from "#support/conversations";
 import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { mountWithQuery } from "#support/mount";
+import { TERMINAL_INSTANCE } from "#support/terminal";
 
 let input: (data: string) => void;
 const writes: string[] = [];
@@ -59,7 +60,7 @@ it("replays a saved terminal read-only without spawning or sending input", async
     return Response.json(
       url.includes("/output")
         ? { session, data: "saved terminal output", cursor: 1, truncated: false }
-        : { instance: "00000000-0000-4000-8000-000000000001", sessions: [] },
+        : { instance: TERMINAL_INSTANCE, sessions: [] },
     );
   });
   const mounted = await mountWithQuery(<TerminalConversationBody session={session} />);

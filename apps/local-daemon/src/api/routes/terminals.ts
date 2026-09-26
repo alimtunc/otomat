@@ -30,7 +30,7 @@ export function createTerminalRoutes(deps: ApiDeps): Hono {
         {
           error: "terminal_unavailable",
           message:
-            "Integrated terminals are available on the local desktop host. Use the external terminal fallback.",
+            "This daemon was started without the integrated terminal. Use the external terminal fallback.",
         },
         503,
       ),

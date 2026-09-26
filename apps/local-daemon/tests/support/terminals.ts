@@ -23,6 +23,16 @@ export function setupTerminals(): TerminalFixture {
   return { fix, repositories, harness, terminals };
 }
 
+export function issueShellRequest(terminals: TerminalService) {
+  return {
+    instance: terminals.instance,
+    issue_id: "i1",
+    run_id: null,
+    tool: null,
+    context_hash: null,
+  };
+}
+
 export async function closeTerminals(terminals: TerminalService, fix: DaemonTestDb): Promise<void> {
   try {
     await terminals.shutdown();

@@ -2,6 +2,7 @@ import {
   DAEMON_TOKEN_ENV,
   MAINTENANCE_ACTION_ENV,
   RESTORE_BACKUP_ENV,
+  TERMINAL_ENABLED_ENV,
   WORKER_JOB_FILE_ENV,
   WORKER_START_TOKEN_ENV,
 } from "@otomat/domain";
@@ -34,7 +35,7 @@ export function buildDaemonEnv(options: DaemonEnvOptions): NodeJS.ProcessEnv {
     OTOMAT_DAEMON_PORT: String(options.port),
     OTOMAT_DB_PATH: options.dbPath,
     OTOMAT_PROJECT_ROOT: options.projectRoot,
-    OTOMAT_TERMINAL_ENABLED: "1",
+    [TERMINAL_ENABLED_ENV]: "1",
   };
   delete env.OTOMAT_LINEAR_API_KEY;
   delete env[MAINTENANCE_ACTION_ENV];
