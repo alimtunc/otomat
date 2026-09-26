@@ -74,7 +74,7 @@ export async function resumeDueProviderWaits(state: SupervisorState): Promise<nu
       refuse(state, ref, wait, wait.resume_at, invalid);
       continue;
     }
-    if (hasRunActivity(state, runId)) continue;
+    if (hasRunActivity(state, runId) || state.updatingWorkspaces.has(runId)) continue;
     try {
       await resumeRun(state, runId);
       journal(state, ref, wait.resume_at, "resumed", `${wait.provider} quota window reopened`);

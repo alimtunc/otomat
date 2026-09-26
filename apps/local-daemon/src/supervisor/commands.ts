@@ -22,6 +22,7 @@ import {
 } from "./resume.js";
 import { preflightResumeAction } from "./runtime-preflight.js";
 import { hasRunActivity, type SupervisorState } from "./state.js";
+import { requireWorkspaceSteady } from "./workspaces/index.js";
 import { scheduleWorktreeInit } from "./worktree-init.js";
 
 /**
@@ -84,6 +85,7 @@ function recoverStoppedRun(
 /** Resumes a run on an explicit user action, never on its own; `resolveResumeAction` is the single decision, so what the cockpit announced is what runs. */
 export async function resumeRun(state: SupervisorState, runId: string): Promise<RunRow> {
   requireLaunchable(state);
+  requireWorkspaceSteady(state, runId);
   const stopped = getRun(state.db, runId);
   if (!stopped) throw new RunNotResumableError(`run ${runId} not found`);
   const action = resolveResumeAction(state, stopped);

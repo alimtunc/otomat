@@ -1,6 +1,10 @@
-import { contextReferenceKey, type ContextReference, type IssueContract } from "@otomat/domain";
+import {
+  contextReferenceKey,
+  type BaseRefusal,
+  type ContextReference,
+  type IssueContract,
+} from "@otomat/domain";
 import { Icon, IconButton } from "@otomat/ui";
-import type { BaseRefusal } from "@web/api/runs/use-launch-run";
 import { AddContextPopover } from "@web/components/context/add-context-popover";
 import { AttachedContextRow } from "@web/components/context/attached-context-row";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";

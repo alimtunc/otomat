@@ -2,7 +2,7 @@ import { DaemonRequestError } from "@otomat/client";
 import {
   agentProfileErrorSchema,
   runLaunchErrorSchema,
-  type RemoteBaseRefusal,
+  type BaseRefusal,
   type RunContract,
   type RunLaunchResponse,
   type StartRunRequest,
@@ -54,11 +54,6 @@ function toastLaunched(launched: RunLaunchResponse): void {
     return;
   }
   toast.info("Run queued", { description: describeRunWait(launched.wait) });
-}
-
-export interface BaseRefusal {
-  message: string;
-  remote: RemoteBaseRefusal;
 }
 
 export interface LaunchRun {

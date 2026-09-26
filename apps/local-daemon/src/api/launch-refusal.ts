@@ -14,6 +14,7 @@ const LAUNCH_REFUSAL_STATUS = {
   issue_workspace_open: 409,
   launches_held: 409,
   context_too_large: 400,
+  workspace_updating: 409,
 } satisfies Record<RunLaunchError, 400 | 409>;
 
 export function launchRefusalResponse<E extends Env>(

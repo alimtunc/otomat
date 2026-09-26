@@ -15,14 +15,16 @@ import {
   Kbd,
 } from "@otomat/ui";
 import { useForm } from "@tanstack/react-form";
-import { useAppendRunStep } from "@web/api/runs/mutations";
-import { useRunDetail } from "@web/api/runs/queries";
+import { useAppendRunStep, useUpdateWorkspace } from "@web/api/runs/mutations";
+import { useRunDetail, useWorkspaceFreshness } from "@web/api/runs/queries";
 import { ContextComposer } from "@web/components/context/context-composer";
 import { ContextSourcesPanel } from "@web/components/context/context-sources-panel";
 import { useContextSources } from "@web/components/context/use-context-sources";
 import { LaunchExecutionPicker } from "@web/components/execution/launch-execution-picker";
 import { useLaunchExecution } from "@web/components/execution/use-launch-execution";
 import { IssueFormFooter } from "@web/components/issues/issue/form-footer";
+import { WorkspaceFreshnessNotice } from "@web/components/runs/steps/freshness/notice";
+import { StaleFreshnessConfirm } from "@web/components/runs/steps/freshness/stale-confirm";
 import { RecoveryLinkField } from "@web/components/runs/steps/recovery-link-field";
 import { StepScheduleField } from "@web/components/runs/steps/step-schedule-field";
 import { WorkspaceReuseNote } from "@web/components/runs/steps/workspace-reuse-note";
@@ -37,6 +39,7 @@ import {
   scheduleReady,
   scheduleRequestFields,
 } from "@web/lib/run/step-schedule";
+import { freshnessCleared, freshnessGate } from "@web/lib/run/workspace-freshness";
 import { useState } from "react";
 
 export interface AppendStepFormProps {
@@ -61,6 +64,9 @@ export function AppendStepForm({
   const launchExecution = useLaunchExecution(execution);
   const append = useAppendRunStep(workspace.run_id);
   const detail = useRunDetail(workspace.run_id);
+  const freshness = useWorkspaceFreshness(workspace.run_id);
+  const update = useUpdateWorkspace(workspace.run_id);
+  const gate = freshnessGate(freshness);
   const recovered = issue.execution.state === "failed" ? issue.execution.failure.step : null;
   const sources = useContextSources({
     draft: context,
@@ -69,10 +75,11 @@ export function AppendStepForm({
     profiles: launchExecution.agents.profiles,
   });
   const form = useForm({
-    defaultValues: { name: "", schedule: DEFAULT_STEP_SCHEDULE },
+    defaultValues: { name: "", schedule: DEFAULT_STEP_SCHEDULE, staleAcknowledged: "" },
     onSubmit: ({ value }) => {
       const agent = agentSelectionFields(launchExecution.request);
       if (!launchExecution.canLaunch || agent === null || detail.data === undefined) return;
+      if (update.isPending || !freshnessCleared(gate, value.staleAcknowledged)) return;
       const request: AppendRunStepRequest = {
         name: value.name.trim(),
         ...contextRequestFields(context),
@@ -100,6 +107,18 @@ export function AppendStepForm({
     >
       <DialogBody className="flex flex-col gap-3">
         <WorkspaceReuseNote workspace={workspace} />
+        <WorkspaceFreshnessNotice freshness={freshness} update={update} busy={workspace.busy} />
+        {gate.kind === "acknowledge" ? (
+          <form.Field name="staleAcknowledged">
+            {(field) => (
+              <StaleFreshnessConfirm
+                reason={gate.reason}
+                checked={field.state.value === gate.key}
+                onCheckedChange={(checked) => field.handleChange(checked ? gate.key : "")}
+              />
+            )}
+          </form.Field>
+        ) : null}
         {recovered === null ? null : (
           <RecoveryLinkField step={recovered} checked={recovers} onCheckedChange={setRecovers} />
         )}
@@ -172,7 +191,8 @@ export function AppendStepForm({
             selector={(state) =>
               hasText(state.values.name) &&
               detail.data !== undefined &&
-              scheduleReady(state.values.schedule)
+              scheduleReady(state.values.schedule) &&
+              freshnessCleared(gate, state.values.staleAcknowledged)
             }
           >
             {(ready) => (
@@ -181,7 +201,9 @@ export function AppendStepForm({
                 variant="primary"
                 size="sm"
                 loading={append.isPending}
-                disabled={!(ready && launchExecution.canLaunch && !append.isPending)}
+                disabled={
+                  !(ready && launchExecution.canLaunch && !append.isPending && !update.isPending)
+                }
               >
                 Add follow-up step
                 <Kbd tone="on-accent">⌘↵</Kbd>

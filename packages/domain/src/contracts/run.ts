@@ -97,6 +97,7 @@ export const RUN_LAUNCH_ERRORS = [
   "issue_workspace_open",
   "launches_held",
   "context_too_large",
+  "workspace_updating",
 ] as const;
 export type RunLaunchError = (typeof RUN_LAUNCH_ERRORS)[number];
 
@@ -110,12 +111,18 @@ const REMOTE_BASE_FAILURES = [
 ] as const;
 export type RemoteBaseFailure = (typeof REMOTE_BASE_FAILURES)[number];
 
-const remoteBaseRefusalSchema = z.object({
+export const remoteBaseRefusalSchema = z.object({
   failure: z.enum(REMOTE_BASE_FAILURES),
   /** git's stderr, redacted on the host. */
   detail: z.string().nullable(),
 });
 export type RemoteBaseRefusal = z.infer<typeof remoteBaseRefusalSchema>;
+
+export const baseRefusalSchema = z.object({
+  message: z.string(),
+  remote: remoteBaseRefusalSchema,
+});
+export type BaseRefusal = z.infer<typeof baseRefusalSchema>;
 
 /** Stable refusal code plus a user-facing daemon message. `run_id` names the workspace holder on `issue_workspace_open`; `remote` is set only on `base_remote_unavailable`. */
 export const runLaunchErrorSchema = z.object({

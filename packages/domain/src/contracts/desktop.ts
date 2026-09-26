@@ -32,7 +32,7 @@ import type {
   WorkspaceCleanupResult,
   WorkspaceInventory,
   WorkspaceReconcileReport,
-} from "./workspace-inventory.js";
+} from "./workspace/inventory.js";
 
 const startupDiagnosticBase = z.object({
   message: z.string().min(1),

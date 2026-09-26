@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { DaemonRequestError } from "@otomat/client";
 import {
   CLOSED_ISSUE_WORKSPACE,
   type AgentProfileContract,
@@ -7,6 +8,8 @@ import {
   type IssueContract,
   type RunContract,
   type RuntimeDescriptor,
+  type UpdateWorkspaceRequest,
+  type WorkspaceFreshness,
 } from "@otomat/domain";
 import { LaunchRunDialog } from "@web/components/issues/workspace/launch/dialog";
 import { act } from "react";
@@ -73,11 +76,31 @@ const appendStep = vi.fn(
 );
 const appendTarget = vi.fn();
 
+const CURRENT: WorkspaceFreshness = {
+  state: "up_to_date",
+  branch: null,
+  base: { ref: "origin/main", sha: "main-1", ahead: 1, behind: 0, strategies: [] },
+  dirty: false,
+};
+
+let freshness: WorkspaceFreshness | undefined = CURRENT;
+const updateWorkspace = vi.fn();
+let updateError: Error | null = null;
+let updateVariables: UpdateWorkspaceRequest | undefined;
+
 vi.mock("@web/api/runs/mutations", () => ({
   useAppendRunStep: (runId: string) => {
     appendTarget(runId);
     return { mutate: appendStep, isPending: false };
   },
+  useUpdateWorkspace: () => ({
+    mutate: updateWorkspace,
+    reset: vi.fn(),
+    isPending: false,
+    isError: updateError !== null,
+    error: updateError,
+    variables: updateVariables,
+  }),
 }));
 
 vi.mock("@web/api/runs/use-launch-run", () => ({
@@ -89,6 +112,13 @@ vi.mock("@web/api/runs/queries", () => ({
     data: chainRunDetail({ implement: "succeeded", review: "running" }),
     isPending: false,
     isError: false,
+  }),
+  useWorkspaceFreshness: () => ({
+    data: freshness,
+    isPending: freshness === undefined,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
   }),
 }));
 
@@ -204,6 +234,10 @@ afterEach(async () => {
   pickerProps.mockClear();
   appendStep.mockClear();
   appendTarget.mockClear();
+  updateWorkspace.mockClear();
+  freshness = CURRENT;
+  updateError = null;
+  updateVariables = undefined;
 });
 
 function clickLabelled(label: string) {
@@ -455,6 +489,77 @@ it("runs the step in parallel only once the shared workspace is confirmed", asyn
     expect.objectContaining({ depends_on: [], parallel: true }),
     expect.anything(),
   );
+});
+
+it("holds the step while the remote is being checked", async () => {
+  freshness = undefined;
+  await openDialog(CONTINUING);
+  await act(async () => setInputValue(input("Step name"), "Address the failing test"));
+  await click("pick opus for launch");
+
+  expect(document.body.textContent).toContain("Fetching the branch and its base…");
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(true);
+});
+
+it("offers the update and holds a stale follow-up until it is acknowledged", async () => {
+  freshness = {
+    ...CURRENT,
+    state: "behind",
+    base: { ref: "origin/main", sha: "main-2", ahead: 1, behind: 3, strategies: ["merge"] },
+  };
+  await openDialog(CONTINUING);
+  await act(async () => setInputValue(input("Step name"), "Address the failing test"));
+  await click("pick opus for launch");
+
+  expect(document.body.textContent).toContain("origin/main gained 3 commits");
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(true);
+
+  await click("Merge origin/main");
+  expect(updateWorkspace).toHaveBeenCalledWith({ source: "base", strategy: "merge" });
+
+  await clickLabelled("Add the step on this outdated workspace anyway");
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(false);
+});
+
+it("names a remote it could not read and lets the step go only once that is accepted", async () => {
+  freshness = {
+    state: "unverifiable",
+    failure: {
+      message: '"origin" refused access while reading "main".',
+      remote: { failure: "access_denied", detail: null },
+    },
+  };
+  await openDialog(CONTINUING);
+  await act(async () => setInputValue(input("Step name"), "Address the failing test"));
+  await click("pick opus for launch");
+
+  expect(document.body.textContent).toContain("Remote not checked");
+  expect(document.body.textContent).toContain("The remote refused access");
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(true);
+
+  await clickLabelled("Add the step without checking the remote");
+  expect(findButton("Add follow-up step⌘↵")?.disabled).toBe(false);
+});
+
+it("names the files of an aborted conflicting update and holds updates over uncommitted work", async () => {
+  freshness = {
+    ...CURRENT,
+    state: "diverged",
+    dirty: true,
+    branch: { ref: "origin/feat", sha: "feat-2", ahead: 1, behind: 1, strategies: ["rebase"] },
+  };
+  updateVariables = { source: "branch", strategy: "rebase" };
+  updateError = new DaemonRequestError(409, "POST", "/api/runs/run-7/workspace/update", {
+    error: "update_conflict",
+    message: "Rebasing onto origin/feat stopped on conflicts.",
+    conflicts: ["shared.md"],
+  });
+  await openDialog(CONTINUING);
+
+  expect(document.body.textContent).toContain("Conflicting: shared.md");
+  expect(document.body.textContent).toContain("git fetch origin, git rebase origin/feat");
+  expect(findButton("Rebase onto origin/feat")?.disabled).toBe(true);
+  expect(document.body.textContent).toContain("commit or discard them before updating it");
 });
 
 it("appends the step on a saved profile when the user picks one instead", async () => {

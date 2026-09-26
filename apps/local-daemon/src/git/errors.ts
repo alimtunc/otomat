@@ -39,3 +39,13 @@ export class RemoteBaseError extends Error {
     this.name = "RemoteBaseError";
   }
 }
+
+export class IntegrationAbortedError extends Error {
+  constructor(
+    readonly conflicts: string[],
+    readonly stderr: string,
+  ) {
+    super("git could not integrate the remote commit");
+    this.name = "IntegrationAbortedError";
+  }
+}

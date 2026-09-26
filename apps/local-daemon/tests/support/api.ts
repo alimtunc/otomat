@@ -225,6 +225,12 @@ export function stubSupervisor(overrides: Partial<Supervisor> = {}): Supervisor 
       throw new Error("abandon stub not configured");
     },
     workspaceClosure: async () => null,
+    workspaceFreshness: async () => {
+      throw new Error("workspaceFreshness stub not configured");
+    },
+    updateWorkspace: async () => {
+      throw new Error("updateWorkspace stub not configured");
+    },
     contributionImage: () => null,
     workspaces: async () => ({
       entries: [],

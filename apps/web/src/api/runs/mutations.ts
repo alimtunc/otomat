@@ -8,10 +8,12 @@ import {
   type AppendRunStepRequest,
   type CreateRunContributionRequest,
   type RunContributionsResponse,
+  type UpdateWorkspaceRequest,
 } from "@otomat/domain";
 import { toast } from "@otomat/ui";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
+import { invalidateCheckout } from "@web/api/files/invalidate";
 import type { HostQueryKeys } from "@web/api/query-keys";
 import { seedContribution } from "@web/api/runs/seed/contribution";
 import { seedIssueRun } from "@web/api/runs/seed/run";
@@ -92,6 +94,20 @@ export function useAbandonWorkspace(runId: string) {
       toast.success("Workspace abandoned — the next launch starts a fresh cycle.");
     },
     onError: (error) => toast.error(abandonErrorMessage(error)),
+  });
+}
+
+export function useUpdateWorkspace(runId: string) {
+  const client = useQueryClient();
+  const keys = useQueryKeys();
+  return useMutation({
+    mutationFn: (request: UpdateWorkspaceRequest) => daemon.updateRunWorkspace(runId, request),
+    onSuccess: (freshness) => {
+      client.setQueryData(keys.workspaceFreshness(runId), freshness);
+      invalidateCheckout(client, keys, { kind: "run", id: runId });
+      client.invalidateQueries({ queryKey: keys.runPullRequest(runId) });
+      client.invalidateQueries({ queryKey: keys.workspaces });
+    },
   });
 }
 

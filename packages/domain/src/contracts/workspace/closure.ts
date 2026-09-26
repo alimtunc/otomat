@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { pullRequestContractSchema } from "./entities/pull-request.js";
+import { pullRequestContractSchema } from "../entities/pull-request.js";
 
 export const workspaceCommitSchema = z.object({
   sha: z.string().min(1),

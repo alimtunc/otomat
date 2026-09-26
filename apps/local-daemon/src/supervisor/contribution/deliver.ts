@@ -183,7 +183,14 @@ export async function deliverQueuedContributions(
   state: SupervisorState,
   runId: string,
 ): Promise<void> {
-  if (state.shuttingDown || state.aborting.has(runId) || state.delivering.has(runId)) return;
+  if (
+    state.shuttingDown ||
+    state.aborting.has(runId) ||
+    state.delivering.has(runId) ||
+    state.updatingWorkspaces.has(runId)
+  ) {
+    return;
+  }
   // Failing an unreachable step must not strand a later step that can still be sent, so the scan resumes past it.
   let queued = listClaimableRunContributions(state.db, runId);
   while (queued.length > 0) {

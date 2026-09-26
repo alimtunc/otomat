@@ -33,6 +33,7 @@ import { createRunEventRoutes } from "./routes/run/events.js";
 import { createRunFileRoutes } from "./routes/run/files.js";
 import { createRunInteractionRoutes } from "./routes/run/interactions.js";
 import { createRunStepRoutes } from "./routes/run/steps.js";
+import { createRunWorkspaceRoutes } from "./routes/run/workspace.js";
 import { createRunRoutes } from "./routes/runs.js";
 import { createSettingsRoutes } from "./routes/settings.js";
 import { createSkillRoutes } from "./routes/skills.js";
@@ -98,6 +99,7 @@ export function createApiApp(deps: ApiDeps): Hono {
   app.route("/api/runs", createRunFileRoutes(deps));
   app.route("/api/runs", createRunInteractionRoutes(deps));
   app.route("/api/runs", createRunStepRoutes(deps));
+  app.route("/api/runs", createRunWorkspaceRoutes(deps));
   app.route("/api/runs", createRunRoutes(deps));
   app.route("/api/runs", createCompeteRoutes(deps));
   app.route("/api/runs", createReviewRoutes(deps));
