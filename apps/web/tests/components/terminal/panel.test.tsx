@@ -6,6 +6,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { findButton, findLabelled } from "#support/dom-queries";
 import { mountWithQuery } from "#support/mount";
+import { testQueryClient } from "#support/query";
+import { TERMINAL_INSTANCE, terminalSession } from "#support/terminal";
 
 vi.mock("@web/components/terminal/screen", () => ({ TerminalScreen: () => <div>PTY screen</div> }));
 const cleanups: Array<() => Promise<void>> = [];
@@ -34,7 +36,7 @@ it("reads only on mount, shows literal argv, and requires confirmation before la
       });
     if (method === "POST")
       return Response.json({ error: "worktree_conflict", message: "CLI missing" }, { status: 409 });
-    return Response.json({ instance: "00000000-0000-4000-8000-000000000001", sessions: [] });
+    return Response.json({ instance: TERMINAL_INSTANCE, sessions: [] });
   });
   const mounted = await mountWithQuery(
     <TerminalPanel
@@ -55,7 +57,7 @@ it("reads only on mount, shows literal argv, and requires confirmation before la
   });
   await vi.waitFor(() => expect(document.body.textContent).toContain("CLI missing"));
   expect(requests.find((request) => request.method === "POST")?.body).toEqual({
-    instance: "00000000-0000-4000-8000-000000000001",
+    instance: TERMINAL_INSTANCE,
     issue_id: "i1",
     run_id: null,
     tool: "codex",
@@ -76,22 +78,81 @@ it("offers the external fallback when the host has no PTY service", async () => 
   expect(mounted.container.textContent).toContain("Integrated terminal unavailable");
 });
 
+it("opens a VPS shell through the host tunnel", async () => {
+  window.otomat = fakeDesktopBridge({
+    daemonUrl: "http://127.0.0.1:52000",
+    executionHostId: "remote",
+  });
+  const session = terminalSession({ branch: "feat/remote" });
+  const opens: Array<{ url: string; body: unknown }> = [];
+  vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      opens.push({ url, body: JSON.parse(String(init.body)) });
+      return Response.json(session);
+    }
+    return Response.json({
+      instance: TERMINAL_INSTANCE,
+      sessions: opens.length > 0 ? [session] : [],
+    });
+  });
+  const mounted = await mountWithQuery(
+    <TerminalPanel
+      issueId="i1"
+      runId="r1"
+      host={{ id: "remote", label: "otomat-vps", kind: "ssh" }}
+    />,
+  );
+  cleanups.push(mounted.cleanup);
+  await act(async () => {
+    findButton("Open shell")?.click();
+  });
+  await vi.waitFor(() => expect(mounted.container.textContent).toContain("Session active"));
+  expect(opens).toEqual([
+    {
+      url: "http://127.0.0.1:52000/api/terminals",
+      body: {
+        instance: TERMINAL_INSTANCE,
+        issue_id: "i1",
+        run_id: "r1",
+        tool: null,
+        context_hash: null,
+      },
+    },
+  ]);
+  expect(mounted.container.textContent).toContain("feat/remote");
+});
+
+it("stops calling a session live once its host is lost", async () => {
+  window.otomat = fakeDesktopBridge({ executionHostId: "remote" });
+  let reachable = true;
+  vi.stubGlobal("fetch", async () => {
+    if (!reachable) throw new TypeError("tunnel closed");
+    return Response.json({ instance: TERMINAL_INSTANCE, sessions: [terminalSession()] });
+  });
+  const queries = testQueryClient();
+  const mounted = await mountWithQuery(
+    <TerminalPanel
+      issueId="i1"
+      runId={null}
+      host={{ id: "remote", label: "otomat-vps", kind: "ssh" }}
+    />,
+    queries,
+  );
+  cleanups.push(mounted.cleanup);
+  await vi.waitFor(() => expect(mounted.container.textContent).toContain("Session active"));
+  reachable = false;
+  await act(async () => {
+    await queries.refetchQueries();
+  });
+  await vi.waitFor(() => expect(mounted.container.textContent).toContain("Couldn’t refresh"));
+  expect(mounted.container.textContent).not.toContain("Session active");
+  expect(mounted.container.textContent).toContain("PTY screen");
+});
+
 it("requires confirmation to stop a live shell and preserves it when dismissed", async () => {
   window.otomat = fakeDesktopBridge();
   const closeRequests: string[] = [];
-  const session = {
-    id: "00000000-0000-4000-8000-000000000002",
-    issue_id: "i1",
-    project_id: "local-default",
-    worktree_id: "w1",
-    path: "/tmp/worktree",
-    branch: "feat/demo",
-    started_at: "2026-09-24T00:00:00Z",
-    tool: null,
-    state: "running",
-    exit_code: null,
-    signal: null,
-  };
+  const session = terminalSession();
   vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
     if (init?.method === "POST") {
       closeRequests.push(url);
@@ -100,7 +161,7 @@ it("requires confirmation to stop a live shell and preserves it when dismissed",
         { status: 409 },
       );
     }
-    return Response.json({ instance: "00000000-0000-4000-8000-000000000001", sessions: [session] });
+    return Response.json({ instance: TERMINAL_INSTANCE, sessions: [session] });
   });
   const mounted = await mountWithQuery(
     <TerminalPanel
@@ -153,7 +214,7 @@ it.each(["Claude", "Codex"])(
           { error: "worktree_conflict", message: "Issue context too large" },
           { status: 409 },
         );
-      return Response.json({ instance: "00000000-0000-4000-8000-000000000001", sessions: [] });
+      return Response.json({ instance: TERMINAL_INSTANCE, sessions: [] });
     });
     const mounted = await mountWithQuery(
       <TerminalPanel
@@ -183,7 +244,7 @@ it.each(["Claude", "Codex"])(
     await vi.waitFor(() =>
       expect(launches).toEqual([
         {
-          instance: "00000000-0000-4000-8000-000000000001",
+          instance: TERMINAL_INSTANCE,
           issue_id: "i1",
           run_id: null,
           tool: label.toLowerCase(),

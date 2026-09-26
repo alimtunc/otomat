@@ -144,8 +144,8 @@ jobs:
           pnpm --filter "@otomat/local-daemon..." run build
           pnpm --filter @otomat/local-daemon deploy --prod --legacy --config.allow-unused-patches=true "$RUNNER_TEMP/daemon"
 
-      # Not what smoke:dist covers: imports must resolve inside the deployed tree, and its
-      # /api/health build must name this commit.
+      # Not what smoke:dist covers: imports and the native PTY binding must resolve inside the
+      # deployed tree, and its /api/health build must name this commit.
       - name: Smoke the deployed daemon
         env:
           HEAD_SHA: ${{ github.sha }}
@@ -169,6 +169,8 @@ jobs:
           fi
           echo "$health"
           test "$(echo "$health" | jq -r .build)" = "${HEAD_SHA:0:7}"
+          cd "$RUNNER_TEMP/daemon"
+          node -e 'require("node-pty").spawn("/bin/sh", ["-c", "exit 7"], {}).onExit(({ exitCode }) => process.exit(exitCode === 7 ? 0 : 1))'
 
       - name: Name and pack the bundle
         id: bundle

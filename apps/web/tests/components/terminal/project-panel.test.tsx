@@ -6,6 +6,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { findButton, findLabelled } from "#support/dom-queries";
 import { mountWithQuery } from "#support/mount";
+import { TERMINAL_INSTANCE, terminalSession } from "#support/terminal";
 
 const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -31,7 +32,7 @@ it.each(["Claude", "Codex"])(
           { error: "worktree_conflict", message: "CLI unavailable" },
           { status: 409 },
         );
-      return Response.json({ instance: "00000000-0000-4000-8000-000000000001", sessions: [] });
+      return Response.json({ instance: TERMINAL_INSTANCE, sessions: [] });
     });
     const mounted = await mountWithQuery(
       <TerminalPanel
@@ -55,7 +56,7 @@ it.each(["Claude", "Codex"])(
     });
     await vi.waitFor(() =>
       expect(requests.find((request) => request.method === "POST")?.body).toEqual({
-        instance: "00000000-0000-4000-8000-000000000001",
+        instance: TERMINAL_INSTANCE,
         project_id: "p2",
         tool: tool.toLowerCase(),
       }),
@@ -65,22 +66,15 @@ it.each(["Claude", "Codex"])(
 
 it("does not attach a different project's terminal or an issue terminal", async () => {
   window.otomat = fakeDesktopBridge();
-  const session = {
-    id: "00000000-0000-4000-8000-000000000002",
-    project_id: "p1",
+  const session = terminalSession({
     issue_id: null,
     worktree_id: null,
     path: "/tmp/project",
     branch: "main",
-    started_at: "2026-09-25T00:00:00Z",
-    tool: null,
-    state: "running",
-    exit_code: null,
-    signal: null,
-  };
+  });
   vi.stubGlobal("fetch", async () =>
     Response.json({
-      instance: "00000000-0000-4000-8000-000000000001",
+      instance: TERMINAL_INSTANCE,
       sessions: [
         session,
         {

@@ -112,8 +112,8 @@ the host itself (`better-sqlite3` is a native module).
 CI builds and smoke-tests this exact deploy for linux-x64 in parallel on every push to `main`;
 `publish-daemon` exposes it only after the required `check` aggregate is green: an artifact named
 `otomat-daemon-<short-sha>-linux-x64`, kept 7 days, boot-smoked to `/api/health`
-before upload. On a host with `gh` authenticated, updating is a download instead
-of a build:
+and a PTY spawn from the deployed tree before upload. On a host with `gh` authenticated,
+updating is a download instead of a build:
 
 ```bash
 gh run download <run-id> -R <owner>/<repo> -n otomat-daemon-<short-sha>-linux-x64 -D /tmp/otomat-daemon
@@ -142,7 +142,8 @@ closed mid-wait picks the journey back up on its next launch, and nothing has to
 2. **Wait** while `/api/runs` reports work in flight, saying how many runs it is holding for and
    re-checking every 15s. Busy, refusing, unreadable and unreachable all count as "not idle" — an
    absent answer is never taken for an empty one. Meanwhile the cockpit refuses new launches, so the
-   queue drains instead of postponing the update forever. No run is ever interrupted.
+   queue drains instead of postponing the update forever. No run is ever interrupted; open
+   terminals do not hold the update back, and its restart ends them.
 3. **Wait for the bundle** through `upgrade/artifact.ts`, a read-only `gh` round trip made *before*
    anything is stopped: the artifact by name — skipping the expired entries the listing keeps
    returning after their content is gone — and when it is not there yet, the run of the workflow

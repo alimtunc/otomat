@@ -47,7 +47,7 @@ export function TerminalToolbar({
           <span className="max-w-32 truncate text-text-secondary" title={host.label}>
             {host.label}
           </span>
-          {live ? (
+          {live && !stale ? (
             <>
               <LiveDot tone="success" live size={6} />
               <span className="sr-only">Session active</span>

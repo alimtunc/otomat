@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 
 import { schema, updateIssueStatus } from "@otomat/db";
@@ -10,7 +10,12 @@ import { findWorktreeById } from "#git/worktrees-store";
 import { TerminalService, terminalContext } from "#terminal";
 import { json, makeApiApp, post, request } from "#test-support/api";
 import type { DaemonTestDb } from "#test-support/daemon-db";
-import { closeTerminals, setupTerminals, type TerminalFixture } from "#test-support/terminals";
+import {
+  closeTerminals,
+  issueShellRequest,
+  setupTerminals,
+  type TerminalFixture,
+} from "#test-support/terminals";
 
 let fix: DaemonTestDb;
 let terminals: TerminalService;
@@ -25,13 +30,7 @@ afterEach(async () => {
 });
 
 it("owns a real PTY independently of runs, reattaches, resizes and retains its exit", async () => {
-  const input = {
-    instance: terminals.instance,
-    issue_id: "i1",
-    run_id: null,
-    tool: null,
-    context_hash: null,
-  };
+  const input = issueShellRequest(terminals);
   const opened = await terminals.open(input);
   const session = terminals.get(terminals.instance, opened.id);
   session.write("stty -echo\r");
@@ -59,13 +58,7 @@ it("owns a real PTY independently of runs, reattaches, resizes and retains its e
 
 it("keeps all terminal API operations behind authentication and rejects arbitrary launch data", async () => {
   const app = makeApiApp(fix, { terminals, supervisor: harness.supervisor, repositories });
-  const input = {
-    instance: terminals.instance,
-    issue_id: "i1",
-    run_id: null,
-    tool: null,
-    context_hash: null,
-  };
+  const input = issueShellRequest(terminals);
   for (const headers of [
     { Host: "127.0.0.1" },
     {
@@ -124,13 +117,7 @@ it("serves the context preview, cursor, resize and workspace preparation routes"
   expect(prepared.status).toBe(200);
   const { workspace_id } = await json<{ workspace_id: string }>(prepared);
   expect(findWorktreeById(fix.db, workspace_id)?.prepared_issue_id).toBe("i1");
-  const opened = await terminals.open({
-    instance: terminals.instance,
-    issue_id: "i1",
-    run_id: null,
-    tool: null,
-    context_hash: null,
-  });
+  const opened = await terminals.open(issueShellRequest(terminals));
   expect(opened.worktree_id).toBe(workspace_id);
   const output = `/api/terminals/${opened.id}/output?instance=${terminals.instance}`;
   expect((await request(app, `${output}&after=-1`)).status).toBe(400);
@@ -150,25 +137,13 @@ it("refuses unavailable hosts and requires re-inspection when context changes", 
   expect(preview.argv).toHaveLength(1);
   expect(preview.argv[0]).toMatch(/^Issue: /);
   await expect(
-    terminals.open({
-      instance: terminals.instance,
-      issue_id: "i1",
-      run_id: null,
-      tool: "codex",
-      context_hash: "stale",
-    }),
+    terminals.open({ ...issueShellRequest(terminals), tool: "codex", context_hash: "stale" }),
   ).rejects.toThrow(/Inspect it again/);
   expect(terminals.list()).toHaveLength(0);
 });
 
 it("stops a foreground command on daemon shutdown and refuses the stale instance", async () => {
-  const opened = await terminals.open({
-    instance: terminals.instance,
-    issue_id: "i1",
-    run_id: null,
-    tool: null,
-    context_hash: null,
-  });
+  const opened = await terminals.open(issueShellRequest(terminals));
   const session = terminals.get(terminals.instance, opened.id);
   session.write("stty -echo\r");
   session.write("sh -c 'echo CHILD:$$; exec sleep 60'\r");
@@ -193,13 +168,7 @@ it("stops a foreground command on daemon shutdown and refuses the stale instance
 });
 
 it("keeps the previous issue session reachable until it ends across a new cycle", async () => {
-  const input = {
-    instance: terminals.instance,
-    issue_id: "i1",
-    run_id: null,
-    tool: null,
-    context_hash: null,
-  };
+  const input = issueShellRequest(terminals);
   const first = await terminals.open(input);
   updateIssueStatus(fix.db, "i1", "done");
   updateIssueStatus(fix.db, "i1", "ready");
@@ -222,22 +191,14 @@ it.each(["claude", "codex"] as const)(
       { mode: 0o755 },
     );
     vi.stubEnv("PATH", `${bin}${delimiter}${process.env.PATH}`);
-    const opened = await terminals.open({
-      instance: terminals.instance,
-      issue_id: "i1",
-      run_id: null,
-      tool,
-      context_hash: null,
-    });
+    const opened = await terminals.open({ ...issueShellRequest(terminals), tool });
     const session = terminals.get(terminals.instance, opened.id);
     await expect.poll(() => session.info.state).toBe("exited");
     expect(JSON.parse(session.output(0).data)).toEqual({ args: [], cwd: opened.path });
     expect(session.info.exit_code).toBe(0);
     const preview = terminalContext(fix.db, "i1", tool);
     const withContext = await terminals.open({
-      instance: terminals.instance,
-      issue_id: "i1",
-      run_id: null,
+      ...issueShellRequest(terminals),
       tool,
       context_hash: preview.context_hash,
     });
@@ -251,3 +212,16 @@ it.each(["claude", "codex"] as const)(
     expect(fix.db.select().from(schema.runs).all()).toHaveLength(0);
   },
 );
+
+it("refuses a worktree whose branch or directory no longer matches, starting nothing", async () => {
+  const input = issueShellRequest(terminals);
+  const row = findWorktreeById(fix.db, await harness.supervisor.prepareIssueWorkspace("i1"));
+  if (!row) throw new Error("Issue worktree missing");
+  fix.repo.git("-C", row.path, "switch", "-q", "-c", "rogue");
+  await expect(terminals.open(input)).rejects.toThrow(/no longer registers the canonical worktree/);
+  expect(hasInteractiveWriter(realpathSync(row.path))).toBe(false);
+  rmSync(row.path, { recursive: true, force: true });
+  await expect(terminals.open(input)).rejects.toThrow(/canonical worktree is missing/);
+  expect(terminals.list()).toHaveLength(0);
+  expect(fix.db.select().from(schema.terminalSessions).all()).toHaveLength(0);
+});

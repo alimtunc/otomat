@@ -1,4 +1,9 @@
-import { DAEMON_TOKEN_ENV, DAEMON_TOKEN_FILE, PREVIEW_BUILD_SHA } from "@otomat/domain";
+import {
+  DAEMON_TOKEN_ENV,
+  DAEMON_TOKEN_FILE,
+  PREVIEW_BUILD_SHA,
+  TERMINAL_ENABLED_ENV,
+} from "@otomat/domain";
 
 import type { DesktopChannel } from "#shared/channel";
 
@@ -103,6 +108,7 @@ export function startOrVerifyDaemonScript(deployment: RemoteDeployment): string 
     '  OTOMAT_DB_PATH="$OTOMAT_HOME/data/otomat.db" \\',
     '  OTOMAT_PROJECT_ROOT="$OTOMAT_HOME/data" \\',
     "  OTOMAT_ALLOWED_ORIGINS=otomat://app \\",
+    `  ${TERMINAL_ENABLED_ENV}=1 \\`,
     '  nohup node "$ENTRY" >> "$OTOMAT_HOME/daemon.log" 2>&1 < /dev/null &',
     'DAEMON_PID="$!"',
     "sleep 2",

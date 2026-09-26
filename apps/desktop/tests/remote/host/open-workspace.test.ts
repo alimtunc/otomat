@@ -163,7 +163,7 @@ it("refuses a remote VS Code launch when no SSH alias is registered", async () =
   expect(fake.openExternal).not.toHaveBeenCalled();
 });
 
-it("has no remote terminal integration and says so", async () => {
+it("has no remote external terminal launcher and says so", async () => {
   const fake = launchers();
 
   const result = await openWorkspace(

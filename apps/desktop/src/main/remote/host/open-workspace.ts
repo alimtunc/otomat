@@ -63,7 +63,7 @@ async function launchTarget(
   if (hostId === "remote") {
     return {
       ok: false,
-      message: "No terminal integration exists for a remote host; copy the ssh command instead.",
+      message: "No external terminal opens on a remote host; copy the ssh command instead.",
     };
   }
   if (launchers.platform !== "darwin") {

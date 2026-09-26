@@ -9,7 +9,11 @@ import {
   prepareDatabase,
   readSchemaMetadata,
 } from "@otomat/db";
-import { LINEAR_DEFAULT_CONNECTION_ID, type LinearLifecycleSync } from "@otomat/domain";
+import {
+  LINEAR_DEFAULT_CONNECTION_ID,
+  TERMINAL_ENABLED_ENV,
+  type LinearLifecycleSync,
+} from "@otomat/domain";
 
 import { rescanSkills } from "#agents";
 import { createApiApp, logApiRoutes, publishDaemonToken, takeDaemonToken } from "#api";
@@ -157,7 +161,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Dae
     });
     supervisorBinding.bind(supervisor);
     const terminals =
-      process.env.OTOMAT_TERMINAL_ENABLED === "1" && process.platform !== "win32"
+      process.env[TERMINAL_ENABLED_ENV] === "1" && process.platform !== "win32"
         ? new TerminalService(db, repositories, supervisor)
         : undefined;
 
