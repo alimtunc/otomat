@@ -2,9 +2,9 @@ import { act } from "react";
 
 import { findButton } from "#support/dom-queries";
 
-export async function pressKey(key: string): Promise<void> {
+export async function pressKey(key: string, target: EventTarget = window): Promise<void> {
   await act(async () => {
-    window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
   });
 }
 
