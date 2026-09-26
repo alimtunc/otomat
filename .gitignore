@@ -35,6 +35,8 @@ docs/design/**
 !docs/design/motion-audit-2026-09-03/**
 !docs/design/conversations-inbox-2026-09-19/
 !docs/design/conversations-inbox-2026-09-19/**
+!docs/design/linked-issues-and-stacked-prs-2026-09-25/
+!docs/design/linked-issues-and-stacked-prs-2026-09-25/**
 !docs/ci-performance.md
 !docs/ai/
 !docs/ai/**

@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Otomat — Linked issues and stacked pull requests prototype</title>
+<style>
+  :root {
+    --background: #0a0b0d; --foreground: #e7e9ee; --sidebar: #0c0d10;
+    --surface-1: #101216; --surface-2: #16181d; --surface-3: #1b1e25; --hover: #15171c;
+    --border: #23262d; --border-subtle: #1b1e24; --border-strong: #30343d;
+    --text-secondary: #9197a3; --text-tertiary: #7a8291;
+    --iris: #f0645a; --iris-hover: #f7776e; --iris-text: #ff9b93; --iris-bg: rgba(240, 100, 90, 0.13);
+    --live: #4da3ff; --success: #3fb950; --warning: #d8a12b; --danger: #f2545b; --review: #a371f7;
+    --live-bg: rgba(77,163,255,.13); --success-bg: rgba(63,185,80,.12); --warning-bg: rgba(216,161,43,.13);
+    --danger-bg: rgba(242,84,91,.13); --review-bg: rgba(163,113,247,.14); --neutral-bg: rgba(145,151,163,.12);
+    --prov-linear: #8a8ff5; --prov-github: #8b949e;
+    --radius-md: 6px; --radius-lg: 8px;
+    --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--background); color: var(--foreground); font: 13px/1.45 var(--font-ui); display: grid; grid-template-columns: 200px 1fr; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid var(--iris); outline-offset: 1px; }
+  a { color: inherit; text-decoration: none; }
+  .mono { font-family: var(--font-mono); font-size: 11px; }
+  .muted { color: var(--text-secondary); } .faint { color: var(--text-tertiary); }
+
+  nav { background: var(--sidebar); border-right: 1px solid var(--border-subtle); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+  nav .project { display: flex; align-items: center; gap: 8px; padding: 6px 8px 14px; font-weight: 600; }
+  nav .project .mark { width: 18px; height: 18px; border-radius: 5px; background: var(--iris); }
+  nav a { padding: 6px 8px; border-radius: var(--radius-md); color: var(--text-secondary); }
+  nav a:hover { background: var(--hover); }
+  nav a[aria-current="page"] { background: var(--surface-2); color: var(--foreground); }
+
+  main { display: grid; grid-template-rows: auto auto 1fr; min-height: 0; height: 100vh; }
+  header.shell { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border-subtle); min-height: 47px; }
+  header.shell h1 { font-size: 14px; margin: 0; font-weight: 600; }
+  header.shell .actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .btn { height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-2); font-size: 12px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .btn:hover { background: var(--surface-3); }
+  .btn.primary { background: var(--iris); border-color: var(--iris); color: #16181d; font-weight: 600; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.ghost { background: none; border-color: transparent; color: var(--text-secondary); }
+  .btn.ghost:hover { background: var(--hover); color: var(--foreground); }
+  select.btn { color: var(--foreground); }
+  .sim { display: flex; align-items: center; gap: 4px; padding: 6px 16px; border-bottom: 1px dashed var(--border); background: var(--surface-1); font-size: 12px; flex-wrap: wrap; }
+  .sim .label { color: var(--text-tertiary); margin-right: 4px; }
+  .view { overflow: auto; min-height: 0; }
+
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-radius: 9px; font-size: 11px; white-space: nowrap; background: var(--neutral-bg); color: var(--text-secondary); }
+  .chip.live { background: var(--live-bg); color: var(--live); } .chip.success { background: var(--success-bg); color: var(--success); }
+  .chip.warning { background: var(--warning-bg); color: var(--warning); } .chip.review { background: var(--review-bg); color: var(--review); }
+  .chip.iris { background: var(--iris-bg); color: var(--iris-text); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; display: inline-block; }
+  .prov { font-size: 11px; color: var(--text-tertiary); display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
+  .prov::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+  .prov.linear { --c: var(--prov-linear); } .prov.github { --c: var(--prov-github); }
+  .ext::after { content: " ↗"; color: var(--text-tertiary); }
+
+  .table { padding: 4px 0 24px; }
+  .group { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; background: var(--surface-1); border-bottom: 1px solid var(--border-subtle); position: sticky; top: 0; }
+  .group .toggle { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+  .group .toggle::before { content: "▾"; color: var(--text-tertiary); width: 10px; transition: transform 90ms; }
+  .group .toggle[aria-expanded="false"]::before { transform: rotate(-90deg); }
+  .group .title { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .group .tail { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  a.row { display: grid; grid-template-columns: 72px 1fr 110px 90px; align-items: center; gap: 12px; height: 40px; padding: 0 12px 0 30px; border-bottom: 1px solid var(--border-subtle); }
+  a.row:hover, a.row:focus-visible { background: var(--hover); }
+  a.row .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .note { margin: 10px 16px; color: var(--text-tertiary); font-size: 12px; }
+  @media (prefers-reduced-motion: reduce) { .group .toggle::before { transition: none; } }
+
+  .page { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; padding: 16px; align-items: start; }
+  .page h2 { font-size: 18px; margin: 0 0 6px; font-weight: 600; }
+  .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  .parent-line { font-size: 12px; color: var(--text-secondary); margin: 4px 0 14px; }
+  .parent-line a:hover { color: var(--foreground); text-decoration: underline; }
+  .placeholder { border: 1px dashed var(--border); border-radius: var(--radius-lg); padding: 40px 16px; text-align: center; color: var(--text-tertiary); }
+  .rail { display: flex; flex-direction: column; gap: 10px; }
+  .card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-1); padding: 10px 12px; }
+  .card > .head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .card > .head .name { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); }
+  .card > .head .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .rel-kind { font-size: 11px; color: var(--text-tertiary); margin: 8px 0 2px; display: flex; gap: 6px; align-items: center; }
+  .rel-kind:first-of-type { margin-top: 0; }
+  summary.rel-kind { cursor: pointer; list-style: none; }
+  summary.rel-kind::before { content: "▸"; } details[open] > summary.rel-kind::before { content: "▾"; }
+  .rel { display: grid; grid-template-columns: 10px 62px 1fr auto; gap: 8px; align-items: center; padding: 4px 6px; margin: 0 -6px; border-radius: var(--radius-md); }
+  .rel:hover { background: var(--hover); }
+  .rel .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rel .state { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+  .notice { font-size: 12px; padding: 6px 8px; border-radius: var(--radius-md); margin: 6px 0; display: flex; gap: 8px; align-items: baseline; }
+  .notice.stale { background: var(--warning-bg); color: var(--warning); }
+  .notice.warn { background: var(--warning-bg); color: var(--warning); }
+  .notice.info { background: var(--neutral-bg); color: var(--text-secondary); }
+  .notice button { margin-left: auto; text-decoration: underline; color: var(--foreground); }
+  .pr + .pr { border-top: 1px solid var(--border-subtle); margin-top: 10px; padding-top: 10px; }
+  .pr .l1 { display: flex; gap: 6px; align-items: center; }
+  .pr .l1 .t { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pr .refs { margin: 4px 0 8px; color: var(--text-tertiary); }
+  .stack { border-top: 1px dashed var(--border-subtle); padding-top: 6px; margin-top: 6px; }
+  .stack .name { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 4px; }
+  .stack .name .prov { text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  .layer { display: grid; grid-template-columns: 14px 34px 1fr auto auto; gap: 6px; align-items: center; height: 24px; font-size: 12px; }
+  .layer .rail-line { color: var(--text-tertiary); font-family: var(--font-mono); }
+  .layer.current { color: var(--foreground); font-weight: 500; }
+  .layer .branch { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .layer a.issue { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .layer a.issue:hover { color: var(--foreground); text-decoration: underline; }
+  .actions-row { display: flex; gap: 6px; margin-top: 8px; align-items: center; }
+  .actions-row .why { font-size: 11px; color: var(--text-tertiary); }
+  .toast { position: fixed; right: 16px; bottom: 16px; background: var(--surface-3); border: 1px solid var(--border); border-left: 3px solid var(--live); padding: 8px 12px; border-radius: var(--radius-md); font-size: 12px; opacity: 0; transition: opacity 140ms ease-out; pointer-events: none; }
+  .toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<nav aria-label="Workspace">
+  <div class="project"><span class="mark"></span>Otomat</div>
+  <a href="#/issues" id="nav-issues">▤ Issues</a>
+  <a>▲ Runs</a>
+  <a>⑂ Reviews</a>
+</nav>
+<main>
+  <header class="shell" id="shell"></header>
+  <div class="sim" role="toolbar" aria-label="Simulation">
+    <span class="label">Simulate</span>
+    <button class="btn ghost" data-sim="relation" title="A blocking relation added in Linear shows on the issue page at the next open or focus">OTO-232 now blocks OTO-233 in Linear</button>
+    <button class="btn ghost" data-sim="disconnected">Linear disconnected</button>
+    <button class="btn ghost" data-sim="failed">Relations fetch failed</button>
+    <button class="btn ghost" data-sim="mergedKept">#41 merged, branch kept</button>
+    <button class="btn ghost" data-sim="retargeted">#41 merged, branch deleted → GitHub retargets</button>
+    <button class="btn ghost" data-sim="loop">PR base loop</button>
+    <button class="btn ghost" data-sim="reset">Reset</button>
+  </div>
+  <section class="view" id="view"></section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const LINEAR_STATE = { Backlog: "#bec2c8", Todo: "#e2e2e2", "In Progress": "#f2c94c", "In Review": "#4cb782", Done: "#5e6ad2" };
+const STATUS_TONE = { backlog: "", ready: "iris", running: "live", reviewing: "review", pr_open: "success", done: "success" };
+const STATUS_LABEL = { backlog: "backlog", ready: "ready", running: "running", reviewing: "reviewing", pr_open: "pr open", done: "done" };
+const fresh = () => ({
+  issues: {
+    "OTO-228": { title: "Linked issues and stacked PRs", linear: "In Progress", status: "ready", parent: null, mirrored: true },
+    "OTO-229": { title: "Mirror the Linear parent", linear: "In Review", status: "pr_open", parent: "OTO-228", mirrored: true },
+    "OTO-231": { title: "Relations rail section", linear: "In Progress", status: "running", parent: "OTO-228", mirrored: true },
+    "OTO-232": { title: "Group issues by parent", linear: "Todo", status: "ready", parent: "OTO-228", mirrored: true },
+    "OTO-233": { title: "Stack strip in the PR card", linear: "In Review", status: "reviewing", parent: "OTO-228", mirrored: true },
+    "OTO-240": { title: "Retry the Linear sync on rate limits", linear: "Todo", status: "ready", parent: "PLT-12", mirrored: true },
+    "OTO-219": { title: "Terminal history search", linear: "Backlog", status: "backlog", parent: null, mirrored: true },
+    "OTO-225": { title: "Compact density for the rail", linear: "Todo", status: "ready", parent: null, mirrored: true },
+    "PLT-12": { title: "Sync hardening", linear: "In Progress", parent: null, mirrored: false },
+    "PLT-7": { title: "Linear webhook spike", linear: "Backlog", parent: null, mirrored: false },
+  },
+  relations: [["blocks", "OTO-229", "OTO-231"], ["blocks", "OTO-231", "OTO-233"], ["related", "OTO-231", "PLT-7"]],
+  prs: [
+    { n: 41, title: "Mirror the Linear parent", head: "feat/mirror-parent", base: "main", state: "open", issue: "OTO-229", provenance: "otomat" },
+    { n: 42, title: "Relations rail section", head: "feat/relations-rail", base: "feat/mirror-parent", state: "open", issue: "OTO-231", provenance: "otomat" },
+    { n: 43, title: "Stack strip in the PR card", head: "feat/stack-strip", base: "feat/relations-rail", state: "draft", issue: "OTO-233", provenance: "otomat" },
+    { n: 44, title: "Fix terminal scroll", head: "fix/terminal-scroll", base: "main", state: "open", issue: "OTO-219", provenance: "external" },
+  ],
+  linear: { mode: "ok", age: "2 min ago" },
+});
+let data = fresh();
+let toastTimer;
+let group = "parent";
+const collapsed = new Set();
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const $ = (id) => document.getElementById(id);
+const toast = (text) => { const t = $("toast"); t.textContent = text; t.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), 2600); };
+const linearDot = (id) => `<span class="dot" style="background:${LINEAR_STATE[data.issues[id].linear]}" title="Linear · ${esc(data.issues[id].linear)}"></span>`;
+const statusChip = (s) => `<span class="chip ${STATUS_TONE[s]}">${STATUS_LABEL[s]}</span>`;
+const prChip = (s) => `<span class="chip ${{ open: "success", merged: "review" }[s] ?? ""}">${s}</span>`;
+const issueHref = (id) => data.issues[id].mirrored ? `#/issues/${id}` : `https://linear.app/otomat/issue/${id.toLowerCase()}`;
+const issueLink = (id, cls = "") => data.issues[id].mirrored
+  ? `<a class="${cls}" href="${issueHref(id)}">${id}</a>`
+  : `<a class="${cls} ext" href="${issueHref(id)}" target="_blank" rel="noopener" title="Not synced on this host — opens Linear">${id}</a>`;
+
+function groupsFor() {
+  const rows = Object.entries(data.issues).filter(([, i]) => i.mirrored);
+  if (group === "none") return [{ key: "all", rows }];
+  if (group === "status") {
+    const order = ["running", "reviewing", "pr_open", "ready", "backlog", "done"];
+    return order.map((s) => ({ key: s, label: statusChip(s), rows: rows.filter(([, i]) => i.status === s) })).filter((g) => g.rows.length);
+  }
+  const parents = [...new Set(rows.map(([, i]) => i.parent).filter(Boolean))];
+  const out = parents.map((p) => ({ key: p, parent: p, rows: rows.filter(([, i]) => i.parent === p) }));
+  out.push({ key: "none", label: "No parent", rows: rows.filter(([, i]) => !i.parent) });
+  return out;
+}
+function groupHeader(g) {
+  const expanded = !collapsed.has(g.key);
+  let label = g.label ?? "";
+  let tail = `<span class="faint">${g.rows.length}</span>`;
+  if (g.parent) {
+    const p = data.issues[g.parent];
+    const done = g.rows.filter(([, i]) => i.linear === "Done").length;
+    label = `${linearDot(g.parent)} <span class="mono faint">${g.parent}</span> <span class="title">${esc(p.title)}</span>`;
+    tail = `${p.mirrored ? "" : `<a class="faint ext" href="${issueHref(g.parent)}" target="_blank" rel="noopener">not synced here</a>`}
+      <span class="faint" title="Linear state of the sub-issues synced in this project">${done}/${g.rows.length} done</span><span class="prov linear">Linear</span>`;
+  }
+  const open = g.parent && data.issues[g.parent].mirrored ? `<a class="btn ghost" href="${issueHref(g.parent)}" aria-label="Open ${g.parent}">Open</a>` : "";
+  return `<div class="group"><button class="toggle" aria-expanded="${expanded}" data-toggle="${g.key}">${label}</button><span class="tail">${tail}${open}</span></div>`;
+}
+function renderList() {
+  $("nav-issues").setAttribute("aria-current", "page");
+  $("shell").innerHTML = `<h1>Issues</h1><div class="actions">
+    <label class="faint" for="group">Group</label>
+    <select class="btn" id="group"><option value="parent">Parent</option><option value="status">Status</option><option value="none">No grouping</option></select></div>`;
+  $("group").value = group;
+  $("group").onchange = (e) => { group = e.target.value; render(); };
+  const groups = groupsFor();
+  $("view").innerHTML = `<div class="table">${groups.map((g) => `${g.key === "all" ? "" : groupHeader(g)}${collapsed.has(g.key) ? "" : g.rows.map(([id, i]) => `
+      <a class="row" href="#/issues/${id}"><span class="mono faint">${id}</span><span class="t">${esc(i.title)}</span><span>${statusChip(i.status)}</span><span class="faint">${linearDot(id)} ${esc(i.linear)}</span></a>`).join("")}`).join("")}</div>
+    <p class="note">Group by parent reads Linear's parent pointer from the sync; counts cover sub-issues synced in this project. Rows keep today's anatomy. ↑ ↓ move, Enter opens.</p>`;
+  document.querySelectorAll("[data-toggle]").forEach((b) => b.onclick = () => { const k = b.dataset.toggle; collapsed.has(k) ? collapsed.delete(k) : collapsed.add(k); render(); });
+}
+
+function relationsOf(id) {
+  const r = data.relations;
+  return {
+    parent: data.issues[id].parent ? [data.issues[id].parent] : [],
+    children: Object.keys(data.issues).filter((k) => data.issues[k].parent === id),
+    blockedBy: r.filter(([t, , to]) => t === "blocks" && to === id).map(([, from]) => from),
+    blocks: r.filter(([t, from]) => t === "blocks" && from === id).map(([, , to]) => to),
+    related: r.filter(([t, a, b]) => t === "related" && (a === id || b === id)).map(([, a, b]) => (a === id ? b : a)),
+  };
+}
+const relRow = (id) => `<a class="rel" href="${issueHref(id)}" ${data.issues[id].mirrored ? "" : 'target="_blank" rel="noopener" title="Not synced on this host — opens Linear"'}>
+  ${linearDot(id)}<span class="mono faint ${data.issues[id].mirrored ? "" : "ext"}">${id}</span><span class="t">${esc(data.issues[id].title)}</span><span class="state">${esc(data.issues[id].linear)}</span></a>`;
+function relationsCard(id) {
+  const mode = data.linear.mode;
+  const rel = relationsOf(id);
+  const head = `<div class="head"><span class="name">Relations</span><span class="right"><span class="prov linear">Linear · ${mode === "disconnected" ? "unavailable" : data.linear.age}</span>
+    <a class="btn ghost ext" href="${`https://linear.app/otomat/issue/${id.toLowerCase()}`}" target="_blank" rel="noopener">Open in Linear</a></span></div>`;
+  if (mode === "disconnected") {
+    return `<div class="card">${head}${rel.parent.length ? `<div class="rel-kind">Parent</div>${rel.parent.map(relRow).join("")}` : ""}
+      <div class="notice info">The Linear key has not reached this host · relations need it.<button type="button" data-sim="retry">Retry</button></div></div>`;
+  }
+  const done = rel.children.filter((c) => data.issues[c].linear === "Done").length;
+  const sections = [
+    ["Parent", rel.parent], [`Sub-issues · ${done}/${rel.children.length} done`, rel.children],
+    ["Blocked by", rel.blockedBy], ["Blocks", rel.blocks],
+  ].filter(([, ids]) => ids.length).map(([k, ids]) => `<div class="rel-kind">${k}</div>${ids.map(relRow).join("")}`).join("");
+  const related = rel.related.length ? `<details><summary class="rel-kind">Related · ${rel.related.length}</summary>${rel.related.map(relRow).join("")}</details>` : "";
+  if (!sections && !related) return "";
+  const stale = mode === "failed" ? `<div class="notice stale">Couldn't refresh from Linear · showing what it returned ${data.linear.age}<button type="button" data-sim="retry">Retry</button></div>` : "";
+  return `<div class="card">${head}${stale}${sections}${related}</div>`;
+}
+
+function stackOf(pr) {
+  const live = data.prs.filter((p) => !p.deleted);
+  const seen = new Set([pr.n]);
+  const down = [];
+  let cycle = false;
+  for (let p = pr; ;) {
+    const below = live.find((q) => q.head === p.base);
+    if (!below) break;
+    if (seen.has(below.n)) { cycle = true; break; }
+    seen.add(below.n); down.unshift(below); p = below;
+  }
+  const up = [];
+  for (let p = pr; !cycle;) {
+    const above = live.find((q) => q.base === p.head && (q.state === "open" || q.state === "draft"));
+    if (!above) break;
+    if (seen.has(above.n)) { cycle = true; break; }
+    seen.add(above.n); up.push(above); p = above;
+  }
+  const layers = [...down, pr, ...up];
+  return { trunk: layers[0].base, layers, cycle, below: down.at(-1) };
+}
+function stackBlock(pr) {
+  const { trunk, layers, cycle, below } = stackOf(pr);
+  if (layers.length < 2 && !cycle) return { html: "", blocker: null };
+  let blocker = null, warning = "";
+  if (cycle) { blocker = "These pull requests target each other."; warning = `<div class="notice warn">⚠ These pull requests target each other — fix their bases on GitHub.</div>`; }
+  else if (below?.state === "merged") { blocker = `#${below.n} is merged — retarget this PR to ${below.base} on GitHub.`; warning = `<div class="notice warn">⚠ #${below.n} is merged but this PR still targets ${esc(below.head)}. Retarget it to ${esc(below.base)} on GitHub before merging.</div>`; }
+  else if (below) { blocker = `#${below.n} sits below this PR — merge it first.`; }
+  const rows = layers.map((p, i) => `<div class="layer ${p.n === pr.n ? "current" : ""}"><span class="rail-line">${i === layers.length - 1 ? "└" : "├"}</span>
+    <span class="mono">#${p.n}</span><span class="branch" title="${esc(p.head)} → ${esc(p.base)}">${esc(p.head)}</span>${prChip(p.state)}
+    ${data.issues[p.issue] ? issueLink(p.issue, "issue") : ""}</div>`).join("");
+  return {
+    html: `<div class="stack"><div class="name">Stack <span class="prov github">GitHub</span></div>
+      ${cycle ? "" : `<div class="layer"><span class="rail-line">○</span><span></span><span class="branch">${esc(trunk)}</span><span></span><span></span></div>`}${rows}</div>${warning}`,
+    blocker,
+  };
+}
+function prCard(id) {
+  const prs = data.prs.filter((p) => p.issue === id);
+  if (!prs.length) return "";
+  return `<div class="card"><div class="head"><span class="name">Pull requests</span><span class="right"><span class="prov github">GitHub · 4 min ago</span></span></div>
+    ${prs.map((pr) => { const s = stackBlock(pr); const blocker = pr.provenance === "otomat" ? s.blocker : "Otomat merges only its own or your pull requests."; const canMerge = pr.state === "open" && !blocker; const mergeable = pr.state === "open" || pr.state === "draft"; return `<div class="pr">
+      <div class="l1"><span class="mono faint">#${pr.n}</span><span class="t">${esc(pr.title)}</span>${prChip(pr.state)}<span class="chip">${pr.provenance}</span></div>
+      <div class="refs mono">${esc(pr.head)} → ${esc(pr.base)}</div>${s.html}
+      <div class="actions-row">${mergeable ? `<button class="btn primary" ${canMerge ? "" : "disabled"}>Merge</button>` : ""}<a class="btn ghost ext" href="https://github.com/otomat/otomat/pull/${pr.n}" target="_blank" rel="noopener">GitHub</a>
+      ${mergeable && !canMerge && blocker ? `<span class="why">${esc(blocker)}</span>` : ""}</div></div>`; }).join("")}</div>`;
+}
+function renderIssue(id) {
+  const i = data.issues[id];
+  $("nav-issues").removeAttribute("aria-current");
+  $("shell").innerHTML = `<h1><a class="faint" href="#/issues">Issues</a> › <span class="mono">${id}</span></h1>
+    <div class="actions"><button class="btn">Open cockpit</button><button class="btn primary">Launch run</button></div>`;
+  const parent = i.parent ? `<div class="parent-line">Sub-issue of ${issueLink(i.parent)} ${esc(data.issues[i.parent].title)}</div>` : `<div class="parent-line"></div>`;
+  $("view").innerHTML = `<div class="page"><div>
+      <h2>${esc(i.title)}</h2>
+      <div class="meta"><span class="mono faint">${id}</span>${statusChip(i.status)}<span class="chip">${linearDot(id)} Linear · ${esc(i.linear)}</span></div>
+      ${parent}<div class="placeholder">Description and conversation — unchanged</div></div>
+    <aside class="rail" aria-label="Issue details">${relationsCard(id)}${prCard(id)}</aside></div>`;
+}
+
+const SIM = {
+  relation: () => { if (!data.relations.some(([t, a, b]) => t === "blocks" && a === "OTO-232" && b === "OTO-233")) data.relations.push(["blocks", "OTO-232", "OTO-233"]); Object.assign(data.linear, { mode: "ok", age: "just now" }); toast("Linear changed · read again on the next open or focus of OTO-233"); location.hash = "#/issues/OTO-233"; },
+  disconnected: () => { data.linear.mode = "disconnected"; toast("Linear key not on this host · the mirrored parent stays, relations need the key"); },
+  failed: () => { data.linear.mode = "failed"; toast("Relations request failed · retained data stays behind the stale notice"); },
+  retry: () => { data.linear.mode = "ok"; data.linear.age = "just now"; },
+  mergedKept: () => { Object.assign(data.prs[0], { state: "merged" }); Object.assign(data.issues["OTO-229"], { linear: "Done", status: "done" }); location.hash = "#/issues/OTO-231"; },
+  retargeted: () => { Object.assign(data.prs[0], { state: "merged", deleted: true }); data.prs[1].base = "main"; Object.assign(data.issues["OTO-229"], { linear: "Done", status: "done" }); toast("GitHub retargeted #42 to main · seen on the next Reviews or 5-minute pass"); location.hash = "#/issues/OTO-231"; },
+  loop: () => { data.prs[1].base = "feat/stack-strip"; location.hash = "#/issues/OTO-231"; },
+  reset: () => { data = fresh(); },
+};
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-sim]");
+  if (!b) return;
+  SIM[b.dataset.sim]();
+  render();
+});
+document.addEventListener("keydown", (e) => {
+  if ((e.key !== "ArrowDown" && e.key !== "ArrowUp") || !e.target.closest("a.row")) return;
+  const rows = [...document.querySelectorAll("a.row")];
+  const i = rows.indexOf(e.target);
+  const next = rows[Math.max(0, Math.min(rows.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)))];
+  next.focus(); e.preventDefault();
+});
+function render() {
+  const m = location.hash.match(/^#\/issues\/([A-Z]+-\d+)$/);
+  m && data.issues[m[1]]?.mirrored ? renderIssue(m[1]) : renderList();
+}
+window.addEventListener("hashchange", render);
+render();
+</script>
+</body>
+</html>
