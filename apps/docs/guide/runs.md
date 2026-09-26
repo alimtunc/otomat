@@ -78,3 +78,14 @@ with nothing keeping their changes apart, so the form asks you to confirm before
 step list shows the choice — _after Implement_ or _in parallel_.
 The cycle closes when its pull request is merged, when you **Abandon workspace…**, or when the issue
 is closed at the tracker; the next launch then starts fresh.
+
+Before the step starts, the form compares the worktree with the remote: the pull request branch,
+in case someone pushed to it outside Otomat, and the branch the work lands on. It reads **Up to
+date**, **Behind the remote** or **Diverged from the remote** with the commit counts, or **Remote
+not checked** with what git answered and a **Retry** when the remote could not be read. When there
+is something to take, it offers **Fast-forward**, **Rebase onto** or **Merge** — only the ones that
+keep your commits and rewrite nothing already pushed. Commit or discard uncommitted changes first. A rebase
+or merge that conflicts is aborted, so the workspace stays exactly as it was; the form names the
+conflicting files and the commands to resolve them yourself in the worktree's terminal. No step
+or resume starts while an update runs. On a stale or unchecked workspace, **Add follow-up step**
+stays disabled until you tick the acknowledgment; **Check again** reads the remote again.

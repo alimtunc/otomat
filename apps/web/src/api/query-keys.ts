@@ -135,6 +135,7 @@ export function hostKeys(host: ExecutionHostId) {
     workspacesForProject: (projectId?: string) =>
       [host, "workspaces", "project", projectId ?? null] as const,
     workspacesForRun: (runId: string | null) => [host, "workspaces", "run", runId] as const,
+    workspaceFreshness: (runId: string) => [host, "workspace-freshness", runId] as const,
     workspaceSettings: (projectId: string) => [host, "settings", "workspaces", projectId] as const,
     reviews: [host, "reviews"] as const,
     pullRequestInbox: (projectId?: string) =>

@@ -1,6 +1,5 @@
-import type { RemoteBaseFailure } from "@otomat/domain";
+import type { BaseRefusal, RemoteBaseFailure } from "@otomat/domain";
 import { Button, CopyButton } from "@otomat/ui";
-import type { BaseRefusal } from "@web/api/runs/use-launch-run";
 
 export interface BaseRemoteRefusalProps {
   refusal: BaseRefusal;

@@ -15,8 +15,10 @@ import type {
   RuntimeInteractionAnswer,
   RunWait,
   StartRunRequest,
+  UpdateWorkspaceRequest,
   WorkspaceCleanupResult,
   WorkspaceClosureFacts,
+  WorkspaceFreshness,
   WorkspaceInventory,
   WorkspaceReconcileReport,
 } from "@otomat/domain";
@@ -163,6 +165,10 @@ export interface Supervisor {
   abandon(runId: string): RunRow;
   /** The branch, commits, uncommitted work and diff an abandon would leave behind; null for an unknown run. */
   workspaceClosure(runId: string): Promise<WorkspaceClosureFacts | null>;
+  /** Fetches the run branch and its base; a remote that cannot be read answers `unverifiable`, never a comparison that passed. */
+  workspaceFreshness(runId: string): Promise<WorkspaceFreshness>;
+  /** Rebase or merge one remote ref into the worktree; anything that would lose local work or rewrite a published commit is refused. */
+  updateWorkspace(runId: string, request: UpdateWorkspaceRequest): Promise<WorkspaceFreshness>;
   /** Append one step to the run's plan and start it once the workspace is free; refused once the workspace closes. */
   appendStep(runId: string, input: AppendStepInput): Promise<RunRow>;
   /** Persist one user message, with its uploaded images, on an explicitly selected step as `queued`, then deliver it if that step can take it now. */

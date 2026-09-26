@@ -15,12 +15,14 @@ import {
   runUsageResponseSchema,
   sessionContextResponseSchema,
   workspaceClosureSummarySchema,
+  workspaceFreshnessSchema,
   type AppendRunStepRequest,
   type AnswerRunInteractionRequest,
   type CreateRunContributionRequest,
   type ScheduleProviderResumeRequest,
   type SelectCompeteWinnerRequest,
   type StartRunRequest,
+  type UpdateWorkspaceRequest,
 } from "@otomat/domain";
 
 import type { DaemonClientConfig } from "./config.js";
@@ -80,6 +82,16 @@ export function createRunsClient(config: DaemonClientConfig) {
     async getRunWorkspace(id: string) {
       return workspaceClosureSummarySchema.parse(
         await getJson(config, `/api/runs/${encodeURIComponent(id)}/workspace`),
+      );
+    },
+    async getRunWorkspaceFreshness(id: string) {
+      return workspaceFreshnessSchema.parse(
+        await getJson(config, `/api/runs/${encodeURIComponent(id)}/workspace/freshness`),
+      );
+    },
+    async updateRunWorkspace(id: string, request: UpdateWorkspaceRequest) {
+      return workspaceFreshnessSchema.parse(
+        await postJson(config, `/api/runs/${encodeURIComponent(id)}/workspace/update`, request),
       );
     },
     async abandonRunWorkspace(id: string) {

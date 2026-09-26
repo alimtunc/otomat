@@ -882,6 +882,30 @@ one refusal to the form as `baseRefusal` rather than toasting it:
 re-submits the same untouched draft, since the launch was refused before any
 issue, run, branch or worktree existed.
 
+The follow-up form compares the worktree with the remote before it submits.
+`GET /api/runs/:id/workspace/freshness` fetches the run branch and the base — the
+pull request's target once one is attached, the fork base otherwise — with the same
+remote resolution, private fetch ref and failure classification as a launch
+(`git/remote-base.ts:fetchRemoteTip`), then counts what each side lacks
+(`git/remote-compare.ts`). A branch with no upstream, or one the remote never
+carried, is unpublished; any other read failure answers `unverifiable` with the
+classified refusal. The same comparison names the strategies that keep local work
+and rewrite nothing published: a fast-forward when only the remote moved, rebase or
+merge onto the pull request branch for unpushed commits, only a merge of the base
+once the branch is published, and nothing for the base while the pull request
+branch itself is behind. A rebase that would replay a merge commit is never offered.
+
+`POST /api/runs/:id/workspace/update` (`supervisor/workspaces/update.ts`) refuses a
+live turn, a closed cycle, uncommitted work and any strategy the fresh comparison
+does not offer. It runs under the run's pass (`state.advancing`) and the checkout
+lock, and any failure aborts the rebase or merge it started (`git/integrate.ts`), so
+a conflict leaves the worktree exactly as it was and the refusal lists the
+conflicting paths. While it runs, `updatingWorkspaces` holds the run: an append or a
+resume is refused `workspace_updating`, the provider-wait sweep skips it, and queued
+messages wait and are delivered once it ends. The follow-up form enables its submit
+only on a current workspace or on an acknowledgment of the exact state it showed
+(its remote shas and verdict), so a re-check that finds the remote moved asks again.
+
 A failure, a cancel, a lost session or a provider quota error therefore does
 **not** close the cycle: the branch, the worktree and the diff are still there, so
 `failed` and `canceled` are resting states the run machine can leave through

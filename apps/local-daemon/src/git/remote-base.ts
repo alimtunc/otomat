@@ -65,22 +65,74 @@ async function resolveRemoteBranch(
   if (configured === null) {
     const [only, ...rest] = remotes;
     if (only === undefined || rest.length > 0) {
-      throw noUpstream(
-        `"${branch}" has no upstream in ${repoPath}; set its upstream, then relaunch.`,
-      );
+      throw noUpstream(`"${branch}" has no upstream in ${repoPath}; set its upstream, then retry.`);
     }
     return { remote: only, ref: `refs/heads/${branch}` };
   }
   // git writes `.` for a branch tracking a local one; fetching it answers the operator's checkout.
   if (configured === ".") {
     throw noUpstream(
-      `"${branch}" tracks the local repository, not a remote; retarget its upstream, then relaunch.`,
+      `"${branch}" tracks the local repository, not a remote; retarget its upstream, then retry.`,
     );
   }
   return {
     remote: configured,
     ref: (await config(repoPath, `branch.${branch}.merge`)) ?? `refs/heads/${branch}`,
   };
+}
+
+export interface RemoteTip {
+  ref: string;
+  sha: string;
+}
+
+async function fetchTip(
+  repoPath: string,
+  branch: string,
+  remotes: string[],
+): Promise<RemoteTip | null> {
+  const { remote, ref } = await resolveRemoteBranch(repoPath, branch, remotes);
+  const display = `${remote}/${ref.replace(/^refs\/heads\//, "")}`;
+  // Any concurrent fetch in this repository rewrites `FETCH_HEAD`, so the fetched tip lands on a ref of its own.
+  const landed = `refs/otomat/launch/${randomUUID()}`;
+  const fetched = await runGit(["fetch", "--no-tags", remote, `+${ref}:${landed}`], {
+    cwd: repoPath,
+    env: NO_PROMPT_ENV,
+    allowFailure: true,
+    timeoutMs: LAUNCH_FETCH_TIMEOUT_MS,
+  });
+  if (fetched.exitCode === 0) {
+    try {
+      return { ref: display, sha: await revParse(repoPath, landed) };
+    } finally {
+      await runGit(["update-ref", "-d", landed], { cwd: repoPath });
+    }
+  }
+  // `--exit-code` answers 2 only for a ref the remote never advertised: local-only work.
+  const advertised = await runGit(["ls-remote", "--exit-code", remote, ref], {
+    cwd: repoPath,
+    env: NO_PROMPT_ENV,
+    allowFailure: true,
+    timeoutMs: REMOTE_PROBE_TIMEOUT_MS,
+  });
+  if (advertised.exitCode === 2) return null;
+  const failure = classifyRemoteFailure(fetched.stderr);
+  const detail = redactLogText(fetched.stderr).trim();
+  throw new RemoteBaseError(FAILURE_MESSAGE[failure](branch, remote), {
+    failure,
+    detail: detail === "" ? null : detail,
+  });
+}
+
+/** The branch's tip as its remote carries it now, or null when the remote never had it. */
+export async function fetchRemoteTip(repoPath: string, branch: string): Promise<RemoteTip | null> {
+  const remotes = await repositoryRemotes(repoPath);
+  if (remotes.length === 0) {
+    throw noUpstream(
+      `${repoPath} has no git remote to read "${branch}" from; add one, then retry.`,
+    );
+  }
+  return fetchTip(repoPath, branch, remotes);
 }
 
 export async function resolveBaseSha(
@@ -95,36 +147,7 @@ export async function resolveBaseSha(
       `${repoPath} has no git remote to read "${branch}" from; add one, or launch from the local branch explicitly.`,
     );
   }
-  const { remote, ref } = await resolveRemoteBranch(repoPath, branch, remotes);
-  // Any concurrent fetch in this repository rewrites `FETCH_HEAD`, so the fetched tip lands on a ref of its own.
-  const landed = `refs/otomat/launch/${randomUUID()}`;
-  const fetched = await runGit(["fetch", "--no-tags", remote, `+${ref}:${landed}`], {
-    cwd: repoPath,
-    env: NO_PROMPT_ENV,
-    allowFailure: true,
-    timeoutMs: LAUNCH_FETCH_TIMEOUT_MS,
-  });
-  if (fetched.exitCode === 0) {
-    try {
-      return await revParse(repoPath, landed);
-    } finally {
-      await runGit(["update-ref", "-d", landed], { cwd: repoPath });
-    }
-  }
-  // `--exit-code` answers 2 only for a ref the remote never advertised: local-only work.
-  const advertised = await runGit(["ls-remote", "--exit-code", remote, ref], {
-    cwd: repoPath,
-    env: NO_PROMPT_ENV,
-    allowFailure: true,
-    timeoutMs: REMOTE_PROBE_TIMEOUT_MS,
-  });
-  if (advertised.exitCode === 2) return revParse(repoPath, branch);
-  const failure = classifyRemoteFailure(fetched.stderr);
-  const detail = redactLogText(fetched.stderr).trim();
-  throw new RemoteBaseError(FAILURE_MESSAGE[failure](branch, remote), {
-    failure,
-    detail: detail === "" ? null : detail,
-  });
+  return (await fetchTip(repoPath, branch, remotes))?.sha ?? revParse(repoPath, branch);
 }
 
 export type RemoteBranchProbe =

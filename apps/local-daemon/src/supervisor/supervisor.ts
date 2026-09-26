@@ -36,8 +36,10 @@ import {
   cleanupWorkspace,
   inWorkspaceCheckout,
   listWorkspaces,
+  readWorkspaceFreshness,
   reconcileWorkspaces,
   supervisorWorkspaces,
+  updateWorkspace,
 } from "./workspaces/index.js";
 
 export function createSupervisor(config: SupervisorConfig): Supervisor {
@@ -68,6 +70,8 @@ export function createSupervisor(config: SupervisorConfig): Supervisor {
     resumeDueProviderWaits: () => resumeDueProviderWaits(state),
     abandon: (runId) => abandonWorkspace(state, runId),
     workspaceClosure: (runId) => workspaceClosureFacts(state, runId),
+    workspaceFreshness: (runId) => readWorkspaceFreshness(state, runId),
+    updateWorkspace: (runId, request) => updateWorkspace(state, runId, request),
     appendStep: (runId, input) => appendRunStep(state, runId, input),
     contribute: (runId, stepRunId, targetSessionId, targetConfigHash, body, uploads) =>
       contributeToRun(state, runId, stepRunId, targetSessionId, targetConfigHash, body, uploads),

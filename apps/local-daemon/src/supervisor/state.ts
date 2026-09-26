@@ -46,6 +46,8 @@ export interface SupervisorState {
   advancing: Map<string, Promise<unknown>>;
   /** Run-level delivery guard so two contribution posts never batch the same queue twice. */
   delivering: Set<string>;
+  /** Runs whose worktree a rebase or merge is rewriting; no turn may start there until it ends. */
+  updatingWorkspaces: Set<string>;
   /** Steps the operator stopped mid-turn: their queued messages wait for an explicit message, retry or resume, never an automatic restart. */
   stopHeld: Set<string>;
   /** Prevents turns queued on the semaphore from spawning while daemon shutdown drains live workers. */
@@ -76,6 +78,7 @@ export function createState(config: SupervisorConfig): SupervisorState {
     launchesByProject: new Map(),
     advancing: new Map(),
     delivering: new Set(),
+    updatingWorkspaces: new Set(),
     stopHeld: new Set(),
     shuttingDown: false,
     launchHoldUntil: 0,

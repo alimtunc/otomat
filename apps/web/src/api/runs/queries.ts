@@ -103,6 +103,16 @@ export function useRunWorkspace(runId: string, enabled: boolean) {
   });
 }
 
+/** Every read fetches from the remote, so its key sits outside the run's, which run events invalidate. */
+export function useWorkspaceFreshness(runId: string) {
+  const keys = useQueryKeys();
+  return useQuery({
+    queryKey: keys.workspaceFreshness(runId),
+    queryFn: () => daemon.getRunWorkspaceFreshness(runId),
+    staleTime: 0,
+  });
+}
+
 export function useRunContributions(runId: string) {
   const keys = useQueryKeys();
   return useQuery({

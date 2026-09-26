@@ -32,6 +32,7 @@ import { hasRunActivity, type SupervisorState } from "./state.js";
 import { insertTurn, scheduleTurn } from "./turn-scheduling.js";
 import type { AppendStepInput } from "./types.js";
 import { requireOpenWorkspace } from "./workspace.js";
+import { requireWorkspaceSteady } from "./workspaces/index.js";
 
 function nextStepIndex(state: SupervisorState, runId: string): number {
   const indexes = listStepRunsForRun(state.db, runId).map((step) => step.idx);
@@ -73,6 +74,7 @@ export async function appendRunStep(
   // Frozen first, so nothing awaits between the plan read below and its rewrite: a concurrent append cannot lose a node.
   const context = await freezeAppendedContext(state, requireRunRow(db, runId, "append"), input);
   requireLaunchable(state);
+  requireWorkspaceSteady(state, runId);
   const run = requireRunRow(db, runId, "append");
   requireOpenWorkspace(db, run);
   if (input.origin === "review_fix" && hasRunActivity(state, runId)) {

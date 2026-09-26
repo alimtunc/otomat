@@ -6,7 +6,7 @@ import type {
   WorkspaceEntry,
   WorkspaceProvenance,
   WorkspaceState,
-} from "../contracts/workspace-inventory.js";
+} from "../contracts/workspace/inventory.js";
 
 export interface WorkspaceFacts {
   attachment: WorkspaceAttachment;
