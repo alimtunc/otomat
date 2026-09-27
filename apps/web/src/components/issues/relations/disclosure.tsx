@@ -1,9 +1,9 @@
 import { Button, Collapsible, CollapsiblePanel, CollapsibleTrigger, Icon } from "@otomat/ui";
-import { useLinearRelations } from "@web/api/linear/use-relations";
+import { useLinearRelations } from "@web/api/linear/queries";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 
-import { IssueLinksPanel } from "./panel";
+import { IssueRelationsPanel } from "./panel";
 
 export function IssueRelationsDisclosure({
   issueId,
@@ -59,7 +59,12 @@ export function IssueRelationsDisclosure({
               />
             </CollapsibleTrigger>
             <CollapsiblePanel className="pt-3">
-              <IssueLinksPanel issueId={issueId} identifier={identifier} />
+              <IssueRelationsPanel
+                data={data}
+                identifier={identifier}
+                refreshing={query.isFetching}
+                onRefresh={() => void query.refetch()}
+              />
             </CollapsiblePanel>
           </Collapsible>
         );

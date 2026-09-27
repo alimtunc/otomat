@@ -10,6 +10,7 @@ const pullRequestStackMemberSchema = z.object({
   head_ref: z.string(),
   base_ref: z.string(),
 });
+export type PullRequestStackMember = z.infer<typeof pullRequestStackMemberSchema>;
 
 const pullRequestStackSchema = z.object({
   number: z.number().int().positive(),

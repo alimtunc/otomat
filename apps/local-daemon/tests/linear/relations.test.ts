@@ -28,7 +28,7 @@ it("paginates children and both relation directions without turning hierarchy or
     { children: page([neighbor("child-1")], "next-child") },
     { children: page([neighbor("child-2")]) },
     {
-      outgoing: page(
+      page: page(
         [
           {
             id: "block",
@@ -41,7 +41,7 @@ it("paginates children and both relation directions without turning hierarchy or
       ),
     },
     {
-      outgoing: page([
+      page: page([
         {
           id: "other",
           type: "duplicate",
@@ -51,7 +51,7 @@ it("paginates children and both relation directions without turning hierarchy or
       ]),
     },
     {
-      incoming: page([
+      page: page([
         {
           id: "blocked-by",
           type: "blocks",
@@ -82,7 +82,8 @@ it("paginates children and both relation directions without turning hierarchy or
   ]);
   expect(requests[2]?.variables["after"]).toBe("next-child");
   expect(requests[4]?.variables["after"]).toBe("next-relation");
-  expect(requests[5]?.variables).toMatchObject({ inverse: true, after: null });
+  expect(requests[5]?.query).toContain("inverseRelations(");
+  expect(requests[5]?.variables["after"]).toBeNull();
   expect(requests.every((request) => !request.query.includes("mutation"))).toBe(true);
 });
 
@@ -116,8 +117,8 @@ it("distinguishes a confirmed empty neighborhood from an inaccessible issue", as
   const responses = [
     { parent: null },
     { children: page([]) },
-    { outgoing: page([]) },
-    { incoming: page([]) },
+    { page: page([]) },
+    { page: page([]) },
   ];
   const empty = createLinearApiClient(async () => ({
     status: 200,

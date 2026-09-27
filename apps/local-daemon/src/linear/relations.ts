@@ -1,10 +1,10 @@
-import { getIssue, getIssueBySourceExternalId, type Db } from "@otomat/db";
+import { getIssueBySourceExternalId, type Db } from "@otomat/db";
 import type { LinearIssueNeighbor, LinearIssueRelations } from "@otomat/domain";
 
 import type { LinearApiClient } from "./client/types.js";
 import type { LinearAuthorization } from "./connections.js";
-import { linearError } from "./errors.js";
 import { projectConnectionId } from "./sources.js";
+import { requireWritableIssue } from "./writeback/issue.js";
 
 export async function readLinearRelations(
   db: Db,
@@ -12,15 +12,10 @@ export async function readLinearRelations(
   issueId: string,
   authorization: LinearAuthorization,
 ): Promise<LinearIssueRelations> {
-  const issue = getIssue(db, issueId);
-  if (!issue) throw linearError("linear_issue_not_found");
-  if (issue.source !== "linear" || issue.source_external_id === null) {
-    throw linearError("linear_issue_not_writable");
-  }
+  const { issue, linearId } = requireWritableIssue(db, issueId);
   const connection = projectConnectionId(db, issue.project_id);
-  const externalId = issue.source_external_id;
   const result = await authorization.run(() =>
-    client.issueRelations(authorization.apiKey, externalId, authorization.signal),
+    client.issueRelations(authorization.apiKey, linearId, authorization.signal),
   );
   authorization.signal.throwIfAborted();
   const resolve = (neighbor: LinearIssueNeighbor): LinearIssueNeighbor => {

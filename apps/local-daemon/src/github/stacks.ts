@@ -1,9 +1,21 @@
 import { getAttachedPullRequest } from "@otomat/db";
-import type { PullRequestStackContext } from "@otomat/domain";
+import type { PullRequestStackContext, PullRequestStackMember } from "@otomat/domain";
 
+import type { GitHubPullRequest } from "./cli/contract.js";
 import { PullRequestImportRefusal } from "./errors.js";
 import { resolvePullRequestRepository } from "./import/repository.js";
 import type { GitHubServiceConfig } from "./types.js";
+
+function toStackMember(provider: GitHubPullRequest): PullRequestStackMember {
+  return {
+    number: provider.number,
+    title: provider.title,
+    url: provider.url,
+    status: provider.lifecycle,
+    head_ref: provider.headRef,
+    base_ref: provider.baseRef,
+  };
+}
 
 export async function readStackContext(
   config: GitHubServiceConfig,
@@ -15,19 +27,8 @@ export async function readStackContext(
   const { binding, remote } = await resolvePullRequestRepository(config, row);
   const input = { cwd: binding.rootPath, repository: remote.repository, number: row.number };
   const stack = await config.cli.readPullRequestStack(input);
-  const member = stack?.members.find((item) => item.number === row.number);
-  if (member !== undefined) return { current: member, stack, checked_at: new Date().toISOString() };
-  const provider = await config.cli.viewPullRequest(input.cwd, input.repository, input.number);
-  return {
-    current: {
-      number: provider.number,
-      title: provider.title,
-      url: provider.url,
-      status: provider.lifecycle,
-      head_ref: provider.headRef,
-      base_ref: provider.baseRef,
-    },
-    stack,
-    checked_at: new Date().toISOString(),
-  };
+  const current =
+    stack?.members.find((member) => member.number === row.number) ??
+    toStackMember(await config.cli.viewPullRequest(input.cwd, input.repository, input.number));
+  return { current, stack, checked_at: new Date().toISOString() };
 }

@@ -1,14 +1,19 @@
-import type { LinearIssueNeighbor, LinearIssueRelations } from "@otomat/domain";
+import type {
+  LinearIssueNeighbor,
+  LinearIssueRelation,
+  LinearIssueRelations,
+} from "@otomat/domain";
 import type { z } from "zod";
 
 import { linearError } from "../errors.js";
 import {
   CHILDREN_QUERY,
   childrenResponseSchema,
+  INCOMING_RELATIONS_QUERY,
   neighborSchema,
+  OUTGOING_RELATIONS_QUERY,
   PARENT_QUERY,
   parentResponseSchema,
-  RELATIONS_QUERY,
   relationsResponseSchema,
 } from "../graphql/relations.js";
 import type { GraphQLExecutor } from "./executor.js";
@@ -24,6 +29,36 @@ function toNeighbor(node: z.infer<typeof neighborSchema>): LinearIssueNeighbor {
     assignee: node.assignee,
     issue_id: null,
   };
+}
+
+async function readRelationEdges(
+  executor: GraphQLExecutor,
+  apiKey: string,
+  issueId: string,
+  inverse: boolean,
+  signal?: AbortSignal,
+): Promise<LinearIssueRelation[]> {
+  const nodes = await executor.paginate(
+    apiKey,
+    inverse ? INCOMING_RELATIONS_QUERY : OUTGOING_RELATIONS_QUERY,
+    { id: issueId },
+    relationsResponseSchema,
+    (response) => {
+      if (response.issue === null) throw linearError("linear_remote_issue_not_found");
+      return response.issue.page;
+    },
+    signal,
+  );
+  const edges: LinearIssueRelation[] = [];
+  for (const node of nodes) {
+    if (node.type !== "blocks" && node.type !== "related") continue;
+    edges.push({
+      id: node.id,
+      type: node.type === "blocks" && inverse ? "blocked_by" : node.type,
+      issue: toNeighbor(inverse ? node.issue : node.relatedIssue),
+    });
+  }
+  return edges;
 }
 
 export async function readIssueRelations(
@@ -51,29 +86,10 @@ export async function readIssueRelations(
     },
     signal,
   );
-  const relations = new Map<string, LinearIssueRelations["relations"][number]>();
+  const relations = new Map<string, LinearIssueRelation>();
   for (const inverse of [false, true]) {
-    const nodes = await executor.paginate(
-      apiKey,
-      RELATIONS_QUERY,
-      { id: issueId, inverse },
-      relationsResponseSchema,
-      (response) => {
-        if (response.issue === null) throw linearError("linear_remote_issue_not_found");
-        const page = inverse ? response.issue.incoming : response.issue.outgoing;
-        if (page === undefined) throw linearError("linear_request_failed");
-        return page;
-      },
-      signal,
-    );
-    for (const node of nodes) {
-      if (node.type !== "blocks" && node.type !== "related") continue;
-      const type = node.type === "blocks" && inverse ? "blocked_by" : node.type;
-      relations.set(node.id, {
-        id: node.id,
-        type,
-        issue: toNeighbor(inverse ? node.issue : node.relatedIssue),
-      });
+    for (const edge of await readRelationEdges(executor, apiKey, issueId, inverse, signal)) {
+      relations.set(edge.id, edge);
     }
   }
   return {

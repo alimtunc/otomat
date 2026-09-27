@@ -1,30 +1,24 @@
+import type { LinearIssueNeighbor } from "@otomat/domain";
 import { Icon } from "@otomat/ui";
-import { useLinearRelations } from "@web/api/linear/use-relations";
-import { QueryBoundary } from "@web/components/shell/query-boundary";
 
 import { IssueNeighbor } from "./neighbor";
 
-export function IssueChildren({ issueId }: { issueId: string }) {
-  const query = useLinearRelations(issueId);
-  if (query.data === undefined || query.data.children.length === 0) return null;
+export function IssueChildren({ issues }: { issues: LinearIssueNeighbor[] }) {
+  if (issues.length === 0) return null;
   return (
-    <QueryBoundary query={query} pending={null} error={null}>
-      {(data) => (
-        <section aria-label="Sub-issues" className="@container space-y-2">
-          <h2 className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Icon name="list-tree" size="sm" className="text-text-tertiary" />
-            Sub-issues{" "}
-            <span className="rounded bg-surface-2 px-1.5 text-xs tabular-nums text-text-secondary">
-              {data.children.length}
-            </span>
-          </h2>
-          <div className="divide-y divide-border rounded-lg border border-border bg-surface-1 px-1">
-            {data.children.map((child) => (
-              <IssueNeighbor key={child.external_id} issue={child} />
-            ))}
-          </div>
-        </section>
-      )}
-    </QueryBoundary>
+    <section aria-label="Sub-issues" className="@container space-y-2">
+      <h2 className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <Icon name="list-tree" size="sm" className="text-text-tertiary" />
+        Sub-issues{" "}
+        <span className="rounded bg-surface-2 px-1.5 text-xs tabular-nums text-text-secondary">
+          {issues.length}
+        </span>
+      </h2>
+      <div className="divide-y divide-border rounded-lg border border-border bg-surface-1 px-1">
+        {issues.map((child) => (
+          <IssueNeighbor key={child.external_id} issue={child} />
+        ))}
+      </div>
+    </section>
   );
 }

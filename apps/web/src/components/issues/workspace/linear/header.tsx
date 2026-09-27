@@ -1,5 +1,6 @@
 import type { IssueContract } from "@otomat/domain";
 import { Avatar, Skeleton } from "@otomat/ui";
+import { useLinearRelations } from "@web/api/linear/queries";
 import { IssueDescription } from "@web/components/issues/issue/description";
 import { IssueMetadata } from "@web/components/issues/issue/metadata";
 import { IssueChildren } from "@web/components/issues/relations/children";
@@ -34,13 +35,14 @@ export function LinearIssueHeader({
   comments?: ReactNode;
 }) {
   const editing = useLinearIssueEditing(issue.id);
+  const relations = useLinearRelations(issue.id).data;
   const title = editing.values?.title ?? issue.title;
   const description = editing.values?.description ?? issue.body ?? "";
   const assignee = assigneeName(issue, editing);
 
   return (
     <div className="flex shrink-0 flex-col gap-3.5">
-      <IssueParent issueId={issue.id} />
+      <IssueParent parent={relations?.parent ?? null} />
       <div className="flex flex-col gap-2">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
@@ -88,7 +90,7 @@ export function LinearIssueHeader({
           </IssueDescription>
         </LinearMediaProvider>
       )}
-      <IssueChildren issueId={issue.id} />
+      <IssueChildren issues={relations?.children ?? []} />
     </div>
   );
 }

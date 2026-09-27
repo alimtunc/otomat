@@ -41,23 +41,22 @@ const relationSchema = z.object({
   relatedIssue: neighborSchema,
 });
 
-export const RELATIONS_QUERY = `query OtomatIssueRelations($id: String!, $first: Int!, $after: String, $inverse: Boolean!) {
+const relationsQuery = (
+  name: string,
+  field: string,
+) => `query ${name}($id: String!, $first: Int!, $after: String) {
   issue(id: $id) {
-    outgoing: relations(first: $first, after: $after) @skip(if: $inverse) {
-      nodes { id type issue { ${NEIGHBOR_FIELDS} } relatedIssue { ${NEIGHBOR_FIELDS} } }
-      pageInfo { hasNextPage endCursor }
-    }
-    incoming: inverseRelations(first: $first, after: $after) @include(if: $inverse) {
+    page: ${field}(first: $first, after: $after) {
       nodes { id type issue { ${NEIGHBOR_FIELDS} } relatedIssue { ${NEIGHBOR_FIELDS} } }
       pageInfo { hasNextPage endCursor }
     }
   }
 }`;
+export const OUTGOING_RELATIONS_QUERY = relationsQuery("OtomatIssueRelations", "relations");
+export const INCOMING_RELATIONS_QUERY = relationsQuery(
+  "OtomatIssueInverseRelations",
+  "inverseRelations",
+);
 export const relationsResponseSchema = z.object({
-  issue: z
-    .object({
-      outgoing: connection(relationSchema).optional(),
-      incoming: connection(relationSchema).optional(),
-    })
-    .nullable(),
+  issue: z.object({ page: connection(relationSchema) }).nullable(),
 });

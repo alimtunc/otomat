@@ -1,9 +1,5 @@
 // @vitest-environment happy-dom
-import type {
-  LinearIssueNeighbor,
-  LinearIssueRelations,
-  PullRequestStackContext,
-} from "@otomat/domain";
+import type { LinearIssueNeighbor, LinearIssueRelations } from "@otomat/domain";
 import {
   createRootRoute,
   createRoute,
@@ -11,11 +7,11 @@ import {
   createMemoryHistory,
   RouterProvider,
 } from "@tanstack/react-router";
+import { useLinearRelations } from "@web/api/linear/queries";
 import { hostKeys } from "@web/api/query-keys";
 import { IssueChildren } from "@web/components/issues/relations/children";
 import { IssueParent } from "@web/components/issues/relations/parent";
 import { IssueRelationsSection } from "@web/components/issues/relations/section";
-import { PullRequestStackSection } from "@web/components/pull-requests/stack-section";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -25,12 +21,10 @@ import { mountWithQuery, type Mounted } from "#support/mount";
 import { testQueryClient } from "#support/query";
 
 const readRelations = vi.fn();
-const readStack = vi.fn();
 vi.mock("@web/api/client", () => ({
   daemon: {
     getIssue: (id: string) => Promise.resolve(issueContract({ id })),
     getLinearRelations: (id: string) => readRelations(id),
-    getPullRequestStack: (id: string) => readStack(id),
   },
 }));
 
@@ -58,20 +52,12 @@ const relations: LinearIssueRelations = {
   ],
   checked_at: "2026-09-26T00:00:00.000Z",
 };
-const current: PullRequestStackContext["current"] = {
-  number: 42,
-  title: "API",
-  url: "https://github.com/acme/app/pull/42",
-  status: "open",
-  head_ref: "api",
-  base_ref: "types",
-};
-
 function Family() {
+  const data = useLinearRelations("issue").data;
   return (
     <>
-      <IssueParent issueId="issue" />
-      <IssueChildren issueId="issue" />
+      <IssueParent parent={data?.parent ?? null} />
+      <IssueChildren issues={data?.children ?? []} />
       <IssueRelationsSection issueId="issue" identifier="DEMO-2" />
     </>
   );
@@ -160,31 +146,4 @@ it("replaces removed relations only after a successful refresh", async () => {
     expect(mounted?.container.textContent).toContain("No blocking or related issues."),
   );
   expect(mounted.container.textContent).not.toContain("External blocker");
-});
-
-it("shows a declared stack and preserves it when GitHub stops answering", async () => {
-  const data: PullRequestStackContext = {
-    current,
-    stack: { number: 7, base_ref: "main", members: [current] },
-    checked_at: relations.checked_at,
-  };
-  readStack.mockResolvedValue(data);
-  mounted = await mountWithQuery(<PullRequestStackSection pullRequestId="pr" />);
-  expect(mounted.container.textContent).toContain("GitHub stack #7");
-  expect(mounted.container.querySelector('[aria-current="true"]')?.getAttribute("href")).toBe(
-    current.url,
-  );
-  readStack.mockRejectedValue(new Error("GitHub unavailable"));
-  await act(async () => findLabelled("Refresh stack")?.click());
-  await vi.waitFor(() => expect(mounted?.container.textContent).toContain("Couldn’t refresh"));
-  expect(mounted.container.textContent).toContain("GitHub stack #7");
-  expect(mounted.container.textContent).not.toContain("No stack declared");
-});
-
-it("labels a successful absence of native membership without inferring a stack from branches", async () => {
-  readStack.mockResolvedValue({ current, stack: null, checked_at: relations.checked_at });
-  mounted = await mountWithQuery(<PullRequestStackSection pullRequestId="pr" />);
-  expect(mounted.container.textContent).toContain("No stack declared on GitHub");
-  expect(mounted.container.textContent).toContain("api → types");
-  expect(mounted.container.textContent).not.toContain("GitHub stack #");
 });

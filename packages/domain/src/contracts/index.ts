@@ -11,7 +11,6 @@
  * @packageDocumentation
  */
 export * from "./api.js";
-export * from "./linear/relations.js";
 export * from "./commit-subject.js";
 export * from "./daemon-auth.js";
 export * from "./data-safety.js";

@@ -1,13 +1,32 @@
-import { IssueChildren } from "./children";
-import { IssueParent } from "./parent";
-import { IssueRelationsSection } from "./section";
+import type { LinearIssueRelations } from "@otomat/domain";
+import { CheckedAt } from "@web/components/shell/checked-at";
 
-export function IssueLinksPanel({ issueId, identifier }: { issueId: string; identifier: string }) {
+import { IssueChildren } from "./children";
+import { IssueRelationsList } from "./list";
+import { IssueParent } from "./parent";
+
+export function IssueRelationsPanel({
+  data,
+  identifier,
+  refreshing,
+  onRefresh,
+}: {
+  data: LinearIssueRelations;
+  identifier: string;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
   return (
-    <div className="space-y-3 [&>section]:border-0 [&>section]:bg-transparent [&>section]:p-0">
-      <IssueParent issueId={issueId} />
-      <IssueChildren issueId={issueId} />
-      <IssueRelationsSection issueId={issueId} identifier={identifier} />
+    <div className="space-y-3">
+      <IssueParent parent={data.parent} />
+      <IssueChildren issues={data.children} />
+      <IssueRelationsList relations={data.relations} identifier={identifier} />
+      <CheckedAt
+        label="Refresh relations"
+        checkedAt={data.checked_at}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+      />
     </div>
   );
 }

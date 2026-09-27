@@ -49,6 +49,18 @@ export function usePullRequestOverview(pullRequestId: string) {
   });
 }
 
+export function usePullRequestStack(pullRequestId: string) {
+  const keys = useQueryKeys();
+  return useQuery({
+    queryKey: keys.pullRequestStack(pullRequestId),
+    queryFn: () => daemon.getPullRequestStack(pullRequestId),
+    retry: false,
+    staleTime: 15_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+  });
+}
+
 export function useRepositoryPullRequestPreview(
   repositoryId: string,
   baseRef: string,

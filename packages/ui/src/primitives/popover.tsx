@@ -2,7 +2,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { ComponentPropsWithRef } from "react";
 
 import { cn } from "../lib/utils";
-import { POPUP_MOTION_CLASS, POPUP_MOTION_STYLE } from "./styles";
+import { POPUP_MOTION_CLASS, POPUP_MOTION_STYLE, POPUP_SURFACE_CLASS } from "./styles";
 
 export const Popover = PopoverPrimitive.Root;
 export const PopoverTrigger = PopoverPrimitive.Trigger;
@@ -33,11 +33,7 @@ export function PopoverContent({
       >
         <PopoverPrimitive.Popup
           ref={ref}
-          className={cn(
-            "min-w-47.5 rounded-lg border border-border bg-popover p-1.25 shadow-(--shadow-overlay)",
-            POPUP_MOTION_CLASS,
-            className,
-          )}
+          className={cn(POPUP_SURFACE_CLASS, "min-w-47.5 p-1.25", POPUP_MOTION_CLASS, className)}
           style={{ ...POPUP_MOTION_STYLE, ...style }}
           {...props}
         />

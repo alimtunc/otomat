@@ -1,16 +1,12 @@
-import { issueShortId, type PullRequestInboxEntry } from "@otomat/domain";
+import type { PullRequestIssueLink } from "@otomat/domain";
 import { FOCUS_RING, Skeleton } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { useIssue } from "@web/api/issues/queries";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
-import { IssueLinksPanel } from "@web/components/issues/relations/panel";
+import { LinkedIssueRelations } from "@web/components/reviews/linked-issue-relations";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 
-export function ReviewLinkedIssue({
-  issue,
-}: {
-  issue: NonNullable<PullRequestInboxEntry["issue"]>;
-}) {
+export function ReviewLinkedIssue({ issue }: { issue: PullRequestIssueLink }) {
   const query = useIssue(issue.id);
   return (
     <div className="space-y-3">
@@ -41,11 +37,7 @@ export function ReviewLinkedIssue({
           />
         }
       >
-        {(data) =>
-          data.source === "linear" ? (
-            <IssueLinksPanel issueId={data.id} identifier={issueShortId(data)} />
-          ) : null
-        }
+        {(data) => (data.source === "linear" ? <LinkedIssueRelations issue={data} /> : null)}
       </QueryBoundary>
     </div>
   );

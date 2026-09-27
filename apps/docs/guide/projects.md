@@ -97,7 +97,7 @@ or tapping the original issue link still opens the issue. Relations load only wh
 the preview opens; opening a list alone does not fetch every issue's relations.
 
 A known neighbor opens directly in Otomat. A neighbor not imported on this host, or
-belonging to another connection, opens in Linear. Back returns to the previous view.
+belonging to another connection, opens in Linear.
 Relations refresh on opening the issue, returning to the window, or choosing
 **Refresh relations**. If a refresh fails, the previous data stays visible with a
 stale notice. Change relationships in Linear; opening them in Otomat writes nothing.

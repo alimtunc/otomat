@@ -18,7 +18,7 @@ export function ReviewLinksPopover({
         role="dialog"
         align="end"
         aria-label={`Linked work for PR #${entry.number}`}
-        className="max-h-[min(40rem,80dvh)] w-96 max-w-[calc(100vw-1rem)] space-y-3 overflow-y-auto p-3"
+        className="max-h-[min(40rem,80dvh)] space-y-3"
       >
         <div className="flex items-center justify-between gap-3 border-b border-border pb-3 text-xs">
           <span className="font-medium text-foreground">Linked work</span>

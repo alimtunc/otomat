@@ -54,7 +54,9 @@ it("reads GitHub's declared order and member states with GET only", async () => 
     [43, "draft"],
   ]);
   expect(requests[0]?.args).toContain("repos/acme/app/stacks?pull_request=42&per_page=2");
-  expect(requests.every((request) => request.args.includes("GET"))).toBe(true);
+  expect(requests[1]?.args).toContain("repos/acme/app/stacks/7");
+  expect(requests.flatMap((request) => request.args)).not.toContain("--method");
+  expect(requests.flatMap((request) => request.args)).not.toContain("-f");
 });
 
 it("accepts a successful empty list but never treats an API refusal as no stack", async () => {

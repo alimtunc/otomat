@@ -489,7 +489,7 @@ and the explicit **Refresh issues** control). A sync always names a project, and
 the daemon refuses a project it does not own rather than reporting an empty
 success — that is what keeps a VPS project from silently reading local state.
 
-### Issue relationships and PR stack navigation
+## Issue relationships and PR stack navigation
 
 The issue detail reads its Linear neighborhood through
 `GET /api/linear/issues/:id/relations`. The Linear client paginates children and
@@ -505,11 +505,11 @@ Runs group headers, issue rows and board cards use the shared Base UI preview-ca
 primitive on their existing links. The preview renders the available issue summary
 first: title, source status, assignee, priority and canonical workspace run state.
 Linear relations load on hover or keyboard focus, independently of that summary;
-one collapsed control shows the link count and blockers. Expanding it mounts the
-neighborhood readers. Local issue previews do not query Linear. Clicks and touch
-keep the link's navigation. Reviews lazily compose the linked issue's neighborhood
-with the stack reader through the inbox row's link render slot, preserving the
-distinction between an attachment and a reference.
+one collapsed control shows the link count and blockers; expanding it renders the
+parent, sub-issues and relations from that same read. Local issue previews do not
+query Linear. Clicks and touch keep the link's navigation. Reviews lazily compose
+the linked issue's neighborhood with the stack reader through the inbox row's link
+render slot, preserving the distinction between an attachment and a reference.
 
 `GET /api/pull-requests/:id/stack` reads native GitHub stack membership through
 `gh api`, then its declared member order. A successful empty membership returns
@@ -517,7 +517,7 @@ only the PR's head and base; no manual chain is inferred from names. Failed or
 ambiguous reads are errors, never an empty stack. This path deliberately bypasses
 import reconciliation and the review snapshot: even a merged member cannot close
 an issue or workspace through navigation. Existing merge reconciliation remains a
-separate lifecycle path, including its unresolved intermediate-base semantics.
+separate lifecycle path.
 
 Both query caches are scoped to the active host, revalidate on mount and foreground,
 and participate in the existing navigation snapshot. A failed refresh retains the

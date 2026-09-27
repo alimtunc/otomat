@@ -32,7 +32,6 @@ export function LinearStateIcon({
       {state.type === "canceled" ? (
         <path d="m6 6 4 4m0-4-4 4" stroke="white" strokeLinecap="round" />
       ) : null}
-      {state.type === "duplicate" ? <path d="M5 8h6" strokeLinecap="round" /> : null}
       {state.type === "triage" ? (
         <path d="m5.5 7 2.5 2.5L10.5 7" strokeLinecap="round" strokeLinejoin="round" />
       ) : null}

@@ -13,6 +13,9 @@ export const MENU_ITEM_CLASS =
   "data-[disabled]:pointer-events-none data-[disabled]:opacity-50 " +
   "[&_svg]:h-3.5 [&_svg]:w-3.5 [&_svg]:shrink-0 [&_svg]:text-text-tertiary";
 
+export const POPUP_SURFACE_CLASS =
+  "rounded-lg border border-border bg-popover shadow-(--shadow-overlay)";
+
 export const POPUP_MOTION_CLASS =
   "origin-(--transform-origin) data-starting-style:opacity-0 data-ending-style:opacity-0 " +
   "data-starting-style:transform-[scale(.97)] data-ending-style:transform-[scale(.97)]";
