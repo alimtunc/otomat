@@ -298,4 +298,4 @@ export { Toaster, type ToasterProps } from "./components/toaster";
 
 export { toast } from "sonner";
 
-export { Wordmark } from "./components/wordmark";
+export { Wordmark, type WordmarkProps } from "./components/wordmark";

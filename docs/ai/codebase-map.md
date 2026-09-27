@@ -2538,7 +2538,9 @@ rides the tokens needs no second rule. Only `transform` and `opacity` animate.
 `packages/ui/src/styles/brand.css` owns the split O, the wordmark's two-O entrance,
 and their motion. The desktop build copies that stylesheet into `dist` for the
 isolated splash; the web imports it through the UI stylesheet. Both launch
-surfaces yield as soon as startup finishes, without waiting for the entrance.
+surfaces yield as soon as startup finishes, without waiting for the entrance, and
+the cockpit's startup screen skips it under the desktop shell, where the splash
+already played it.
 `Spinner` renders the O alone with an accessible `label`, or with visible context
 as its children. Its default `motion="pulse"` varies opacity without moving the
 O, so inline statuses and loading buttons stay quiet; `motion="breathe"` reserves

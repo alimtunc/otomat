@@ -7,7 +7,7 @@ export function BrandSection() {
   return (
     <Section title="Otomat · brand & loading">
       <Row>
-        <Wordmark />
+        <Wordmark enter />
       </Row>
       <Row>
         <Spinner motion="breathe" size={22}>
