@@ -1,4 +1,4 @@
-import { Avatar, AgentAvatar, Button, LiveDot, Spinner, toast } from "@otomat/ui";
+import { Avatar, AgentAvatar, Button, LiveDot, toast } from "@otomat/ui";
 
 import { Row } from "../row";
 import { Section } from "../section";
@@ -13,7 +13,6 @@ export function AvatarsSection() {
         <AgentAvatar name="codex" runtimeTint="var(--prov-codex)" />
         <LiveDot tone="live" live />
         <LiveDot tone="success" live />
-        <Spinner />
         <Button size="sm" onClick={() => toast("Custom arguments saved")}>
           Show toast
         </Button>

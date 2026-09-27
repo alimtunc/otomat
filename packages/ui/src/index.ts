@@ -273,8 +273,7 @@ export { SidePanel, type SidePanelProps } from "./components/side-panel";
 
 export { SidePanelToggle, type SidePanelToggleProps } from "./components/side-panel-toggle";
 
-export { Spinner, type SpinnerProps } from "./components/spinner";
-export { Wordmark, type WordmarkProps } from "./components/wordmark";
+export { Spinner, type SpinnerProps } from "./primitives/spinner";
 
 export { StatusChip, type StatusChipProps } from "./components/status-chip";
 
@@ -296,4 +295,7 @@ export { EventTime, type EventTimeProps } from "./components/event-time";
 export { TimelineEventRow, type TimelineEventRowProps } from "./components/timeline-event-row";
 
 export { Toaster, type ToasterProps } from "./components/toaster";
+
 export { toast } from "sonner";
+
+export { Wordmark } from "./components/wordmark";

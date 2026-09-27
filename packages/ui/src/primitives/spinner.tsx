@@ -18,7 +18,7 @@ export function Spinner({
 }: SpinnerProps) {
   return (
     <output
-      aria-label={label ?? (children === undefined ? "Loading" : undefined)}
+      aria-label={label ?? (children ? undefined : "Loading")}
       data-slot="spinner"
       className={cn("inline-flex shrink-0 items-center gap-2", className)}
       {...props}

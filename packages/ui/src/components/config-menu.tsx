@@ -13,9 +13,9 @@ import {
   DropdownMenuTrigger,
   type DropdownMenuContentProps,
 } from "../primitives/dropdown-menu";
+import { Spinner } from "../primitives/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 import { Icon } from "./icon";
-import { Spinner } from "./spinner";
 
 /** `--available-height` is what the positioner measured after collision handling. */
 const POPUP_CLASS =

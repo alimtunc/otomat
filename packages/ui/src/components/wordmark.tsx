@@ -1,20 +1,6 @@
-import type { ComponentPropsWithoutRef } from "react";
-
-import { cn } from "../lib/utils";
-
-export interface WordmarkProps extends Omit<ComponentPropsWithoutRef<"span">, "children"> {
-  enter?: boolean;
-}
-
-export function Wordmark({ className, enter = false, ...props }: WordmarkProps) {
+export function Wordmark() {
   return (
-    <span
-      role="img"
-      aria-label="Otomat"
-      data-enter={enter || undefined}
-      className={cn("otomat-wordmark", className)}
-      {...props}
-    >
+    <span role="img" aria-label="Otomat" className="otomat-wordmark">
       <span className="otomat-mark" aria-hidden="true" />
       <span className="otomat-letter" aria-hidden="true">
         t

@@ -7,10 +7,10 @@ export function BrandSection() {
   return (
     <Section title="Otomat · brand & loading">
       <Row>
-        <Wordmark enter />
+        <Wordmark />
       </Row>
       <Row>
-        <Spinner motion="breathe" size={28}>
+        <Spinner motion="breathe" size={22}>
           Opening your workspace…
         </Spinner>
         <Spinner label="Syncing issues" />

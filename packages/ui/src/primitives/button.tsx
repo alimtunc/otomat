@@ -2,9 +2,9 @@ import { Button as BaseButton } from "@base-ui/react/button";
 import type { VariantProps } from "class-variance-authority";
 import type { ComponentPropsWithRef } from "react";
 
-import { Spinner } from "../components/spinner";
 import { cn } from "../lib/utils";
 import { buttonVariants } from "./button-variants";
+import { Spinner } from "./spinner";
 
 export interface ButtonProps
   extends
@@ -48,7 +48,7 @@ export function Button({
           <span className="inline-flex w-full min-w-0 items-center gap-[inherit] opacity-0 [justify-content:inherit]">
             {children}
           </span>
-          <Spinner motion="pulse" aria-hidden="true" className="absolute" />
+          <Spinner aria-hidden="true" className="absolute" />
         </>
       ) : (
         children

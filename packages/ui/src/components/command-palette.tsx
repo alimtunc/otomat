@@ -12,8 +12,8 @@ import {
   CommandItemRight,
   CommandList,
 } from "../primitives/command";
+import { Spinner } from "../primitives/spinner";
 import { Icon, type IconName } from "./icon";
-import { Spinner } from "./spinner";
 
 export type CommandPaletteCommand = {
   id: string;
@@ -109,7 +109,7 @@ export function CommandPalette({
                     const isPending = pending === command.id;
                     let leading: ReactNode = null;
                     if (isPending) {
-                      leading = <Spinner label={`Running ${command.label}`} motion="pulse" />;
+                      leading = <Spinner label={`Running ${command.label}`} />;
                     } else if (command.icon) {
                       leading = <Icon name={command.icon} aria-hidden />;
                     }

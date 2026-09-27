@@ -3,7 +3,7 @@ import { type CSSProperties } from "react";
 import { Toaster as SonnerToaster } from "sonner";
 
 import { useTheme } from "../lib/theme";
-import { Spinner } from "./spinner";
+import { Spinner } from "../primitives/spinner";
 
 export type ToasterProps = {
   position?:

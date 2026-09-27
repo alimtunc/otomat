@@ -33,8 +33,10 @@ void openPreviewSession()
     );
   })
   .catch((error: unknown) => {
+    reportError(error);
     reactRoot.render(
       <ErrorState
+        className="min-h-dvh"
         title="Couldn’t open Otomat"
         description={error instanceof Error ? error.message : "Please retry opening the workspace."}
         onRetry={() => window.location.reload()}

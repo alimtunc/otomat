@@ -52,6 +52,7 @@
   top: 0.015em;
   width: 1.02ex;
   height: 1.02ex;
+  animation: otomat-gather 1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .otomat-wordmark .otomat-mark::before,
@@ -59,27 +60,23 @@
   border-width: 0.08em;
 }
 
-.otomat-wordmark[data-enter] .otomat-mark {
-  animation: otomat-gather 1s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.otomat-wordmark[data-enter] .otomat-mark:first-child {
+.otomat-wordmark .otomat-mark:first-child {
   --otomat-enter-x: 0.9em;
 }
 
-.otomat-wordmark[data-enter] .otomat-mark:nth-child(3) {
+.otomat-wordmark .otomat-mark:nth-child(3) {
   --otomat-enter-x: 0.74em;
 }
 
-.otomat-wordmark[data-enter] .otomat-mark::before {
+.otomat-wordmark .otomat-mark::before {
   animation: otomat-assemble-left 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.otomat-wordmark[data-enter] .otomat-mark::after {
+.otomat-wordmark .otomat-mark::after {
   animation: otomat-assemble-right 450ms 60ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.otomat-wordmark[data-enter] .otomat-letter {
+.otomat-wordmark .otomat-letter {
   animation: otomat-letter-enter 350ms 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -160,10 +157,10 @@
   .otomat-mark,
   .otomat-mark::before,
   .otomat-mark::after,
-  .otomat-wordmark[data-enter] .otomat-mark,
-  .otomat-wordmark[data-enter] .otomat-mark::before,
-  .otomat-wordmark[data-enter] .otomat-mark::after,
-  .otomat-wordmark[data-enter] .otomat-letter {
+  .otomat-wordmark .otomat-mark,
+  .otomat-wordmark .otomat-mark::before,
+  .otomat-wordmark .otomat-mark::after,
+  .otomat-wordmark .otomat-letter {
     animation: none;
   }
 }
