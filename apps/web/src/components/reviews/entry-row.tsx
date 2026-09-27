@@ -1,6 +1,7 @@
 import type { PullRequestInboxEntry } from "@otomat/domain";
 import { Chip, PRStatusBadge } from "@otomat/ui";
 import { InboxRow } from "@web/components/inbox/row";
+import { ReviewLinksPopover } from "@web/components/reviews/links-popover";
 import { INBOX_GROUP_COPY } from "@web/lib/pull-request/inbox/groups";
 import { CHECKS_SIGNAL, reviewDecisionSignal } from "@web/lib/pull-request/inbox/signals";
 import {
@@ -51,6 +52,7 @@ export function ReviewInboxRow({
         </>
       }
       time={entry.updated_at}
+      renderLink={(link) => <ReviewLinksPopover entry={entry}>{link}</ReviewLinksPopover>}
       action={INBOX_GROUP_COPY[entry.group].action}
     />
   );

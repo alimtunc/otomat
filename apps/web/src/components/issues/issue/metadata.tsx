@@ -1,14 +1,19 @@
-import { issueShortId, projectOpenCycleExecution, type IssueContract } from "@otomat/domain";
+import {
+  issueShortId,
+  projectOpenCycleExecution,
+  type IssueContract,
+  type LinearIssueSnapshot,
+} from "@otomat/domain";
 import { Chip, IssueSourceGlyph, IssueStatusChip } from "@otomat/ui";
-import { ColorDot } from "@web/components/issues/color-dot";
 import { IssueExecutionChip } from "@web/components/issues/execution-chip";
+import { LinearStateIcon } from "@web/components/issues/linear-state-icon";
 
 export function IssueMetadata({
   issue,
   linearState,
 }: {
   issue: IssueContract;
-  linearState?: { name: string; color: string };
+  linearState?: LinearIssueSnapshot["state"];
 }) {
   const execution = projectOpenCycleExecution(issue);
   return (
@@ -20,7 +25,7 @@ export function IssueMetadata({
       </span>
       {linearState ? (
         <Chip>
-          <ColorDot color={linearState.color} />
+          <LinearStateIcon state={linearState} />
           Linear · {linearState.name}
         </Chip>
       ) : null}

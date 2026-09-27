@@ -2,6 +2,8 @@ import type { IssueContract } from "@otomat/domain";
 import { Avatar, Skeleton } from "@otomat/ui";
 import { IssueDescription } from "@web/components/issues/issue/description";
 import { IssueMetadata } from "@web/components/issues/issue/metadata";
+import { IssueChildren } from "@web/components/issues/relations/children";
+import { IssueParent } from "@web/components/issues/relations/parent";
 import type { ReactNode } from "react";
 
 import { DraftBar } from "./draft-bar";
@@ -38,6 +40,7 @@ export function LinearIssueHeader({
 
   return (
     <div className="flex shrink-0 flex-col gap-3.5">
+      <IssueParent issueId={issue.id} />
       <div className="flex flex-col gap-2">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
@@ -85,6 +88,7 @@ export function LinearIssueHeader({
           </IssueDescription>
         </LinearMediaProvider>
       )}
+      <IssueChildren issueId={issue.id} />
     </div>
   );
 }

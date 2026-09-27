@@ -30,6 +30,16 @@ export function createPullRequestRoutes(deps: ApiDeps): Hono {
     }
   });
 
+  routes.get("/:id/stack", async (c) => {
+    try {
+      return c.json(await deps.github.pullRequestStack(c.req.param("id")));
+    } catch (error) {
+      const refusal = pullRequestProviderRefusal(c, error, "pr_stack_failed");
+      if (refusal) return refusal;
+      throw error;
+    }
+  });
+
   routes.get("/:id/overview", async (c) => {
     const id = c.req.param("id");
     try {

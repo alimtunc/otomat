@@ -70,6 +70,38 @@ never autoplay. The daemon fetches them with the workspace key, which never reac
 keeps nothing on disk. A file Linear no longer serves, or one Otomat does not display inline, keeps
 an **Open in Linear** link instead.
 
+### Navigate related issues
+
+Open an issue from the Issues list to see its Linear parent above the title and its
+sub-issues below the description. The **Relations** panel lists **Blocked by**,
+**Blocks** and **Related** separately; these relationships do not change the issue's
+Otomat execution state. A local neighbor also shows one compact **Run** indicator
+for its current workspace: running, awaiting permission, awaiting human, review ready,
+or another actual run state. Closed workspaces hide their historical runs; a locally
+blocked issue still shows **Blocked**. The indicator refreshes every ten seconds
+while the page is visible; it does not infer activity from the Linear status.
+
+Each neighbor keeps its Linear status name, color and category icon. Hover or focus
+the link to preview its status, assignee and priority. For a relation, the preview
+names the other endpoint: hovering a ticket under **Blocks** shows **Blocked by**
+followed by the issue you are viewing. On touch screens, open the ticket for its details.
+
+Hover or focus an issue in the list, on the board, or in a **Runs** group to preview
+its title, status, assignee, priority and current run. These details remain visible
+even when the issue has no relations or Linear cannot answer. Local issues also
+show their status and run without contacting Linear.
+
+Linear relationships start folded into one line showing the link count and any
+blockers. Expand it to inspect the parent, sub-issues and related tickets. Clicking
+or tapping the original issue link still opens the issue. Relations load only when
+the preview opens; opening a list alone does not fetch every issue's relations.
+
+A known neighbor opens directly in Otomat. A neighbor not imported on this host, or
+belonging to another connection, opens in Linear. Back returns to the previous view.
+Relations refresh on opening the issue, returning to the window, or choosing
+**Refresh relations**. If a refresh fails, the previous data stays visible with a
+stale notice. Change relationships in Linear; opening them in Otomat writes nothing.
+
 ## Add a VPS as an execution host
 
 The daemon can run on a Linux server you own while the desktop app stays the user interface.

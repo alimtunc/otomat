@@ -1,4 +1,4 @@
-import type { GitHubConnectionContract } from "@otomat/domain";
+import type { GitHubConnectionContract, PullRequestStack } from "@otomat/domain";
 
 import { cliAvailability } from "../availability.js";
 import { authStatusFailed, parseAuthStatus } from "../parse.js";
@@ -41,6 +41,7 @@ import {
 import { mergePullRequest } from "./merge.js";
 import { readRepositoryMergePolicy, viewPullRequestOverview } from "./overview.js";
 import { submitPullRequestReview } from "./review-submission.js";
+import { readPullRequestStack } from "./stacks.js";
 import { listViewedFiles, setFileViewed } from "./viewed.js";
 
 class CommandGitHubCli implements GitHubCli {
@@ -48,6 +49,10 @@ class CommandGitHubCli implements GitHubCli {
     private readonly run: CommandRunner,
     private readonly sleep: (ms: number) => Promise<void>,
   ) {}
+
+  readPullRequestStack(input: PullRequestTarget): Promise<PullRequestStack | null> {
+    return readPullRequestStack(this.run, input);
+  }
 
   availability(): Promise<GitHubConnectionContract | null> {
     return cliAvailability(this.run);

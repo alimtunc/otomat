@@ -29,6 +29,7 @@ import {
 import { LinearError, linearError } from "./errors.js";
 import { resolveLifecycleTarget } from "./lifecycle.js";
 import { reconcileSourceLifecycle } from "./reconcile.js";
+import { readLinearRelations } from "./relations.js";
 import type { LinearService, LinearServiceConfig } from "./service-contract.js";
 import {
   connectionSources,
@@ -66,6 +67,15 @@ class DefaultLinearService implements LinearService {
       now: this.now,
       authorize: (issueId) => this.authorizeIssue(issueId),
     });
+  }
+
+  issueRelations(issueId: string) {
+    return readLinearRelations(
+      this.config.db,
+      this.config.client,
+      issueId,
+      this.authorizeIssue(issueId),
+    );
   }
 
   connections(): LinearConnectionContract[] {

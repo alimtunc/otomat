@@ -17,7 +17,7 @@ const SNAPSHOT_ROOTS = new Set([
   "usage",
   "workspaces",
 ]);
-const LINEAR_PANES = new Set(["editor", "comments", "attachments"]);
+const LINEAR_PANES = new Set(["editor", "comments", "attachments", "relations"]);
 
 function isSnapshotEntry(queryKey: readonly unknown[]): boolean {
   const [first, second, third, fourth] = queryKey;
@@ -26,7 +26,8 @@ function isSnapshotEntry(queryKey: readonly unknown[]): boolean {
   if (second === "runs") return third === "catalog" || asRecord(third) !== null;
   // The run's own detail only: its subtree is recomputed from git on every read.
   if (second === "run") return queryKey.length === 3;
-  if (second === "pull-request") return queryKey.length === 3 || fourth === "overview";
+  if (second === "pull-request")
+    return queryKey.length === 3 || fourth === "overview" || fourth === "stack";
   if (second === "linear") return LINEAR_PANES.has(String(third));
   return SNAPSHOT_ROOTS.has(String(second));
 }

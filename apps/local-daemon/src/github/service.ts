@@ -19,6 +19,7 @@ import {
   previewRepositoryPullRequest,
 } from "./repository/workspace.js";
 import { submitPullRequestReview } from "./review-submission.js";
+import { readStackContext } from "./stacks.js";
 import type { GitHubService, GitHubServiceConfig } from "./types.js";
 import { readViewedFiles, syncViewedFile } from "./viewed-files.js";
 
@@ -33,6 +34,7 @@ export function createGitHubService(config: GitHubServiceConfig): GitHubService 
     serializeByKey(repositoryPublications, repositoryId, operation);
   return {
     ...connection,
+    pullRequestStack: (pullRequestId) => readStackContext(config, pullRequestId),
     pullRequestInbox: (projectId) => inbox.read(projectId),
     syncPullRequestInbox: (projectId) => inbox.sync(projectId),
     listIssuePullRequests: (issueId) => imports.list(issueId),

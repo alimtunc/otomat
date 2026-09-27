@@ -160,6 +160,9 @@ export const EMPTY_PULL_REQUEST_INBOX: PullRequestInbox = {
 
 export function stubGitHubService(overrides: Partial<GitHubService> = {}): GitHubService {
   return {
+    pullRequestStack: async () => {
+      throw new Error("pullRequestStack stub not configured");
+    },
     connection: async () => DISCONNECTED_GITHUB,
     pullRequestInbox: () => EMPTY_PULL_REQUEST_INBOX,
     syncPullRequestInbox: async () => EMPTY_PULL_REQUEST_INBOX,
@@ -251,6 +254,10 @@ export class FakeGitHubCli implements GitHubCli {
   modeInputs: PullRequestModeInput[] = [];
   remoteHeads = new Map<string, string>();
   protectedBranches = new Set<string>();
+
+  async readPullRequestStack() {
+    return null;
+  }
 
   async connection(): Promise<GitHubConnectionContract> {
     if (this.connectionError) throw this.connectionError;
