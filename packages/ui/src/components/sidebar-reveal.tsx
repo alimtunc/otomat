@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
+import { isOverlayTarget } from "../lib/keyboard";
 import { useSidePanel } from "../lib/side-panel-context";
 import { SidebarCollapsedContext } from "../lib/sidebar-collapsed";
 import { useMediaQuery } from "../lib/use-media-query";
@@ -45,7 +46,7 @@ export function SidebarReveal({
     observer.observe(element);
     return () => {
       observer.disconnect();
-      if (timer.current !== null) clearTimeout(timer.current);
+      cancel();
     };
   }, [collapsed, railWidth]);
   const revealed = collapsed && preview;
@@ -75,11 +76,7 @@ export function SidebarReveal({
         setPreview(true);
       }}
       onBlurCapture={(event) => {
-        if (
-          event.relatedTarget instanceof Element &&
-          event.relatedTarget.closest('[role="dialog"], [role="menu"], [role="listbox"]')
-        )
-          return;
+        if (isOverlayTarget(event.relatedTarget)) return;
         if (!event.currentTarget.contains(event.relatedTarget)) {
           dismissed.current = false;
           setPointerMotion(false);
@@ -87,19 +84,19 @@ export function SidebarReveal({
         }
       }}
       onKeyDownCapture={(event) => {
-        if (event.key !== "Escape" || !revealed) return;
-        if (
-          event.target instanceof Element &&
-          event.target.closest('[role="dialog"], [role="menu"], [role="listbox"]')
-        )
-          return;
+        if (event.key !== "Escape" || !revealed || isOverlayTarget(event.target)) return;
         event.preventDefault();
         event.stopPropagation();
         cancel();
         dismissed.current = true;
         setPointerMotion(false);
         setPreview(false);
-        ref.current?.querySelector<HTMLButtonElement>('button[aria-controls="sidebar"]')?.focus();
+        if (panel !== null)
+          ref.current
+            ?.querySelector<HTMLButtonElement>(
+              `button[aria-controls="${CSS.escape(panel.panelId)}"]`,
+            )
+            ?.focus();
       }}
     >
       <div

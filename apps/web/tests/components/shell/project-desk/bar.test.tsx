@@ -7,14 +7,11 @@ import { act } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { stubAnimations } from "#support/animations";
+import { findLabelled, findMenuItem } from "#support/dom-queries";
 import { mount, type Mounted } from "#support/mount";
 
 const navigate = vi.fn();
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => navigate,
-  useRouterState: ({ select }: { select: (state: { location: { href: string } }) => string }) =>
-    select({ location: { href: "/project" } }),
-}));
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 let mounted: Mounted | undefined;
 stubAnimations();
 beforeEach(() => {
@@ -31,13 +28,10 @@ function cancelNavigation(event: Event): void {
   event.preventDefault();
 }
 async function chooseFiles() {
-  const trigger = document.querySelector<HTMLButtonElement>('button[aria-label="New tab"]');
-  await act(async () => trigger?.click());
+  await act(async () => findLabelled("New tab")?.click());
   expect(document.querySelector('[role="menu"]')).not.toBeNull();
   expect(document.querySelector('[role="dialog"]')).toBeNull();
-  const files = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
-    (item) => item.textContent === "Files",
-  );
+  const files = findMenuItem("Files");
   expect(files).toBeDefined();
   await act(async () => files?.click());
 }

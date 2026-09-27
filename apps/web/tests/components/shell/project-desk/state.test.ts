@@ -1,7 +1,7 @@
 import {
+  activateDeskTab,
   addDeskTab,
   closeDeskTab,
-  currentDeskPage,
   initialProjectDesk,
   isDeskRoute,
   moveDeskTab,
@@ -25,7 +25,7 @@ describe("Project desk navigation", () => {
     ]) {
       desk = navigateDesk(desk, { href, label: href });
       expect(desk.tabs).toHaveLength(1);
-      expect(currentDeskPage(desk).href).toBe(href);
+      expect(desk.page.href).toBe(href);
     }
   });
   it("creates duplicate views only explicitly, reorders them and chooses a neighbor on close", () => {
@@ -36,15 +36,20 @@ describe("Project desk navigation", () => {
     desk = addDeskTab(desk, "files-2", { href: "/files?path=two", label: "Files" });
     desk = moveDeskTab(desk, "files-2", -1);
     expect(desk.tabs.map((tab) => tab.id)).toEqual(["initial", "files-2", "files-1"]);
+    desk = activateDeskTab(desk, "initial");
+    expect(desk.page).toEqual({ href: "/project", label: "Project" });
+    expect(activateDeskTab(desk, "missing")).toBe(desk);
     desk = closeDeskTab(desk, "files-2");
-    expect(currentDeskPage(desk).href).toBe("/files?path=one");
+    expect(desk.active).toBe("initial");
+    desk = closeDeskTab(desk, "initial");
+    expect(desk.page.href).toBe("/files?path=one");
   });
   it("does not recreate a closed last tab when navigating", () => {
     const empty = closeDeskTab(initialProjectDesk(), "initial");
     const navigated = navigateDesk(empty, { href: "/issues", label: "Issues" });
     expect(navigated.tabs).toEqual([]);
     expect(navigated.active).toBeNull();
-    expect(currentDeskPage(navigated).href).toBe("/issues");
+    expect(navigated.page.href).toBe("/issues");
   });
   it("restores independent local and remote projects, including explicitly empty desks", () => {
     const storage = memoryStorage();
@@ -76,5 +81,14 @@ describe("Project desk navigation", () => {
       }),
     );
     expect(readProjectDesks(storage)["local:p"]?.tabs).toEqual([]);
+  });
+  it("keeps only host-qualified desks", () => {
+    const storage = memoryStorage();
+    const desk = initialProjectDesk();
+    storage.setItem(
+      "otomat.project-desks",
+      JSON.stringify({ "local:p": desk, locals: desk, "p:local": desk, "remote:": desk }),
+    );
+    expect(Object.keys(readProjectDesks(storage))).toEqual(["local:p"]);
   });
 });

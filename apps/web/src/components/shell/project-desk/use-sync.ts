@@ -12,10 +12,9 @@ export function useDeskSync() {
   // otomat-allow-effect: the router's committed location and resolved entity determine the owning project.
   useEffect(() => {
     if (!scoped || key === undefined || projectId === undefined) return;
-    if (pending !== null && (pending.key !== key || pending.href !== href)) return;
+    if (!projectDeskStore.actions.record(key, { href, label })) return;
     if (projectSelectionStore.state.get(host) !== projectId)
       projectSelectionStore.actions.select(host, projectId);
-    projectDeskStore.actions.record(key, { href, label });
   }, [key, projectId, host, href, label, scoped, pending]);
   return route;
 }

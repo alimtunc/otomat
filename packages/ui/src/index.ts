@@ -8,7 +8,7 @@
  * @packageDocumentation
  */
 export { cn } from "./lib/utils";
-export { isEditableTarget } from "./lib/keyboard";
+export { isEditableTarget, isOverlayTarget } from "./lib/keyboard";
 export { FOCUS_RING, FOCUS_RING_INSET } from "./lib/focus";
 export { SETTLE_IN_CLASS, STALE_CONTENT_CLASS } from "./lib/motion";
 export { useMediaQuery } from "./lib/use-media-query";
@@ -241,8 +241,6 @@ export { MarkdownMedia, type MarkdownMediaProps } from "./components/remote-medi
 export { markdownMediaKind } from "./lib/markdown/media";
 
 export { MetaList, type MetaListItem, type MetaListProps } from "./components/meta-list";
-
-export { NavSection, type NavSectionProps } from "./components/nav-section";
 
 export { PageBar, type PageBarProps } from "./components/page-bar";
 

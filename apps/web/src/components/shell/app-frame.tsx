@@ -1,21 +1,20 @@
 import { AppShell, CommandPalette, useCommandPalette, useTheme } from "@otomat/ui";
 import { useRouterState } from "@tanstack/react-router";
-import { useSelector } from "@tanstack/react-store";
 import { QuickOpen } from "@web/components/files/quick-open";
 import { NewIssueDialog } from "@web/components/issues/new-issue-dialog";
-import { sectionForPath } from "@web/components/shell/nav-items";
+import {
+  PROJECT_HOME_NAV,
+  PROJECT_SETTINGS_NAV,
+  sectionForPath,
+} from "@web/components/shell/nav-items";
 import { usePaletteGroups } from "@web/components/shell/palette/use-groups";
 import { DeskTabsBar } from "@web/components/shell/project-desk/bar";
 import { ProjectDeskHeader } from "@web/components/shell/project-desk/header";
 import { useDeskSync } from "@web/components/shell/project-desk/use-sync";
-import { arrangeProjects } from "@web/components/shell/project-layout/arrange";
 import { OrganizeProjectsDialog } from "@web/components/shell/project-layout/organize-dialog";
-import { projectLayoutStore } from "@web/components/shell/project-layout/store";
 import { AddProjectDialog } from "@web/components/shell/project-selection/add-project-dialog";
 import { useOpenHostInboxes } from "@web/components/shell/project-tabs/use-open-host-inboxes";
-import { useProjectTabShortcuts } from "@web/components/shell/project-tabs/use-tab-shortcuts";
 import { Sidebar } from "@web/components/shell/sidebar";
-import { StaleNotice } from "@web/components/shell/stale-notice";
 import { useNewIssueShortcut } from "@web/components/shell/use-new-issue-shortcut";
 import { useShellData } from "@web/components/shell/use-shell-data";
 import { useCallback, useRef, useState, type ReactNode } from "react";
@@ -26,12 +25,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const palette = useCommandPalette();
   const deskRoute = useDeskSync();
   const inboxes = useOpenHostInboxes();
-  const layout = useSelector(projectLayoutStore);
-  useProjectTabShortcuts(
-    arrangeProjects(layout, shell.projects).flatMap((section) => section.items),
-    shell.currentSwitcherId,
-    shell.selectProject,
-  );
   const [newIssueOpen, setNewIssueOpen] = useState(false);
   const [addProjectOpen, setAddProjectOpen] = useState(false);
   const [organizeOpen, setOrganizeOpen] = useState(false);
@@ -46,27 +39,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
   });
   useNewIssueShortcut(openNewIssue);
 
-  let conversationNotice: ReactNode;
-  if (shell.conversations.isError) {
-    conversationNotice = (
-      <button
-        type="button"
-        className="mx-3 min-w-0 truncate text-left text-xs text-text-tertiary"
-        onClick={() => void shell.conversations.refetch()}
-      >
-        Conversations unavailable · Retry
-      </button>
-    );
-    if (shell.conversations.data !== undefined)
-      conversationNotice = (
-        <StaleNotice
-          dataUpdatedAt={shell.conversations.dataUpdatedAt}
-          refreshing={shell.conversations.isFetching}
-          onRetry={() => void shell.conversations.refetch()}
-        />
-      );
-  }
-
   return (
     <AppShell
       density={density}
@@ -75,12 +47,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <ProjectDeskHeader
             project={shell.projects.find((project) => project.id === shell.currentSwitcherId)}
             hostLabel={shell.activeHostLabel}
+            scoped={deskRoute.scoped || pathname.startsWith(PROJECT_SETTINGS_NAV.to)}
             onHome={() => {
-              if (shell.currentSwitcherId) shell.selectProject(shell.currentSwitcherId, "/project");
+              if (shell.currentSwitcherId)
+                shell.selectProject(shell.currentSwitcherId, PROJECT_HOME_NAV.to);
             }}
             onOrganize={() => setOrganizeOpen(true)}
           />
-          {shell.currentSwitcherId ? (
+          {deskRoute.scoped && shell.currentSwitcherId ? (
             <DeskTabsBar key={shell.currentSwitcherId} projectKey={shell.currentSwitcherId} />
           ) : null}
         </>
@@ -96,14 +70,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
           onOrganizeProjects={() => setOrganizeOpen(true)}
           onSearch={() => palette.setOpen(true)}
           onNewIssue={openNewIssue}
-          hostId={deskRoute.host}
           hostLabel={shell.activeHostLabel}
-          href={deskRoute.href}
-          conversations={shell.conversations.data?.entries ?? []}
+          conversations={shell.conversations}
           inboxes={inboxes}
-          notice={conversationNotice}
           inboxCount={shell.inboxCount}
-          conversationCount={shell.conversationCount}
         />
       }
     >

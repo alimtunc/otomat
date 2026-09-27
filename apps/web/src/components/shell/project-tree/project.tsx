@@ -10,9 +10,11 @@ import {
   SidebarNavItem,
   type ProjectSummary,
 } from "@otomat/ui";
+import { PROJECT_HOME_NAV } from "@web/components/shell/nav-items";
 import { isConversationRunning } from "@web/lib/conversations/status";
-import { conversationTitle } from "@web/lib/conversations/title";
 import { useState } from "react";
+
+import { SidebarConversationRow } from "./conversation-row";
 
 export interface SidebarProjectProps {
   project: ProjectSummary;
@@ -33,9 +35,10 @@ export function SidebarProject({
   onNavigate,
 }: SidebarProjectProps) {
   const [expanded, setExpanded] = useState<boolean | null>(null);
-  const open = expanded ?? active;
+  const disclosed = expanded ?? active;
   const live = conversations.some(isConversationRunning);
-  const visible = conversations.filter((entry) => !entry.archived).slice(0, 5);
+  const open = conversations.filter((entry) => !entry.archived);
+  const visible = open.slice(0, 5);
   const projectLabel = `${project.name} · ${project.tag ?? "Local"}${attention ? ` · ${attention} unread` : ""}${live ? " · Running" : ""}`;
   return (
     <div className="min-w-0" data-project={project.id}>
@@ -48,10 +51,10 @@ export function SidebarProject({
       >
         <button
           type="button"
-          onClick={() => onNavigate(project.id, "/project")}
+          onClick={() => onNavigate(project.id, PROJECT_HOME_NAV.to)}
           title={projectLabel}
           aria-label={projectLabel}
-          aria-current={active && href === "/project" ? "page" : undefined}
+          aria-current={active && href === PROJECT_HOME_NAV.to ? "page" : undefined}
           className={cn(
             "relative flex h-10 min-w-0 items-center gap-2 rounded px-2 text-left text-sm",
             FOCUS_RING_INSET,
@@ -75,8 +78,9 @@ export function SidebarProject({
             </span>
           )}
           {collapsed && (live || attention) ? (
-            <span className="absolute right-0 top-1" aria-label={live ? "Running" : "Unread"}>
+            <span className="absolute right-0 top-1">
               <LiveDot size={6} tone={attention ? "warning" : "iris"} />
+              <span className="sr-only">{live ? "Running" : "Unread"}</span>
             </span>
           ) : null}
           {!collapsed && live ? <LiveDot size={6} tone="iris" /> : null}
@@ -85,14 +89,14 @@ export function SidebarProject({
         {collapsed ? null : (
           <IconButton
             size="sm"
-            label={`${open ? "Collapse" : "Expand"} project ${project.name}`}
-            aria-expanded={open}
-            icon={<Icon name={open ? "chevron-down" : "chevron-right"} aria-hidden />}
-            onClick={() => setExpanded(!open)}
+            label={`${disclosed ? "Collapse" : "Expand"} project ${project.name}`}
+            aria-expanded={disclosed}
+            icon={<Icon name={disclosed ? "chevron-down" : "chevron-right"} aria-hidden />}
+            onClick={() => setExpanded(!disclosed)}
           />
         )}
       </div>
-      {!collapsed && open ? (
+      {!collapsed && disclosed ? (
         <nav
           aria-label={`${project.name} views`}
           className="mb-2 ml-5 flex flex-col gap-1 border-l border-border-subtle py-1 pl-2"
@@ -112,49 +116,16 @@ export function SidebarProject({
           {visible.length ? (
             <div className="px-2 pb-1 pt-3 text-micro text-text-tertiary">Conversations</div>
           ) : null}
-          {visible.map((entry) => {
-            const target = `/conversations?${new URLSearchParams(
-              "terminal" in entry
-                ? { terminal: entry.terminal.id }
-                : { run: entry.run_id, step: entry.step_run_id },
-            )}`;
-            const title = conversationTitle(entry);
-            return (
-              <button
-                key={entry.id}
-                type="button"
-                title={`${entry.issue?.title ?? project.name} · ${title}`}
-                onClick={() => onNavigate(project.id, target)}
-                aria-current={active && href === target ? "page" : undefined}
-                className={cn(
-                  "flex h-8 w-full min-w-0 items-center gap-2.5 rounded border-l-2 px-2 text-left text-sm",
-                  FOCUS_RING_INSET,
-                  active && href === target
-                    ? "border-iris bg-selected text-foreground"
-                    : "border-transparent text-text-secondary hover:bg-hover",
-                )}
-              >
-                <span className="flex w-4 shrink-0 justify-center">
-                  {isConversationRunning(entry) ? (
-                    <LiveDot tone="iris" size={6} />
-                  ) : (
-                    <Icon
-                      name={"terminal" in entry ? "terminal" : "message-square"}
-                      className="size-4"
-                      aria-hidden
-                    />
-                  )}
-                </span>
-                <span className="truncate">{title}</span>
-                {entry.read ? null : (
-                  <span className="ml-auto shrink-0 text-amber" aria-label="Unread">
-                    ●
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          {conversations.length > visible.length ? (
+          {visible.map((entry) => (
+            <SidebarConversationRow
+              key={entry.id}
+              entry={entry}
+              projectName={project.name}
+              href={active ? href : null}
+              onSelect={(target) => onNavigate(project.id, target)}
+            />
+          ))}
+          {open.length > visible.length ? (
             <button
               type="button"
               className={`h-8 w-full rounded px-2 text-left text-xs text-text-tertiary hover:bg-hover ${FOCUS_RING_INSET}`}

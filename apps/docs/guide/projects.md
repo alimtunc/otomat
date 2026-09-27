@@ -45,7 +45,7 @@ home; subsequent navigation does not silently recreate a tab. Closing a view nev
   including projects in folded groups. The browser or operating system may reserve these chords.
 - Collapse the sidebar with its button or **[**. Hover the rail or focus it with the keyboard to
   reveal it without shrinking the content. **Escape** dismisses the preview; **Expand Sidebar**
-  keeps it open. The button also works on touch devices.
+  keeps it open.
 
 Choose **Organize projects** in the project picker to arrange projects and groups:
 
@@ -56,7 +56,7 @@ Choose **Organize projects** in the project picker to arrange projects and group
 - The glyph before a project's name opens its icon choice; **Default icon** returns to the initial.
 
 Click a group in the sidebar to fold it. Its unread and known activity signals remain visible,
-as does the active project. Existing groups, ordering, icons and remembered routes are retained.
+as does the active project.
 The arrangement is a preference on this machine and changes no host, repository, run or worktree.
 A newly added project joins the ungrouped section. A temporarily unavailable host's projects
 return to their previous group when it answers again.

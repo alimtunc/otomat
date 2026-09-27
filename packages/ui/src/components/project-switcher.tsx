@@ -47,9 +47,7 @@ export interface ProjectSwitcherProps {
   triggerRef?: Ref<HTMLButtonElement>;
   currentId?: string;
   onSelect: (id: string) => void;
-  collapsed?: boolean;
   loading?: boolean;
-  /** Renders an "Add project…" footer action; also replaces the empty-state hint when provided. */
   onAddProject?: () => void;
   onOpenSettings: (id: string) => void;
   onOrganize: () => void;
@@ -60,7 +58,6 @@ export function ProjectSwitcher({
   triggerRef,
   currentId,
   onSelect,
-  collapsed = false,
   loading = false,
   onAddProject,
   onOpenSettings,
@@ -101,7 +98,6 @@ export function ProjectSwitcher({
               "h-10 w-full justify-start gap-2 rounded-md border-0 px-2 text-left hover:bg-hover",
               FOCUS_RING_INSET,
               "disabled:cursor-not-allowed disabled:opacity-60",
-              collapsed && "justify-center px-0",
             )}
             style={{ transition: "background var(--motion-fast) var(--ease)" }}
           >
@@ -110,23 +106,19 @@ export function ProjectSwitcher({
             ) : (
               <FolderGit2 className="h-6 w-6 text-text-tertiary" />
             )}
-            {!collapsed ? (
-              <>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                    <span className="truncate">
-                      {loading ? "Loading…" : (current?.name ?? "No project")}
-                    </span>
-                  </div>
-                  {current?.branch || (current?.repo && current.repo !== current.name) ? (
-                    <div className="truncate text-micro text-text-tertiary">
-                      {[current?.repo, current?.branch].filter(Boolean).join(" · ")}
-                    </div>
-                  ) : null}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <span className="truncate">
+                  {loading ? "Loading…" : (current?.name ?? "No project")}
+                </span>
+              </div>
+              {current?.branch || (current?.repo && current.repo !== current.name) ? (
+                <div className="truncate text-micro text-text-tertiary">
+                  {[current?.repo, current?.branch].filter(Boolean).join(" · ")}
                 </div>
-                <ChevronsUpDown className="h-3.5 w-3.5 flex-none text-text-tertiary" />
-              </>
-            ) : null}
+              ) : null}
+            </div>
+            <ChevronsUpDown className="h-3.5 w-3.5 flex-none text-text-tertiary" />
           </Button>
         }
       />

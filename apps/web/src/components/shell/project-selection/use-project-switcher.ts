@@ -3,7 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useProjects } from "@web/api/daemon/queries";
 import { shellKeys } from "@web/api/query-keys";
-import { currentDeskPage } from "@web/components/shell/project-desk/state";
+import { isDeskRoute } from "@web/components/shell/project-desk/state";
 import { getProjectDesk, projectDeskStore } from "@web/components/shell/project-desk/store";
 import {
   parseProjectSwitcherKey,
@@ -77,9 +77,9 @@ export function useProjectSwitcher() {
   const selectProject = (switcherId: string, href?: string): void => {
     if (!confirmContextNavigation()) return;
     const target = parseProjectSwitcherKey(switcherId, activeHostId);
-    const destination = href ?? currentDeskPage(getProjectDesk(switcherId)).href;
+    const destination = href ?? getProjectDesk(switcherId).page.href;
     const arrive = (): void => {
-      projectDeskStore.actions.expect(switcherId, destination);
+      if (isDeskRoute(destination)) projectDeskStore.actions.expect(switcherId, destination);
       projectSelectionStore.actions.select(target.hostId, target.projectId);
       projectTabsStore.actions.open(switcherId);
       void navigate({ href: destination });

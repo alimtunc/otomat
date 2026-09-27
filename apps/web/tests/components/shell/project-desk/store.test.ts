@@ -1,11 +1,7 @@
-import {
-  addDeskTab,
-  currentDeskPage,
-  readProjectDesks,
-} from "@web/components/shell/project-desk/state";
+// @vitest-environment happy-dom
+import { addDeskTab, readProjectDesks } from "@web/components/shell/project-desk/state";
 import { getProjectDesk, projectDeskStore } from "@web/components/shell/project-desk/store";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
-// @vitest-environment happy-dom
 import { beforeEach, expect, it } from "vitest";
 
 beforeEach(() => {
@@ -15,7 +11,7 @@ beforeEach(() => {
 });
 it("migrates the remembered route without changing existing project preferences", () => {
   projectTabsStore.setState(() => [{ key: "local:p", route: "/runs/r1/diff" }]);
-  expect(currentDeskPage(getProjectDesk("local:p")).href).toBe("/runs/r1/diff");
+  expect(getProjectDesk("local:p").page.href).toBe("/runs/r1/diff");
   expect(projectTabsStore.state).toHaveLength(1);
 });
 it("ignores an outgoing route during a project switch, then records only the arrival", () => {
@@ -36,7 +32,7 @@ it("ignores an outgoing route during a project switch, then records only the arr
     href: "/conversations?run=r2&step=s2",
     label: "Other thread",
   });
-  expect(currentDeskPage(getProjectDesk("remote:a")).label).toBe("Other thread");
+  expect(getProjectDesk("remote:a").page.label).toBe("Other thread");
   expect(getProjectDesk("local:a")).toBe(before);
   expect(projectDeskStore.state.pending).toBeNull();
   expect(readProjectDesks()).toEqual(projectDeskStore.state.desks);

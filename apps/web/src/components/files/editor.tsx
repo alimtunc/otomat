@@ -3,7 +3,7 @@ import { Button, Kbd } from "@otomat/ui";
 import { useSaveFile } from "@web/api/files/mutations";
 import type { CodeEditorHandle } from "@web/components/files/code-editor";
 import { EDITOR_PLACEHOLDER_LINES } from "@web/components/files/surface";
-import { useFileNavigation } from "@web/components/files/use-file-navigation";
+import { useUnsavedChangesGuard } from "@web/components/files/use-unsaved-changes-guard";
 import { CopyablePath } from "@web/components/runs/copyable-path";
 import { LinesSkeleton } from "@web/components/shell/lines-skeleton";
 import { worktreeFileRefusal } from "@web/lib/run/file-refusal";
@@ -29,7 +29,7 @@ export function FileEditor({ target, content, editable, refreshing, onReload }: 
   const [dirty, setDirty] = useState(false);
   const [opened, setOpened] = useState(content.revision);
   const [reloads, setReloads] = useState(0);
-  useFileNavigation(dirty, () => {
+  useUnsavedChangesGuard(dirty, () => {
     setDirty(false);
     setReloads((count) => count + 1);
   });

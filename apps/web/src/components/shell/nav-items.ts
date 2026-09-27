@@ -27,6 +27,18 @@ export const WORKSPACE_NAV: NavItem[] = [
   { section: "usage", icon: "bar-chart", label: "Usage", to: "/usage" },
 ];
 
+type ProjectNavItem = Omit<NavItem, "section">;
+export const PROJECT_HOME_NAV: ProjectNavItem = {
+  icon: "folder",
+  label: "Project",
+  to: "/project",
+};
+export const PROJECT_SETTINGS_NAV: ProjectNavItem = {
+  icon: "settings",
+  label: "Project settings",
+  to: "/settings/project",
+};
+
 export const INBOX_NAV: NavItem = { section: "inbox", icon: "inbox", label: "Inbox", to: "/inbox" };
 
 export const CONVERSATIONS_NAV: NavItem = {

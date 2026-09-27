@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useEffectEvent, useState, type ReactNode } from "react";
 
 import type { ConnectionState } from "../lib/connection-state";
-import { isEditableTarget } from "../lib/keyboard";
+import { isEditableTarget, isOverlayTarget } from "../lib/keyboard";
 import { readPanelCollapsed, writePanelCollapsed } from "../lib/panel-collapsed-storage";
-import { SidebarCollapsedContext } from "../lib/sidebar-collapsed";
 import type { Density } from "../lib/theme";
 import { useMediaQuery } from "../lib/use-media-query";
 import { usePanelGroupLayout } from "../lib/use-panel-group-layout";
@@ -69,12 +68,7 @@ export function AppShell({
     if (!toggleKey) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== toggleKey || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (isEditableTarget(e.target)) return;
-      if (
-        e.defaultPrevented ||
-        (e.target instanceof Element && e.target.closest('[role="menu"], [role="dialog"]'))
-      )
-        return;
+      if (e.defaultPrevented || isEditableTarget(e.target) || isOverlayTarget(e.target)) return;
       e.preventDefault();
       onToggle();
     };
@@ -88,33 +82,28 @@ export function AppShell({
     </SidebarReveal>
   );
   return (
-    <SidebarCollapsedContext.Provider value={collapsed}>
-      <div
-        data-density={density}
-        className={cn("flex h-screen flex-col overflow-hidden", className)}
-      >
-        <ResizablePanelGroup {...shellLayout} className="h-auto flex-1">
-          <SidePanel
-            id={SIDEBAR_PANEL_ID}
-            label="Sidebar"
-            side="left"
-            defaultSize={sidebarWidth}
-            minSize={SIDEBAR_MIN_WIDTH}
-            maxSize={SIDEBAR_MAX_WIDTH}
-            collapsedSize={railWidth}
-            collapsed={collapsed}
-            onCollapsedChange={setCollapsed}
-            rail={sidebarContent}
-          >
-            {sidebarContent}
-          </SidePanel>
-          <ResizablePanel id="main" minSize="40%">
-            {tabs}
-            <div className="min-h-0 flex-1">{children}</div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
-    </SidebarCollapsedContext.Provider>
+    <div data-density={density} className={cn("flex h-screen flex-col overflow-hidden", className)}>
+      <ResizablePanelGroup {...shellLayout} className="h-auto flex-1">
+        <SidePanel
+          id={SIDEBAR_PANEL_ID}
+          label="Sidebar"
+          side="left"
+          defaultSize={sidebarWidth}
+          minSize={SIDEBAR_MIN_WIDTH}
+          maxSize={SIDEBAR_MAX_WIDTH}
+          collapsedSize={railWidth}
+          collapsed={collapsed}
+          onCollapsedChange={setCollapsed}
+          rail={sidebarContent}
+        >
+          {sidebarContent}
+        </SidePanel>
+        <ResizablePanel id="main" minSize="40%">
+          {tabs}
+          <div className="min-h-0 flex-1">{children}</div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
   );
 }
 

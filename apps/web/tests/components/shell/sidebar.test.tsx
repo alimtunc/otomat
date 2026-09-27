@@ -1,4 +1,6 @@
 // @vitest-environment happy-dom
+import type { ConversationThreadEntry } from "@otomat/domain";
+import type { ConversationsQuery } from "@web/api/conversations/queries";
 import { projectLayoutStore } from "@web/components/shell/project-layout/store";
 import { Sidebar } from "@web/components/shell/sidebar";
 import { act, type ReactNode } from "react";
@@ -6,17 +8,31 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { stubAnimations } from "#support/animations";
-import { terminalConversationEntry } from "#support/conversations";
+import { conversationEntry, terminalConversationEntry } from "#support/conversations";
 import { setInputValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
 
+let href = "/issues";
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ to, children, ...rest }: { to: string; children?: ReactNode; className?: string }) => (
     <a href={to} {...rest}>
       {children}
     </a>
   ),
+  useRouterState: ({ select }: { select: (state: { location: { href: string } }) => string }) =>
+    select({ location: { href } }),
 }));
+
+function conversationsQuery(entries: ConversationThreadEntry[]) {
+  // SAFETY: the sidebar reads only these five fields, not the full query-state union.
+  return {
+    data: { entries },
+    isError: false,
+    isFetching: false,
+    dataUpdatedAt: 0,
+    refetch: vi.fn(),
+  } as ConversationsQuery;
+}
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 stubAnimations();
@@ -26,6 +42,7 @@ const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
   document.body.replaceChildren();
+  href = "/issues";
   projectLayoutStore.setState(() => ({ ungrouped: [], groups: [], icons: {} }));
 });
 
@@ -38,9 +55,7 @@ async function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> =
       <Sidebar
         active="issues"
         hostLabel="Local"
-        hostId="local"
-        href="/issues"
-        conversations={[]}
+        conversations={conversationsQuery([])}
         inboxes={[]}
         projects={[{ id: "local-default", name: "Local workspace" }]}
         currentProjectId="local-default"
@@ -86,11 +101,11 @@ describe("Sidebar", () => {
     expect(onProjectSelect).toHaveBeenCalledWith("local-default", "/project");
   });
 
-  it("keeps only the working surfaces, pinning Settings alone in the footer", async () => {
+  it("links only Inbox, Conversations and Settings; project views are buttons", async () => {
     const container = await renderSidebar();
 
     const targets = [...container.querySelectorAll("a")].map((link) => link.getAttribute("href"));
-    expect(targets).toEqual(["/inbox", "/conversations", "/settings", "/settings/host"]);
+    expect(targets).toEqual(["/inbox", "/conversations", "/settings"]);
     expect(container.textContent).toContain("All runs");
     expect(container.textContent).toContain("Issues");
     expect(container.textContent).not.toContain("Runtimes");
@@ -109,10 +124,14 @@ describe("Sidebar", () => {
   });
 
   it("badges unread conversations directly below Inbox, outside Workspace", async () => {
+    href = "/conversations";
     const container = await renderSidebar({
       active: "conversations",
       inboxCount: 0,
-      conversationCount: 2,
+      conversations: conversationsQuery([
+        conversationEntry({ id: "c1", read: false }),
+        conversationEntry({ id: "c2", read: false }),
+      ]),
     });
     const links = [...container.querySelectorAll("a")];
     const conversations = links.find((link) => link.getAttribute("href") === "/conversations");
@@ -219,13 +238,13 @@ describe("Sidebar", () => {
   it("opens a terminal conversation in its project without activating the global list", async () => {
     const entry = terminalConversationEntry({ read: true });
     const onProjectSelect = vi.fn();
+    href = `/conversations?terminal=${entry.terminal.id}`;
     const container = await renderSidebar({
       active: "conversations",
-      conversations: [entry],
+      conversations: conversationsQuery([entry]),
       onProjectSelect,
       projects: [{ id: "local:p1", name: "Otomat" }],
       currentProjectId: "local:p1",
-      href: `/conversations?terminal=${entry.terminal.id}`,
     });
     await act(async () => findButton("Codex terminal")?.click());
     expect(onProjectSelect).toHaveBeenCalledExactlyOnceWith(

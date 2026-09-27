@@ -1,24 +1,27 @@
-import type { ConversationThreadEntry } from "@otomat/domain";
+import { countUnreadConversations } from "@otomat/domain";
 import {
   AppSidebar,
-  HostTag,
-  Icon,
   ProjectSwitcher,
   SidebarNavItem,
   useSidebarCollapsed,
   type ProjectSummary,
 } from "@otomat/ui";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
+import type { ConversationsQuery } from "@web/api/conversations/queries";
 import {
   CONVERSATIONS_NAV,
   INBOX_NAV,
+  PROJECT_HOME_NAV,
+  PROJECT_SETTINGS_NAV,
   SETTINGS_NAV,
   type ShellSection,
 } from "@web/components/shell/nav-items";
+import { isDeskRoute } from "@web/components/shell/project-desk/state";
 import { switcherSections } from "@web/components/shell/project-layout/arrange";
 import { projectLayoutStore } from "@web/components/shell/project-layout/store";
 import type { HostInboxEntries } from "@web/components/shell/project-tabs/use-open-host-inboxes";
+import { ConversationsNotice } from "@web/components/shell/project-tree/conversations-notice";
 import { ProjectTree } from "@web/components/shell/project-tree/tree";
 import type { ReactNode, Ref } from "react";
 
@@ -33,13 +36,9 @@ interface SidebarProps {
   onSearch: () => void;
   onNewIssue: () => void;
   inboxCount?: number;
-  conversationCount?: number;
   hostLabel: string;
-  hostId: string;
-  href: string;
-  conversations: ConversationThreadEntry[];
+  conversations: ConversationsQuery;
   inboxes: HostInboxEntries[];
-  notice?: ReactNode;
 }
 function navRender(to: string) {
   return ({
@@ -51,7 +50,7 @@ function navRender(to: string) {
     children: ReactNode;
     "aria-current"?: "page";
   }) => (
-    <Link to={to} search={{}} className={className} {...rest}>
+    <Link to={to} className={className} {...rest}>
       {children}
     </Link>
   );
@@ -67,15 +66,13 @@ export function Sidebar({
   onSearch,
   onNewIssue,
   inboxCount = 0,
-  conversationCount = 0,
   hostLabel,
-  hostId,
-  href,
   conversations,
   inboxes,
-  notice,
 }: SidebarProps) {
   const collapsed = useSidebarCollapsed();
+  const href = useRouterState({ select: (state) => state.location.href });
+  const conversationCount = countUnreadConversations(conversations.data?.entries ?? []);
   const layout = useSelector(projectLayoutStore);
   return (
     <AppSidebar
@@ -85,9 +82,8 @@ export function Sidebar({
           sections={switcherSections(layout, projects)}
           triggerRef={projectTriggerRef}
           currentId={currentProjectId}
-          onSelect={(id) => onProjectSelect(id, "/project")}
-          onOpenSettings={(id) => onProjectSelect(id, "/settings/project")}
-          collapsed={collapsed}
+          onSelect={(id) => onProjectSelect(id, PROJECT_HOME_NAV.to)}
+          onOpenSettings={(id) => onProjectSelect(id, PROJECT_SETTINGS_NAV.to)}
           onOrganize={onOrganizeProjects}
           {...(onAddProject === undefined ? {} : { onAddProject })}
         />
@@ -97,17 +93,10 @@ export function Sidebar({
           <SidebarNavItem
             icon={SETTINGS_NAV.icon}
             label={SETTINGS_NAV.label}
-            active={active === "settings"}
+            active={active === SETTINGS_NAV.section}
             render={navRender(SETTINGS_NAV.to)}
             collapsed={collapsed}
           />
-          <Link
-            to="/settings/host"
-            className="flex min-w-0 items-center justify-center py-2"
-            title={`Host · ${hostLabel}`}
-          >
-            <HostTag tag={hostLabel} />
-          </Link>
         </>
       }
     >
@@ -139,7 +128,7 @@ export function Sidebar({
         <SidebarNavItem
           icon={INBOX_NAV.icon}
           label={INBOX_NAV.label}
-          active={active === "inbox"}
+          active={active === INBOX_NAV.section}
           badgeCount={inboxCount || undefined}
           render={navRender(INBOX_NAV.to)}
           collapsed={collapsed}
@@ -147,9 +136,7 @@ export function Sidebar({
         <SidebarNavItem
           icon={CONVERSATIONS_NAV.icon}
           label={CONVERSATIONS_NAV.label}
-          active={
-            active === "conversations" && !href.includes("run=") && !href.includes("terminal=")
-          }
+          active={active === CONVERSATIONS_NAV.section && !isDeskRoute(href)}
           badgeCount={conversationCount || undefined}
           render={navRender(CONVERSATIONS_NAV.to)}
           collapsed={collapsed}
@@ -159,29 +146,13 @@ export function Sidebar({
       <div className="flex h-6 items-center px-4 text-micro text-text-tertiary">
         {collapsed ? null : "Projects"}
       </div>
-      {notice ? (
-        <div className="flex min-h-8 min-w-0 items-center">
-          {collapsed ? (
-            <span
-              role="status"
-              aria-label="Conversations unavailable"
-              title="Conversations unavailable"
-              className="mx-auto flex h-8 items-center text-warning"
-            >
-              <Icon name="alert-triangle" className="size-4" aria-hidden />
-            </span>
-          ) : (
-            notice
-          )}
-        </div>
-      ) : null}
+      <ConversationsNotice query={conversations} collapsed={collapsed} />
       <ProjectTree
         projects={projects}
         currentProjectId={currentProjectId}
         href={href}
         collapsed={collapsed}
-        entries={conversations}
-        host={hostId}
+        entries={conversations.data?.entries ?? []}
         inboxes={inboxes}
         onNavigate={onProjectSelect}
       />

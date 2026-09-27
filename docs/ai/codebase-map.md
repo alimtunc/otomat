@@ -1993,7 +1993,7 @@ never a silent overwrite.
 ## Staged and Unstaged Changes
 
 Project and run Files each contain Files/Changes tabs on the same route; Changes
-is never a separate sidebar or cockpit entry. Project tabs sit in the page
+is never a separate sidebar or cockpit entry. The project's Files/Changes tabs sit in the page
 header; run tabs stay inside the Files workspace below the cockpit navigation.
 The selected change has one toolbar for its path, staged/unstaged state and
 file actions; the state's tooltip names the compared Git layers.
@@ -2243,9 +2243,8 @@ retain their own scope and do not replace a project's remembered content.
 Every tab has a stable id and its own href and label. Ordinary navigation replaces that tab's
 location; only the New tab dropdown appends one. Duplicate views are allowed. Closing all tabs
 leaves an untabbed current page, so later sidebar navigation cannot implicitly add another tab.
-An absent desk is seeded once from the legacy `otomat.project-tabs` route, or from `/project`.
-The old preference retains known project membership for host attention polling; group preferences
-keep their original key and shape.
+An absent desk is seeded once from the `otomat.project-tabs` route, or from `/project`.
+`otomat.project-tabs` keeps host membership for attention polling; `project-layout` is unchanged.
 
 `useProjectSwitcher.selectProject` resolves the host before selecting the project and navigating
 to its remembered location or an explicit destination. A pending destination prevents an outgoing
@@ -2300,7 +2299,7 @@ ungrouped projects first, then each group in order. Unknown catalog keys are ret
 so a returning host restores its placement. New projects append to the ungrouped section; renames
 keep their id. Every project move is one `withSectionOrder` write. Folded groups aggregate hidden
 unread counts and known live conversations and keep the active project visible. The organization
-dialog retains labelled move controls as alternatives to drag-and-drop.
+dialog offers labelled move controls as alternatives to drag-and-drop.
 
 ## One Renderer For Every Host
 

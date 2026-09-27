@@ -12,3 +12,5 @@ export function useConversations() {
     refetchIntervalInBackground: true,
   });
 }
+
+export type ConversationsQuery = ReturnType<typeof useConversations>;

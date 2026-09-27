@@ -6,7 +6,7 @@ a shell, Claude or Codex terminal session.
 
 ## The list
 
-Conversations are grouped by issue, or by project for a terminal opened from the sidebar,
+Conversations are grouped by issue, or by project for a terminal opened from the project’s **Terminal** view,
 newest activity first, in two sections. **Following**
 holds the issues whose cycle is still open: a run queued, working or
 waiting on a permission, an answer or a provider quota; a run awaiting your review or with an

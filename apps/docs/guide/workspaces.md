@@ -21,7 +21,7 @@ the branch you left it on.
 
 ## Use a terminal
 
-The sidebar’s **Terminal** opens a session in the selected project’s registered
+The project home’s **Terminal** opens a session in the selected project’s registered
 checkout, without creating an issue or run. Changes happen directly in that
 folder. Choose **Open shell**, **Claude** or **Codex**; CLI launches show their
 invocation before confirmation and send no issue context. Each project keeps its

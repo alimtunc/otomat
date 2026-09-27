@@ -1,25 +1,26 @@
 import { FOCUS_RING_INSET, HostTag, Icon, IconButton, type ProjectSummary } from "@otomat/ui";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { projectLayoutStore } from "@web/components/shell/project-layout/store";
-
-import { isDeskRoute } from "./state";
 
 export function ProjectDeskHeader({
   project,
   hostLabel,
+  scoped,
   onHome,
   onOrganize,
 }: {
   project: ProjectSummary | undefined;
   hostLabel: string;
+  scoped: boolean;
   onHome: () => void;
   onOrganize: () => void;
 }) {
   const layout = useSelector(projectLayoutStore);
-  const location = useRouterState({ select: (state) => state.location });
-  const group = layout.groups.find((entry) => entry.projects.includes(project?.id ?? ""));
-  const scoped = isDeskRoute(location.href) || location.pathname.startsWith("/settings/project");
+  const group =
+    project === undefined
+      ? undefined
+      : layout.groups.find((entry) => entry.projects.includes(project.id));
   return (
     <header className="flex h-11 min-w-0 shrink-0 items-center gap-2 border-b border-border-subtle bg-surface-1 px-3">
       {scoped ? (

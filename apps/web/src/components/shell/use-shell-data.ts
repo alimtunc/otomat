@@ -1,4 +1,4 @@
-import { countUnreadConversations, countUnreadInboxEntries } from "@otomat/domain";
+import { countUnreadInboxEntries } from "@otomat/domain";
 import { useConversations } from "@web/api/conversations/queries";
 import { useDaemonStatus } from "@web/api/daemon/queries";
 import { useInbox } from "@web/api/inbox/queries";
@@ -25,6 +25,5 @@ export function useShellData() {
     ...switcher,
     conversations,
     inboxCount: countUnreadInboxEntries(inbox.data?.entries ?? []),
-    conversationCount: countUnreadConversations(conversations.data?.entries ?? []),
   };
 }

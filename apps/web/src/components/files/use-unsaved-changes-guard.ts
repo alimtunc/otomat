@@ -3,10 +3,11 @@ import { CONTEXT_NAVIGATION_EVENT } from "@web/lib/context-navigation";
 import { useEffect, useEffectEvent } from "react";
 import { flushSync } from "react-dom";
 
-export function useFileNavigation(dirty: boolean, onDiscard: () => void): void {
+export function useUnsavedChangesGuard(dirty: boolean, onDiscard: () => void): void {
   const confirm = (): boolean => {
     if (!dirty) return true;
     if (!window.confirm("This file has unsaved changes. Leave and discard them?")) return false;
+    // The router blocker re-reads `dirty` on the navigation that follows this confirm.
     flushSync(onDiscard);
     return true;
   };

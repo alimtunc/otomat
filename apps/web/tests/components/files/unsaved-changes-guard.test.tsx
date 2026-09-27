@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { useFileNavigation } from "@web/components/files/use-file-navigation";
+import { useUnsavedChangesGuard } from "@web/components/files/use-unsaved-changes-guard";
 import { confirmContextNavigation } from "@web/lib/context-navigation";
 import { act, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -10,7 +10,7 @@ vi.mock("@tanstack/react-router", () => ({ useBlocker: vi.fn() }));
 afterEach(() => vi.unstubAllGlobals());
 function EditorProbe() {
   const [dirty, setDirty] = useState(true);
-  useFileNavigation(dirty, () => setDirty(false));
+  useUnsavedChangesGuard(dirty, () => setDirty(false));
   return <span>{dirty ? "Unsaved" : "Discarded"}</span>;
 }
 it("refuses project or tab changes before they can remove unsaved content", async () => {

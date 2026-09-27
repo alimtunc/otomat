@@ -1,13 +1,15 @@
-import { countUnreadInboxEntriesByProject, type ConversationThreadEntry } from "@otomat/domain";
+import type { ConversationThreadEntry } from "@otomat/domain";
 import { Badge, FOCUS_RING_INSET, Icon, LiveDot, type ProjectSummary } from "@otomat/ui";
 import { useSelector } from "@tanstack/react-store";
 import { arrangeProjects, withLayoutIcons } from "@web/components/shell/project-layout/arrange";
 import { projectLayoutStore } from "@web/components/shell/project-layout/store";
-import { projectSwitcherKey } from "@web/components/shell/project-selection/host-key";
 import type { HostInboxEntries } from "@web/components/shell/project-tabs/use-open-host-inboxes";
+import { useActiveHostId } from "@web/lib/active-host";
 import { isConversationRunning } from "@web/lib/conversations/status";
 
+import { attentionByProject, conversationsByProject } from "./by-project";
 import { SidebarProject } from "./project";
+import { useProjectShortcuts } from "./use-project-shortcuts";
 
 export function ProjectTree({
   projects,
@@ -15,7 +17,6 @@ export function ProjectTree({
   href,
   collapsed,
   entries,
-  host,
   inboxes,
   onNavigate,
 }: {
@@ -24,18 +25,18 @@ export function ProjectTree({
   href: string;
   collapsed: boolean;
   entries: ConversationThreadEntry[];
-  host: string;
   inboxes: HostInboxEntries[];
-  onNavigate: (id: string, href: string) => void;
+  onNavigate: (id: string, href?: string) => void;
 }) {
   const layout = useSelector(projectLayoutStore);
+  const host = useActiveHostId();
   const sections = arrangeProjects(layout, withLayoutIcons(layout, projects));
-  const attention = new Map(
-    inboxes.flatMap((inbox) =>
-      [...countUnreadInboxEntriesByProject(inbox.entries)].map(
-        ([id, count]) => [projectSwitcherKey(inbox.host, id), count] as const,
-      ),
-    ),
+  const attention = attentionByProject(inboxes);
+  const byProject = conversationsByProject(entries, host);
+  useProjectShortcuts(
+    sections.flatMap((section) => section.items),
+    currentProjectId,
+    onNavigate,
   );
   return (
     <div className="flex flex-col gap-2 px-2 pb-3">
@@ -46,9 +47,7 @@ export function ProjectTree({
         const hidden = items.filter((project) => !shown.includes(project));
         const unread = hidden.reduce((sum, project) => sum + (attention.get(project.id) ?? 0), 0);
         const live = hidden.some((project) =>
-          entries.some(
-            (entry) => `${host}:${entry.project.id}` === project.id && isConversationRunning(entry),
-          ),
+          byProject.get(project.id)?.some(isConversationRunning),
         );
         return (
           <section key={group?.id ?? "ungrouped"} aria-label={group?.name ?? "Ungrouped"}>
@@ -79,9 +78,7 @@ export function ProjectTree({
                 collapsed={collapsed}
                 onNavigate={onNavigate}
                 attention={attention.get(project.id)}
-                conversations={entries.filter(
-                  (entry) => `${host}:${entry.project.id}` === project.id,
-                )}
+                conversations={byProject.get(project.id) ?? []}
               />
             ))}
           </section>

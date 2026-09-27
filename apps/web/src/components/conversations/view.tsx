@@ -27,7 +27,7 @@ import {
 import { groupConversations } from "@web/lib/conversations/sections";
 import { conversationTitle } from "@web/lib/conversations/title";
 import { markInboxRequest, type InboxMarkPatch } from "@web/lib/inbox/marks";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 export function ConversationsView() {
   useConversationsStream();
@@ -96,51 +96,44 @@ export function ConversationsView() {
 
   const selectedTerminal =
     selected !== undefined && "terminal" in selected ? selected.terminal : undefined;
-  const terminalThread = selectedTerminal ? (
-    <TerminalConversationBody
-      key={`${hostUrl}:${token}:${selectedTerminal.id}`}
-      session={selectedTerminal}
-    />
-  ) : (
-    <QueryBoundary
-      query={conversations}
-      pending={<ListSkeleton rows={3} height={40} />}
-      error={
-        <ErrorReport
-          error={conversations.error}
-          context="Couldn’t load conversations"
-          onRetry={() => void conversations.refetch()}
-        />
-      }
-    >
-      {() => (
-        <CenteredState>
-          <EmptyState
-            icon="terminal"
-            title="Terminal session not found"
-            description="This session is no longer listed on this host."
-          />
-        </CenteredState>
-      )}
-    </QueryBoundary>
-  );
-  const chatThread =
-    run === undefined || step === undefined ? (
-      <CenteredState>
-        <EmptyState
-          icon="message-square"
-          title="Select a conversation"
-          description="Read a cockpit chat or return to a terminal session."
-        />
-      </CenteredState>
+  let thread: ReactNode = null;
+  if (terminal !== undefined)
+    thread = selectedTerminal ? (
+      <TerminalConversationBody
+        key={`${hostUrl}:${token}:${selectedTerminal.id}`}
+        session={selectedTerminal}
+      />
     ) : (
+      <QueryBoundary
+        query={conversations}
+        pending={<ListSkeleton rows={3} height={40} />}
+        error={
+          <ErrorReport
+            error={conversations.error}
+            context="Couldn’t load conversations"
+            onRetry={() => void conversations.refetch()}
+          />
+        }
+      >
+        {() => (
+          <CenteredState>
+            <EmptyState
+              icon="terminal"
+              title="Terminal session not found"
+              description="This session is no longer listed on this host."
+            />
+          </CenteredState>
+        )}
+      </QueryBoundary>
+    );
+  else if (run !== undefined && step !== undefined)
+    thread = (
       <RunEventsProvider runId={run}>
         <ConversationThreadBody runId={run} stepRunId={step} />
       </RunEventsProvider>
     );
-  const thread = terminal === undefined ? chatThread : terminalThread;
 
-  if (terminal !== undefined || (run !== undefined && step !== undefined))
+  if (thread !== null)
     return (
       <RouteShell
         titleIcon="message-square"

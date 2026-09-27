@@ -1,36 +1,21 @@
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Icon,
-  IconButton,
-  isEditableTarget,
-} from "@otomat/ui";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { isEditableTarget, isOverlayTarget } from "@otomat/ui";
+import { useNavigate } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
-import { WORKSPACE_NAV } from "@web/components/shell/nav-items";
 import { confirmContextNavigation } from "@web/lib/context-navigation";
 import { useEffect, useEffectEvent, useRef } from "react";
 
-import {
-  addDeskTab,
-  closeDeskTab,
-  currentDeskPage,
-  isDeskRoute,
-  moveDeskTab,
-  PROJECT_HOME,
-} from "./state";
+import { NewTabMenu } from "./new-tab-menu";
+import { activateDeskTab, addDeskTab, closeDeskTab, moveDeskTab, type DeskPage } from "./state";
 import { getProjectDesk, projectDeskStore } from "./store";
 import { DeskTabItem } from "./tab";
+import { TabActionsMenu } from "./tab-actions-menu";
 
 export function DeskTabsBar({ projectKey }: { projectKey: string }) {
   const stored = useSelector(projectDeskStore, (state) => state.desks[projectKey]);
   const desk = stored ?? getProjectDesk(projectKey);
   const navigate = useNavigate();
-  const href = useRouterState({ select: (state) => state.location.href });
   const ref = useRef<HTMLElement>(null);
-  const scoped = isDeskRoute(href);
+  const newTabRef = useRef<HTMLButtonElement>(null);
   const go = (target: string) => {
     projectDeskStore.actions.expect(projectKey, target);
     void navigate({ href: target });
@@ -39,17 +24,17 @@ export function DeskTabsBar({ projectKey }: { projectKey: string }) {
     requestAnimationFrame(() => {
       const target =
         id === null
-          ? ref.current?.querySelector<HTMLButtonElement>('[aria-label="New tab"]')
+          ? newTabRef.current
           : ref.current?.querySelector<HTMLButtonElement>(`[data-desk-tab="${CSS.escape(id)}"]`);
       target?.focus();
       target?.scrollIntoView({ block: "nearest", inline: "nearest" });
     });
   const select = (id: string) => {
-    if (desk.active === id && scoped) return false;
+    if (desk.active === id) return false;
     if (!confirmContextNavigation()) return false;
     const tab = desk.tabs.find((entry) => entry.id === id);
     if (tab === undefined) return false;
-    projectDeskStore.actions.edit(projectKey, (current) => ({ ...current, active: id }));
+    projectDeskStore.actions.edit(projectKey, (current) => activateDeskTab(current, id));
     go(tab.href);
     return true;
   };
@@ -62,19 +47,26 @@ export function DeskTabsBar({ projectKey }: { projectKey: string }) {
       if (select(next.id)) focusTab(next.id);
     }
   };
+  const move = (id: string, offset: number) =>
+    projectDeskStore.actions.edit(projectKey, (current) => moveDeskTab(current, id, offset));
+  const open = (page: DeskPage) => {
+    if (!confirmContextNavigation()) return;
+    projectDeskStore.actions.edit(projectKey, (current) =>
+      addDeskTab(current, crypto.randomUUID(), page),
+    );
+    go(page.href);
+  };
   const onKey = useEffectEvent((event: KeyboardEvent) => {
     if (
-      !scoped ||
       event.defaultPrevented ||
       event.key !== "Tab" ||
       !(event.ctrlKey || event.metaKey) ||
       event.altKey ||
-      isEditableTarget(event.target)
+      isEditableTarget(event.target) ||
+      isOverlayTarget(event.target) ||
+      desk.active === null
     )
       return;
-    if (event.target instanceof Element && event.target.closest('[role="dialog"], [role="menu"]'))
-      return;
-    if (desk.active === null) return;
     event.preventDefault();
     adjacent(desk.active, event.shiftKey ? -1 : 1);
   });
@@ -84,9 +76,8 @@ export function DeskTabsBar({ projectKey }: { projectKey: string }) {
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
   }, []);
-  if (!scoped) return null;
   const activeId = desk.active;
-  const index = desk.tabs.findIndex((tab) => tab.id === desk.active);
+  const index = desk.tabs.findIndex((tab) => tab.id === activeId);
   return (
     <nav
       ref={ref}
@@ -98,28 +89,21 @@ export function DeskTabsBar({ projectKey }: { projectKey: string }) {
           <DeskTabItem
             key={tab.id}
             tab={tab}
-            active={desk.active === tab.id}
+            active={activeId === tab.id}
             onSelect={() => select(tab.id)}
             onAdjacent={(offset) => adjacent(tab.id, offset)}
-            onMove={(offset) =>
-              projectDeskStore.actions.edit(projectKey, (current) =>
-                moveDeskTab(current, tab.id, offset),
-              )
-            }
+            onMove={(offset) => move(tab.id, offset)}
             onClose={() => {
-              if (desk.active === tab.id && !confirmContextNavigation()) return;
+              if (activeId === tab.id && !confirmContextNavigation()) return;
               const next = closeDeskTab(desk, tab.id);
               projectDeskStore.actions.edit(projectKey, () => next);
-              if (desk.active === tab.id) go(currentDeskPage(next).href);
+              if (activeId === tab.id) go(next.page.href);
               focusTab(next.active);
             }}
             onDrop={(id) => {
               const from = desk.tabs.findIndex((entry) => entry.id === id);
               const to = desk.tabs.findIndex((entry) => entry.id === tab.id);
-              if (from !== -1)
-                projectDeskStore.actions.edit(projectKey, (current) =>
-                  moveDeskTab(current, id, to - from),
-                );
+              if (from !== -1) move(id, to - from);
             }}
           />
         ))}
@@ -127,67 +111,14 @@ export function DeskTabsBar({ projectKey }: { projectKey: string }) {
           <span className="truncate px-3 text-xs text-text-tertiary">{desk.page.label}</span>
         ) : null}
       </div>
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger
-          render={<IconButton label="New tab" icon={<Icon name="plus" aria-hidden />} />}
-        />
-        <DropdownMenuContent align="end" className="w-56" style={{ transition: "none" }}>
-          {[
-            { to: PROJECT_HOME.href, label: PROJECT_HOME.label, icon: "folder" as const },
-            ...WORKSPACE_NAV,
-          ].map((item) => (
-            <DropdownMenuItem
-              key={item.to}
-              onClick={() => {
-                if (!confirmContextNavigation()) return;
-                const page = { href: item.to, label: item.label };
-                projectDeskStore.actions.edit(projectKey, (current) =>
-                  addDeskTab(current, crypto.randomUUID(), page),
-                );
-                go(item.to);
-              }}
-            >
-              <Icon name={item.icon} aria-hidden />
-              {item.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger
-          render={
-            <IconButton
-              label="Tab actions"
-              disabled={desk.active === null}
-              icon={<Icon name="more-horizontal" aria-hidden />}
-            />
-          }
-        />
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            disabled={index <= 0}
-            onClick={() => {
-              if (activeId !== null)
-                projectDeskStore.actions.edit(projectKey, (current) =>
-                  moveDeskTab(current, activeId, -1),
-                );
-            }}
-          >
-            Move tab left
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={index < 0 || index === desk.tabs.length - 1}
-            onClick={() => {
-              if (activeId !== null)
-                projectDeskStore.actions.edit(projectKey, (current) =>
-                  moveDeskTab(current, activeId, 1),
-                );
-            }}
-          >
-            Move tab right
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <NewTabMenu triggerRef={newTabRef} onPick={open} />
+      <TabActionsMenu
+        index={index}
+        count={desk.tabs.length}
+        onMove={(offset) => {
+          if (activeId !== null) move(activeId, offset);
+        }}
+      />
     </nav>
   );
 }
