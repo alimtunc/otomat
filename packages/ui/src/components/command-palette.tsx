@@ -1,5 +1,4 @@
 import { Dialog } from "@base-ui/react/dialog";
-import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 
@@ -13,6 +12,7 @@ import {
   CommandItemRight,
   CommandList,
 } from "../primitives/command";
+import { Spinner } from "../primitives/spinner";
 import { Icon, type IconName } from "./icon";
 
 export type CommandPaletteCommand = {
@@ -109,7 +109,7 @@ export function CommandPalette({
                     const isPending = pending === command.id;
                     let leading: ReactNode = null;
                     if (isPending) {
-                      leading = <Loader2 className="animate-spin motion-reduce:animate-none" />;
+                      leading = <Spinner label={`Running ${command.label}`} />;
                     } else if (command.icon) {
                       leading = <Icon name={command.icon} aria-hidden />;
                     }

@@ -2529,11 +2529,25 @@ width; only the tab strip scrolls when the group itself cannot fit.
 
 ### Motion
 
-Motion is a budget, not a finish. `tokens.css` owns every duration and curve
+Motion is a budget, not a finish. `tokens.css` owns interface durations and curves
 (`--motion-fast` 90ms for anchored surfaces, `--motion-base` 140ms for modals
 and notices, `--ease` for entrances, `--ease-spring` for the pop-in transform),
 and the reduced-motion media query zeroes those durations, so a component that
 rides the tokens needs no second rule. Only `transform` and `opacity` animate.
+
+`packages/ui/src/styles/brand.css` owns the split O, the wordmark's two-O entrance,
+and their motion. The desktop build copies that stylesheet into `dist` for the
+isolated splash; the web imports it through the UI stylesheet. Both launch
+surfaces yield as soon as startup finishes, without waiting for the entrance, and
+the cockpit's startup screen skips it under the desktop shell, where the splash
+already played it.
+`Spinner` renders the O alone with an accessible `label`, or with visible context
+as its children. Its default `motion="pulse"` varies opacity without moving the
+O, so inline statuses and loading buttons stay quiet; `motion="breathe"` reserves
+the split breathing for large, full-panel loading states. Skeletons retain their
+place for content with a known layout.
+Brand motion has its own reduced-motion rule because the desktop splash does
+not load the cockpit's tokens. The design-system gallery shows these usages.
 
 Base UI mounts a popup with `data-open` already set, so an `opacity-0
 data-[open]:opacity-100` pair never transitions on enter — it only fades on exit.
@@ -2579,11 +2593,12 @@ navigation reopens — catalogs, issue and run detail, an issue's runs,
 conversations, pull-request overviews, the Linear panes, usage and workspaces —
 in IndexedDB (`api/snapshot-store.ts`). localStorage was dropped for it: the
 issue catalog alone nearly filled its per-origin quota and each write blocked the
-main thread. `main.tsx` restores the snapshot before the first paint, bounded so
-a slow database never holds the window, and every restored entry is invalidated
-so it revalidates behind what it already shows. A run's git-backed subtree
-(files, diffs, report) and its event windows are never stored: they are
-recomputed from the worktree or replayed from the ledger.
+main thread. `main.tsx` restores the snapshot behind the startup screen, before
+the cockpit’s first paint, bounded so a slow database never holds the window, and
+every restored entry is invalidated so it revalidates behind what it already
+shows. A run's git-backed subtree (files, diffs, report) and its event windows
+are never stored: they are recomputed from the worktree or replayed from the
+ledger.
 
 ## Navigation Without Waiting
 

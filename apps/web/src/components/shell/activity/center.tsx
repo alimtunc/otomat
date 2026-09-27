@@ -1,4 +1,4 @@
-import { FOCUS_RING, Icon, Popover, PopoverContent, PopoverTrigger, cn } from "@otomat/ui";
+import { FOCUS_RING, Icon, Popover, PopoverContent, PopoverTrigger, Spinner, cn } from "@otomat/ui";
 import { useActivity } from "@web/api/activity/queries";
 import { countPendingActivities } from "@web/components/shell/activity/groups";
 import { ActivityPanel } from "@web/components/shell/activity/panel";
@@ -55,7 +55,11 @@ export function ActivityCenter({ hostLabel }: ActivityCenterProps) {
         )}
         <QueryBoundary
           query={activity}
-          pending={<p className="px-3 py-4 text-xs text-text-tertiary">Loading activity…</p>}
+          pending={
+            <Spinner motion="breathe" className="px-3 py-4 text-xs text-text-tertiary">
+              Loading activity…
+            </Spinner>
+          }
           error={
             <p className="px-3 py-4 text-xs text-text-tertiary">
               Could not read this host’s activity.

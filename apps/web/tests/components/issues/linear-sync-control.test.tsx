@@ -92,6 +92,7 @@ it("refuses a second launch while a pass is running", async () => {
 
   expect(button.disabled).toBe(true);
   expect(button.getAttribute("aria-label")).toContain("Syncing…");
+  expect(button.getAttribute("aria-busy")).toBe("true");
 });
 
 it("disables the control when nothing is mapped and says so", async () => {

@@ -5,14 +5,13 @@ import {
   DialogHeader,
   DialogTitle,
   ErrorState,
-  Spinner,
 } from "@otomat/ui";
 import { useRepositoryBranches } from "@web/api/daemon/queries";
 import {
   useGenerateRepositoryPullRequest,
   usePublishRepositoryPullRequest,
 } from "@web/api/prs/mutations";
-import { CenteredState } from "@web/components/shell/centered-state";
+import { CenteredLoading } from "@web/components/shell/centered-loading";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { RepositoryPullRequestForm } from "@web/components/source-control/repository/form";
 
@@ -44,11 +43,7 @@ export function RepositoryPullRequestDialog({
       <DialogBody className="flex flex-col gap-4">
         <QueryBoundary
           query={branches}
-          pending={
-            <CenteredState fill="flex">
-              <Spinner label="Loading branches" />
-            </CenteredState>
-          }
+          pending={<CenteredLoading>Loading branches…</CenteredLoading>}
           error={
             <ErrorState
               title="Could not load the repository branches"

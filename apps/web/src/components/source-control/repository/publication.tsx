@@ -1,4 +1,4 @@
-import { ErrorState, Spinner, toast } from "@otomat/ui";
+import { ErrorState, toast } from "@otomat/ui";
 import { useNavigate } from "@tanstack/react-router";
 import type {
   useGenerateRepositoryPullRequest,
@@ -10,7 +10,7 @@ import { PullRequestConnectionPanel } from "@web/components/runs/pr/connection-p
 import { PullRequestForm } from "@web/components/runs/pr/form";
 import { PullRequestGeneratorNote } from "@web/components/runs/pr/generator-note";
 import { pullRequestConnectionModel } from "@web/components/runs/pr/model";
-import { CenteredState } from "@web/components/shell/centered-state";
+import { CenteredLoading } from "@web/components/shell/centered-loading";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 import { sourceControlMessage } from "@web/components/source-control/refusal";
 import { useState } from "react";
@@ -47,11 +47,7 @@ export function RepositoryPullRequestPublication({
   return (
     <QueryBoundary
       query={connection}
-      pending={
-        <CenteredState fill="flex">
-          <Spinner label="Checking GitHub connection" />
-        </CenteredState>
-      }
+      pending={<CenteredLoading>Checking GitHub connection…</CenteredLoading>}
       error={
         <ErrorState
           title="Could not load GitHub connection"
@@ -72,11 +68,7 @@ export function RepositoryPullRequestPublication({
             )}
             <QueryBoundary
               query={preview}
-              pending={
-                <CenteredState fill="flex">
-                  <Spinner label="Preparing pull request" />
-                </CenteredState>
-              }
+              pending={<CenteredLoading>Preparing pull request…</CenteredLoading>}
               error={
                 <ErrorState
                   title="Could not prepare pull request"

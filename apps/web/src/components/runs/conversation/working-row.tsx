@@ -5,8 +5,9 @@ import { eventSummary } from "@web/components/runs/timeline/event-summary";
 export function WorkingRow({ latest }: { latest: EventEnvelope | null }) {
   return (
     <li className="flex items-center gap-2.5 px-6 py-3" aria-live="polite">
-      <Spinner size={13} label="Agent working" />
-      <span className="text-sm text-text-secondary">Agent is working…</span>
+      <Spinner size={13} className="text-sm text-text-secondary">
+        Agent is working…
+      </Spinner>
       {latest === null ? null : (
         <span className="min-w-0 flex-1 truncate text-xs text-text-tertiary">
           {eventSummary(latest)}

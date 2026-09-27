@@ -111,19 +111,21 @@ describe("shared UI boundaries", () => {
     expect(button?.hasAttribute("disabled")).toBe(false);
   });
 
-  it("uses the canonical live loading indicator for every button variant", async () => {
-    await render(
+  it("keeps the action name while a shared loader blocks repeat submissions", async () => {
+    const container = await render(
       <Button variant="outline" loading>
         Sync now
       </Button>,
     );
 
-    const loadingStyles =
-      document.querySelector<HTMLStyleElement>("#otomat-btn-loading")?.textContent;
-
-    expect(loadingStyles).toContain("border:2px solid var(--border-strong)");
-    expect(loadingStyles).toContain("border-top-color:var(--live)");
-    expect(loadingStyles).not.toContain("border:2px solid currentColor");
+    const button = container.querySelector("button");
+    expect(button?.textContent).toBe("Sync now");
+    expect(button?.disabled).toBe(true);
+    expect(button?.getAttribute("aria-busy")).toBe("true");
+    expect(button?.querySelector('[data-slot="spinner"]')?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
+    expect(button?.querySelector(".otomat-pulse")).not.toBeNull();
   });
 
   it("shows avatar initials while an image is unavailable", async () => {

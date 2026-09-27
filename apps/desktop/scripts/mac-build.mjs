@@ -50,6 +50,7 @@ function buildInputs() {
 
   for (const [label, path] of [
     ["desktop main", join(DESKTOP, "dist", "main", "index.js")],
+    ["splash stylesheet", join(DESKTOP, "dist", "brand.css")],
     ["daemon entry", join(DESKTOP, ".daemon", "dist", "index.js")],
     ["web build", join(WEB_DIST, "index.html")],
   ]) {

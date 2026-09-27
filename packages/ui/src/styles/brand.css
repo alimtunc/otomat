@@ -1,0 +1,169 @@
+.otomat-mark {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.04em;
+}
+
+.otomat-mark::before,
+.otomat-mark::after {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 0.17em solid currentColor;
+  border-radius: 38%;
+  content: "";
+}
+
+.otomat-mark::before {
+  clip-path: polygon(0 0, 62% 0, 62% 50%, 38% 50%, 38% 100%, 0 100%);
+}
+
+.otomat-mark::after {
+  clip-path: polygon(66% 0, 100% 0, 100% 100%, 42% 100%, 42% 50%, 66% 50%);
+}
+
+.otomat-loader::before {
+  animation: otomat-open-left 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.otomat-loader::after {
+  animation: otomat-open-right 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.otomat-pulse {
+  animation: otomat-pulse 1.6s ease-in-out infinite;
+}
+
+.otomat-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.035em;
+  font:
+    400 48px / 1 Arial,
+    Helvetica,
+    sans-serif;
+  letter-spacing: -0.035em;
+}
+
+.otomat-wordmark .otomat-mark {
+  top: 0.015em;
+  width: 1.02ex;
+  height: 1.02ex;
+}
+
+.otomat-wordmark .otomat-mark::before,
+.otomat-wordmark .otomat-mark::after {
+  border-width: 0.08em;
+}
+
+.otomat-wordmark[data-enter] .otomat-mark {
+  animation: otomat-gather 1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.otomat-wordmark[data-enter] .otomat-mark:first-child {
+  --otomat-enter-x: 0.9em;
+}
+
+.otomat-wordmark[data-enter] .otomat-mark:nth-child(3) {
+  --otomat-enter-x: 0.74em;
+}
+
+.otomat-wordmark[data-enter] .otomat-mark::before {
+  animation: otomat-assemble-left 450ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.otomat-wordmark[data-enter] .otomat-mark::after {
+  animation: otomat-assemble-right 450ms 60ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.otomat-wordmark[data-enter] .otomat-letter {
+  animation: otomat-letter-enter 350ms 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes otomat-open-left {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-5%, -7%);
+  }
+}
+
+@keyframes otomat-open-right {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(5%, 7%);
+  }
+}
+
+@keyframes otomat-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes otomat-gather {
+  0%,
+  35% {
+    transform: translateX(var(--otomat-enter-x));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes otomat-assemble-left {
+  from {
+    opacity: 0;
+    transform: translate(-10%, -14%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes otomat-assemble-right {
+  from {
+    opacity: 0;
+    transform: translate(10%, 14%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes otomat-letter-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.06em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otomat-mark,
+  .otomat-mark::before,
+  .otomat-mark::after,
+  .otomat-wordmark[data-enter] .otomat-mark,
+  .otomat-wordmark[data-enter] .otomat-mark::before,
+  .otomat-wordmark[data-enter] .otomat-mark::after,
+  .otomat-wordmark[data-enter] .otomat-letter {
+    animation: none;
+  }
+}
