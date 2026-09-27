@@ -1,8 +1,9 @@
-import { AlertTriangle, CheckCircle2, Info, Loader2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
 import { type CSSProperties } from "react";
 import { Toaster as SonnerToaster } from "sonner";
 
 import { useTheme } from "../lib/theme";
+import { Spinner } from "./spinner";
 
 export type ToasterProps = {
   position?:
@@ -45,7 +46,7 @@ export function Toaster({
         error: <XCircle className="h-4 w-4 text-danger" />,
         warning: <AlertTriangle className="h-4 w-4 text-warning" />,
         info: <Info className="h-4 w-4 text-neutral" />,
-        loading: <Loader2 className="h-4 w-4 animate-spin text-live motion-reduce:animate-none" />,
+        loading: <Spinner size={16} aria-hidden="true" />,
       }}
       toastOptions={{
         style: toastStyle,

@@ -1,36 +1,34 @@
 import type { ComponentPropsWithoutRef } from "react";
 
-import { injectStyleOnce } from "../lib/inject-style";
-import { injectSpinKeyframes } from "../lib/spin";
 import { cn } from "../lib/utils";
 
-const SPINNER_STYLE_ID = "otomat-spinner";
-const SPINNER_CSS = `
-.otomat-spinner{border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--live);animation:otomat-spin .7s linear infinite}
-@media (prefers-reduced-motion:reduce){.otomat-spinner{animation:none}}
-`;
-
-export interface SpinnerProps extends Omit<ComponentPropsWithoutRef<"output">, "children"> {
+export interface SpinnerProps extends ComponentPropsWithoutRef<"output"> {
   size?: number;
   label?: string;
+  motion?: "breathe" | "pulse";
 }
 
 export function Spinner({
   className,
   size = 14,
-  label = "Loading",
-  style,
+  label,
+  motion = "pulse",
+  children,
   ...props
 }: SpinnerProps) {
-  injectSpinKeyframes();
-  injectStyleOnce(SPINNER_STYLE_ID, SPINNER_CSS);
   return (
     <output
-      aria-label={label}
+      aria-label={label ?? (children === undefined ? "Loading" : undefined)}
       data-slot="spinner"
-      className={cn("otomat-spinner inline-block shrink-0", className)}
-      style={{ width: size, height: size, ...style }}
+      className={cn("inline-flex shrink-0 items-center gap-2", className)}
       {...props}
-    />
+    >
+      <span
+        aria-hidden="true"
+        className={cn("otomat-mark", motion === "breathe" ? "otomat-loader" : "otomat-pulse")}
+        style={{ fontSize: size }}
+      />
+      {children}
+    </output>
   );
 }

@@ -14,6 +14,7 @@ export default defineConfig([
     dts: false,
     deps: { neverBundle: ["electron"] },
     outExtensions: () => ({ js: ".js" }),
+    copy: [{ from: "../../packages/ui/src/styles/brand.css", to: "dist" }],
   },
   {
     entry: {

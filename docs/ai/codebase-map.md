@@ -2529,11 +2529,24 @@ width; only the tab strip scrolls when the group itself cannot fit.
 
 ### Motion
 
-Motion is a budget, not a finish. `tokens.css` owns every duration and curve
+Motion is a budget, not a finish. `tokens.css` owns interface durations and curves
 (`--motion-fast` 90ms for anchored surfaces, `--motion-base` 140ms for modals
 and notices, `--ease` for entrances, `--ease-spring` for the pop-in transform),
 and the reduced-motion media query zeroes those durations, so a component that
 rides the tokens needs no second rule. Only `transform` and `opacity` animate.
+
+`packages/ui/src/styles/brand.css` owns the split O, the wordmark's two-O entrance,
+and their motion. The desktop build copies that stylesheet into `dist` for the
+isolated splash; the web imports it through the UI stylesheet. Both launch
+surfaces yield as soon as startup finishes, without waiting for the entrance.
+`Spinner` renders the O alone with an accessible `label`, or with visible context
+as its children. Its default `motion="pulse"` varies opacity without moving the
+O, keeping inputs, inline statuses, and loading buttons (including Linear and
+GitHub sync) quiet. `motion="breathe"` reserves the split breathing for larger
+loading states: startup, activity, and repository publication panels. Skeletons
+retain their place for content with a known layout.
+Brand motion has its own reduced-motion rule because the desktop splash does
+not load the cockpit's tokens. The design-system gallery shows these usages.
 
 Base UI mounts a popup with `data-open` already set, so an `opacity-0
 data-[open]:opacity-100` pair never transitions on enter — it only fades on exit.

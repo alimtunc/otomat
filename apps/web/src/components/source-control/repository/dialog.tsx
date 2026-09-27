@@ -46,7 +46,9 @@ export function RepositoryPullRequestDialog({
           query={branches}
           pending={
             <CenteredState fill="flex">
-              <Spinner label="Loading branches" />
+              <Spinner motion="breathe" size={24}>
+                Loading branches…
+              </Spinner>
             </CenteredState>
           }
           error={

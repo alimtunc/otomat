@@ -2,6 +2,7 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource/jetbrains-mono";
 @import "./tokens.css";
+@import "./brand.css";
 
 @source "../../src";
 @source "../../../../apps/web/src";

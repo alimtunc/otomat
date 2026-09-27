@@ -274,6 +274,7 @@ export { SidePanel, type SidePanelProps } from "./components/side-panel";
 export { SidePanelToggle, type SidePanelToggleProps } from "./components/side-panel-toggle";
 
 export { Spinner, type SpinnerProps } from "./components/spinner";
+export { Wordmark, type WordmarkProps } from "./components/wordmark";
 
 export { StatusChip, type StatusChipProps } from "./components/status-chip";
 

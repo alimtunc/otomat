@@ -5,8 +5,8 @@ import { Button, type ButtonProps } from "../primitives/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../primitives/tooltip";
 
 const SIZE_CLASS = {
-  default: "size-7 [&>svg]:size-3.75",
-  sm: "size-6 [&>svg]:size-3.5",
+  default: "size-7 [&_svg]:size-3.75",
+  sm: "size-6 [&_svg]:size-3.5",
 } as const;
 
 export interface IconButtonProps extends Omit<ButtonProps, "size" | "children" | "aria-label"> {

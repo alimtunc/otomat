@@ -1,4 +1,4 @@
-import { Button } from "@otomat/ui";
+import { Button, Spinner } from "@otomat/ui";
 import type { useIssueSearch } from "@web/api/issues/queries";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
 
@@ -32,7 +32,7 @@ export function PaletteIssueNotice({
   return (
     <QueryBoundary
       query={issues}
-      pending={<p className={LINE}>Loading issues in {scope}…</p>}
+      pending={<Spinner className={LINE}>Loading issues in {scope}…</Spinner>}
       error={
         <div className={`${LINE} flex items-center justify-between gap-2`}>
           <span>Couldn’t load issues in {scope}.</span>

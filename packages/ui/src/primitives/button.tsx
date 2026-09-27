@@ -2,17 +2,9 @@ import { Button as BaseButton } from "@base-ui/react/button";
 import type { VariantProps } from "class-variance-authority";
 import type { ComponentPropsWithRef } from "react";
 
-import { injectStyleOnce } from "../lib/inject-style";
-import { injectSpinKeyframes } from "../lib/spin";
+import { Spinner } from "../components/spinner";
 import { cn } from "../lib/utils";
 import { buttonVariants } from "./button-variants";
-
-const BTN_LOADING_STYLE_ID = "otomat-btn-loading";
-const BTN_LOADING_CSS = `
-.otomat-btn-loading{color:transparent!important}
-.otomat-btn-loading::after{content:"";position:absolute;inset:0;margin:auto;width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong);border-top-color:var(--live);animation:otomat-spin .7s linear infinite}
-@media (prefers-reduced-motion:reduce){.otomat-btn-loading::after{animation:none}}
-`;
 
 export interface ButtonProps
   extends
@@ -35,8 +27,6 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  injectSpinKeyframes();
-  injectStyleOnce(BTN_LOADING_STYLE_ID, BTN_LOADING_CSS);
   return (
     <BaseButton
       render={render}
@@ -45,11 +35,7 @@ export function Button({
       data-loading={loading || undefined}
       aria-busy={loading || undefined}
       disabled={disabled || loading}
-      className={cn(
-        buttonVariants({ variant, size, density }),
-        loading && "otomat-btn-loading",
-        className,
-      )}
+      className={cn(buttonVariants({ variant, size, density }), className)}
       style={{
         transition:
           "background var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease), opacity var(--motion-fast) var(--ease)",
@@ -57,7 +43,16 @@ export function Button({
       }}
       {...props}
     >
-      {children}
+      {loading ? (
+        <>
+          <span className="inline-flex w-full min-w-0 items-center gap-[inherit] opacity-0 [justify-content:inherit]">
+            {children}
+          </span>
+          <Spinner motion="pulse" aria-hidden="true" className="absolute" />
+        </>
+      ) : (
+        children
+      )}
     </BaseButton>
   );
 }

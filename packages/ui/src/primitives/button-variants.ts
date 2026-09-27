@@ -8,7 +8,7 @@ export const buttonVariants = cva(
     "rounded-md border font-sans font-medium",
     "disabled:opacity-45 disabled:pointer-events-none",
     "active:translate-y-[0.5px]",
-    "[&>svg]:size-3.5 [&>svg]:shrink-0",
+    "[&_svg]:size-3.5 [&_svg]:shrink-0",
   ),
   {
     variants: {
@@ -28,7 +28,7 @@ export const buttonVariants = cva(
       size: {
         default: "h-7.5 px-2.75 text-sm",
         sm: "h-6.5 px-2.25 text-sm",
-        xs: "h-5.5 px-1.75 text-xs gap-1 [&>svg]:size-3",
+        xs: "h-5.5 px-1.75 text-xs gap-1 [&_svg]:size-3",
       },
       density: {
         compact: "",

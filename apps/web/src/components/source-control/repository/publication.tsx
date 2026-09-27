@@ -49,7 +49,9 @@ export function RepositoryPullRequestPublication({
       query={connection}
       pending={
         <CenteredState fill="flex">
-          <Spinner label="Checking GitHub connection" />
+          <Spinner motion="breathe" size={24}>
+            Checking GitHub connection…
+          </Spinner>
         </CenteredState>
       }
       error={
@@ -74,7 +76,9 @@ export function RepositoryPullRequestPublication({
               query={preview}
               pending={
                 <CenteredState fill="flex">
-                  <Spinner label="Preparing pull request" />
+                  <Spinner motion="breathe" size={24}>
+                    Preparing pull request…
+                  </Spinner>
                 </CenteredState>
               }
               error={

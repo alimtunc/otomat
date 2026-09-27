@@ -1,6 +1,7 @@
 import { Icon, Toaster } from "@otomat/ui";
 
 import { AvatarsSection } from "./sections/avatars";
+import { BrandSection } from "./sections/brand";
 import { ButtonsSection } from "./sections/buttons";
 import { CardsSection } from "./sections/cards";
 import { ConfigMenusSection } from "./sections/config-menus";
@@ -30,6 +31,7 @@ export function GalleryApp() {
         </div>
 
         <SurfacesSection />
+        <BrandSection />
         <ButtonsSection />
         <DropdownsSection />
         <ConfigMenusSection />

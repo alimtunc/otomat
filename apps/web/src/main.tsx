@@ -1,6 +1,8 @@
 import "@otomat/ui/styles.css";
 import "@git-diff-view/react/styles/diff-view.css";
 import "@web/components/runs/diff/review-diff.css";
+import { ErrorState } from "@otomat/ui";
+import { StartupScreen } from "@web/components/shell/startup-screen";
 import { openPreviewSession } from "@web/preview/session";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -9,21 +11,33 @@ const root = document.getElementById("root");
 if (!root) {
   throw new Error("Missing #root element");
 }
+const reactRoot = createRoot(root);
+reactRoot.render(<StartupScreen />);
 
 // The preview session decides the daemon transport, and `api/client` reads it when its module is
 // evaluated — so the app graph is imported only once that session is resolved.
-void openPreviewSession().then(async () => {
-  const { Cockpit } = await import("@web/cockpit");
-  const { attachQuerySnapshot } = await import("@web/api/cache-snapshot");
-  const { queryClient } = await import("@web/api/query-client");
-  // A slow IndexedDB must never hold the first paint; a late restore still hydrates behind it.
-  await Promise.race([
-    attachQuerySnapshot(queryClient),
-    new Promise((resolve) => setTimeout(resolve, 800)),
-  ]);
-  createRoot(root).render(
-    <StrictMode>
-      <Cockpit />
-    </StrictMode>,
-  );
-});
+void openPreviewSession()
+  .then(async () => {
+    const { Cockpit } = await import("@web/cockpit");
+    const { attachQuerySnapshot } = await import("@web/api/cache-snapshot");
+    const { queryClient } = await import("@web/api/query-client");
+    // A slow IndexedDB must never hold the first paint; a late restore still hydrates behind it.
+    await Promise.race([
+      attachQuerySnapshot(queryClient),
+      new Promise((resolve) => setTimeout(resolve, 800)),
+    ]);
+    reactRoot.render(
+      <StrictMode>
+        <Cockpit />
+      </StrictMode>,
+    );
+  })
+  .catch((error: unknown) => {
+    reactRoot.render(
+      <ErrorState
+        title="Couldn’t open Otomat"
+        description={error instanceof Error ? error.message : "Please retry opening the workspace."}
+        onRetry={() => window.location.reload()}
+      />,
+    );
+  });
