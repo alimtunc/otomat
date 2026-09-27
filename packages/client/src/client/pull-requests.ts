@@ -1,4 +1,5 @@
 import {
+  pullRequestStackContextSchema,
   issuePullRequestsSchema,
   pullRequestContractSchema,
   pullRequestDetailSchema,
@@ -55,6 +56,11 @@ export function createPullRequestsClient(config: DaemonClientConfig) {
       const id = encodeURIComponent(pullRequestId);
       return pullRequestReviewContextSchema.parse(
         await getJson(config, `/api/pull-requests/${id}`),
+      );
+    },
+    async getPullRequestStack(pullRequestId: string) {
+      return pullRequestStackContextSchema.parse(
+        await getJson(config, `/api/pull-requests/${encodeURIComponent(pullRequestId)}/stack`),
       );
     },
     async getPullRequestOverview(pullRequestId: string) {

@@ -1,5 +1,6 @@
 import type { Db, PullRequestRow, RunRow } from "@otomat/db";
 import type {
+  PullRequestStackContext,
   AttachPullRequestRequest,
   GitHubConnectionContract,
   LinearLifecycleSync,
@@ -83,6 +84,7 @@ export interface GitHubServiceConfig {
 export type PullRequestViewedImport = (pullRequestId: string) => void;
 
 export interface GitHubService {
+  pullRequestStack(pullRequestId: string): Promise<PullRequestStackContext>;
   connection(): Promise<GitHubConnectionContract>;
   connect(): GitHubConnectionContract;
   pullRequestInbox(projectId: string): PullRequestInbox;

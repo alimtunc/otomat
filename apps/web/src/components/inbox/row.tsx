@@ -1,7 +1,7 @@
 import { FOCUS_RING_INSET, RelativeTime } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import type { InboxRoute } from "@web/lib/inbox/target";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 const LINK_CLASS = `flex h-11 min-w-0 flex-1 items-center gap-3 rounded-md px-2.5 ${FOCUS_RING_INSET}`;
 
@@ -17,6 +17,7 @@ export interface InboxRowProps {
   /** Never inside the link: interactive content in an anchor is invalid HTML and its click would navigate. */
   selection?: ReactNode;
   actions?: ReactNode;
+  renderLink?: (link: ReactElement) => ReactNode;
   muted?: boolean;
 }
 
@@ -31,30 +32,34 @@ export function InboxRow({
   action,
   selection,
   actions,
+  renderLink,
   muted = false,
 }: InboxRowProps) {
+  const content = (
+    <Link {...link} className={LINK_CLASS}>
+      <span className="flex shrink-0 items-center gap-2 xl:w-37.5">{leading}</span>
+      <span
+        className={`min-w-0 flex-1 truncate text-sm ${muted ? "text-text-secondary" : "text-foreground"}`}
+      >
+        {identifier === null ? null : (
+          <span className="font-mono text-xs text-text-tertiary">{identifier} </span>
+        )}
+        <span className="font-medium">{title}</span>
+        {reason === "" ? null : <span className="text-xs text-text-tertiary"> — {reason}</span>}
+      </span>
+      {chips}
+      <span className="shrink-0 text-xs text-text-tertiary">
+        <RelativeTime date={time} />
+      </span>
+      <span className="inline-flex h-6 shrink-0 items-center rounded-md border border-border bg-surface-2 px-2 text-xs font-medium text-text-secondary">
+        {action}
+      </span>
+    </Link>
+  );
   return (
     <div className="flex items-center gap-1 rounded-md hover:bg-hover">
       {selection}
-      <Link {...link} className={LINK_CLASS}>
-        <span className="flex shrink-0 items-center gap-2 xl:w-37.5">{leading}</span>
-        <span
-          className={`min-w-0 flex-1 truncate text-sm ${muted ? "text-text-secondary" : "text-foreground"}`}
-        >
-          {identifier === null ? null : (
-            <span className="font-mono text-xs text-text-tertiary">{identifier} </span>
-          )}
-          <span className="font-medium">{title}</span>
-          {reason === "" ? null : <span className="text-xs text-text-tertiary"> — {reason}</span>}
-        </span>
-        {chips}
-        <span className="shrink-0 text-xs text-text-tertiary">
-          <RelativeTime date={time} />
-        </span>
-        <span className="inline-flex h-6 shrink-0 items-center rounded-md border border-border bg-surface-2 px-2 text-xs font-medium text-text-secondary">
-          {action}
-        </span>
-      </Link>
+      {renderLink === undefined ? content : renderLink(content)}
       {actions}
     </div>
   );

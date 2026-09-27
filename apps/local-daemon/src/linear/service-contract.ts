@@ -1,5 +1,6 @@
 import type { Db } from "@otomat/db";
 import type {
+  LinearIssueRelations,
   ConnectLinearRequest,
   CreateIssueSourceRequest,
   IssueSourceContract,
@@ -25,6 +26,7 @@ export interface LinearServiceConfig {
 }
 
 export interface LinearService {
+  issueRelations(issueId: string): Promise<LinearIssueRelations>;
   connections(): LinearConnectionContract[];
   /** Connects a new connection, or rotates a catalogued one's key in place. */
   connect(request: ConnectLinearRequest): Promise<LinearConnectionContract>;

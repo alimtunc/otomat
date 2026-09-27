@@ -489,6 +489,41 @@ and the explicit **Refresh issues** control). A sync always names a project, and
 the daemon refuses a project it does not own rather than reporting an empty
 success — that is what keeps a VPS project from silently reading local state.
 
+## Issue relationships and PR stack navigation
+
+The issue detail reads its Linear neighborhood through
+`GET /api/linear/issues/:id/relations`. The Linear client paginates children and
+both relation directions; any failed page rejects the whole read. The service
+resolves local neighbor IDs only on the same connection, without importing issues,
+changing their mirror, or applying lifecycle transitions. Parent and children live
+in the main issue content; directed blockers and related issues occupy the rail.
+Neighbors carry the real Linear state category, color and name, assignee and priority.
+The category selects a static state glyph; it never implies agent activity or a
+percentage of completion. Hover or keyboard focus reveals the metadata and the
+known relation from that neighbor's perspective, naming the current issue.
+Runs group headers, issue rows and board cards use the shared Base UI preview-card
+primitive on their existing links. The preview renders the available issue summary
+first: title, source status, assignee, priority and canonical workspace run state.
+Linear relations load on hover or keyboard focus, independently of that summary;
+one collapsed control shows the link count and blockers; expanding it renders the
+parent, sub-issues and relations from that same read. Local issue previews do not
+query Linear. Clicks and touch keep the link's navigation. Reviews lazily compose
+the linked issue's neighborhood with the stack reader through the inbox row's link
+render slot, preserving the distinction between an attachment and a reference.
+
+`GET /api/pull-requests/:id/stack` reads native GitHub stack membership through
+`gh api`, then its declared member order. A successful empty membership returns
+only the PR's head and base; no manual chain is inferred from names. Failed or
+ambiguous reads are errors, never an empty stack. This path deliberately bypasses
+import reconciliation and the review snapshot: even a merged member cannot close
+an issue or workspace through navigation. Existing merge reconciliation remains a
+separate lifecycle path.
+
+Both query caches are scoped to the active host, revalidate on mount and foreground,
+and participate in the existing navigation snapshot. A failed refresh retains the
+previous result behind the stale-notice boundary. Relation editing and stack
+operations remain with their source providers.
+
 ## Linear Run-Lifecycle Mirror
 
 The daemon's own canonical transitions drive the linked Linear issue, never the
@@ -716,6 +751,10 @@ a renderer exception appears in no daemon log, and a transport failure never
 reached a host at all. `packages/client` makes the distinction real: a non-2xx
 answer throws `DaemonRequestError` carrying the daemon's correlation id, and a
 request that never landed throws `DaemonTransportError`.
+
+Relationship and stack panels use the inline error report: a short message and
+retry action stay visible, while the full diagnostic remains in a disclosure.
+These small panels do not inherit the centered page layout or its padding.
 
 The daemon stamps `x-otomat-correlation-id` on every `/api` response and keeps a
 bounded, redacted ring of what it recorded about the failures.

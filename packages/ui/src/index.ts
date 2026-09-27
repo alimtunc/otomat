@@ -103,6 +103,13 @@ export {
 } from "./primitives/popover";
 
 export {
+  PreviewCard,
+  PreviewCardContent,
+  PreviewCardTrigger,
+  type PreviewCardContentProps,
+} from "./primitives/preview-card";
+
+export {
   Select,
   SelectContent,
   SelectGroup,

@@ -1,4 +1,5 @@
 import {
+  linearIssueRelationsSchema,
   issueSourceContractSchema,
   linearAttachmentsResponseSchema,
   linearCommentsResponseSchema,
@@ -81,6 +82,11 @@ export function createLinearClient(config: DaemonClientConfig) {
     async getLinearWriteback(issueId: string) {
       return linearWritebackStateSchema.parse(
         await getJson(config, `/api/linear/issues/${encodeURIComponent(issueId)}/writeback`),
+      );
+    },
+    async getLinearRelations(issueId: string) {
+      return linearIssueRelationsSchema.parse(
+        await getJson(config, `/api/linear/issues/${encodeURIComponent(issueId)}/relations`),
       );
     },
     async getLinearEditor(issueId: string) {

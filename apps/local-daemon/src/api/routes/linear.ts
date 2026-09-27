@@ -101,6 +101,10 @@ export function createLinearRoutes(deps: ApiDeps): Hono {
     c.json(deps.linear.writeback.writebackState(c.req.param("id"))),
   );
 
+  routes.get("/issues/:id/relations", async (c) =>
+    c.json(await deps.linear.issueRelations(c.req.param("id"))),
+  );
+
   routes.get("/issues/:id/editor", async (c) =>
     c.json(await deps.linear.writeback.editorState(c.req.param("id"))),
   );

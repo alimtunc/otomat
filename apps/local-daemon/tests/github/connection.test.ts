@@ -25,6 +25,7 @@ function fakeCli(): GitHubCli & { tokens: string[] } {
   let current = DISCONNECTED;
   return {
     tokens,
+    readPullRequestStack: () => Promise.reject(new Error("not used")),
     connection: async () => current,
     availability: async () => null,
     remoteBranchExists: async () => true,

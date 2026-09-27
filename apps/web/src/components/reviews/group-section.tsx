@@ -26,7 +26,7 @@ export function ReviewInboxGroup({
       onToggle={() => onToggle(group)}
     >
       {entries.map((entry) => (
-        <li key={entry.id}>
+        <li key={entry.id} className="border-b border-border py-1 last:border-b-0">
           <ReviewInboxRow entry={entry} viewerLogin={viewerLogin} />
         </li>
       ))}

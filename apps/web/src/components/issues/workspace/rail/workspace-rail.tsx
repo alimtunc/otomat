@@ -1,5 +1,6 @@
-import { type IssueContract, type RunContract } from "@otomat/domain";
+import { issueShortId, type IssueContract, type RunContract } from "@otomat/domain";
 import { cn, SidePanelToggle, useSidePanel } from "@otomat/ui";
+import { IssueRelationsSection } from "@web/components/issues/relations/section";
 import { LinearRailSection } from "@web/components/issues/workspace/linear/rail-section";
 import { CycleDetails } from "@web/components/issues/workspace/rail/cycle-details";
 import { IssuePullRequestsSection } from "@web/components/issues/workspace/rail/issue-pull-requests-section";
@@ -73,6 +74,9 @@ export function WorkspaceRail({ issue, run }: { issue: IssueContract; run: RunCo
       <StoppedSection execution={issue.execution} />
       {issue.source === "linear" ? <LinearRailSection issue={issue} run={run} /> : null}
       {cycleRunId === null ? null : <CycleDetails runId={cycleRunId} run={run} />}
+      {issue.source === "linear" ? (
+        <IssueRelationsSection issueId={issue.id} identifier={issueShortId(issue)} />
+      ) : null}
       <IssuePullRequestsSection issueId={issue.id} />
       {run !== null ? (
         <>

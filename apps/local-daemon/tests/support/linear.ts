@@ -81,6 +81,9 @@ export function stubLinearService(
 ): LinearService {
   const { writeback, ...service } = overrides;
   return {
+    issueRelations: async () => {
+      throw new Error("issueRelations stub not configured");
+    },
     connections: () => [],
     connect: async () => {
       throw new Error("connect stub not configured");
@@ -118,6 +121,9 @@ export function stubLinearService(
 
 export function stubLinearApiClient(overrides: Partial<LinearApiClient> = {}): LinearApiClient {
   return {
+    issueRelations: async () => {
+      throw new Error("issueRelations stub not configured");
+    },
     viewer: async () => {
       throw new Error("viewer stub not configured");
     },

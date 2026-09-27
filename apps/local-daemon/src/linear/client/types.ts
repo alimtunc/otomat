@@ -1,4 +1,4 @@
-import type { DiffMediaType, LinearWorkspaceContract } from "@otomat/domain";
+import type { DiffMediaType, LinearIssueRelations, LinearWorkspaceContract } from "@otomat/domain";
 
 export interface LinearViewer {
   user_name: string;
@@ -112,6 +112,11 @@ export interface LinearFile {
 }
 
 export interface LinearApiClient {
+  issueRelations(
+    apiKey: string,
+    issueId: string,
+    signal?: AbortSignal,
+  ): Promise<LinearIssueRelations>;
   viewer(apiKey: string, signal?: AbortSignal): Promise<LinearViewer>;
   workspace(apiKey: string, signal?: AbortSignal): Promise<LinearWorkspaceContract>;
   issues(apiKey: string, query: LinearIssueQuery, signal?: AbortSignal): Promise<LinearIssue[]>;

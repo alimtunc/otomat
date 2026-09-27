@@ -48,3 +48,15 @@ export function useLinearSyncStatus(projectId: string | undefined) {
     refetchInterval: (query) => (query.state.data?.running === true ? 1_500 : false),
   });
 }
+
+export function useLinearRelations(issueId: string) {
+  const keys = useQueryKeys();
+  return useQuery({
+    queryKey: keys.linearRelations(issueId),
+    queryFn: () => daemon.getLinearRelations(issueId),
+    retry: false,
+    staleTime: 15_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+  });
+}

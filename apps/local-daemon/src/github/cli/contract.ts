@@ -1,4 +1,5 @@
 import type {
+  PullRequestStack,
   GitHubConnectionContract,
   PullRequestCheck,
   PullRequestMergeMethod,
@@ -128,6 +129,7 @@ export interface ForcePushWithLeaseInput {
 }
 
 export interface GitHubCli {
+  readPullRequestStack(input: PullRequestTarget): Promise<PullRequestStack | null>;
   connection(): Promise<GitHubConnectionContract>;
   /** Null when gh can run; otherwise the not_installed/cli_outdated/failed contract. */
   availability(): Promise<GitHubConnectionContract | null>;

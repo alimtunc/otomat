@@ -5,7 +5,7 @@ import {
   DropdownMenuRadioItem,
 } from "@otomat/ui";
 import { usePublishLinearStatus } from "@web/api/linear/writeback";
-import { ColorDot } from "@web/components/issues/color-dot";
+import { LinearStateIcon } from "@web/components/issues/linear-state-icon";
 import { Unknown } from "@web/components/issues/workspace/rail/unknown";
 
 import type { LinearIssueEditing } from "../use-issue-editing";
@@ -27,7 +27,7 @@ export function StatusRow({
   return (
     <DropdownMenu>
       <Trigger disabled={disabled}>
-        <ColorDot color={snapshot.state.color} />
+        <LinearStateIcon state={snapshot.state} />
         <span className="whitespace-nowrap">{snapshot.state.name}</span>
       </Trigger>
       <DropdownMenuContent align="end">
@@ -42,7 +42,7 @@ export function StatusRow({
           {(metadata?.states ?? []).map((state) => (
             <DropdownMenuRadioItem key={state.id} value={state.id}>
               <span className="inline-flex items-center gap-2">
-                <ColorDot color={state.color} />
+                <LinearStateIcon state={state} />
                 {state.name}
               </span>
             </DropdownMenuRadioItem>

@@ -78,6 +78,28 @@ marked as such and offers **Retry publication**, which is safe to repeat: a clea
 nothing, an identical push is a no-op, and an existing pull request is reused rather than opened
 twice.
 
+## Navigate a GitHub stack
+
+Each linked pull request on an issue page checks its membership in a GitHub stack.
+A declared stack shows its number, base, ordered pull requests and individual states,
+with numbered steps and the current PR highlighted. Expand **Branches** to inspect
+a member’s head and target. Links open GitHub without adopting neighboring PRs.
+
+**No stack declared on GitHub** means the stack API successfully returned no
+membership. **Branch details** shows the PR’s branch and target; matching branch names
+alone do not establish a stack. **Stack membership unavailable** means GitHub could not
+answer; it is not evidence that the PR is outside a stack.
+
+Membership refreshes when opening the issue, returning to the window, or choosing
+**Refresh stack**. Last-known data survives a failed refresh with a stale notice.
+Viewing a stack does not merge PRs, change issue state or close workspaces. Stack
+creation, reordering and merging remain on GitHub.
+
+In **Reviews**, hover or focus a PR row to preview its linked issue, relations and
+GitHub stack. Clicking or tapping still opens the review. A named reference remains
+labeled **Referenced issue · not attached**; viewing it does not attach it.
+The popover loads these details only when opened.
+
 ## Keep the pull request current
 
 Once a pull request exists, the panel compares the workspace with the published head:

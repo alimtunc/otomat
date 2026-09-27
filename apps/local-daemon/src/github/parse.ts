@@ -59,7 +59,7 @@ export function outdatedGhVersion(stdout: string): string | null {
   return null;
 }
 
-function lifecycle(state: "OPEN" | "CLOSED" | "MERGED", draft: boolean): PullRequestState {
+export function lifecycle(state: "OPEN" | "CLOSED" | "MERGED", draft: boolean): PullRequestState {
   if (state === "MERGED") return "merged";
   if (state === "CLOSED") return "closed";
   return draft ? "draft" : "open";
