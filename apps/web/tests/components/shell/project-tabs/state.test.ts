@@ -1,8 +1,6 @@
 import {
   openTabHosts,
-  projectTabDestination,
   readStoredProjectTabs,
-  withoutProjectTab,
   withProjectTab,
   withProjectTabRoute,
   writeStoredProjectTabs,
@@ -82,45 +80,11 @@ describe("stored project tabs", () => {
     ]);
   });
 
-  it("forgets the route of a closed tab, and leaves the other tabs alone", () => {
-    const tabs = withProjectTabRoute(
-      withProjectTab(withProjectTab([], REMOTE), LOCAL),
-      LOCAL,
-      "/issues/issue-7",
-    );
-
-    expect(withoutProjectTab(tabs, LOCAL)).toEqual([{ key: REMOTE, route: null }]);
-    expect(withProjectTab(withoutProjectTab(tabs, LOCAL), LOCAL).at(-1)).toEqual({
-      key: LOCAL,
-      route: null,
-    });
-  });
-
   it("returns the same list when nothing changed", () => {
     const tabs = withProjectTabRoute(withProjectTab([], LOCAL), LOCAL, "/issues");
 
     expect(withProjectTab(tabs, LOCAL)).toBe(tabs);
     expect(withProjectTabRoute(tabs, LOCAL, "/issues")).toBe(tabs);
-    expect(withoutProjectTab(tabs, REMOTE)).toBe(tabs);
-  });
-});
-
-describe("project tab destination", () => {
-  it("restores the view the project was left on", () => {
-    const tabs = withProjectTabRoute(withProjectTab([], LOCAL), LOCAL, "/runs/run-3/diff");
-
-    expect(projectTabDestination(tabs, LOCAL, "/issues/issue-7")).toBe("/runs/run-3/diff");
-  });
-
-  it("leaves a detail view behind when the activated tab has no route yet", () => {
-    expect(projectTabDestination([], LOCAL, "/issues/issue-7")).toBe("/issues");
-    expect(projectTabDestination([], LOCAL, "/runs/run-3")).toBe("/issues");
-    expect(projectTabDestination([], LOCAL, "/pull-requests/pr-1")).toBe("/issues");
-  });
-
-  it("stays on a list view when the activated tab has no route yet", () => {
-    expect(projectTabDestination([], LOCAL, "/issues")).toBeNull();
-    expect(projectTabDestination([], LOCAL, "/settings/project")).toBeNull();
   });
 });
 

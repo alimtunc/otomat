@@ -1556,8 +1556,8 @@ lets Linear write-back apply to a merge Otomat only witnessed.
 
 Reviews is PR-first: the synced GitHub pull request is the entry, and a run is at
 most context on it. Runs resting on a diff are reached from Runs and from their
-issue, which is why `GET /api/reviews` answers a pull-request inbox and the
-sidebar badge counts pull requests alone.
+issue, which is why `GET /api/reviews` answers a pull-request inbox. The sidebar
+project badge counts unread attention across the host Inbox.
 
 The mirror carries the inbox. A pass writes the same `pull_requests` row an
 adoption would, minus the adoption: `issue_id` is nullable, `attached_at` and
@@ -2032,7 +2032,7 @@ never a silent overwrite.
 ## Staged and Unstaged Changes
 
 Project and run Files each contain Files/Changes tabs on the same route; Changes
-is never a separate sidebar or cockpit entry. Project tabs sit in the page
+is never a separate sidebar or cockpit entry. The project's Files/Changes tabs sit in the page
 header; run tabs stay inside the Files workspace below the cockpit navigation.
 The selected change has one toolbar for its path, staged/unstaged state and
 file actions; the state's tooltip names the compared Git layers.
@@ -2190,12 +2190,11 @@ not render.
 
 ## Settings and Global Agents
 
-The sidebar carries work only — Issues, Files, Runs, Conversations, Reviews,
-Usage, plus the Inbox and the two quick actions. Everything that configures Otomat or documents it is
-reached from the project switcher, which is where the operator already goes to
-change what they are working on. `nav-items.ts` therefore holds one workspace
-list and a single `SETTINGS_NAV` entry the switcher and the palette share; there
-is no second "Configure" rail to keep in sync with the settings surface itself.
+The sidebar separates application actions (Search, New issue, Inbox, Conversations) from the
+operator's grouped projects. Settings is pinned in the footer. Expanded projects expose Issues,
+All runs and recent conversations; clicking a project opens `/project`, which links the remaining
+workspace features and project settings. `nav-items.ts` owns the shared feature list used by the
+home, the New tab dropdown and the command palette.
 
 Settings splits four ways, and the split is a claim about ownership rather than
 a menu order. *Project* is what belongs to the selected project. *Global · <host>*
@@ -2272,29 +2271,36 @@ keeps its tab and the reviewer keeps its file anchor. Every such write replaces
 the current entry (`runs/diff/use-active-file.ts` states it for the anchor), so
 refining a screen never buries the screen it was reached from.
 
-## Project Tabs
+## Project Navigation and View Tabs
 
-The shell carries one tab per open project above everything else, and a tab is an
-**application** tab: the desktop shell never asks macOS for native ones, so the
-strip renders the same in the browser, in the packaged app and in a preview.
+The sidebar starts with the active project picker; its gear action opens that project's settings.
+Below the application shortcuts, the project catalog follows personal group order. The main pane's context header
+identifies the project, its group and the active host. Global Inbox, Conversations and Settings
+retain their own scope and do not replace a project's remembered content.
 
-A tab is identified by the switcher key the project already had — `host:project`
-(`project-selection/host-key.ts`) — so two daemons that both name a project
-`local-default` cannot share a tab, a route or a badge. Tabs are opt-in and
-independent of the selection: only the switcher's per-project pin action opens
-one, and merely picking a project never does, so the bar shows the projects the
-operator chose to keep at hand — not every project ever visited — and a
-single-project cockpit simply never renders it. Activation stays one code path:
-`useProjectSwitcher.selectProject` restores the target's remembered view whether
-it was reached from the switcher, a tab or a keyboard shortcut, and the store
-deduplicates on open (`project-tabs/state.ts`), so uniqueness holds without
-reconciliation.
+`project-desk/` owns persisted view tabs under `otomat.project-desks`, keyed by `host:project`.
+Every tab has a stable id and its own href and label. Ordinary navigation replaces that tab's
+location; only the New tab dropdown appends one. Duplicate views are allowed. Closing all tabs
+leaves an untabbed current page, so later sidebar navigation cannot implicitly add another tab.
+An absent desk is seeded once from the `otomat.project-tabs` route, or from `/project`.
+`otomat.project-tabs` keeps host membership for attention polling; `project-layout` is unchanged.
 
-What a tab restores is the last **project-scoped** location it was on, stored as
-the router's `href` so the filters, the selection and the panel state that live in
-the URL come back with it. `lib/project-navigation.ts` draws that line: Inbox,
-Settings and the agent surfaces answer for every project at once and therefore
-never become a project's remembered view.
+`useProjectSwitcher.selectProject` resolves the host before selecting the project and navigating
+to its remembered location or an explicit destination. A pending destination prevents an outgoing
+route from being recorded against the arriving project. `useDeskSync` records committed project
+routes; detail ownership is resolved from the conversation or issue data using the existing query
+cache. Selected cockpit and terminal conversations are project-scoped; the unselected Conversations route is host-wide.
+The top strip restores a stored href, including its filters and anchors. Ctrl/⌘ Tab moves through
+view tabs; Ctrl/⌘ 1–9 selects projects in arranged catalog order. Tab drag, Alt + Left/Right and the
+Tab actions menu use the same reorder operation. Closing a tab changes only presentation state.
+
+`AppShell` places the context header and tabs inside the main pane. Its collapsed sidebar renders
+`SidebarReveal`: pointer hover or keyboard focus reveals the same sidebar over the content;
+Escape returns focus to the rail, and the existing panel toggle pins it. The same sidebar stays
+mounted across all three states, preserving project disclosures. The overlay uses the last
+pinned width and a 140 ms pointer transition; keyboard and reduced-motion interactions are
+immediate, and hover never resizes the content. Project conversations use the active host's existing snapshot;
+off-host activity is not inferred from another daemon's data.
 
 The Inbox is the operator's own: each projected entry carries a `read` and an
 `archived` flag from `inbox_marks`, a table keyed by the projected entry id
@@ -2316,7 +2322,7 @@ The attention badge is `countUnreadInboxEntriesByProject` over each host's Inbox
 snapshot — not a second notification path. It counts what is unread, unarchived
 and still open; a resolved entry keeps its mark but never badges, because the
 operator caused the resolution. `useOpenHostInboxes` polls one Inbox
-per host that has an open tab (the active host on its own client, the others
+per host retained in the project membership preference (the active host on its own client, the others
 through `bridge.executionHost.readInbox`, the same `HostCatalog.call` seam the
 workspace inventory uses) and is mounted from the root layout, so the poll
 outlives the route remounts of the shell that renders the badge. That has three
@@ -2326,30 +2332,13 @@ operator is not looking at is badged from that host's own poll, and everything
 the Inbox projection refuses to count (a withdrawn demand, a completed run) can
 never inflate it.
 
-Closing a tab is a view operation and nothing else: it drops the tab and its
-remembered route while the selection stays where it is — the project outlives
-its tab — and touches no run, branch or worktree.
-
-The operator's arrangement of projects — order, named groups, a presentation
-icon — is one web-only preference (`project-layout/`, localStorage
-`otomat.project-layout`) keyed by the same switcher key, so no daemon, host or
-project setting ever hears of it and nothing synchronizes it between machines.
-The switcher and the tab bar both read it through `arrangeProjects`: ungrouped
-projects first, then each group in order. It reconciles at read and never
-prunes: a key the catalog does not list — a removed project, or one on a host
-that is unreachable right now — is skipped, so a VPS that answers again gets its
-projects back in place, and a project the layout never held joins the end of the
-ungrouped section in the order it was given (catalog order in the switcher, open
-order in the bar), which is also why an operator who never organizes sees no
-change. A rename needs nothing, because a key is an id. Every project move is
-one write, `withSectionOrder`: the target section takes the order the operator
-sees, keys it holds but did not show stay behind them, and the moved keys leave
-every other list. A folded group collapses to a chip carrying its hidden tabs'
-host tags and summed attention, and still shows the active project's tab so the
-bar never hides where the cockpit is; keyboard shortcuts number the arranged
-tabs, folded ones included. Organizing happens in an explicit dialog opened from
-the switcher, where every action is a labelled control and drag-and-drop is only
-a shortcut for the same writes.
+Project order, named groups and icons remain one web-only preference (`project-layout/`,
+localStorage `otomat.project-layout`). The sidebar and directory read it through `arrangeProjects`:
+ungrouped projects first, then each group in order. Unknown catalog keys are retained but hidden,
+so a returning host restores its placement. New projects append to the ungrouped section; renames
+keep their id. Every project move is one `withSectionOrder` write. Folded groups aggregate hidden
+unread counts and known live conversations and keep the active project visible. The organization
+dialog offers labelled move controls as alternatives to drag-and-drop.
 
 ## One Renderer For Every Host
 

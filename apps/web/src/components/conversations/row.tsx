@@ -15,8 +15,8 @@ import {
 import { Link } from "@tanstack/react-router";
 import { conversationLine } from "@web/lib/conversations/line";
 import { conversationStatus } from "@web/lib/conversations/status";
+import { conversationTitle } from "@web/lib/conversations/title";
 import type { InboxMarkPatch } from "@web/lib/inbox/marks";
-import { terminalToolLabel } from "@web/lib/terminal-tool";
 import type { KeyboardEvent } from "react";
 
 export interface ConversationRowProps {
@@ -35,7 +35,7 @@ export function ConversationRow({
   onMark,
 }: ConversationRowProps) {
   const isTerminal = "terminal" in entry;
-  const title = isTerminal ? `${terminalToolLabel(entry.terminal.tool)} terminal` : entry.step_name;
+  const title = conversationTitle(entry);
   const kindLabel = isTerminal ? "Terminal" : "Cockpit chat";
   const status = conversationStatus([entry]);
   const onKeyDown = (event: KeyboardEvent<HTMLAnchorElement>): void => {

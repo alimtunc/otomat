@@ -1,9 +1,9 @@
 import type { CheckoutTarget, WorktreeFileContent } from "@otomat/domain";
 import { Button, Kbd } from "@otomat/ui";
-import { useBlocker } from "@tanstack/react-router";
 import { useSaveFile } from "@web/api/files/mutations";
 import type { CodeEditorHandle } from "@web/components/files/code-editor";
 import { EDITOR_PLACEHOLDER_LINES } from "@web/components/files/surface";
+import { useUnsavedChangesGuard } from "@web/components/files/use-unsaved-changes-guard";
 import { CopyablePath } from "@web/components/runs/copyable-path";
 import { LinesSkeleton } from "@web/components/shell/lines-skeleton";
 import { worktreeFileRefusal } from "@web/lib/run/file-refusal";
@@ -12,8 +12,6 @@ import { lazy, Suspense, useRef, useState } from "react";
 const CodeEditor = lazy(() =>
   import("@web/components/files/code-editor").then((m) => ({ default: m.CodeEditor })),
 );
-
-const DISCARD_PROMPT = "This file has unsaved changes. Leave and discard them?";
 
 type TextContent = Extract<WorktreeFileContent, { kind: "text" }>;
 
@@ -31,19 +29,9 @@ export function FileEditor({ target, content, editable, refreshing, onReload }: 
   const [dirty, setDirty] = useState(false);
   const [opened, setOpened] = useState(content.revision);
   const [reloads, setReloads] = useState(0);
-  // Every route change, including picking another file, goes through the router, so one blocker covers them all; the browser's own prompt covers closing the tab.
-  useBlocker({
-    shouldBlockFn: () => {
-      if (!dirty) return false;
-      // The editor stays mounted until the next file lands, so it falls back to the file on disk and never prompts again.
-      const discard = window.confirm(DISCARD_PROMPT);
-      if (discard) {
-        setDirty(false);
-        setReloads((count) => count + 1);
-      }
-      return !discard;
-    },
-    enableBeforeUnload: dirty,
+  useUnsavedChangesGuard(dirty, () => {
+    setDirty(false);
+    setReloads((count) => count + 1);
   });
 
   const moved = content.revision !== opened;

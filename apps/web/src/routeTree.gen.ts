@@ -14,6 +14,7 @@ import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as ConversationsRouteImport } from './routes/conversations'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as ProjectRouteImport } from './routes/project'
 import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as SkillsRouteImport } from './routes/skills'
@@ -78,6 +79,11 @@ const FilesRoute = FilesRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectRoute = ProjectRouteImport.update({
+  id: '/project',
+  path: '/project',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReviewsRoute = ReviewsRouteImport.update({
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/conversations': typeof ConversationsRoute
   '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
+  '/project': typeof ProjectRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
   '/terminal': typeof TerminalRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByTo {
   '/conversations': typeof ConversationsRoute
   '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
+  '/project': typeof ProjectRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
   '/terminal': typeof TerminalRoute
@@ -384,6 +392,7 @@ export interface FileRoutesById {
   '/conversations': typeof ConversationsRoute
   '/files': typeof FilesRoute
   '/inbox': typeof InboxRoute
+  '/project': typeof ProjectRoute
   '/reviews': typeof ReviewsRoute
   '/skills': typeof SkillsRoute
   '/terminal': typeof TerminalRoute
@@ -433,6 +442,7 @@ export interface FileRouteTypes {
     | '/conversations'
     | '/files'
     | '/inbox'
+    | '/project'
     | '/reviews'
     | '/skills'
     | '/terminal'
@@ -478,6 +488,7 @@ export interface FileRouteTypes {
     | '/conversations'
     | '/files'
     | '/inbox'
+    | '/project'
     | '/reviews'
     | '/skills'
     | '/terminal'
@@ -523,6 +534,7 @@ export interface FileRouteTypes {
     | '/conversations'
     | '/files'
     | '/inbox'
+    | '/project'
     | '/reviews'
     | '/skills'
     | '/terminal'
@@ -571,6 +583,7 @@ export interface RootRouteChildren {
   ConversationsRoute: typeof ConversationsRoute
   FilesRoute: typeof FilesRoute
   InboxRoute: typeof InboxRoute
+  ProjectRoute: typeof ProjectRoute
   ReviewsRoute: typeof ReviewsRoute
   SkillsRoute: typeof SkillsRoute
   TerminalRoute: typeof TerminalRoute
@@ -617,6 +630,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/project': {
+      id: '/project'
+      path: '/project'
+      fullPath: '/project'
+      preLoaderRoute: typeof ProjectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reviews': {
@@ -1011,6 +1031,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConversationsRoute: ConversationsRoute,
   FilesRoute: FilesRoute,
   InboxRoute: InboxRoute,
+  ProjectRoute: ProjectRoute,
   ReviewsRoute: ReviewsRoute,
   SkillsRoute: SkillsRoute,
   TerminalRoute: TerminalRoute,

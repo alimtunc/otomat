@@ -21,7 +21,7 @@ the branch you left it on.
 
 ## Use a terminal
 
-The sidebar’s **Terminal** opens a session in the selected project’s registered
+The project home’s **Terminal** opens a session in the selected project’s registered
 checkout, without creating an issue or run. Changes happen directly in that
 folder. Choose **Open shell**, **Claude** or **Codex**; CLI launches show their
 invocation before confirmation and send no issue context. Each project keeps its
@@ -83,7 +83,7 @@ agent turn and is not part of the run's history.
 commits the index with your configured git identity — hooks and signing apply. Discarding asks
 first and is irreversible.
 
-The **Files** view in the sidebar does the same on the project's real checkout: browse, edit,
+The **Files** view from the project home does the same on the project's real checkout: browse, edit,
 stage, commit, and publish a pull request from your own branch without any run involved.
 
 ## Clean up

@@ -6,7 +6,7 @@ a shell, Claude or Codex terminal session.
 
 ## The list
 
-Conversations are grouped by issue, or by project for a terminal opened from the sidebar,
+Conversations are grouped by issue, or by project for a terminal opened from the project’s **Terminal** view,
 newest activity first, in two sections. **Following**
 holds the issues whose cycle is still open: a run queued, working or
 waiting on a permission, an answer or a provider quota; a run awaiting your review or with an
@@ -19,7 +19,7 @@ collapsed by default, with its unread count still visible in the heading.
 A single-conversation issue opens directly from its row. Issues with several conversations
 stay open while one of their steps is running and fold again when none is; click a heading to
 fold or unfold it yourself, and your choice holds while you stay on the page. Folding a group or
-section leaves the open thread on screen. Each row shows a short preview — a pending permission
+section keeps its attention totals visible. Each row shows a short preview — a pending permission
 or question first, then a message waiting to be delivered, then the last thing said — and how
 long ago it moved. Running, waiting and failed steps have a named status; a running one spins
 while the agent works, including a completed step answering a message you sent it. Completed
@@ -37,8 +37,11 @@ or by project. Archived threads stay hidden until they speak again.
 
 ## Reading and answering
 
-Selecting a cockpit row opens its chat on the right: the same header, messages, question cards and
-composer as the run cockpit, aimed at that exact step. The composer names its recipient and says
+Selecting a row switches to its owning project and opens its thread in the active view tab:
+recent chats and terminal sessions are also directly reachable under each project in the sidebar.
+**All conversations** returns to the host-wide list; navigating to a thread never adds a tab.
+A cockpit chat uses the same header, messages, question cards and composer as its exact run step.
+The composer names its recipient and says
 when the message will be delivered; a step that can no longer take one says why, and a finished
 run offers to add a follow-up step in place. Runtime and model details appear here.
 **Open issue** and **Open cockpit** lead to the surfaces that hold the plan, the diff and the
@@ -50,7 +53,7 @@ reading marks like the Inbox's — they change nothing on the run or the step. `
 the rows.
 
 The selection lives in the URL, so a refresh, a shared link or a notification lands on the same
-thread and reveals its group and section. A host that stops answering keeps its last list on
+thread in its project. A host that stops answering keeps its last list on
 screen behind a stale notice; marks and messages wait until it answers again.
 
 ## Terminal sessions

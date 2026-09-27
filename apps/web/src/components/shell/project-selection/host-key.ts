@@ -10,6 +10,11 @@ export interface ParsedProjectSwitcherKey {
   projectId: string;
 }
 
+export function isProjectSwitcherKey(key: string): boolean {
+  const separator = key.indexOf(":");
+  return separator > 0 && separator < key.length - 1 && isExecutionHostId(key.slice(0, separator));
+}
+
 export function parseProjectSwitcherKey(
   key: string,
   fallbackHost: ExecutionHostId,

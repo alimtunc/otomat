@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import type { ExecutionHostSelectResult } from "@otomat/domain";
+import { projectDeskStore } from "@web/components/shell/project-desk/store";
 import { readSelectedProjectIds } from "@web/components/shell/project-selection/selection";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
@@ -11,16 +12,8 @@ import { fakeDesktopBridge } from "#support/desktop-bridge";
 import { mountWithQuery, type Mounted } from "#support/mount";
 
 const navigate = vi.fn();
-let pathname = "/issues";
 
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => navigate,
-  useRouterState: ({
-    select,
-  }: {
-    select: (state: { location: { pathname: string; href: string } }) => string;
-  }) => select({ location: { pathname, href: `${pathname}?view=board` } }),
-}));
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 
 vi.mock("@web/api/daemon/queries", () => ({
   useProjects: () => ({
@@ -36,7 +29,7 @@ vi.mock("@web/components/shell/use-host-projects", () => ({
 }));
 
 const mounted: Mounted[] = [];
-let select: (switcherId: string) => void = () => undefined;
+let select: (switcherId: string, href?: string) => void = () => undefined;
 
 function Probe() {
   select = useProjectSwitcher().selectProject;
@@ -44,9 +37,9 @@ function Probe() {
 }
 
 beforeEach(() => {
-  pathname = "/issues";
   navigate.mockReset();
   projectTabsStore.setState(() => []);
+  projectDeskStore.setState(() => ({ desks: {}, pending: null }));
   window.localStorage.clear();
 });
 
@@ -68,19 +61,28 @@ async function settle(): Promise<void> {
   });
 }
 
-it("opens no tab of its own: picking a project only switches to it", async () => {
+it("records the picked project's host membership without creating a view tab", async () => {
   await renderSwitcher();
 
   await act(async () => {
     select("local:p2");
   });
 
-  expect(projectTabsStore.state).toEqual([]);
+  expect(projectTabsStore.state).toEqual([{ key: "local:p2", route: null }]);
+  expect(projectDeskStore.state.desks).toEqual({});
+});
+
+it("expects no desk arrival when the destination is outside the project's views", async () => {
+  await renderSwitcher();
+
+  await act(async () => select("local:p2", "/settings/project"));
+
+  expect(navigate).toHaveBeenCalledWith({ href: "/settings/project" });
+  expect(projectDeskStore.state.pending).toBeNull();
 });
 
 it("restores the view the picked project was left on", async () => {
   projectTabsStore.setState(() => [{ key: "local:p2", route: "/runs/run-3/diff" }]);
-  pathname = "/issues/issue-7";
 
   await renderSwitcher();
   await act(async () => select("local:p2"));
@@ -88,20 +90,11 @@ it("restores the view the picked project was left on", async () => {
   expect(navigate).toHaveBeenCalledWith({ href: "/runs/run-3/diff" });
 });
 
-it("leaves the other project's detail view for the issue list", async () => {
-  pathname = "/issues/issue-7";
-
+it("opens the project home when it has no remembered view", async () => {
   await renderSwitcher();
   await act(async () => select("local:p2"));
 
-  expect(navigate).toHaveBeenCalledWith({ href: "/issues" });
-});
-
-it("stays where it is when the picked project has no view of its own yet", async () => {
-  await renderSwitcher();
-  await act(async () => select("local:p2"));
-
-  expect(navigate).not.toHaveBeenCalled();
+  expect(navigate).toHaveBeenCalledWith({ href: "/project" });
 });
 
 it("switches the host in place once it answers, then lands on the project's view", async () => {

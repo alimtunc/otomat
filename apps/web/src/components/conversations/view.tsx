@@ -1,13 +1,5 @@
 import type { ConversationThreadEntry } from "@otomat/domain";
-import {
-  EmptyState,
-  ResizablePanel,
-  ResizablePanelGroup,
-  SidePanel,
-  useMediaQuery,
-  usePanelGroupLayout,
-  WIDE_VIEWPORT_MEDIA_QUERY,
-} from "@otomat/ui";
+import { EmptyState } from "@otomat/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { useMarkConversations } from "@web/api/conversations/mutations";
@@ -33,8 +25,9 @@ import {
   NO_CONVERSATION_FILTERS,
 } from "@web/lib/conversations/filters";
 import { groupConversations } from "@web/lib/conversations/sections";
+import { conversationTitle } from "@web/lib/conversations/title";
 import { markInboxRequest, type InboxMarkPatch } from "@web/lib/inbox/marks";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 export function ConversationsView() {
   useConversationsStream();
@@ -47,8 +40,6 @@ export function ConversationsView() {
   const mark = useMarkConversations();
   const { run, step, terminal } = useSearch({ from: "/conversations" });
   const navigate = useNavigate();
-  const wide = useMediaQuery(WIDE_VIEWPORT_MEDIA_QUERY);
-  const panesLayout = usePanelGroupLayout("otomat.conversations");
   const [filters, setFilters] = useState(NO_CONVERSATION_FILTERS);
   const filtered = activeConversationFilterCount(filters) > 0;
 
@@ -105,60 +96,64 @@ export function ConversationsView() {
 
   const selectedTerminal =
     selected !== undefined && "terminal" in selected ? selected.terminal : undefined;
-  const terminalThread = selectedTerminal ? (
-    <TerminalConversationBody
-      key={`${hostUrl}:${token}:${selectedTerminal.id}`}
-      session={selectedTerminal}
-    />
-  ) : (
-    <QueryBoundary
-      query={conversations}
-      pending={<ListSkeleton rows={3} height={40} />}
-      error={
-        <ErrorReport
-          error={conversations.error}
-          context="Couldn’t load conversations"
-          onRetry={() => void conversations.refetch()}
-        />
-      }
-    >
-      {() => (
-        <CenteredState>
-          <EmptyState
-            icon="terminal"
-            title="Terminal session not found"
-            description="This session is no longer listed on this host."
-          />
-        </CenteredState>
-      )}
-    </QueryBoundary>
-  );
-  const chatThread =
-    run === undefined || step === undefined ? (
-      <CenteredState>
-        <EmptyState
-          icon="message-square"
-          title="Select a conversation"
-          description="Read a cockpit chat or return to a terminal session."
-        />
-      </CenteredState>
+  let thread: ReactNode = null;
+  if (terminal !== undefined)
+    thread = selectedTerminal ? (
+      <TerminalConversationBody
+        key={`${hostUrl}:${token}:${selectedTerminal.id}`}
+        session={selectedTerminal}
+      />
     ) : (
+      <QueryBoundary
+        query={conversations}
+        pending={<ListSkeleton rows={3} height={40} />}
+        error={
+          <ErrorReport
+            error={conversations.error}
+            context="Couldn’t load conversations"
+            onRetry={() => void conversations.refetch()}
+          />
+        }
+      >
+        {() => (
+          <CenteredState>
+            <EmptyState
+              icon="terminal"
+              title="Terminal session not found"
+              description="This session is no longer listed on this host."
+            />
+          </CenteredState>
+        )}
+      </QueryBoundary>
+    );
+  else if (run !== undefined && step !== undefined)
+    thread = (
       <RunEventsProvider runId={run}>
         <ConversationThreadBody runId={run} stepRunId={step} />
       </RunEventsProvider>
     );
-  const thread = terminal === undefined ? chatThread : terminalThread;
+
+  if (thread !== null)
+    return (
+      <RouteShell
+        titleIcon="message-square"
+        breadcrumbs={[
+          {
+            label: selected === undefined ? "Conversation" : conversationTitle(selected),
+            current: true,
+          },
+        ]}
+        back={{ label: "All conversations", goBack: closeThread }}
+      >
+        {thread}
+      </RouteShell>
+    );
 
   return (
     <RouteShell
       titleIcon="message-square"
       titleNote="Cockpit chats and terminal sessions on this host."
       breadcrumbs={[{ label: "Conversations", current: true }]}
-      back={
-        !wide && (step !== undefined || terminal !== undefined)
-          ? { label: "Back to conversations", goBack: closeThread }
-          : null
-      }
       actions={
         <ConversationFiltersMenu
           filters={filters}
@@ -167,27 +162,7 @@ export function ConversationsView() {
         />
       }
     >
-      {wide ? (
-        <ResizablePanelGroup {...panesLayout} className="h-full min-h-0">
-          <SidePanel
-            id="conversations-list"
-            label="Conversations"
-            side="left"
-            defaultSize={380}
-            minSize={300}
-            maxSize="45%"
-          >
-            <div className="h-full min-h-0 overflow-auto">{list}</div>
-          </SidePanel>
-          <ResizablePanel id="conversation-thread" minSize="40%">
-            {thread}
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      ) : (
-        <div className="flex h-full min-h-0 flex-col overflow-auto">
-          {step === undefined && terminal === undefined ? list : thread}
-        </div>
-      )}
+      <div className="mx-auto h-full max-w-5xl overflow-auto">{list}</div>
     </RouteShell>
   );
 }
