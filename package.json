@@ -41,8 +41,8 @@
     "@otomat/tooling": "workspace:*",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "lefthook": "^2.1.14",
-    "oxfmt": "~0.68.0",
-    "oxlint": "1.83.0",
+    "oxfmt": "~0.70.0",
+    "oxlint": "1.85.0",
     "react-doctor": "0.9.14"
   },
   "engines": {
