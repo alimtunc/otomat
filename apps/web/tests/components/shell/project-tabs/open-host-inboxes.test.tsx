@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import { countUnreadInboxEntriesByProject, type InboxSnapshot } from "@otomat/domain";
 import { hostKeys } from "@web/api/query-keys";
+import { closeDeskTab } from "@web/components/shell/project-desk/state";
+import { getProjectDesk, projectDeskStore } from "@web/components/shell/project-desk/store";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import { useOpenHostInboxes } from "@web/components/shell/project-tabs/use-open-host-inboxes";
 import { act } from "react";
@@ -43,6 +45,7 @@ function Probe() {
 const mounted: Mounted[] = [];
 
 beforeEach(() => {
+  projectDeskStore.setState(() => ({ desks: {}, pending: null }));
   const bridge = fakeDesktopBridge();
   bridge.executionHost.readInbox = () =>
     Promise.resolve({ ok: true as const, value: remoteInbox() });
@@ -72,7 +75,7 @@ async function flush(): Promise<void> {
   });
 }
 
-it("polls the Inbox of every host with an open tab, the focused one and the others alike", async () => {
+it("polls the Inbox of every known project host, the focused one and the others alike", async () => {
   remoteInbox.mockReturnValue({
     entries: [inboxEntry({ id: "run:r1", project: { id: "p9", name: "Far" } })],
     observed_at: OBSERVED_AT,
@@ -102,17 +105,18 @@ it("badges a run that turns review-ready on the host that is not focused", async
   expect(rows()).toEqual(["local:p1=1", "remote:p9=1"]);
 });
 
-it("stops polling a host once its last tab closes, and keeps what it had until it is collected", async () => {
+it("keeps project attention polling after its last view tab closes", async () => {
   const client = testQueryClient();
   mounted.push(await mountWithQuery(<Probe />, client));
   const remoteKey = hostKeys("remote").inbox;
   expect(client.getQueryCache().find({ queryKey: remoteKey })?.getObserversCount()).toBe(1);
 
   await act(async () => {
-    projectTabsStore.actions.close("remote:p9");
+    projectDeskStore.actions.edit("remote:p9", (desk) => closeDeskTab(desk, "initial"));
   });
 
-  expect(rows()).toEqual(["local:p1=1"]);
-  expect(client.getQueryCache().find({ queryKey: remoteKey })?.getObserversCount()).toBe(0);
+  expect(getProjectDesk("remote:p9").tabs).toEqual([]);
+  expect(rows()).toEqual(["local:p1=1", "remote:"]);
+  expect(client.getQueryCache().find({ queryKey: remoteKey })?.getObserversCount()).toBe(1);
   expect(client.getQueryData(remoteKey)).toBeDefined();
 });

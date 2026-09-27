@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import type { ExecutionHostSelectResult } from "@otomat/domain";
+import { projectDeskStore } from "@web/components/shell/project-desk/store";
 import { readSelectedProjectIds } from "@web/components/shell/project-selection/selection";
 import { useProjectSwitcher } from "@web/components/shell/project-selection/use-project-switcher";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
@@ -47,6 +48,7 @@ beforeEach(() => {
   pathname = "/issues";
   navigate.mockReset();
   projectTabsStore.setState(() => []);
+  projectDeskStore.setState(() => ({ desks: {}, pending: null }));
   window.localStorage.clear();
 });
 
@@ -75,7 +77,8 @@ it("opens no tab of its own: picking a project only switches to it", async () =>
     select("local:p2");
   });
 
-  expect(projectTabsStore.state).toEqual([]);
+  expect(projectTabsStore.state).toEqual([{ key: "local:p2", route: null }]);
+  expect(projectDeskStore.state.desks).toEqual({});
 });
 
 it("restores the view the picked project was left on", async () => {
@@ -88,20 +91,20 @@ it("restores the view the picked project was left on", async () => {
   expect(navigate).toHaveBeenCalledWith({ href: "/runs/run-3/diff" });
 });
 
-it("leaves the other project's detail view for the issue list", async () => {
+it("leaves the other project's detail view for the project home", async () => {
   pathname = "/issues/issue-7";
 
   await renderSwitcher();
   await act(async () => select("local:p2"));
 
-  expect(navigate).toHaveBeenCalledWith({ href: "/issues" });
+  expect(navigate).toHaveBeenCalledWith({ href: "/project" });
 });
 
-it("stays where it is when the picked project has no view of its own yet", async () => {
+it("opens the project home when it has no remembered view", async () => {
   await renderSwitcher();
   await act(async () => select("local:p2"));
 
-  expect(navigate).not.toHaveBeenCalled();
+  expect(navigate).toHaveBeenCalledWith({ href: "/project" });
 });
 
 it("switches the host in place once it answers, then lands on the project's view", async () => {

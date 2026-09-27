@@ -1,6 +1,8 @@
+import type { ConversationThreadEntry } from "@otomat/domain";
 import {
   AppSidebar,
-  NavSection,
+  HostTag,
+  Icon,
   ProjectSwitcher,
   SidebarNavItem,
   useSidebarCollapsed,
@@ -12,12 +14,12 @@ import {
   CONVERSATIONS_NAV,
   INBOX_NAV,
   SETTINGS_NAV,
-  WORKSPACE_NAV,
   type ShellSection,
 } from "@web/components/shell/nav-items";
 import { switcherSections } from "@web/components/shell/project-layout/arrange";
 import { projectLayoutStore } from "@web/components/shell/project-layout/store";
-import { projectTabsStore } from "@web/components/shell/project-tabs/store";
+import type { HostInboxEntries } from "@web/components/shell/project-tabs/use-open-host-inboxes";
+import { ProjectTree } from "@web/components/shell/project-tree/tree";
 import type { ReactNode, Ref } from "react";
 
 interface SidebarProps {
@@ -25,19 +27,22 @@ interface SidebarProps {
   projectTriggerRef?: Ref<HTMLButtonElement>;
   projects: ProjectSummary[];
   currentProjectId?: string;
-  onProjectSelect: (id: string) => void;
+  onProjectSelect: (id: string, href?: string) => void;
   onAddProject?: () => void;
   onOrganizeProjects: () => void;
   onSearch: () => void;
   onNewIssue: () => void;
-  hasLiveRun?: boolean;
-  reviewCount?: number;
   inboxCount?: number;
   conversationCount?: number;
+  hostLabel: string;
+  hostId: string;
+  href: string;
+  conversations: ConversationThreadEntry[];
+  inboxes: HostInboxEntries[];
+  notice?: ReactNode;
 }
-
 function navRender(to: string) {
-  return function render({
+  return ({
     className,
     children,
     ...rest
@@ -45,15 +50,12 @@ function navRender(to: string) {
     className: string;
     children: ReactNode;
     "aria-current"?: "page";
-  }) {
-    return (
-      <Link to={to} className={className} {...rest}>
-        {children}
-      </Link>
-    );
-  };
+  }) => (
+    <Link to={to} search={{}} className={className} {...rest}>
+      {children}
+    </Link>
+  );
 }
-
 export function Sidebar({
   active,
   projectTriggerRef,
@@ -64,39 +66,62 @@ export function Sidebar({
   onOrganizeProjects,
   onSearch,
   onNewIssue,
-  hasLiveRun = false,
-  reviewCount = 0,
   inboxCount = 0,
   conversationCount = 0,
+  hostLabel,
+  hostId,
+  href,
+  conversations,
+  inboxes,
+  notice,
 }: SidebarProps) {
   const collapsed = useSidebarCollapsed();
   const layout = useSelector(projectLayoutStore);
-  const projectSwitcher = (
-    <ProjectSwitcher
-      sections={switcherSections(layout, projects)}
-      triggerRef={projectTriggerRef}
-      currentId={currentProjectId}
-      onSelect={onProjectSelect}
-      collapsed={collapsed}
-      onOpenTab={projectTabsStore.actions.open}
-      onOrganize={onOrganizeProjects}
-      {...(onAddProject === undefined ? {} : { onAddProject })}
-    />
-  );
-  const footer = (
-    <>
-      <SidebarNavItem
-        icon={SETTINGS_NAV.icon}
-        label={SETTINGS_NAV.label}
-        active={active === SETTINGS_NAV.section}
-        render={navRender(SETTINGS_NAV.to)}
-        collapsed={collapsed}
-      />
-    </>
-  );
   return (
-    <AppSidebar projectSwitcher={projectSwitcher} footer={footer} collapsed={collapsed}>
-      <nav aria-label="Quick actions" className="mt-1 flex flex-col gap-px px-2">
+    <AppSidebar
+      collapsed={collapsed}
+      projectSwitcher={
+        <ProjectSwitcher
+          sections={switcherSections(layout, projects)}
+          triggerRef={projectTriggerRef}
+          currentId={currentProjectId}
+          onSelect={(id) => onProjectSelect(id, "/project")}
+          onOpenSettings={(id) => onProjectSelect(id, "/settings/project")}
+          collapsed={collapsed}
+          onOrganize={onOrganizeProjects}
+          {...(onAddProject === undefined ? {} : { onAddProject })}
+        />
+      }
+      footer={
+        <>
+          <SidebarNavItem
+            icon={SETTINGS_NAV.icon}
+            label={SETTINGS_NAV.label}
+            active={active === "settings"}
+            render={navRender(SETTINGS_NAV.to)}
+            collapsed={collapsed}
+          />
+          <Link
+            to="/settings/host"
+            className="flex min-w-0 items-center justify-center py-2"
+            title={`Host · ${hostLabel}`}
+          >
+            <HostTag tag={hostLabel} />
+          </Link>
+        </>
+      }
+    >
+      {!collapsed ? (
+        <div className="flex h-6 items-center justify-between px-4 text-micro text-text-tertiary">
+          <span>Apps</span>
+          <span className="ml-2 truncate" title={hostLabel}>
+            {hostLabel}
+          </span>
+        </div>
+      ) : (
+        <div className="h-6" aria-hidden />
+      )}
+      <nav aria-label="Quick actions" className="flex flex-col gap-px px-2">
         <SidebarNavItem
           icon="search"
           label="Search"
@@ -114,37 +139,52 @@ export function Sidebar({
         <SidebarNavItem
           icon={INBOX_NAV.icon}
           label={INBOX_NAV.label}
-          active={active === INBOX_NAV.section}
-          badgeCount={inboxCount > 0 ? inboxCount : undefined}
+          active={active === "inbox"}
+          badgeCount={inboxCount || undefined}
           render={navRender(INBOX_NAV.to)}
           collapsed={collapsed}
         />
         <SidebarNavItem
           icon={CONVERSATIONS_NAV.icon}
           label={CONVERSATIONS_NAV.label}
-          active={active === CONVERSATIONS_NAV.section}
-          badgeCount={conversationCount > 0 ? conversationCount : undefined}
+          active={
+            active === "conversations" && !href.includes("run=") && !href.includes("terminal=")
+          }
+          badgeCount={conversationCount || undefined}
           render={navRender(CONVERSATIONS_NAV.to)}
           collapsed={collapsed}
         />
       </nav>
-      <NavSection label="Workspace" collapsed={collapsed}>
-        {WORKSPACE_NAV.map((item) => {
-          const count = item.section === "reviews" ? reviewCount : 0;
-          return (
-            <SidebarNavItem
-              key={item.section}
-              icon={item.icon}
-              label={item.label}
-              active={active === item.section}
-              live={item.section === "runs" && hasLiveRun}
-              badgeCount={count > 0 ? count : undefined}
-              render={navRender(item.to)}
-              collapsed={collapsed}
-            />
-          );
-        })}
-      </NavSection>
+      <div className="mx-3 my-3 border-t border-border-subtle" />
+      <div className="flex h-6 items-center px-4 text-micro text-text-tertiary">
+        {collapsed ? null : "Projects"}
+      </div>
+      {notice ? (
+        <div className="flex min-h-8 min-w-0 items-center">
+          {collapsed ? (
+            <span
+              role="status"
+              aria-label="Conversations unavailable"
+              title="Conversations unavailable"
+              className="mx-auto flex h-8 items-center text-warning"
+            >
+              <Icon name="alert-triangle" className="size-4" aria-hidden />
+            </span>
+          ) : (
+            notice
+          )}
+        </div>
+      ) : null}
+      <ProjectTree
+        projects={projects}
+        currentProjectId={currentProjectId}
+        href={href}
+        collapsed={collapsed}
+        entries={conversations}
+        host={hostId}
+        inboxes={inboxes}
+        onNavigate={onProjectSelect}
+      />
     </AppSidebar>
   );
 }

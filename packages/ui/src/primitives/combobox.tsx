@@ -90,7 +90,7 @@ export type ComboboxEmptyProps = ComponentPropsWithoutRef<typeof ComboboxPrimiti
 export function ComboboxEmpty({ className, ...props }: ComboboxEmptyProps) {
   return (
     <ComboboxPrimitive.Empty
-      className={cn("py-6 text-center text-sm text-text-tertiary", className)}
+      className={cn("py-6 text-center text-sm text-text-tertiary empty:p-0", className)}
       {...props}
     />
   );

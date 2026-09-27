@@ -106,13 +106,13 @@ it("waits on its skeleton rather than an empty list", async () => {
   await cleanup();
 });
 
-it("invites a launch when the host holds no thread, and a selection when it does", async () => {
+it("invites a launch without rendering an unused thread pane", async () => {
   conversations = loaded([]);
 
   const { container, cleanup } = await mount(<ConversationsView />);
 
   expect(container.textContent).toContain("No conversations yet");
-  expect(container.textContent).toContain("Select a conversation");
+  expect(container.textContent).not.toContain("Select a conversation");
   await cleanup();
 });
 

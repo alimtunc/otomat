@@ -9,6 +9,7 @@ export function useNewIssueShortcut(onNewIssue: () => void) {
       if (e.key !== "c" || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.defaultPrevented || e.repeat) return;
       if (isEditableTarget(e.target)) return;
+      if (e.target instanceof Element && e.target.closest('[role="menu"]')) return;
       if (
         document.querySelector(
           '[role="dialog"]:not([hidden]):not([data-closed]), [role="alertdialog"]:not([hidden]):not([data-closed]), [aria-modal="true"]:not([hidden]):not([data-closed]), dialog[open]',

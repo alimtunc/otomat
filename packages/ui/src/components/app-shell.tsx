@@ -13,6 +13,7 @@ import { ResizablePanel, ResizablePanelGroup } from "../primitives/resizable";
 import { OfflineBanner } from "./offline-banner";
 import { ReconnectingBar } from "./reconnecting-bar";
 import { SidePanel } from "./side-panel";
+import { SidebarReveal } from "./sidebar-reveal";
 
 const SIDEBAR_PANEL_ID = "sidebar";
 const SIDEBAR_MIN_WIDTH = 200;
@@ -69,6 +70,11 @@ export function AppShell({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== toggleKey || e.metaKey || e.ctrlKey || e.altKey) return;
       if (isEditableTarget(e.target)) return;
+      if (
+        e.defaultPrevented ||
+        (e.target instanceof Element && e.target.closest('[role="menu"], [role="dialog"]'))
+      )
+        return;
       e.preventDefault();
       onToggle();
     };
@@ -76,13 +82,17 @@ export function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [toggleKey]);
 
+  const sidebarContent = (
+    <SidebarReveal defaultWidth={sidebarWidth} railWidth={railWidth}>
+      {sidebar}
+    </SidebarReveal>
+  );
   return (
     <SidebarCollapsedContext.Provider value={collapsed}>
       <div
         data-density={density}
         className={cn("flex h-screen flex-col overflow-hidden", className)}
       >
-        {tabs}
         <ResizablePanelGroup {...shellLayout} className="h-auto flex-1">
           <SidePanel
             id={SIDEBAR_PANEL_ID}
@@ -94,12 +104,13 @@ export function AppShell({
             collapsedSize={railWidth}
             collapsed={collapsed}
             onCollapsedChange={setCollapsed}
-            rail={sidebar}
+            rail={sidebarContent}
           >
-            {sidebar}
+            {sidebarContent}
           </SidePanel>
           <ResizablePanel id="main" minSize="40%">
-            {children}
+            {tabs}
+            <div className="min-h-0 flex-1">{children}</div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

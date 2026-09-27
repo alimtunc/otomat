@@ -43,7 +43,7 @@ export function SidebarNavItem({
   render,
 }: SidebarNavItemProps) {
   const className = cn(
-    "group flex h-7.25 items-center gap-2.25 rounded-md px-2 text-sm font-[450]",
+    "group flex h-8 w-full min-w-0 items-center justify-start gap-2.5 rounded-md border border-transparent px-2.75 text-left text-sm font-[450]",
     "text-text-secondary hover:bg-hover hover:text-foreground",
     FOCUS_RING_INSET,
     active && "bg-selected text-foreground",

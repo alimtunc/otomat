@@ -24,3 +24,7 @@ export function conversationStatus(
     });
   return STATUS_PRIORITY.find((status) => statuses.includes(status)) ?? null;
 }
+
+export function isConversationRunning(entry: ConversationThreadEntry): boolean {
+  return "terminal" in entry ? entry.terminal.state !== "exited" : entry.step_status === "running";
+}

@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { stubAnimations } from "#support/animations";
+import { terminalConversationEntry } from "#support/conversations";
 import { setInputValue } from "#support/dom-events";
 import { findButton } from "#support/dom-queries";
 
@@ -36,7 +37,11 @@ async function renderSidebar(overrides: Partial<Parameters<typeof Sidebar>[0]> =
     root.render(
       <Sidebar
         active="issues"
-        online
+        hostLabel="Local"
+        hostId="local"
+        href="/issues"
+        conversations={[]}
+        inboxes={[]}
         projects={[{ id: "local-default", name: "Local workspace" }]}
         currentProjectId="local-default"
         onProjectSelect={vi.fn()}
@@ -78,24 +83,16 @@ describe("Sidebar", () => {
       item?.click();
     });
 
-    expect(onProjectSelect).toHaveBeenCalledWith("local-default");
+    expect(onProjectSelect).toHaveBeenCalledWith("local-default", "/project");
   });
 
   it("keeps only the working surfaces, pinning Settings alone in the footer", async () => {
     const container = await renderSidebar();
 
     const targets = [...container.querySelectorAll("a")].map((link) => link.getAttribute("href"));
-    expect(targets).toEqual([
-      "/inbox",
-      "/conversations",
-      "/issues",
-      "/files",
-      "/terminal",
-      "/runs",
-      "/reviews",
-      "/usage",
-      "/settings",
-    ]);
+    expect(targets).toEqual(["/inbox", "/conversations", "/settings", "/settings/host"]);
+    expect(container.textContent).toContain("All runs");
+    expect(container.textContent).toContain("Issues");
     expect(container.textContent).not.toContain("Runtimes");
     expect(container.textContent).not.toContain("Skills");
     expect(container.textContent).not.toContain("Design system");
@@ -120,7 +117,7 @@ describe("Sidebar", () => {
     const links = [...container.querySelectorAll("a")];
     const conversations = links.find((link) => link.getAttribute("href") === "/conversations");
     const inbox = links.find((link) => link.getAttribute("href") === "/inbox");
-    const workspace = container.querySelector('nav[aria-label="Workspace"]');
+    const workspace = container.querySelector('nav[aria-label="Local workspace views"]');
 
     expect(conversations?.textContent).toContain("2");
     expect(conversations?.getAttribute("aria-current")).toBe("page");
@@ -138,14 +135,25 @@ describe("Sidebar", () => {
     expect(inbox?.textContent).toBe("Inbox");
   });
 
-  it("offers no Settings entry inside the project switcher popover", async () => {
-    await renderSidebar();
+  it("opens settings for the active project from the switcher and closes it", async () => {
+    const onProjectSelect = vi.fn();
+    await renderSidebar({
+      onProjectSelect,
+      projects: [
+        { id: "local:other", name: "Other" },
+        { id: "local:current", name: "Current" },
+      ],
+      currentProjectId: "local:current",
+    });
 
     await act(async () => {
       switcherTrigger()?.click();
     });
 
-    expect(findButton("Settings")).toBeUndefined();
+    await act(async () => findButton("Project settings")?.click());
+
+    expect(onProjectSelect).toHaveBeenCalledExactlyOnceWith("local:current", "/settings/project");
+    expect(switcherTrigger()?.getAttribute("aria-expanded")).toBe("false");
   });
 
   it("lists projects in the operator's groups and order", async () => {
@@ -208,6 +216,26 @@ describe("Sidebar", () => {
     expect(document.body.textContent).toContain("No projects found.");
   });
 
+  it("opens a terminal conversation in its project without activating the global list", async () => {
+    const entry = terminalConversationEntry({ read: true });
+    const onProjectSelect = vi.fn();
+    const container = await renderSidebar({
+      active: "conversations",
+      conversations: [entry],
+      onProjectSelect,
+      projects: [{ id: "local:p1", name: "Otomat" }],
+      currentProjectId: "local:p1",
+      href: `/conversations?terminal=${entry.terminal.id}`,
+    });
+    await act(async () => findButton("Codex terminal")?.click());
+    expect(onProjectSelect).toHaveBeenCalledExactlyOnceWith(
+      "local:p1",
+      `/conversations?terminal=${entry.terminal.id}`,
+    );
+    expect(container.querySelector('a[href="/conversations"]')?.hasAttribute("aria-current")).toBe(
+      false,
+    );
+  });
   it("enters the organize mode from the switcher", async () => {
     const onOrganizeProjects = vi.fn();
     await renderSidebar({ onOrganizeProjects });

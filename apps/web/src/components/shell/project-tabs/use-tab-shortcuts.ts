@@ -1,28 +1,24 @@
 import { isEditableTarget } from "@otomat/ui";
-import type { ProjectTab } from "@web/components/shell/project-tabs/visible-tabs";
 import { useEffect, useEffectEvent } from "react";
 
-function targetIndex(event: KeyboardEvent, count: number, active: number): number | null {
+function targetIndex(event: KeyboardEvent, count: number): number | null {
   if (count === 0) return null;
-  if (event.key === "Tab") return (active + (event.shiftKey ? -1 : 1) + count) % count;
   const digit = Number(event.key);
   if (!Number.isInteger(digit) || digit < 1 || digit > count) return null;
   return digit - 1;
 }
 
 export function useProjectTabShortcuts(
-  tabs: ProjectTab[],
+  tabs: { id: string }[],
   activeKey: string | undefined,
   onSelect: (key: string) => void,
 ): void {
   const handle = useEffectEvent((event: KeyboardEvent) => {
     if (event.defaultPrevented || event.altKey || !(event.metaKey || event.ctrlKey)) return;
     if (isEditableTarget(event.target)) return;
-    const index = targetIndex(
-      event,
-      tabs.length,
-      tabs.findIndex((tab) => tab.id === activeKey),
-    );
+    if (event.target instanceof Element && event.target.closest('[role="menu"], [role="dialog"]'))
+      return;
+    const index = targetIndex(event, tabs.length);
     if (index === null) return;
     const tab = tabs[index];
     if (tab === undefined) return;

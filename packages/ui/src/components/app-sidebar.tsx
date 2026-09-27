@@ -24,16 +24,11 @@ export function AppSidebar({
       data-collapsed={collapsed ? "" : undefined}
       className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-sidebar", className)}
     >
-      <div
-        className={cn(
-          "flex min-w-0 flex-none",
-          collapsed ? "flex-col items-center pb-1" : "items-center gap-0.5 pr-1.5",
-        )}
-      >
-        <div className={collapsed ? "w-full" : "min-w-0 flex-1"}>{projectSwitcher}</div>
-        <SidePanelToggle className="flex-none" />
+      <div className="flex h-12 min-w-0 shrink-0 items-center gap-3 px-4">
+        <SidePanelToggle className="shrink-0" />
+        <div className={collapsed ? "hidden" : "min-w-0 flex-1"}>{projectSwitcher}</div>
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1" viewportClassName="[&>div]:min-w-0!">
         <div className="flex flex-col gap-px pb-2 pt-1.5">{children}</div>
       </ScrollArea>
       {footer ? <div className="border-t border-border-subtle p-2">{footer}</div> : null}

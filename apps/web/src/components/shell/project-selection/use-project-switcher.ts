@@ -1,8 +1,10 @@
 import { toast, type ProjectSummary } from "@otomat/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useProjects } from "@web/api/daemon/queries";
 import { shellKeys } from "@web/api/query-keys";
+import { currentDeskPage } from "@web/components/shell/project-desk/state";
+import { getProjectDesk, projectDeskStore } from "@web/components/shell/project-desk/store";
 import {
   parseProjectSwitcherKey,
   projectSwitcherKey,
@@ -10,11 +12,11 @@ import {
 import { selectableProjects } from "@web/components/shell/project-selection/selection";
 import { projectSelectionStore } from "@web/components/shell/project-selection/store";
 import { useProjectSelection } from "@web/components/shell/project-selection/use-selection";
-import { projectTabDestination } from "@web/components/shell/project-tabs/state";
 import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import { describeOperationFailure } from "@web/components/shell/remote-session/status-labels";
 import { useHostProjects } from "@web/components/shell/use-host-projects";
 import { activeHostStore, useActiveHostId, useRemoteHostAlias } from "@web/lib/active-host";
+import { confirmContextNavigation } from "@web/lib/context-navigation";
 import { desktopBridge } from "@web/lib/desktop-bridge";
 
 function lastPathSegment(rootPath: string): string | undefined {
@@ -27,7 +29,6 @@ export function useProjectSwitcher() {
   const activeHostId = useActiveHostId();
   const hostAlias = useRemoteHostAlias();
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const projectsQuery = useProjects();
   const hostProjects = useHostProjects();
 
@@ -73,12 +74,15 @@ export function useProjectSwitcher() {
       : [{ id: "local" as const, label: "Local", active: true }];
 
   // The selection and the navigation land only once the target host answers, so no view shows another host's data.
-  const selectProject = (switcherId: string): void => {
+  const selectProject = (switcherId: string, href?: string): void => {
+    if (!confirmContextNavigation()) return;
     const target = parseProjectSwitcherKey(switcherId, activeHostId);
-    const destination = projectTabDestination(projectTabsStore.state, switcherId, pathname);
+    const destination = href ?? currentDeskPage(getProjectDesk(switcherId)).href;
     const arrive = (): void => {
+      projectDeskStore.actions.expect(switcherId, destination);
       projectSelectionStore.actions.select(target.hostId, target.projectId);
-      if (destination !== null) void navigate({ href: destination });
+      projectTabsStore.actions.open(switcherId);
+      void navigate({ href: destination });
     };
     if (target.hostId === activeHostId || bridge === null) {
       arrive();

@@ -1,7 +1,6 @@
 import type { ExecutionHostId } from "@otomat/domain";
 import { parseProjectSwitcherKey } from "@web/components/shell/project-selection/host-key";
 import { asRecord, asString } from "@web/lib/coerce";
-import { isProjectScopedDetail } from "@web/lib/project-navigation";
 import { readStoredJson, writeStored } from "@web/lib/storage";
 
 const PROJECT_TABS_KEY = "otomat.project-tabs";
@@ -41,10 +40,6 @@ export function withProjectTab(tabs: StoredProjectTab[], key: string): StoredPro
   return tabs.some((tab) => tab.key === key) ? tabs : [...tabs, { key, route: null }];
 }
 
-export function withoutProjectTab(tabs: StoredProjectTab[], key: string): StoredProjectTab[] {
-  return tabs.some((tab) => tab.key === key) ? tabs.filter((tab) => tab.key !== key) : tabs;
-}
-
 export function withProjectTabRoute(
   tabs: StoredProjectTab[],
   key: string,
@@ -62,14 +57,4 @@ export function openTabHosts(
   const hosts = new Set<ExecutionHostId>([activeHostId]);
   for (const tab of tabs) hosts.add(parseProjectSwitcherKey(tab.key, activeHostId).hostId);
   return [...hosts];
-}
-
-export function projectTabDestination(
-  tabs: StoredProjectTab[],
-  key: string,
-  pathname: string,
-): string | null {
-  const stored = tabs.find((tab) => tab.key === key)?.route ?? null;
-  if (stored !== null) return stored;
-  return isProjectScopedDetail(pathname) ? "/issues" : null;
 }

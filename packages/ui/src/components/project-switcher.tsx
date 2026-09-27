@@ -1,4 +1,4 @@
-import { ArrowUpDown, Check, ChevronsUpDown, FolderGit2, Pin, Plus } from "lucide-react";
+import { ArrowUpDown, Check, ChevronsUpDown, FolderGit2, Plus, Settings } from "lucide-react";
 import { useState, type Ref } from "react";
 
 import { FOCUS_RING_INSET } from "../lib/focus";
@@ -20,7 +20,6 @@ import {
   ComboboxTrigger,
 } from "../primitives/combobox";
 import { HostTag } from "./host-tag";
-import { IconButton } from "./icon-button";
 import { ProjectGlyph } from "./project-glyph";
 
 const HEALTH_COLOR = {
@@ -52,8 +51,7 @@ export interface ProjectSwitcherProps {
   loading?: boolean;
   /** Renders an "Add project…" footer action; also replaces the empty-state hint when provided. */
   onAddProject?: () => void;
-  /** Renders a per-project "open in a tab" action; selection alone never creates a tab. */
-  onOpenTab?: (id: string) => void;
+  onOpenSettings: (id: string) => void;
   onOrganize: () => void;
 }
 
@@ -65,7 +63,7 @@ export function ProjectSwitcher({
   collapsed = false,
   loading = false,
   onAddProject,
-  onOpenTab,
+  onOpenSettings,
   onOrganize,
 }: ProjectSwitcherProps) {
   const [open, setOpen] = useState(false);
@@ -100,7 +98,7 @@ export function ProjectSwitcher({
             type="button"
             variant="ghost"
             className={cn(
-              "h-12 w-full justify-start gap-2.25 rounded-none border-0 px-3 text-left hover:bg-hover",
+              "h-10 w-full justify-start gap-2 rounded-md border-0 px-2 text-left hover:bg-hover",
               FOCUS_RING_INSET,
               "disabled:cursor-not-allowed disabled:opacity-60",
               collapsed && "justify-center px-0",
@@ -120,7 +118,7 @@ export function ProjectSwitcher({
                       {loading ? "Loading…" : (current?.name ?? "No project")}
                     </span>
                   </div>
-                  {current?.repo || current?.branch ? (
+                  {current?.branch || (current?.repo && current.repo !== current.name) ? (
                     <div className="truncate text-micro text-text-tertiary">
                       {[current?.repo, current?.branch].filter(Boolean).join(" · ")}
                     </div>
@@ -178,17 +176,6 @@ export function ProjectSwitcher({
                             style={{ background: HEALTH_COLOR[project.health] }}
                           />
                         ) : null}
-                        {onOpenTab ? (
-                          <IconButton
-                            size="sm"
-                            label={`Open ${project.name} in a tab`}
-                            icon={<Pin aria-hidden />}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              closeThen(() => onOpenTab(project.id));
-                            }}
-                          />
-                        ) : null}
                         <ComboboxItemIndicator>
                           <Check className="h-4 w-4 flex-none text-iris-text" />
                         </ComboboxItemIndicator>
@@ -199,6 +186,12 @@ export function ProjectSwitcher({
               )}
             </ComboboxList>
             <div className="flex flex-col gap-px border-t border-border-subtle p-1.5">
+              {current ? (
+                <ProjectSwitcherAction onClick={() => closeThen(() => onOpenSettings(current.id))}>
+                  <Settings />
+                  Project settings
+                </ProjectSwitcherAction>
+              ) : null}
               {onAddProject ? (
                 <ProjectSwitcherAction onClick={() => closeThen(onAddProject)}>
                   <Plus />

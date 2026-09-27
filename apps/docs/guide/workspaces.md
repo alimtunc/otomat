@@ -83,7 +83,7 @@ agent turn and is not part of the run's history.
 commits the index with your configured git identity — hooks and signing apply. Discarding asks
 first and is irreversible.
 
-The **Files** view in the sidebar does the same on the project's real checkout: browse, edit,
+The **Files** view from the project home does the same on the project's real checkout: browse, edit,
 stage, commit, and publish a pull request from your own branch without any run involved.
 
 ## Clean up

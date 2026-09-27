@@ -5,17 +5,18 @@ worktrees, agents, presets — belongs to that host's daemon.
 
 ## Add a local project
 
-1. Open the **project switcher** at the top of the sidebar and choose **Add project**.
+1. Open the project picker at the top of the sidebar and choose **Add project**.
 2. Enter the **Repository path** — the absolute path of an existing git clone — or click
    **Browse…** to pick the folder.
-3. **Add project**. The project appears in the switcher and becomes the active one.
+3. **Add project**. The project appears in the sidebar and becomes the active one.
 
 Otomat registers the path; it does not copy or move the repository. Runs work in
 [workspaces](./workspaces.md) of their own.
 
 ### Per-project settings
 
-_Settings → Project → This project_ holds what belongs to that repository:
+Open the project picker at the top of the sidebar and choose **Project settings** (the gear).
+_Settings → Project → This project_ reaches the same repository settings:
 
 - **Worktree init commands** — shell lines run in every new worktree before an agent starts
   (`pnpm install`, `pnpm build`, …). They run on the host that owns the project.
@@ -27,8 +28,26 @@ _Agents_ / _Skills_ the profiles and skills scoped to this project alone.
 
 ## Organize the navigation
 
-Open the project switcher and choose **Organize projects…** to arrange how projects appear in the
-switcher and in the tab bar:
+Projects live in the sidebar. Expand a project to reach **Issues**, **All runs** and its recent
+conversations. Clicking its name opens its home, with Files, Terminal, Reviews, Usage and project settings.
+A conversation under another project selects that project automatically. Search, New issue,
+Inbox and Conversations stay in the application section; Settings stays at the bottom. Inbox and
+Conversations cover the active host, whose Local/VPS label is always visible.
+
+Each project has its own view tabs. Ordinary navigation replaces the active tab's content.
+Only the **+ (New tab)** menu adds a tab; choosing Files twice creates two independent views. Tab order,
+selection and locations are saved per host and project. Closing the last tab leaves the project
+home; subsequent navigation does not silently recreate a tab. Closing a view never stops a run.
+
+- Drag a tab to reorder it, use **Tab actions → Move tab left/right**, or **Alt + Left/Right** on
+  its focused label. **Delete** closes the focused tab; Left/Right selects its neighbors.
+- **Ctrl/⌘ + Tab** selects the next view tab; **Ctrl/⌘ + 1–9** selects projects in sidebar order,
+  including projects in folded groups. The browser or operating system may reserve these chords.
+- Collapse the sidebar with its button or **[**. Hover the rail or focus it with the keyboard to
+  reveal it without shrinking the content. **Escape** dismisses the preview; **Expand Sidebar**
+  keeps it open. The button also works on touch devices.
+
+Choose **Organize projects** in the project picker to arrange projects and groups:
 
 - **Add group** creates a named group; each project's group picker moves it in or out, and dragging
   a project onto another row or group does the same.
@@ -36,11 +55,11 @@ switcher and in the tab bar:
 - A group's name is edited in place; deleting a group puts its projects back under _Not grouped_.
 - The glyph before a project's name opens its icon choice; **Default icon** returns to the initial.
 
-In the tab bar, clicking a group's name folds it: the group keeps its host tags and unread count,
-and the project you are on stays visible. The arrangement is kept by this app on this machine. It
-changes nothing about the projects themselves — hosts, settings, runs and worktrees stay as they
-are. A newly added project appears at the end of the ungrouped projects, and a project on a host
-that is temporarily unreachable returns to its group when the host answers again.
+Click a group in the sidebar to fold it. Its unread and known activity signals remain visible,
+as does the active project. Existing groups, ordering, icons and remembered routes are retained.
+The arrangement is a preference on this machine and changes no host, repository, run or worktree.
+A newly added project joins the ungrouped section. A temporarily unavailable host's projects
+return to their previous group when it answers again.
 
 ## Connect Linear
 
