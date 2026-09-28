@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "brand:icons": "electron scripts/brand-icons.ts",
+    "brand:icons": "electron --force-device-scale-factor=1 scripts/brand-icons.mjs",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run",
     "start": "electron .",

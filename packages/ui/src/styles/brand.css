@@ -18,12 +18,12 @@
 }
 
 .otomat-mark::before,
-.otomat-orbit-half:first-child {
+.otomat-orbit-ring:first-child {
   clip-path: polygon(0 0, 62% 0, 62% 50%, 38% 50%, 38% 100%, 0 100%);
 }
 
 .otomat-mark::after,
-.otomat-orbit-half:last-child {
+.otomat-orbit-ring:last-child {
   clip-path: polygon(66% 0, 100% 0, 100% 100%, 42% 100%, 42% 50%, 66% 50%);
 }
 
@@ -40,13 +40,9 @@
   opacity: 0.22;
 }
 
-.otomat-orbit-half,
 .otomat-orbit-ring {
   position: absolute;
   inset: 0;
-}
-
-.otomat-orbit-ring {
   box-sizing: border-box;
   padding: 0.17em;
   border-radius: 38%;
@@ -188,7 +184,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .otomat-orbit-ring::before,
-  .otomat-mark,
   .otomat-mark::before,
   .otomat-mark::after,
   .otomat-wordmark[data-enter] .otomat-mark,

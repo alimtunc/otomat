@@ -30,12 +30,8 @@ export function Spinner({
       >
         {motion === "orbit" ? (
           <>
-            <span className="otomat-orbit-half">
-              <span className="otomat-orbit-ring" />
-            </span>
-            <span className="otomat-orbit-half">
-              <span className="otomat-orbit-ring" />
-            </span>
+            <span className="otomat-orbit-ring" />
+            <span className="otomat-orbit-ring" />
           </>
         ) : null}
       </span>

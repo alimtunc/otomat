@@ -12,6 +12,7 @@ const harness = vi.hoisted(() => ({
   setDockIcon: vi.fn(),
   registerQuitHandlers: vi.fn(),
   constructed: 0,
+  packaged: false,
 }));
 
 vi.mock("electron", () => ({
@@ -42,7 +43,9 @@ vi.mock("#main/app", () => ({
     }
   },
 }));
-vi.mock("#main/paths", () => ({ resolveAppPaths: () => PATHS }));
+vi.mock("#main/paths", () => ({
+  resolveAppPaths: () => ({ ...PATHS, packaged: harness.packaged }),
+}));
 vi.mock("#main/protocol", () => ({ registerAppSchemePrivileged: vi.fn() }));
 vi.mock("#main/quit", () => ({ registerQuitHandlers: harness.registerQuitHandlers }));
 vi.mock("#main/user-data-root", () => ({ applyUserDataRoot: vi.fn() }));
@@ -54,6 +57,7 @@ afterEach(() => {
   harness.setDockIcon.mockClear();
   harness.registerQuitHandlers.mockClear();
   harness.constructed = 0;
+  harness.packaged = false;
   vi.resetModules();
 });
 
@@ -78,8 +82,26 @@ it("reopens the running instance when Otomat is launched or activated again", as
   harness.listeners.get("activate")?.();
 
   expect(harness.focusPrimary).toHaveBeenCalledTimes(2);
-  expect(harness.setDockIcon).toHaveBeenCalledWith(PATHS.appIcon);
   expect(harness.quit).not.toHaveBeenCalled();
+});
+
+it("sets the Dock icon in dev, where no app bundle provides one", async () => {
+  harness.lock = true;
+
+  await import("#main/index");
+
+  await vi.waitFor(() => expect(harness.constructed).toBe(1));
+  expect(harness.setDockIcon).toHaveBeenCalledWith(PATHS.appIcon);
+});
+
+it("leaves the packaged Dock icon to the app bundle", async () => {
+  harness.lock = true;
+  harness.packaged = true;
+
+  await import("#main/index");
+
+  await vi.waitFor(() => expect(harness.constructed).toBe(1));
+  expect(harness.setDockIcon).not.toHaveBeenCalled();
 });
 
 it("hands the quit handlers the background gate and the shutdown sequence, once there is one", async () => {

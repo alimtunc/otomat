@@ -21,7 +21,6 @@ const targets = [
 ];
 
 app.disableHardwareAcceleration();
-app.commandLine.appendSwitch("force-device-scale-factor", "1");
 
 app
   .whenReady()
@@ -58,7 +57,7 @@ app
     window.destroy();
     app.quit();
   })
-  .catch((error: unknown) => {
+  .catch((error) => {
     console.error(error);
     app.exit(1);
   });
