@@ -11,6 +11,7 @@ import { MemorySink } from "#runtime/sinks";
 import { stubLinuxPlatform } from "../support/platform.js";
 import { runtimeRunInput, runtimeSessionRef } from "../support/runtime.js";
 import {
+  denyCodexSandboxProbe,
   setupStubHarness,
   STUB_BIN,
   STUB_FIXTURES,
@@ -302,10 +303,7 @@ describe("CodexRuntimeAdapter", () => {
 
   it("preflights the one-shot read-only sandbox with its effective argv", () => {
     stubLinuxPlatform();
-    process.env["STUB_EXIT_BY_ARGV"] = JSON.stringify({ "sandbox true": 1 });
-    process.env["STUB_STDERR_BY_ARGV"] = JSON.stringify({
-      "sandbox true": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
-    });
+    denyCodexSandboxProbe();
     const oneShot = new CodexRuntimeAdapter(STUB_BIN).describeOneShot(null, {});
 
     expect(() => oneShot.preflight?.(worktree)).toThrow(

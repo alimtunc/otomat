@@ -43,3 +43,10 @@ export function teardownStubHarness(worktree: string): void {
   clearProviderProbeCache();
   clearCodexSandboxProbeCache();
 }
+
+export function denyCodexSandboxProbe(): void {
+  process.env["STUB_EXIT_BY_ARGV"] = JSON.stringify({ "sandbox true": 1 });
+  process.env["STUB_STDERR_BY_ARGV"] = JSON.stringify({
+    "sandbox true": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
+  });
+}

@@ -265,7 +265,10 @@ a launch or a profile naming a value the installed binary does not announce is
 refused before argv; a host default that does not apply here is dropped, because
 it is a preference for every execution rather than a claim about this one. What a
 runtime or model that is *absent on this host* gets is a refusal either way —
-never a substitution.
+never a substitution. An unannounced option is refused in one sentence naming the
+setting and, when the host offers it, the values it accepts; the probe's host
+diagnostic stays on the option set's `detection.detail`, which the execution
+control shows, instead of riding along in every surface that relays the refusal.
 
 `apps/web/src/components/execution` is the single control: one trigger
 summarising the whole configuration over submenus that list only detected values,

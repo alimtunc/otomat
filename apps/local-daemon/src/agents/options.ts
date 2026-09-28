@@ -43,11 +43,11 @@ function refusal(
   const descriptor = providerOptionDescriptor(support.options, key);
   if (descriptor === null) {
     return new ProfileOptionUnsupportedError(
-      `runtime "${runtime}" does not offer the "${key}" option here: ${support.detection.detail}`,
+      `runtime "${runtime}" does not offer the "${key}" option on this host.`,
     );
   }
   return new ProfileOptionUnsupportedError(
-    `runtime "${runtime}" does not accept requested "${key}" value "${value}"; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}. ${support.detection.detail}`,
+    `runtime "${runtime}" does not accept requested "${key}" value "${value}" on this host; pick one of ${descriptor.choices.map((choice) => choice.value).join(", ")}.`,
   );
 }
 

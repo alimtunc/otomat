@@ -14,6 +14,7 @@ import { CodexRuntimeAdapter } from "#runtime/providers/codex/adapter";
 
 import { stubLinuxPlatform } from "../support/platform.js";
 import {
+  denyCodexSandboxProbe,
   setupStubHarness,
   STUB_BIN,
   stubFixture,
@@ -252,10 +253,7 @@ describe("codex provider options", () => {
   it("withholds confined sandboxes when the host capability probe is denied", () => {
     stubLinuxPlatform();
     codexFixtures();
-    process.env["STUB_EXIT_BY_ARGV"] = JSON.stringify({ "sandbox true": 1 });
-    process.env["STUB_STDERR_BY_ARGV"] = JSON.stringify({
-      "sandbox true": "bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted",
-    });
+    denyCodexSandboxProbe();
 
     const support = new CodexRuntimeAdapter(STUB_BIN).describeOptions("gpt-5.6-sol");
     const sandbox = descriptor(support.options, "sandbox");
