@@ -223,6 +223,22 @@ it("lists the repository's branches most-recently-committed first, and refuses w
   });
 });
 
+it("lists a published branch even when this host has no local or remote-tracking ref", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+  repo.git("checkout", "-b", "feat/remote-only");
+  repo.write("remote-only.txt", "published\n");
+  repo.commitAll("remote-only work");
+  repo.git("push", "origin", "feat/remote-only");
+  repo.git("checkout", "main");
+  repo.git("branch", "-D", "feat/remote-only");
+  repo.git("update-ref", "-d", "refs/remotes/origin/feat/remote-only");
+
+  const res = await request(app, `/api/repositories/${created.repository.id}/branches`);
+  const listed = repositoryBranchesResponseSchema.parse(await res.json());
+  expect(listed.branches).toContain("feat/remote-only");
+});
+
 it("reports a repository with no remote, which is what offers the launch its local base", async () => {
   const app = makeApiApp(t);
   const remoteless = setupTestRepo({ withoutRemote: true });

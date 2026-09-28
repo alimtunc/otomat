@@ -31,7 +31,12 @@ export {
   type TrackedFileMatches,
 } from "./repo.js";
 export * from "./pull-request.js";
-export { probeRemoteBranch, resolveBaseSha, type RemoteBranchProbe } from "./remote-base.js";
+export {
+  fetchRemoteTip,
+  probeRemoteBranch,
+  resolveBaseSha,
+  type RemoteBranchProbe,
+} from "./remote-base.js";
 export * from "./remote-compare.js";
 export { integrateCommit } from "./integrate.js";
 export * from "./repository-path.js";

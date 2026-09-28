@@ -9,6 +9,7 @@ import type { RemoteBaseRefusal, RunLaunchError, StartRunRequest } from "@otomat
 
 import {
   branchExists,
+  fetchRemoteTip,
   isRepositoryRoot,
   RemoteBaseError,
   resolveBaseSha,
@@ -122,6 +123,16 @@ async function launchBaseSha(
   request: StartRunRequest,
 ): Promise<string> {
   try {
+    if (!(await branchExists(rootPath, baseRef))) {
+      const tip = await fetchRemoteTip(rootPath, baseRef);
+      if (tip === null) {
+        throw new LaunchRefusedError(
+          "base_branch_not_found",
+          `branch "${baseRef}" does not exist in ${rootPath} or its remote`,
+        );
+      }
+      return tip.sha;
+    }
     return await resolveBaseSha(rootPath, baseRef, request.local_base === true);
   } catch (error) {
     if (!(error instanceof RemoteBaseError)) throw error;
@@ -167,12 +178,6 @@ export async function resolveLaunchTarget(
     return { projectId, binding, baseRef: prepared.base_ref, baseSha: prepared.base_sha };
   }
   const baseRef = request.base_branch ?? binding.defaultBranch;
-  if (!(await branchExists(binding.rootPath, baseRef))) {
-    throw new LaunchRefusedError(
-      "base_branch_not_found",
-      `branch "${baseRef}" does not exist in ${binding.rootPath}`,
-    );
-  }
   return {
     projectId,
     binding,
