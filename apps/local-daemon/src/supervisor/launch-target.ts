@@ -9,6 +9,7 @@ import type { RemoteBaseRefusal, RunLaunchError, StartRunRequest } from "@otomat
 
 import {
   branchExists,
+  fetchRemoteTip,
   isRepositoryRoot,
   RemoteBaseError,
   resolveBaseSha,
@@ -121,15 +122,25 @@ async function launchBaseSha(
   baseRef: string,
   request: StartRunRequest,
 ): Promise<string> {
+  const local = await branchExists(rootPath, baseRef);
   try {
-    return await resolveBaseSha(rootPath, baseRef, request.local_base === true);
+    if (local) return await resolveBaseSha(rootPath, baseRef, request.local_base === true);
+    const tip = await fetchRemoteTip(rootPath, baseRef);
+    if (tip !== null) return tip.sha;
   } catch (error) {
     if (!(error instanceof RemoteBaseError)) throw error;
-    throw new LaunchRefusedError("base_remote_unavailable", error.message, {
-      cause: error,
-      remote: error.remote,
-    });
+    // With no local branch, a repository that names no single remote for it has nowhere it was published.
+    if (local || error.remote.failure !== "no_upstream") {
+      throw new LaunchRefusedError("base_remote_unavailable", error.message, {
+        cause: error,
+        remote: error.remote,
+      });
+    }
   }
+  throw new LaunchRefusedError(
+    "base_branch_not_found",
+    `branch "${baseRef}" does not exist in ${rootPath} or its remote`,
+  );
 }
 
 /** Every refusal is a typed `LaunchRefusedError` thrown before the launch writes any row. */
@@ -167,12 +178,6 @@ export async function resolveLaunchTarget(
     return { projectId, binding, baseRef: prepared.base_ref, baseSha: prepared.base_sha };
   }
   const baseRef = request.base_branch ?? binding.defaultBranch;
-  if (!(await branchExists(binding.rootPath, baseRef))) {
-    throw new LaunchRefusedError(
-      "base_branch_not_found",
-      `branch "${baseRef}" does not exist in ${binding.rootPath}`,
-    );
-  }
   return {
     projectId,
     binding,

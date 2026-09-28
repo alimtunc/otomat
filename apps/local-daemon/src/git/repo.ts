@@ -43,8 +43,8 @@ async function publishedBase(repoPath: string, branch: string): Promise<string |
   if (remote.stdout.trim() === ".") return null;
   const tracked = await verifyRef(repoPath, `${branch}@{upstream}`);
   if (tracked !== null) return tracked;
-  const [only, ...rest] = await repositoryRemotes(repoPath);
-  if (only === undefined || rest.length > 0) return null;
+  const only = soleRemote(await repositoryRemotes(repoPath));
+  if (only === null) return null;
   return verifyRef(repoPath, `refs/remotes/${only}/${branch}`);
 }
 
@@ -107,6 +107,11 @@ export async function repositoryRemotes(repoPath: string): Promise<string[]> {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "");
+}
+
+export function soleRemote(remotes: string[]): string | null {
+  const [only, ...rest] = remotes;
+  return only !== undefined && rest.length === 0 ? only : null;
 }
 
 /**

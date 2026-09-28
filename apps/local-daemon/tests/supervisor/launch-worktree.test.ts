@@ -232,6 +232,22 @@ it("refuses an unknown base branch, leaving no run, issue or worktree behind", a
   expect(fix.db.select().from(schema.worktrees).all()).toHaveLength(0);
 });
 
+it("forks a run from a published branch with no local or tracking ref", async () => {
+  const remoteHead = fix.repo.git("rev-parse", "main").trim();
+  fix.repo.git("push", "origin", "main:refs/heads/feat/remote-only");
+  fix.repo.git("update-ref", "-d", "refs/remotes/origin/feat/remote-only");
+  const { supervisor } = makeSupervisor(fix, "complete");
+
+  const run = await supervisor.start({
+    prompt: "continue published work",
+    base_branch: "feat/remote-only",
+  });
+  await supervisor.settle();
+
+  expect(findActiveByOwner(fix.db, run.id)?.base_sha).toBe(remoteHead);
+  expect(findActiveByOwner(fix.db, run.id)?.base_ref).toBe("feat/remote-only");
+});
+
 it("forks the run's worktree from the requested base branch, not the default one", async () => {
   fix.repo.git("checkout", "-b", "develop");
   fix.repo.write("only-on-develop.txt", "feature\n");

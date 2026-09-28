@@ -1,7 +1,7 @@
 import { runGit } from "./git-cli.js";
+import { publishedBranches } from "./remote-base.js";
 import { verifyRef } from "./repo.js";
 
-/** Local branch names, most recently committed first, so a base-branch picker leads with live work. */
 export async function listBranches(repoPath: string): Promise<string[]> {
   const res = await runGit(
     ["for-each-ref", "--sort=-committerdate", "--format=%(refname:short)", "refs/heads"],
@@ -11,10 +11,11 @@ export async function listBranches(repoPath: string): Promise<string[]> {
     },
   );
   if (res.exitCode !== 0) return [];
-  return res.stdout
+  const local = res.stdout
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "");
+  return [...new Set([...local, ...(await publishedBranches(repoPath))])];
 }
 
 /** Whether a local branch ref exists. */

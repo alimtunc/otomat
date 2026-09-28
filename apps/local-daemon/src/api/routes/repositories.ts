@@ -14,7 +14,13 @@ import {
 } from "@otomat/domain";
 import { Hono } from "hono";
 
-import { isRepositoryRoot, listBranches, repositoryRemotes, searchTrackedFiles } from "#git";
+import {
+  isRepositoryRoot,
+  listBranches,
+  RemoteBaseError,
+  repositoryRemotes,
+  searchTrackedFiles,
+} from "#git";
 
 import type { ApiDeps } from "../deps.js";
 import { validateJson } from "../guards.js";
@@ -118,9 +124,16 @@ export function createRepositoryRoutes(deps: ApiDeps): Hono {
         409,
       );
     }
+    let branches: string[];
+    try {
+      branches = await listBranches(project.root_path);
+    } catch (error) {
+      if (!(error instanceof RemoteBaseError)) throw error;
+      return c.json({ error: "remote_unreadable", message: error.message }, 502);
+    }
     return c.json({
       default_branch: repository.default_branch,
-      branches: await listBranches(project.root_path),
+      branches,
       has_remote: (await repositoryRemotes(project.root_path)).length > 0,
     } satisfies RepositoryBranchesResponse);
   });

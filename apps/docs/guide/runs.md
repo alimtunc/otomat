@@ -20,7 +20,8 @@ host does not support is refused before anything runs; nothing is silently subst
 1. **Agent** — pick a profile, then adjust the model, permission mode or reasoning level for this
    launch if you want.
 2. **Base branch** — the branch the work forks from. Otomat fetches it from its remote and forks
-   from what the remote holds, not from your local checkout. Search the list with **Find branch…**.
+   from what the remote holds, not from your local checkout. Search the list with **Find branch…**;
+   it also offers branches pushed to the repository's remote that this machine has not fetched.
 3. **Add context** — attach further issues or repository files by reference. The issue itself is
    always attached. Attached files are read from the same snapshot of the repository the worktree
    is created from. A step carries at most 512 KB of context; past that the launch, or a step
