@@ -18,7 +18,7 @@ it("names a standalone mark and lets visible context name a labelled loader", as
   const [standalone, contextual] = container.querySelectorAll("output");
   expect(standalone?.getAttribute("aria-label")).toBe("Syncing issues");
   expect(standalone?.textContent).toBe("");
-  expect(standalone?.querySelector(".otomat-pulse")).not.toBeNull();
+  expect(standalone?.querySelector(".otomat-orbit")).not.toBeNull();
   expect(contextual?.querySelector(".otomat-loader")).not.toBeNull();
   expect(contextual?.textContent).toBe("Preparing pull request…");
   expect(contextual?.hasAttribute("aria-label")).toBe(false);

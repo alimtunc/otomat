@@ -18,6 +18,7 @@ export async function createSplashWindow(paths: AppPaths): Promise<BrowserWindow
     resizable: false,
     frame: false,
     title: "Otomat",
+    icon: paths.appIcon,
     backgroundColor: "#0b0b0e",
     webPreferences: { ...SECURE_WEB_PREFERENCES, preload: paths.splashPreload },
   });
@@ -34,6 +35,7 @@ export function createCockpitWindow(paths: AppPaths, startUrl: string | null): B
     minHeight: 640,
     show: false,
     title: "Otomat",
+    icon: paths.appIcon,
     backgroundColor: "#0b0b0e",
     webPreferences: { ...SECURE_WEB_PREFERENCES, preload: paths.cockpitPreload },
   });

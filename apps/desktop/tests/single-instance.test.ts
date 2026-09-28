@@ -9,12 +9,14 @@ const harness = vi.hoisted(() => ({
   listeners: new Map<string, () => void>(),
   quit: vi.fn(),
   focusPrimary: vi.fn(),
+  setDockIcon: vi.fn(),
   registerQuitHandlers: vi.fn(),
   constructed: 0,
 }));
 
 vi.mock("electron", () => ({
   app: {
+    dock: { setIcon: harness.setDockIcon },
     commandLine: { hasSwitch: () => false },
     getPath: () => "/tmp/appData",
     getVersion: () => "0.0.0-test",
@@ -49,6 +51,7 @@ afterEach(() => {
   harness.listeners.clear();
   harness.quit.mockClear();
   harness.focusPrimary.mockClear();
+  harness.setDockIcon.mockClear();
   harness.registerQuitHandlers.mockClear();
   harness.constructed = 0;
   vi.resetModules();
@@ -61,6 +64,7 @@ it("quits a second launch instead of starting a second shell and a second daemon
 
   expect(harness.quit).toHaveBeenCalledOnce();
   expect(harness.constructed).toBe(0);
+  expect(harness.setDockIcon).not.toHaveBeenCalled();
   expect(harness.listeners.size).toBe(0);
 });
 
@@ -74,6 +78,7 @@ it("reopens the running instance when Otomat is launched or activated again", as
   harness.listeners.get("activate")?.();
 
   expect(harness.focusPrimary).toHaveBeenCalledTimes(2);
+  expect(harness.setDockIcon).toHaveBeenCalledWith(PATHS.appIcon);
   expect(harness.quit).not.toHaveBeenCalled();
 });
 

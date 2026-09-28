@@ -40,6 +40,7 @@ if (!app.requestSingleInstanceLock()) {
   app
     .whenReady()
     .then(async () => {
+      app.dock?.setIcon(paths.appIcon);
       desktop = new DesktopApp(paths, buildInfo);
       await desktop.onReady();
     })

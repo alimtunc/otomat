@@ -14,6 +14,7 @@
   },
   "scripts": {
     "build": "tsdown",
+    "brand:icons": "electron scripts/brand-icons.ts",
     "typecheck": "tsgo -p tsconfig.json --noEmit",
     "test": "vitest run",
     "start": "electron .",
