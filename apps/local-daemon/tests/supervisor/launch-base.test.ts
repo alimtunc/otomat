@@ -130,6 +130,19 @@ it("refuses a repository with no remote until the launch asks for the local base
   expect(findActiveByOwner(fix.db, run.id)?.base_sha).toBe(localHead);
 });
 
+it("refuses an unknown base branch as not found when no single remote could publish it", async () => {
+  fix.cleanup();
+  fix = setupDaemonDb({ withoutRemote: true });
+  const { supervisor } = makeSupervisor(fix, "complete");
+  const ghost = { prompt: "build it", base_branch: "ghost", local_base: true };
+
+  await expect(supervisor.start(ghost)).rejects.toMatchObject({ code: "base_branch_not_found" });
+
+  fix.repo.git("remote", "add", "origin", "/nonexistent/origin");
+  fix.repo.git("remote", "add", "mirror", "/nonexistent/mirror");
+  await expect(supervisor.start(ghost)).rejects.toMatchObject({ code: "base_branch_not_found" });
+});
+
 it("keeps a follow-up step in the cycle's own worktree and base after the remote moves on", async () => {
   const { supervisor, spawn } = makeSupervisor(fix, ["complete", "complete"]);
   const run = await supervisor.start({ prompt: "build it" });

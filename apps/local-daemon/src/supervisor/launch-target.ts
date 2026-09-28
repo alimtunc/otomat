@@ -122,25 +122,25 @@ async function launchBaseSha(
   baseRef: string,
   request: StartRunRequest,
 ): Promise<string> {
+  const local = await branchExists(rootPath, baseRef);
   try {
-    if (!(await branchExists(rootPath, baseRef))) {
-      const tip = await fetchRemoteTip(rootPath, baseRef);
-      if (tip === null) {
-        throw new LaunchRefusedError(
-          "base_branch_not_found",
-          `branch "${baseRef}" does not exist in ${rootPath} or its remote`,
-        );
-      }
-      return tip.sha;
-    }
-    return await resolveBaseSha(rootPath, baseRef, request.local_base === true);
+    if (local) return await resolveBaseSha(rootPath, baseRef, request.local_base === true);
+    const tip = await fetchRemoteTip(rootPath, baseRef);
+    if (tip !== null) return tip.sha;
   } catch (error) {
     if (!(error instanceof RemoteBaseError)) throw error;
-    throw new LaunchRefusedError("base_remote_unavailable", error.message, {
-      cause: error,
-      remote: error.remote,
-    });
+    // With no local branch, a repository that names no single remote for it has nowhere it was published.
+    if (local || error.remote.failure !== "no_upstream") {
+      throw new LaunchRefusedError("base_remote_unavailable", error.message, {
+        cause: error,
+        remote: error.remote,
+      });
+    }
   }
+  throw new LaunchRefusedError(
+    "base_branch_not_found",
+    `branch "${baseRef}" does not exist in ${rootPath} or its remote`,
+  );
 }
 
 /** Every refusal is a typed `LaunchRefusedError` thrown before the launch writes any row. */

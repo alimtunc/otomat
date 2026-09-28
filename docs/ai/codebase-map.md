@@ -860,6 +860,10 @@ tree and to create the worktree. The fetch lands on a ref of its own
 (`refs/otomat/launch/<id>`, deleted once read) rather than `FETCH_HEAD`, and launches
 into one project are chained, so no other fetch or launch can move that base
 between the fetch and `worktree add`.
+A base with no local branch is fetched from the repository's sole remote, which is
+also the only remote whose advertised branches (`publishedBranches`, `ls-remote`)
+the picker lists — an unreadable remote answers 502 `remote_unreadable`, never a
+partial list; with no remote or several, such a base is `base_branch_not_found`.
 A remote that cannot be read refuses the launch with `base_remote_unavailable`
 rather than silently forking from a stale local branch; only a branch the remote
 never had, or a repository with no remote plus an explicit `local_base: true`,

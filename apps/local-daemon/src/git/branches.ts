@@ -1,5 +1,6 @@
 import { runGit } from "./git-cli.js";
-import { repositoryRemotes, verifyRef } from "./repo.js";
+import { publishedBranches } from "./remote-base.js";
+import { verifyRef } from "./repo.js";
 
 export async function listBranches(repoPath: string): Promise<string[]> {
   const res = await runGit(
@@ -14,22 +15,7 @@ export async function listBranches(repoPath: string): Promise<string[]> {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line !== "");
-  const [remote, ...otherRemotes] = await repositoryRemotes(repoPath);
-  if (remote === undefined || otherRemotes.length > 0) return local;
-  const advertised = await runGit(["ls-remote", "--heads", remote], {
-    cwd: repoPath,
-    env: { GIT_TERMINAL_PROMPT: "0" },
-    allowFailure: true,
-    timeoutMs: 10_000,
-  });
-  if (advertised.exitCode !== 0)
-    throw new Error("Could not read the repository's remote branches.");
-  const branches = new Set(local);
-  for (const line of advertised.stdout.split("\n")) {
-    const ref = line.split("\t")[1];
-    if (ref?.startsWith("refs/heads/")) branches.add(ref.slice("refs/heads/".length));
-  }
-  return [...branches];
+  return [...new Set([...local, ...(await publishedBranches(repoPath))])];
 }
 
 /** Whether a local branch ref exists. */

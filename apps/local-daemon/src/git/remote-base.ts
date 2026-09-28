@@ -4,7 +4,7 @@ import { redactLogText, type RemoteBaseFailure } from "@otomat/domain";
 
 import { RemoteBaseError } from "./errors.js";
 import { runGit } from "./git-cli.js";
-import { repositoryRemotes, revParse } from "./repo.js";
+import { repositoryRemotes, revParse, soleRemote } from "./repo.js";
 
 interface RemoteBranch {
   remote: string;
@@ -63,8 +63,8 @@ async function resolveRemoteBranch(
 ): Promise<RemoteBranch> {
   const configured = await config(repoPath, `branch.${branch}.remote`);
   if (configured === null) {
-    const [only, ...rest] = remotes;
-    if (only === undefined || rest.length > 0) {
+    const only = soleRemote(remotes);
+    if (only === null) {
       throw noUpstream(`"${branch}" has no upstream in ${repoPath}; set its upstream, then retry.`);
     }
     return { remote: only, ref: `refs/heads/${branch}` };
@@ -133,6 +133,28 @@ export async function fetchRemoteTip(repoPath: string, branch: string): Promise<
     );
   }
   return fetchTip(repoPath, branch, remotes);
+}
+
+export async function publishedBranches(repoPath: string): Promise<string[]> {
+  const remote = soleRemote(await repositoryRemotes(repoPath));
+  if (remote === null) return [];
+  const advertised = await runGit(["ls-remote", "--heads", remote], {
+    cwd: repoPath,
+    env: NO_PROMPT_ENV,
+    allowFailure: true,
+    timeoutMs: REMOTE_PROBE_TIMEOUT_MS,
+  });
+  if (advertised.exitCode !== 0) {
+    const detail = redactLogText(advertised.stderr).trim();
+    throw new RemoteBaseError(
+      `"${remote}" could not be read to list its branches; check this host's network and credentials, then retry.`,
+      { failure: classifyRemoteFailure(advertised.stderr), detail: detail === "" ? null : detail },
+    );
+  }
+  return advertised.stdout.split("\n").flatMap((line) => {
+    const ref = line.split("\t")[1];
+    return ref?.startsWith("refs/heads/") ? [ref.slice("refs/heads/".length)] : [];
+  });
 }
 
 export async function resolveBaseSha(

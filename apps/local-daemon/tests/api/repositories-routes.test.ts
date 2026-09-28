@@ -239,6 +239,16 @@ it("lists a published branch even when this host has no local or remote-tracking
   expect(listed.branches).toContain("feat/remote-only");
 });
 
+it("answers 502 rather than a partial list when the remote cannot be read", async () => {
+  const app = makeApiApp(t);
+  const created = await registerRepo(app, repo.root);
+  repo.git("remote", "set-url", "origin", join(scratch, "missing"));
+
+  const res = await request(app, `/api/repositories/${created.repository.id}/branches`);
+  expect(res.status).toBe(502);
+  expect(await json<{ error: string }>(res)).toMatchObject({ error: "remote_unreadable" });
+});
+
 it("reports a repository with no remote, which is what offers the launch its local base", async () => {
   const app = makeApiApp(t);
   const remoteless = setupTestRepo({ withoutRemote: true });
