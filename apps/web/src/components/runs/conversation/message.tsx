@@ -25,9 +25,9 @@ export function ConversationMessage({
   const cancelable = isRunContributionCancelable(contribution);
 
   return (
-    <li className="flex flex-col gap-1.5 px-6 py-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-text-secondary">You</span>
+    <li className="flex flex-col items-end gap-1.5 px-6 py-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className="text-xs font-semibold text-foreground">You</span>
         <RelativeTime date={contribution.created_at} className="text-xs" />
         <RunContributionStatusChip
           status={projectRunContributionDelivery(contribution)}
@@ -37,11 +37,11 @@ export function ConversationMessage({
       {contribution.body.length === 0 ? null : (
         <Markdown
           value={contribution.body}
-          className="rounded-lg border border-border-subtle bg-card px-3 py-2 text-sm"
+          className="max-w-[85%] rounded-lg rounded-tr-sm border border-border-strong bg-card px-3 py-2 text-sm"
         />
       )}
       {contribution.images.length === 0 ? null : (
-        <ul aria-label="Attached images" className="flex flex-wrap gap-2">
+        <ul aria-label="Attached images" className="flex flex-wrap justify-end gap-2">
           {contribution.images.map((image, index) => (
             <li key={image.id}>
               <img
@@ -66,7 +66,7 @@ export function ConversationMessage({
         <p className="text-xs text-text-tertiary">{DELIVERED_FAILURE_HINT}</p>
       ) : null}
       {retriable || cancelable ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           {retriable ? (
             <Button
               type="button"
