@@ -26,7 +26,9 @@ export function sectionOf(entry: ConversationThreadEntry): ConversationSectionKe
 }
 
 /** Entries arrive newest first, so an issue's group takes the rank of its newest thread. */
-function groupByOwner(entries: readonly ConversationThreadEntry[]): ConversationGroup[] {
+export function groupConversationsByOwner(
+  entries: readonly ConversationThreadEntry[],
+): ConversationGroup[] {
   const groups = new Map<string, ConversationGroup>();
   for (const entry of entries) {
     const id = entry.issue === null ? `project:${entry.project.id}` : `issue:${entry.issue.id}`;
@@ -42,7 +44,9 @@ export function groupConversations(
   entries: readonly ConversationThreadEntry[],
 ): ConversationSection[] {
   return SECTIONS.map((section) => {
-    const groups = groupByOwner(entries.filter((entry) => sectionOf(entry) === section.key));
+    const groups = groupConversationsByOwner(
+      entries.filter((entry) => sectionOf(entry) === section.key),
+    );
     return {
       key: section.key,
       label: section.label,

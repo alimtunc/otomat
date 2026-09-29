@@ -14,7 +14,7 @@ import { PROJECT_HOME_NAV } from "@web/components/shell/nav-items";
 import { isConversationRunning } from "@web/lib/conversations/status";
 import { useState } from "react";
 
-import { SidebarConversationRow } from "./conversation-row";
+import { SidebarConversations } from "./conversations/list";
 
 export interface SidebarProjectProps {
   project: ProjectSummary;
@@ -37,8 +37,6 @@ export function SidebarProject({
   const [expanded, setExpanded] = useState<boolean | null>(null);
   const disclosed = expanded ?? active;
   const live = conversations.some(isConversationRunning);
-  const open = conversations.filter((entry) => !entry.archived);
-  const visible = open.slice(0, 5);
   const projectLabel = `${project.name} · ${project.tag ?? "Local"}${attention ? ` · ${attention} unread` : ""}${live ? " · Running" : ""}`;
   return (
     <div className="min-w-0" data-project={project.id}>
@@ -113,27 +111,11 @@ export function SidebarProject({
             active={active && href.startsWith("/runs")}
             onClick={() => onNavigate(project.id, "/runs")}
           />
-          {visible.length ? (
-            <div className="px-2 pb-1 pt-3 text-micro text-text-tertiary">Conversations</div>
-          ) : null}
-          {visible.map((entry) => (
-            <SidebarConversationRow
-              key={entry.id}
-              entry={entry}
-              projectName={project.name}
-              href={active ? href : null}
-              onSelect={(target) => onNavigate(project.id, target)}
-            />
-          ))}
-          {open.length > visible.length ? (
-            <button
-              type="button"
-              className={`h-8 w-full rounded px-2 text-left text-xs text-text-tertiary hover:bg-hover ${FOCUS_RING_INSET}`}
-              onClick={() => onNavigate(project.id, "/runs")}
-            >
-              All project activity
-            </button>
-          ) : null}
+          <SidebarConversations
+            entries={conversations.filter((entry) => !entry.archived)}
+            href={active ? href : null}
+            onNavigate={(target) => onNavigate(project.id, target)}
+          />
         </nav>
       ) : null}
     </div>

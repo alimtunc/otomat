@@ -6,6 +6,7 @@ import { IssuePreviewCard } from "@web/components/issues/preview/card";
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { focusVisibly } from "#support/dom-events";
 import { issueContract, linearIssueContract, openWorkspace } from "#support/issue";
 import { mountWithQuery, type Mounted } from "#support/mount";
 import { testQueryClient } from "#support/query";
@@ -57,11 +58,7 @@ afterEach(async () => {
 async function focusIssue() {
   const link = document.querySelector<HTMLAnchorElement>(`a[href="/issues/${issue.id}"]`);
   if (link === null) throw new Error("Issue link missing");
-  const matches = link.matches.bind(link);
-  vi.spyOn(link, "matches").mockImplementation(
-    (selector) => selector === ":focus-visible" || matches(selector),
-  );
-  await act(async () => link.focus());
+  await focusVisibly(link);
   return link;
 }
 

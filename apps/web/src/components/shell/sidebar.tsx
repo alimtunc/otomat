@@ -21,7 +21,7 @@ import { isDeskRoute } from "@web/components/shell/project-desk/state";
 import { switcherSections } from "@web/components/shell/project-layout/arrange";
 import { projectLayoutStore } from "@web/components/shell/project-layout/store";
 import type { HostInboxEntries } from "@web/components/shell/project-tabs/use-open-host-inboxes";
-import { ConversationsNotice } from "@web/components/shell/project-tree/conversations-notice";
+import { ConversationsNotice } from "@web/components/shell/project-tree/conversations/notice";
 import { ProjectTree } from "@web/components/shell/project-tree/tree";
 import type { ReactNode, Ref } from "react";
 

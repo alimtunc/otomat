@@ -1,4 +1,5 @@
 import { act } from "react";
+import { vi } from "vitest";
 
 import { findButton } from "#support/dom-queries";
 
@@ -24,4 +25,12 @@ export function click(text: string): Promise<void> {
   const button = findButton(text);
   if (!button) throw new Error(`button "${text}" not found`);
   return act(async () => button.click());
+}
+
+export async function focusVisibly(element: HTMLElement): Promise<void> {
+  const matches = element.matches.bind(element);
+  vi.spyOn(element, "matches").mockImplementation(
+    (selector) => selector === ":focus-visible" || matches(selector),
+  );
+  await act(async () => element.focus());
 }
