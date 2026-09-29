@@ -5,13 +5,13 @@ import { useSelector } from "@tanstack/react-store";
 import { useMarkConversations } from "@web/api/conversations/mutations";
 import { useConversations } from "@web/api/conversations/queries";
 import { useConversationsStream } from "@web/api/conversations/use-conversations-stream";
+import { useMarkConversationSeen } from "@web/api/conversations/use-mark-seen";
 import { RunEventsProvider } from "@web/api/runs/run-events-provider";
 import { useDaemonToken } from "@web/api/use-daemon-token";
 import { ConversationFiltersMenu } from "@web/components/conversations/filters-menu";
 import { ConversationList } from "@web/components/conversations/list";
 import { TerminalConversationBody } from "@web/components/conversations/terminal-body";
 import { ConversationThreadBody } from "@web/components/conversations/thread-body";
-import { useMarkConversationSeen } from "@web/components/conversations/use-mark-seen";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { CenteredState } from "@web/components/shell/centered-state";
 import { ListSkeleton } from "@web/components/shell/list-skeleton";
@@ -24,6 +24,7 @@ import {
   conversationProjectOptions,
   NO_CONVERSATION_FILTERS,
 } from "@web/lib/conversations/filters";
+import { findConversationThread } from "@web/lib/conversations/find-thread";
 import { groupConversations } from "@web/lib/conversations/sections";
 import { conversationTitle } from "@web/lib/conversations/title";
 import { markInboxRequest, type InboxMarkPatch } from "@web/lib/inbox/marks";
@@ -44,10 +45,8 @@ export function ConversationsView() {
   const filtered = activeConversationFilterCount(filters) > 0;
 
   const entries = conversations.data?.entries ?? [];
-  const selected = entries.find((entry) =>
-    "terminal" in entry ? entry.terminal.id === terminal : entry.step_run_id === step,
-  );
-  useMarkConversationSeen(selected, mark.mutate);
+  const selected = findConversationThread(entries, { step, terminal });
+  useMarkConversationSeen(terminal === undefined ? null : { terminal });
 
   const markEntry = (entry: ConversationThreadEntry, patch: InboxMarkPatch): void => {
     mark.mutate(markInboxRequest([entry], patch));

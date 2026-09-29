@@ -247,14 +247,17 @@ describe("GET /api/conversations", () => {
     ).toEqual([["run-live", "reviewing"]]);
   });
 
-  it("stops following a thread on the read after its cycle closes", async () => {
+  it("stops following a thread, and stops calling it unread, on the read after its cycle closes", async () => {
     const seed = seedRun(t.db, {
       runId: "run-5",
       runStatus: "running",
       stepStatus: "running",
       sessionStatus: "active",
     });
-    expect((await readSnapshot()).entries[0]?.issue?.cycle).toBe("running");
+    expect((await readSnapshot()).entries[0]).toMatchObject({
+      read: false,
+      issue: { cycle: "running" },
+    });
 
     t.db.update(schema.runs).set({ status: "completed" }).where(eq(schema.runs.id, "run-5")).run();
     t.db
@@ -267,6 +270,7 @@ describe("GET /api/conversations", () => {
     expect((await readSnapshot()).entries[0]).toMatchObject({
       step_status: "succeeded",
       issue: { cycle: null },
+      read: true,
     });
   });
 

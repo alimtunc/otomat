@@ -1670,9 +1670,12 @@ entering `awaiting_permission`, `awaiting_human`, `waiting_for_provider`,
 from nothing else: tool calls, reasoning, logs and the operator's own message
 never move a thread, which is why the badge counts threads and cannot tick per
 stream frame. A cancelled step and an abandoned run read as already read: they
-are the operator's act. The web groups entries by issue and sections the groups
-by `issue.cycle` alone — an unread finished thread sits in *Recently finished*
-with its dot, never in *Following* — and the state filter reads `sectionOf`, so a
+are the operator's act. So does every finished thread — one `isConversationFollowed`
+rejects: it stays listed and reachable, but the projection never lets it badge,
+dot or count, so the nav badge, the sidebar, the section headers and the Unread
+filter agree without a rule of their own, and its row offers no read toggle a
+mark could not hold. The web groups entries by issue and sections the groups by
+that same predicate (`sectionOf`), which the state filter also reads, so a
 filter and a section cannot disagree. An issue group opens by default while one of
 its threads is running and folds back when none is; a manual fold or unfold
 overrides that default for the rest of the visit. The project sidebar applies
@@ -1684,11 +1687,16 @@ the one holding the open thread.
 
 Reading marks reuse `inbox_marks` and `POST /api/inbox/marks` unchanged; the
 projection only ever looks up its own ids, so the two projections cannot see
-each other's marks, and the stale-mark rule is the Inbox's. The view marks the
-selected thread read once per `(id, updated_at)` while the document is visible
-(`useMarkConversationSeen`); a thread that speaks again while open is read
-again, one in a hidden tab is not, and a refused mark is not retried until the
-thread moves. `GET /api/conversations/stream` is a state stream shaped like the
+each other's marks, and the stale-mark rule is the Inbox's. Reading follows the
+thread, not the route: Conversations, the issue page and the run cockpit all
+render `ConversationThread`, which marks its own step's entry once per
+`(id, updated_at)` while its history and messages are loaded, its newest activity
+is in view (the autoscroll pin) and the document is visible (`useMarkConversationSeen`);
+the Conversations view marks a selected terminal the same way. Opening an issue
+reads only the thread it shows; a thread that speaks again while on screen is
+read again, one scrolled away from its newest activity or in a hidden tab is
+not, and a refused mark is not retried until the thread moves.
+`GET /api/conversations/stream` is a state stream shaped like the
 activity one — no cursor, a frame only when the projection changed — mounted by
 the view alone; the sidebar badge polls the snapshot the rest of the time. The
 Inbox and the Activity Center are unchanged: a pending permission appears in all

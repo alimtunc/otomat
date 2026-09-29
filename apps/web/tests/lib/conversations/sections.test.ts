@@ -51,7 +51,7 @@ it("sections by the issue's cycle, one group per issue, and hides an empty secti
   ]);
 });
 
-it("keeps an unread finished thread out of Active and keeps all finished issues reachable", () => {
+it("keeps all finished issues reachable", () => {
   const entries = Array.from({ length: 12 }, (_, index) =>
     finished(`step-${index}`, `issue-${index}`),
   );
@@ -60,7 +60,6 @@ it("keeps an unread finished thread out of Active and keeps all finished issues 
 
   expect(section?.key).toBe("finished");
   expect(section?.groups).toHaveLength(12);
-  expect(section?.groups[0]?.entries[0]?.read).toBe(false);
 });
 
 it("groups a project terminal without inventing an issue and keeps active terminals active", () => {

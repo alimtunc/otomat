@@ -1,5 +1,6 @@
 import { isRunSettled, latestSessionForStep, liveStepStatus, type RunDetail } from "@otomat/domain";
 import { EmptyState, ErrorState } from "@otomat/ui";
+import { useMarkConversationSeen } from "@web/api/conversations/use-mark-seen";
 import { useRunContributions, useRunInteractions } from "@web/api/runs/queries";
 import type { RunEventStream } from "@web/api/runs/run-event-stream";
 import { RunClosureBar } from "@web/components/runs/conversation/closure-bar";
@@ -35,6 +36,12 @@ export function ConversationThread({
   const interactions = useRunInteractions(detail.run.id);
   const autoscroll = useThreadAutoscroll(`${detail.run.id}:${stepRunId}`, events[0]?.seq ?? null);
   const loadOlderRef = useLoadOlder(history, !autoscroll.pinned);
+  const latestOnScreen =
+    history.status === "ready" &&
+    contributions.data !== undefined &&
+    interactions.data !== undefined &&
+    autoscroll.pinned;
+  useMarkConversationSeen(latestOnScreen ? { step: stepRunId } : null);
   const step = detail.steps.find((candidate) => candidate.id === stepRunId);
   const status =
     step === undefined

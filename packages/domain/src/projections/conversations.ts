@@ -104,14 +104,22 @@ function currentMark(mark: InboxMark | undefined, updatedAt: string): InboxMark 
   return mark !== undefined && mark.evidence_updated_at >= updatedAt ? mark : undefined;
 }
 
+export function isConversationFollowed(
+  entry: Pick<ConversationEntry, "issue"> | Pick<TerminalConversationEntry, "issue" | "terminal">,
+): boolean {
+  const running = "terminal" in entry && entry.terminal.state !== "exited";
+  return running || (entry.issue !== null && entry.issue.cycle !== null);
+}
+
 /** A cancel and an abandon are the operator's own act, so their threads are never news. */
 function readingOf(
   row: ConversationEvidence,
   updatedAt: string,
   mark: InboxMark | undefined,
+  followed: boolean,
 ): Pick<ConversationEntry, "read" | "archived"> {
   const current = currentMark(mark, updatedAt);
-  const silenced = row.step_status === "canceled" || row.run_abandoned_at !== null;
+  const silenced = !followed || row.step_status === "canceled" || row.run_abandoned_at !== null;
   return { read: silenced || (current?.read ?? false), archived: current?.archived ?? false };
 }
 
@@ -145,15 +153,16 @@ export function projectConversations(
     .map((row): ConversationEntry => {
       const id = `conversation:${row.step_run_id}`;
       const updated_at = updatedAtOf(row);
+      const issue = {
+        id: row.issue_id,
+        identifier: row.issue_identifier,
+        title: row.issue_title,
+        cycle: cycles.get(row.issue_id)?.state ?? null,
+      };
       return {
         id,
         project: { id: row.project_id, name: row.project_name },
-        issue: {
-          id: row.issue_id,
-          identifier: row.issue_identifier,
-          title: row.issue_title,
-          cycle: cycles.get(row.issue_id)?.state ?? null,
-        },
+        issue,
         run_id: row.run_id,
         run_status: row.run_status,
         step_run_id: row.step_run_id,
@@ -167,7 +176,7 @@ export function projectConversations(
             : { kind: row.pending_interaction.kind, prompt: row.pending_interaction.prompt },
         queued_contributions: row.queued_contributions,
         updated_at,
-        ...readingOf(row, updated_at, markById.get(id)),
+        ...readingOf(row, updated_at, markById.get(id), isConversationFollowed({ issue })),
       };
     })
     .toSorted(compareConversations);
@@ -182,16 +191,15 @@ export function projectTerminalConversations(
   return evidence.map((row) => {
     const id = `terminal:${row.session.id}`;
     const mark = currentMark(markById.get(id), row.updated_at);
+    const issue =
+      row.issue === null ? null : { ...row.issue, cycle: cycles.get(row.issue.id)?.state ?? null };
     return {
       id,
       project: { id: row.session.project_id, name: row.project_name },
-      issue:
-        row.issue === null
-          ? null
-          : { ...row.issue, cycle: cycles.get(row.issue.id)?.state ?? null },
+      issue,
       terminal: row.session,
       updated_at: row.updated_at,
-      read: mark?.read ?? false,
+      read: !isConversationFollowed({ issue, terminal: row.session }) || (mark?.read ?? false),
       archived: mark?.archived ?? false,
     };
   });

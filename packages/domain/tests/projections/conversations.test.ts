@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { InboxMark } from "#domain/contracts/inbox";
+import type { TerminalSession } from "#domain/contracts/terminal";
 import {
   countUnreadConversations,
+  isConversationFollowed,
   projectConversations,
   projectFollowedCycle,
+  projectTerminalConversations,
   type ConversationCycles,
 } from "#domain/projections/conversations";
 import type { IssueExecutionEvidence } from "#domain/projections/evidence";
@@ -17,6 +20,7 @@ const T1 = "2026-09-19T10:05:00.000Z";
 const T2 = "2026-09-19T10:10:00.000Z";
 
 const NO_CYCLES: ConversationCycles = new Map();
+const FOLLOWED: ConversationCycles = new Map([["issue-1", { state: "running", run_id: "run-1" }]]);
 
 const updatedAtOf = (overrides: Parameters<typeof conversationEvidence>[0]) =>
   projectConversations([conversationEvidence(overrides)], [], NO_CYCLES)[0]?.updated_at;
@@ -29,12 +33,27 @@ const mark = (overrides: Partial<InboxMark> = {}): InboxMark => ({
   ...overrides,
 });
 
+const session = (overrides: Partial<TerminalSession> = {}): TerminalSession => ({
+  id: "00000000-0000-4000-8000-000000000001",
+  project_id: "project-1",
+  issue_id: null,
+  worktree_id: null,
+  path: "/tmp/otomat",
+  branch: "main",
+  started_at: T0,
+  tool: null,
+  state: "running",
+  exit_code: null,
+  signal: null,
+  ...overrides,
+});
+
 describe("projectConversations", () => {
   it("keys the entry by its step and reads the participant from the frozen configuration", () => {
     const [entry] = projectConversations(
       [conversationEvidence({ reported_model: "opus-4" })],
       [],
-      NO_CYCLES,
+      FOLLOWED,
     );
 
     expect(entry).toMatchObject({
@@ -107,11 +126,11 @@ describe("projectConversations", () => {
   it("honours a mark until the thread moves past it", () => {
     const evidence = conversationEvidence({ last_agent_message: { text: "Done.", at: T1 } });
 
-    const [current] = projectConversations([evidence], [mark({ archived: true })], NO_CYCLES);
+    const [current] = projectConversations([evidence], [mark({ archived: true })], FOLLOWED);
     const [stale] = projectConversations(
       [{ ...evidence, last_agent_message: { text: "More.", at: T2 } }],
       [mark({ archived: true })],
-      NO_CYCLES,
+      FOLLOWED,
     );
 
     expect(current).toMatchObject({ read: true, archived: true });
@@ -125,7 +144,7 @@ describe("projectConversations", () => {
         conversationEvidence({ step_run_id: "step-a", run_abandoned_at: T1 }),
       ],
       [],
-      NO_CYCLES,
+      FOLLOWED,
     );
 
     expect(entries.every((entry) => entry.read)).toBe(true);
@@ -144,11 +163,35 @@ describe("projectConversations", () => {
         conversationEvidence({ step_run_id: "read", step_created_at: T1 }),
       ],
       [mark({ entry_id: "conversation:read", evidence_updated_at: T1 })],
-      NO_CYCLES,
+      FOLLOWED,
     );
 
     expect(entries.map((entry) => entry.step_run_id)).toEqual(["new", "read", "old"]);
     expect(countUnreadConversations(entries)).toBe(2);
+  });
+
+  it("keeps a finished thread listed but never as news, whatever its mark says", () => {
+    const evidence = conversationEvidence({ last_agent_message: { text: "Done.", at: T1 } });
+
+    const followed = projectConversations([evidence], [], FOLLOWED);
+    const finished = projectConversations([evidence], [mark({ read: false })], NO_CYCLES);
+
+    expect(followed[0]?.read).toBe(false);
+    expect(countUnreadConversations(followed)).toBe(1);
+    expect(finished).toHaveLength(1);
+    expect(finished[0]).toMatchObject({ read: true, issue: { cycle: null } });
+    expect(countUnreadConversations(finished)).toBe(0);
+  });
+
+  it("brings a read thread back once for later activity and never for the same evidence again", () => {
+    const seen = conversationEvidence({ last_agent_message: { text: "Done.", at: T1 } });
+    const spoke = { ...seen, last_agent_message: { text: "One more thing.", at: T2 } };
+    const project = (evidence: typeof seen, marks: InboxMark[]) =>
+      projectConversations([evidence], marks, FOLLOWED);
+
+    expect(project(seen, [mark()])[0]?.read).toBe(true);
+    expect(countUnreadConversations(project(spoke, [mark()]))).toBe(1);
+    expect(project(spoke, [mark({ evidence_updated_at: T2 })])[0]?.read).toBe(true);
   });
 
   it("stamps each thread with its issue's followed cycle, null once nothing is left to follow", () => {
@@ -188,6 +231,29 @@ describe("projectConversations", () => {
     expect(statusOf({ step_status: "canceled", latest_session_status: "terminated" })).toBe(
       "canceled",
     );
+  });
+});
+
+describe("projectTerminalConversations", () => {
+  const issue = { id: "issue-1", identifier: "OTO-1", title: "Ship it" };
+  const project = (terminal: TerminalSession, linked: typeof issue | null, cycles = NO_CYCLES) =>
+    projectTerminalConversations(
+      [{ session: terminal, updated_at: T1, project_name: "Otomat", issue: linked }],
+      [],
+      cycles,
+    )[0];
+
+  it("reads a terminal as news only while it runs or its issue's cycle is open", () => {
+    const running = project(session(), null);
+    const ended = project(session({ state: "exited", exit_code: 0 }), null);
+    const endedInCycle = project(session({ state: "exited", exit_code: 0 }), issue, FOLLOWED);
+
+    expect(running).toMatchObject({ read: false });
+    expect(ended).toMatchObject({ read: true });
+    expect(endedInCycle).toMatchObject({ read: false, issue: { cycle: "running" } });
+    expect(
+      [running, ended, endedInCycle].map((entry) => entry && isConversationFollowed(entry)),
+    ).toEqual([true, false, true]);
   });
 });
 

@@ -1,4 +1,4 @@
-import type { ConversationThreadEntry } from "@otomat/domain";
+import { isConversationFollowed, type ConversationThreadEntry } from "@otomat/domain";
 
 const SECTIONS = [
   { key: "active", label: "Following" },
@@ -21,8 +21,7 @@ export interface ConversationSection {
 }
 
 export function sectionOf(entry: ConversationThreadEntry): ConversationSectionKey {
-  const running = "terminal" in entry && entry.terminal.state !== "exited";
-  return running || (entry.issue !== null && entry.issue.cycle !== null) ? "active" : "finished";
+  return isConversationFollowed(entry) ? "active" : "finished";
 }
 
 /** Entries arrive newest first, so an issue's group takes the rank of its newest thread. */
