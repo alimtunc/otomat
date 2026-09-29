@@ -1618,7 +1618,9 @@ selected step exactly as it would in the cockpit.
 Terminal entries (`terminal:<session_id>`) extend the snapshot as a union with their
 own metadata, project and optional issue; they carry no fabricated run or step IDs.
 Their pane reuses `TerminalScreen`, interactive only while the owner reports a live
-session. Cockpit rows have a monitor icon and retain the chat view; terminal rows
+session. The pane and the row menu mount the terminal toolbar's `EndSessionDialog`,
+which reads the owner's instance itself, so every surface ends a session through one
+close path. Cockpit rows have a monitor icon and retain the chat view; terminal rows
 have a terminal icon. All saved terminals remain listed regardless of age, grouped
 under the project when no issue owns them. A project terminal's state selects
 Following or Recently finished; an issue terminal follows while it runs or while

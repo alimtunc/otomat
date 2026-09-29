@@ -1,15 +1,22 @@
 // @vitest-environment happy-dom
 import { ConversationRow, type ConversationRowProps } from "@web/components/conversations/row";
 import { act } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { conversationEntry, terminalConversationEntry } from "#support/conversations";
-import { findLabelled, findMenuItem } from "#support/dom-queries";
-import { mountRouted } from "#support/router";
+import { fakeDesktopBridge } from "#support/desktop-bridge";
+import { findButton, findLabelled, findMenuItem } from "#support/dom-queries";
+import { mountRoutedWithQuery } from "#support/router";
+import { TERMINAL_INSTANCE, terminalSession } from "#support/terminal";
+
+afterEach(() => {
+  delete window.otomat;
+  vi.unstubAllGlobals();
+});
 
 async function render(props: Partial<ConversationRowProps> = {}) {
   const onMark = vi.fn();
-  const mounted = await mountRouted(
+  const mounted = await mountRoutedWithQuery(
     <ConversationRow
       entry={conversationEntry()}
       selected={false}
@@ -118,6 +125,7 @@ describe("ConversationRow", () => {
 });
 
 it("identifies a project terminal and keeps its actions separate from a run", async () => {
+  window.otomat = fakeDesktopBridge();
   const entry = terminalConversationEntry();
   const { link, container, onMark, cleanup } = await render({ entry, showIssue: true });
   expect(container.querySelector('[aria-label="Terminal"]')).not.toBeNull();
@@ -126,9 +134,53 @@ it("identifies a project terminal and keeps its actions separate from a run", as
   expect(container.textContent).toContain("Ended");
   expect(link.getAttribute("href")).toBe(`/conversations?terminal=${entry.terminal.id}`);
   await act(async () => control("Conversation actions").click());
+  expect(findMenuItem("End session…")).toBeUndefined();
   const archive = findMenuItem("Archive");
   if (archive === undefined) throw new Error("no archive menu item");
   await act(async () => archive.click());
   expect(onMark).toHaveBeenCalledWith({ archived: true });
+  await cleanup();
+});
+
+it("ends an active terminal from its row menu, apart from archiving", async () => {
+  window.otomat = fakeDesktopBridge();
+  const terminal = terminalSession();
+  const closes: string[] = [];
+  vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+    if (init?.method === "POST") closes.push(new URL(url).pathname);
+    return Response.json(
+      init?.method === "POST"
+        ? { ok: true }
+        : { instance: TERMINAL_INSTANCE, sessions: [terminal] },
+    );
+  });
+  const { container, onMark, cleanup } = await render({
+    entry: terminalConversationEntry({ terminal }),
+  });
+  expect(container.textContent).toContain("Active");
+  await act(async () => control("Conversation actions").click());
+  expect(findMenuItem("Archive")).toBeDefined();
+  const end = findMenuItem("End session…");
+  if (end === undefined) throw new Error("no end session menu item");
+  await act(async () => end.click());
+  const confirm = await vi.waitFor(() => {
+    const button = findButton("End session");
+    if (button === undefined || button.disabled) throw new Error("end session is not ready");
+    return button;
+  });
+  await act(async () => confirm.click());
+  await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+  expect(closes).toEqual([`/api/terminals/${terminal.id}/close`]);
+  expect(onMark).not.toHaveBeenCalled();
+  await cleanup();
+});
+
+it("hides the end action when this app cannot reach terminals", async () => {
+  const { cleanup } = await render({
+    entry: terminalConversationEntry({ terminal: terminalSession() }),
+  });
+  await act(async () => control("Conversation actions").click());
+  expect(findMenuItem("Archive")).toBeDefined();
+  expect(findMenuItem("End session…")).toBeUndefined();
   await cleanup();
 });

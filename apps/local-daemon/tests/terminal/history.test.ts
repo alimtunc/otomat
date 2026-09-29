@@ -89,6 +89,47 @@ it("lists project and issue terminals without runs and reads their output after 
   });
 });
 
+it("accepts repeated close requests, stops the running command and lists the session ended", async () => {
+  const app = makeApiApp(fix, { terminals });
+  const opened = await terminals.open({
+    instance: terminals.instance,
+    project_id: "p1",
+    tool: null,
+  });
+  const session = terminals.get(terminals.instance, opened.id);
+  session.write("stty -echo\r");
+  session.write("sh -c 'echo CHILD:$$; exec sleep 60'\r");
+  await expect.poll(() => session.output(0).data, { timeout: 10_000 }).toMatch(/CHILD:\d+/);
+  const pid = Number(/CHILD:(\d+)/.exec(session.output(0).data)?.[1]);
+  expect(pid).toBeGreaterThan(0);
+  const closes = await Promise.all(
+    [0, 1].map(() =>
+      post(app, `/api/terminals/${opened.id}/close`, { instance: terminals.instance }),
+    ),
+  );
+  expect(closes.map((response) => response.status)).toEqual([200, 200]);
+  await expect
+    .poll(
+      () => {
+        try {
+          process.kill(pid, 0);
+          return true;
+        } catch (error) {
+          if (error instanceof Error && "code" in error && error.code === "ESRCH") return false;
+          throw error;
+        }
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(false);
+  const snapshot = conversationSnapshotSchema.parse(
+    await (await request(app, "/api/conversations")).json(),
+  );
+  expect(snapshot.entries.find((entry) => entry.id === `terminal:${opened.id}`)).toMatchObject({
+    terminal: { state: "exited" },
+  });
+});
+
 it("marks an interrupted record ended, keeps only retained frames and replays by cursor", () => {
   const record = {
     id: "00000000-0000-4000-8000-000000000002",

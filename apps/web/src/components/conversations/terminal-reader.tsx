@@ -1,10 +1,11 @@
 import type { TerminalSession } from "@otomat/domain";
-import { CopyButton, Icon, Skeleton } from "@otomat/ui";
+import { Button, CopyButton, Icon, Skeleton } from "@otomat/ui";
 import { captureTerminalClient } from "@web/api/terminals/client";
 import { useTerminalInventory } from "@web/api/terminals/queries";
 import { ErrorReport } from "@web/components/diagnostics/error-report";
 import { PaneHeader } from "@web/components/runs/pane-header";
 import { QueryBoundary } from "@web/components/shell/query-boundary";
+import { EndSessionDialog } from "@web/components/terminal/end-session-dialog";
 import { terminalToolLabel } from "@web/lib/terminal-tool";
 import { lazy, Suspense, useState } from "react";
 
@@ -15,6 +16,10 @@ const TerminalScreen = lazy(() =>
 export function TerminalReader({ session }: { session: TerminalSession }) {
   const [client] = useState(captureTerminalClient);
   const inventory = useTerminalInventory(client);
+  const [ending, setEnding] = useState(false);
+  const running = inventory.data?.sessions.some(
+    (item) => item.id === session.id && item.state === "running",
+  );
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PaneHeader>
@@ -23,7 +28,19 @@ export function TerminalReader({ session }: { session: TerminalSession }) {
           {terminalToolLabel(session.tool)} · {session.branch}
         </span>
         <CopyButton value={session.path} label="Copy terminal path" />
+        {running ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto normal-case tracking-normal"
+            onClick={() => setEnding(true)}
+          >
+            <Icon name="square" aria-hidden />
+            End session
+          </Button>
+        ) : null}
       </PaneHeader>
+      {ending ? <EndSessionDialog sessionId={session.id} onClose={() => setEnding(false)} /> : null}
       <p className="px-3 py-2 text-xs text-text-tertiary">
         Recent terminal output is saved on the host that ran it. Ended sessions open read-only.
       </p>

@@ -69,6 +69,11 @@ may be truncated; the terminal shows a notice when this happens. This is the ter
 including CLI output, not a structured chat transcript. Input that a program does not echo, such
 as a password, is not recorded. External terminal sessions are not recorded by Otomat.
 
+**End session**, in a running terminal's header or its row's `…` menu, works as in
+[a terminal tab](./workspaces.md#use-a-terminal), on a local or VPS host alike. The row then reads
+**Ended** everywhere; if the host refuses, the dialog shows why and the session stays active.
+Ended sessions offer no **End session**.
+
 A daemon restart ends the process but keeps its saved output available read-only. Start a new
 session explicitly from **Terminal** or an issue's **Terminal** tab. Archiving hides an entry;
 it neither stops its process nor deletes its recording.

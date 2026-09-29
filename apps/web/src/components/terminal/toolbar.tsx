@@ -1,4 +1,3 @@
-import type { DaemonClient } from "@otomat/client";
 import {
   terminalToolSchema,
   type ExecutionHostDescriptor,
@@ -8,11 +7,11 @@ import {
 import { Button, CopyButton, Icon, IconButton, LiveDot, ProviderMark } from "@otomat/ui";
 import { runtimeMark } from "@web/lib/runtimes";
 import { terminalToolLabel } from "@web/lib/terminal-tool";
+import { useState } from "react";
 
 import { EndSessionDialog } from "./end-session-dialog";
 
 export function TerminalToolbar({
-  client,
   host,
   project,
   session,
@@ -23,7 +22,6 @@ export function TerminalToolbar({
   onInspect,
   onExternal,
 }: {
-  client: DaemonClient;
   host: ExecutionHostDescriptor;
   project: boolean;
   session: TerminalSession | null;
@@ -37,6 +35,7 @@ export function TerminalToolbar({
   const remote = host.id === "remote";
   const localFallbackLabel = project ? "Copy terminal command" : "Open in external terminal";
   const live = session !== null && session.state !== "exited";
+  const [ending, setEnding] = useState(false);
   return (
     <>
       <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border-subtle bg-surface-1 px-3 py-2">
@@ -85,12 +84,15 @@ export function TerminalToolbar({
             onClick={onExternal}
           />
           {live && instance !== null ? (
-            <EndSessionDialog
-              client={client}
-              instance={instance}
-              session={session}
-              disabled={busy}
+            <IconButton
+              label="End session"
+              icon={<Icon name="square" aria-hidden />}
+              disabled={busy || session.state === "closing"}
+              onClick={() => setEnding(true)}
             />
+          ) : null}
+          {ending && session !== null ? (
+            <EndSessionDialog sessionId={session.id} onClose={() => setEnding(false)} />
           ) : null}
         </div>
       </div>
