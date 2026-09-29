@@ -130,13 +130,15 @@ export function compareConversations(
   return b.updated_at.localeCompare(a.updated_at) || a.id.localeCompare(b.id);
 }
 
-/** A live run is followed before `preparing` creates the worktree that would open its cycle. */
+/** A run at work or waiting on the operator is followed before `preparing` creates the worktree that would open its cycle. */
 export function projectFollowedCycle(
   rows: readonly IssueExecutionEvidence[],
 ): OpenCycleExecution | null {
   const execution = projectIssueExecution(rows);
   const open = projectOpenCycleExecution({ execution, workspace: projectIssueWorkspace(rows) });
-  if (open !== null || execution.state !== "running") return open;
+  if (open !== null || (execution.state !== "running" && execution.state !== "awaiting_input")) {
+    return open;
+  }
   const run = rows.find((row) => row.run_id === execution.run_id);
   return run !== undefined && !isCycleClosed(run) ? execution : null;
 }
@@ -167,7 +169,11 @@ export function projectConversations(
         run_status: row.run_status,
         step_run_id: row.step_run_id,
         step_name: row.step_name,
-        step_status: liveStepStatus(row.step_status, row.latest_session_status),
+        step_status: liveStepStatus(
+          row.step_status,
+          row.latest_session_status,
+          row.pending_interaction !== null,
+        ),
         participant: participantOf(row),
         last: lastOf(row),
         pending_interaction:

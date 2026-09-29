@@ -4,7 +4,7 @@ import type {
   IssueExecutionState,
 } from "../contracts/entities/issue-execution.js";
 import { isPullRequestLive } from "../state-machines/pull-request.js";
-import { isRunSettled } from "../state-machines/run.js";
+import { isRunSettled, isRunWorking } from "../state-machines/run.js";
 import type { IssueExecutionEvidence } from "./evidence.js";
 import { holdsWorkspace } from "./issue-workspace.js";
 
@@ -18,8 +18,8 @@ type Winner = Classification & { evidence: IssueExecutionEvidence };
 
 type Candidate = { classified: Classification | null; evidence: IssueExecutionEvidence };
 
-/** Active work — live, or suspended on a provider quota — outranks a delivered PR, which outranks a run awaiting review, which outranks a stopped cycle. */
 const KIND_RANK = {
+  awaiting_input: 6,
   running: 5,
   waiting_for_provider: 4,
   pr_open: 3,
@@ -56,13 +56,13 @@ function failureReason(evidence: IssueExecutionEvidence): IssueExecutionFailureR
   return evidence.run_status === "awaiting_human" ? "interrupted" : null;
 }
 
-/** A run is "running" (active work) while it is neither stopped, nor terminal, nor resting at review_ready. A quota wait is its own state so it never reads as live work. */
 function classifyEvidence(evidence: IssueExecutionEvidence): Classification | null {
   const reason = failureReason(evidence);
   if (reason !== null) return { kind: "failed", reason };
   if (evidence.run_status === "waiting_for_provider") return { kind: "waiting_for_provider" };
+  if (isRunWorking(evidence.run_status)) return { kind: "running" };
   if (!isRunSettled(evidence.run_status) && evidence.run_status !== "review_ready") {
-    return { kind: "running" };
+    return { kind: "awaiting_input" };
   }
   if (hasOpenPullRequest(evidence)) return { kind: "pr_open" };
   if (evidence.run_status === "review_ready" && isReviewOpen(evidence))
@@ -87,6 +87,13 @@ function outranks(candidate: Candidate, best: Candidate): boolean {
 }
 
 function toExecution(winner: Winner): IssueExecution {
+  if (winner.kind === "awaiting_input") {
+    return {
+      state: "awaiting_input",
+      run_id: winner.evidence.run_id,
+      request: winner.evidence.pending_request,
+    };
+  }
   if (winner.kind !== "failed") return { state: winner.kind, run_id: winner.evidence.run_id };
   return {
     state: "failed",

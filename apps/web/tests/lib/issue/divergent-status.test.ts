@@ -39,6 +39,15 @@ describe("divergentSourceStatus", () => {
     expect(
       divergentSourceStatus(issueContract({ status: "done", execution: RUNNING, workspace: OPEN })),
     ).toBeNull();
+    expect(
+      divergentSourceStatus(
+        issueContract({
+          status: "running",
+          execution: { state: "awaiting_input", run_id: "run-1", request: null },
+          workspace: openWorkspace("run-1", "awaiting_permission"),
+        }),
+      ),
+    ).toBeNull();
   });
 
   it("stays silent once the cycle is closed, when the status is the primary state again", () => {

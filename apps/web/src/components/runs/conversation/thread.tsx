@@ -43,13 +43,6 @@ export function ConversationThread({
     autoscroll.pinned;
   useMarkConversationSeen(latestOnScreen ? { step: stepRunId } : null);
   const step = detail.steps.find((candidate) => candidate.id === stepRunId);
-  const status =
-    step === undefined
-      ? null
-      : liveStepStatus(
-          step.status,
-          latestSessionForStep(detail.sessions, stepRunId)?.status ?? null,
-        );
 
   if (history.status === "error") return loadErrorState(history.retry);
   if (history.status === "pending") return LOADING;
@@ -77,13 +70,20 @@ export function ConversationThread({
               history.hasOlder,
               asked.interactions,
             );
+            const asking = asked.interactions.some(
+              (interaction) =>
+                interaction.step_run_id === stepRunId && interaction.state === "pending",
+            );
+            const status =
+              step === undefined
+                ? null
+                : liveStepStatus(
+                    step.status,
+                    latestSessionForStep(detail.sessions, stepRunId)?.status ?? null,
+                    asking,
+                  );
             // A pending question is out: the turn is live, but it is waiting on the operator, and its card already says so.
-            const working =
-              (status === "starting" || status === "running") &&
-              !asked.interactions.some(
-                (interaction) =>
-                  interaction.step_run_id === stepRunId && interaction.state === "pending",
-              );
+            const working = (status === "starting" || status === "running") && !asking;
 
             return (
               <div className="flex min-h-0 flex-1 flex-col">

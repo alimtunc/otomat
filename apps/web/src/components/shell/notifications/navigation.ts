@@ -5,6 +5,7 @@ import { projectTabsStore } from "@web/components/shell/project-tabs/store";
 import { describeOperationFailure } from "@web/components/shell/remote-session/status-labels";
 import { activeHostStore } from "@web/lib/active-host";
 import { inboxRoute } from "@web/lib/inbox/target";
+import { interactionAnchor } from "@web/lib/run/interaction";
 
 export function notificationRoute(notification: DesktopNotification) {
   const target = notification.target;
@@ -19,7 +20,7 @@ export function notificationRoute(notification: DesktopNotification) {
     hash:
       notification.interaction_id === null
         ? undefined
-        : `interaction-${notification.interaction_id}`,
+        : interactionAnchor(notification.interaction_id),
   };
 }
 

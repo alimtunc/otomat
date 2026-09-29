@@ -41,7 +41,6 @@ export interface StatusDescriptor {
 export type StatusMap<K extends string> = Record<K, StatusDescriptor>;
 
 export interface KindStatusMap {
-  /** An issue's source status, plus the local `failed` execution the board shows as its own column. */
   issue: IssueBoardColumn;
   run: RunState;
   runContribution: RunContributionDeliveryPhase;

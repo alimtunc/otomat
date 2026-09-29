@@ -4,6 +4,7 @@ import { useAnswerRunInteraction } from "@web/api/runs/interaction-mutations";
 import { InteractionAnswerForm } from "@web/components/runs/conversation/interaction/answer-form";
 import { useNotificationAnchor } from "@web/components/runs/conversation/interaction/use-notification-anchor";
 import {
+  interactionAnchor,
   interactionAnswerLabel,
   interactionErrorMessage,
   interactionStateLabel,
@@ -21,7 +22,7 @@ export function InteractionCard({
   const answer = useAnswerRunInteraction(runId, interaction.id);
   const pending = interaction.state === "pending";
   const inFlight = answer.isPending ? answer.variables : undefined;
-  const anchorId = `interaction-${interaction.id}`;
+  const anchorId = interactionAnchor(interaction.id);
   const anchorRef = useNotificationAnchor(anchorId);
 
   return (

@@ -24,6 +24,7 @@ export function StatusChipsSection() {
         <IssueStatusChip status="backlog" />
         <IssueStatusChip status="ready" />
         <IssueStatusChip status="running" />
+        <IssueStatusChip status="awaiting_input" />
         <IssueStatusChip status="reviewing" />
         <IssueStatusChip status="done" />
       </Row>

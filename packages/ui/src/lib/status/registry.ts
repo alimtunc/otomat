@@ -51,6 +51,7 @@ const ISSUE_STATUS: StatusMap<IssueBoardColumn> = {
   backlog: { tone: "neutral", icon: Circle, label: "Backlog" },
   ready: { tone: "iris", icon: CircleDot, label: "Ready" },
   running: { tone: "live", icon: Loader, label: "Running", live: true },
+  awaiting_input: { tone: "warning", icon: MessageCircleQuestion, label: "Waiting on you" },
   waiting_for_provider: { tone: "warning", icon: Timer, label: "Waiting on provider" },
   failed: { tone: "danger", icon: TriangleAlert, label: "Failed" },
   reviewing: { tone: "review", icon: MessageSquare, label: "Reviewing" },

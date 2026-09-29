@@ -1,6 +1,7 @@
 import type { RuntimeInteractionAnswer } from "@otomat/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
+import { invalidateRunCycleCaches } from "@web/api/runs/mutations";
 import { seedInteraction } from "@web/api/runs/seed/interaction";
 import { useQueryKeys } from "@web/api/use-query-keys";
 
@@ -14,9 +15,8 @@ export function useAnswerRunInteraction(runId: string, interactionId: string) {
     onSuccess: (interaction) => {
       seedInteraction(client, keys, interaction);
       client.invalidateQueries({ queryKey: keys.runInteractions(runId) });
-      client.invalidateQueries({ queryKey: keys.run(runId) });
-      client.invalidateQueries({ queryKey: keys.activity });
-      client.invalidateQueries({ queryKey: keys.inbox });
+      client.invalidateQueries({ queryKey: keys.conversations });
+      invalidateRunCycleCaches(client, keys, runId);
     },
   });
 }

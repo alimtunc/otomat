@@ -90,6 +90,7 @@ export {
   type IssueExecution,
   type IssueExecutionFailure,
   type IssueExecutionFailureReason,
+  type IssueExecutionRequest,
   type IssueExecutionState,
   type IssueExecutionStoppedStep,
   type AgentSessionKind,

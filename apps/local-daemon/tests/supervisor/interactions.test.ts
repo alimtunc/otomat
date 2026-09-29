@@ -12,6 +12,7 @@ import {
 import type { RuntimeInteractionAnswer } from "@otomat/domain";
 import { afterEach, beforeEach, expect, it } from "vitest";
 
+import { readIssue } from "#api/reads";
 import { readRunEvents, sessionDir } from "#events";
 import { RunInteractionRefusedError, type Supervisor } from "#supervisor";
 import { ingestRunInteractions } from "#supervisor/interaction/ingest";
@@ -138,6 +139,26 @@ it("hands the answer to the running turn exactly once and returns the run to wor
   expect(
     readRunEvents(fix.db, RUN).filter((event) => event.type === "runtime.interaction_answered"),
   ).toHaveLength(1);
+
+  await supervisor.abort(RUN);
+  await supervisor.settle();
+});
+
+it("shows the issue waiting on the question, never running, until the answer resumes the turn", async () => {
+  const { supervisor } = makeSupervisor(fix, "live-ask");
+  seedAskingRun();
+  const row = await askingTurn(supervisor);
+  await waitFor(() => getRun(fix.db, RUN)?.status === "awaiting_permission");
+
+  expect(readIssue(fix.db, "i1")?.execution).toEqual({
+    state: "awaiting_input",
+    run_id: RUN,
+    request: { id: row.id, step_run_id: STEP },
+  });
+
+  await supervisor.answerInteraction(RUN, row.id, ALLOW);
+
+  expect(readIssue(fix.db, "i1")?.execution).toEqual({ state: "running", run_id: RUN });
 
   await supervisor.abort(RUN);
   await supervisor.settle();

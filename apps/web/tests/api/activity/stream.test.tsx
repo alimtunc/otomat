@@ -152,3 +152,26 @@ it("reopens the stream on the token a restarted daemon now demands", async () =>
   expect(close).toHaveBeenCalledTimes(1);
   expect(subscribe).toHaveBeenCalledTimes(2);
 });
+
+it("refreshes the issues, runs and threads when a run changes status, even after a poll saw it first, never when a frame only re-dates it", async () => {
+  const running = snapshot(["run-1"], "2026-08-20T10:00:00.000Z");
+  listActivity.mockResolvedValue(running);
+  const client = testQueryClient();
+  const summaries = [keys.issuesList("p1"), keys.runs, keys.conversations];
+  const invalidated = () =>
+    summaries.map((key) => client.getQueryState(key)?.isInvalidated ?? false);
+  const mounted = await mountWithQuery(<Probe />, client);
+  cleanups.push(mounted.cleanup);
+  for (const key of summaries) client.setQueryData(key, []);
+
+  await push(snapshot(["run-1"], "2026-08-20T10:00:05.000Z"));
+  expect(invalidated()).toEqual([false, false, false]);
+
+  const waiting = {
+    activities: [runActivity({ bucket: "attention", status: "awaiting_permission" })],
+    observed_at: "2026-08-20T10:00:10.000Z",
+  } satisfies ActivitySnapshot;
+  act(() => client.setQueryData(keys.activity, waiting));
+  await push(waiting);
+  expect(invalidated()).toEqual([true, true, true]);
+});

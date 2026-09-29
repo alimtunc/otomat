@@ -12,6 +12,7 @@ import { CardChips } from "@web/components/issues/list/card-chips";
 import { IssuePreviewCard } from "@web/components/issues/preview/card";
 import { divergentSourceStatus } from "@web/lib/issue/divergent-status";
 import { failureSummary } from "@web/lib/issue/execution-failure";
+import { issueTarget } from "@web/lib/issue/target";
 import type { ComponentProps } from "react";
 
 export function BoardCard({ issue, ...props }: { issue: IssueSummary } & ComponentProps<"li">) {
@@ -26,8 +27,7 @@ export function BoardCard({ issue, ...props }: { issue: IssueSummary } & Compone
     <li {...props}>
       <IssuePreviewCard issue={issue}>
         <Link
-          to="/issues/$issueId"
-          params={{ issueId: issue.id }}
+          {...issueTarget(issue)}
           className={`flex flex-col gap-1.75 rounded-lg border border-border-subtle bg-surface-1 px-3 py-2.75 hover:border-border hover:bg-surface-2 hover:shadow-[var(--shadow-sm)] hover:-translate-y-px ${FOCUS_RING}`}
           style={{
             transition:
@@ -59,6 +59,7 @@ export function BoardCard({ issue, ...props }: { issue: IssueSummary } & Compone
           )}
           <span className="flex flex-wrap items-center gap-1">
             {sourceStatus !== null ? <IssueStatusChip status={sourceStatus} /> : null}
+            {primary.state === "awaiting_input" ? <IssueStatusChip status={primary.state} /> : null}
             {overlay === null ? null : <IssueExecutionChip execution={overlay} />}
             <CardChips issue={issue} />
           </span>

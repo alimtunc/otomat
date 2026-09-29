@@ -15,6 +15,7 @@ export function issueExecutionEvidence(
     worktree_status: "active",
     halted_step: null,
     interrupted_step: null,
+    pending_request: null,
     pr_status: null,
     pr_publication: null,
     adopted_pr_status: null,

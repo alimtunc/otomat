@@ -153,3 +153,16 @@ it("names an issue-less conversation from its project and shows the full title o
     expect(document.body.textContent).toContain("CRM-12 · Refondre la fiche contact du CRM"),
   );
 });
+
+it("opens the group of a thread waiting on the operator, as it does for a live one", async () => {
+  await render([
+    step("step-ask", crm, {
+      step_status: "awaiting_permission",
+      pending_interaction: { kind: "choice", prompt: "Which parser?" },
+    }),
+    step("step-billing", billing),
+  ]);
+
+  expect(header("CRM-12")?.getAttribute("aria-expanded")).toBe("true");
+  expect(header("CRM-13")?.getAttribute("aria-expanded")).toBe("false");
+});

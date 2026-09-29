@@ -33,6 +33,11 @@ const PENDING: ResolvedAgentConfig = {
 
 const stopStep = vi.fn();
 const cancelStep = vi.fn();
+let pendingInteractions: { step_run_id: string; state: "pending" }[] = [];
+
+vi.mock("@web/api/runs/queries", () => ({
+  useRunInteractions: () => ({ data: { interactions: pendingInteractions } }),
+}));
 
 vi.mock("@web/api/runs/step-mutations", () => ({
   useStopRunStep: () => ({ mutate: stopStep, isPending: false }),
@@ -145,6 +150,7 @@ const DETAIL: RunDetail = {
 
 afterEach(() => {
   document.body.replaceChildren();
+  pendingInteractions = [];
 });
 
 it("shows the last launched turn's reported model separately from the pending model", async () => {
@@ -226,6 +232,27 @@ it("reads a succeeded step as running while its next turn is live, then settles 
   await view.rerender(<ConversationHeader detail={reopened("terminated")} stepRunId="step-1" />);
   expect(view.container.textContent).toContain("Succeeded");
   expect(view.container.textContent).not.toContain("Stop step");
+  expect(view.container.querySelector(".animate-spin")).toBeNull();
+  await view.cleanup();
+});
+
+it("reads a live follow-up turn as waiting only while its own step has a question pending", async () => {
+  const launched = DETAIL.sessions[0]!;
+  pendingInteractions = [{ step_run_id: "step-other", state: "pending" }];
+  const asking: RunDetail = {
+    ...DETAIL,
+    run: { ...DETAIL.run, status: "awaiting_permission" },
+    steps: [{ ...DETAIL.steps[0]!, status: "succeeded", next_turn_config: null }],
+    sessions: [{ ...launched, id: "session-next", status: "active" }],
+  };
+
+  const view = await mount(<ConversationHeader detail={asking} stepRunId="step-1" />);
+  expect(view.container.textContent).toContain("Running");
+
+  pendingInteractions = [{ step_run_id: "step-1", state: "pending" }];
+  await view.rerender(<ConversationHeader detail={asking} stepRunId="step-1" />);
+  expect(view.container.textContent).toContain("Awaiting permission");
+  expect(view.container.textContent).not.toContain("Running");
   expect(view.container.querySelector(".animate-spin")).toBeNull();
   await view.cleanup();
 });

@@ -1,5 +1,6 @@
 import type { ConversationThreadEntry } from "@otomat/domain";
 import { sectionOf } from "@web/lib/conversations/sections";
+import { isConversationWaiting } from "@web/lib/conversations/status";
 
 const STATES = ["all", "active", "waiting", "finished"] as const;
 export type ConversationStateFilter = (typeof STATES)[number];
@@ -28,22 +29,12 @@ export interface ConversationProjectOption {
   label: string;
 }
 
-/** A pending question waits on the operator whatever state the step reads. */
-function isWaitingOnOperator(entry: ConversationThreadEntry): boolean {
-  if ("terminal" in entry) return false;
-  return (
-    entry.pending_interaction !== null ||
-    entry.step_status === "awaiting_permission" ||
-    entry.step_status === "awaiting_human"
-  );
-}
-
 function inState(entry: ConversationThreadEntry, state: ConversationStateFilter): boolean {
   switch (state) {
     case "all":
       return true;
     case "waiting":
-      return isWaitingOnOperator(entry);
+      return isConversationWaiting(entry);
     case "active":
     case "finished":
       return sectionOf(entry) === state;
