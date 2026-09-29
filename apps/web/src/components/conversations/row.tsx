@@ -1,4 +1,4 @@
-import type { ConversationThreadEntry } from "@otomat/domain";
+import { isConversationFollowed, type ConversationThreadEntry } from "@otomat/domain";
 import { cn, FOCUS_RING_INSET, Icon, LiveDot, RelativeTime, StepStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import { ConversationRowActions } from "@web/components/conversations/row-actions";
@@ -29,7 +29,7 @@ export function ConversationRow({
   const status = conversationStatus([entry]);
   const onKeyDown = (event: KeyboardEvent<HTMLAnchorElement>): void => {
     if (pending || event.metaKey || event.ctrlKey || event.altKey) return;
-    if (event.key === "u") onMark({ read: !entry.read });
+    if (event.key === "u" && isConversationFollowed(entry)) onMark({ read: !entry.read });
     else if (event.key === "e") onMark({ archived: true });
   };
   return (

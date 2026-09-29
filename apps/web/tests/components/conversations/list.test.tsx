@@ -71,11 +71,12 @@ it("collapses a group without dropping the selected thread, and the arrows skip 
   await cleanup();
 });
 
-it("folds finished conversations by default while keeping their unread count visible", async () => {
+it("folds finished conversations by default without claiming attention", async () => {
   const finished = groupConversations([
     conversationEntry({
       id: "conversation:finished",
       step_run_id: "finished",
+      read: true,
       issue: { id: "finished-issue", identifier: "OTO-3", title: "Finished work", cycle: null },
     }),
   ]);
@@ -84,10 +85,11 @@ it("folds finished conversations by default while keeping their unread count vis
   );
   const history = container.querySelector<HTMLButtonElement>("h2 button");
   expect(history?.getAttribute("aria-expanded")).toBe("false");
-  expect(history?.textContent).toContain("1 unread");
+  expect(history?.textContent).not.toContain("unread");
   expect(container.querySelectorAll("[data-conversation-row]")).toHaveLength(0);
   await act(async () => history?.click());
   expect(container.textContent).toContain("Finished work");
+  expect(container.textContent).not.toContain("Unread");
   await cleanup();
 });
 

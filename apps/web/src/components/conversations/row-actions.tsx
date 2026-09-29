@@ -1,4 +1,4 @@
-import type { ConversationThreadEntry } from "@otomat/domain";
+import { isConversationFollowed, type ConversationThreadEntry } from "@otomat/domain";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,9 +43,11 @@ export function ConversationRowActions({
           }
         />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem disabled={pending} onClick={() => onMark({ read: !entry.read })}>
-            {entry.read ? "Mark as unread" : "Mark as read"}
-          </DropdownMenuItem>
+          {isConversationFollowed(entry) ? (
+            <DropdownMenuItem disabled={pending} onClick={() => onMark({ read: !entry.read })}>
+              {entry.read ? "Mark as unread" : "Mark as read"}
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem disabled={pending} onClick={() => onMark({ archived: true })}>
             Archive
           </DropdownMenuItem>

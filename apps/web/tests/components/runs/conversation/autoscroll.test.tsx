@@ -65,6 +65,10 @@ vi.mock("@web/api/daemon/queries", () => ({
   useRuntimes: () => ({ data: [claudeDescriptor()] }),
 }));
 
+vi.mock("@web/api/conversations/use-mark-seen", () => ({
+  useMarkConversationSeen: () => undefined,
+}));
+
 vi.mock("@web/components/runs/conversation/next-turn/menu", () => ({
   NextTurnMenu: () => null,
 }));

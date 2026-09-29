@@ -12,6 +12,7 @@ import { mount } from "#support/mount";
 let conversations: FakeQueryState = {};
 let search: ConversationsSearch = {};
 const mutate = vi.fn();
+const seen = vi.fn();
 
 vi.mock("@otomat/ui", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
@@ -24,6 +25,9 @@ vi.mock("@web/api/conversations/use-conversations-stream", () => ({
 }));
 vi.mock("@web/api/conversations/mutations", () => ({
   useMarkConversations: () => ({ mutate, isPending: false }),
+}));
+vi.mock("@web/api/conversations/use-mark-seen", () => ({
+  useMarkConversationSeen: (thread: unknown) => seen(thread),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -94,6 +98,7 @@ const spinningRows = (container: HTMLElement): Element[] =>
 
 beforeEach(() => {
   mutate.mockReset();
+  seen.mockReset();
   search = {};
 });
 
@@ -133,7 +138,7 @@ it("keeps the loaded threads on screen when a refresh fails", async () => {
   await cleanup();
 });
 
-it("opens the thread the URL names and reads it once it is on screen", async () => {
+it("opens the thread the URL names and leaves its reading to the thread on screen", async () => {
   conversations = loaded([
     conversationEntry(),
     conversationEntry({ id: "conversation:step-2", step_run_id: "step-2" }),
@@ -143,32 +148,18 @@ it("opens the thread the URL names and reads it once it is on screen", async () 
   const { container, cleanup } = await mount(<ConversationsView />);
 
   expect(container.textContent).toContain("thread run-1/step-2");
-  expect(mutate).toHaveBeenCalledTimes(1);
-  expect(mutate).toHaveBeenCalledWith({
-    marks: [
-      {
-        entry_id: "conversation:step-2",
-        read: true,
-        archived: false,
-        evidence_updated_at: "2026-09-19T10:00:00.000Z",
-      },
-    ],
-  });
+  expect(seen).toHaveBeenLastCalledWith(null);
   await cleanup();
 });
 
-it("does not read a thread that is already read, nor one the host does not list", async () => {
-  conversations = loaded([conversationEntry({ read: true })]);
-  search = { run: "run-1", step: "step-1" };
-  const read = await mount(<ConversationsView />);
-  expect(mutate).not.toHaveBeenCalled();
-  await read.cleanup();
-
+it("opens a thread the host does not list", async () => {
+  conversations = loaded([conversationEntry()]);
   search = { run: "run-9", step: "step-9" };
-  const foreign = await mount(<ConversationsView />);
-  expect(foreign.container.textContent).toContain("thread run-9/step-9");
-  expect(mutate).not.toHaveBeenCalled();
-  await foreign.cleanup();
+
+  const { container, cleanup } = await mount(<ConversationsView />);
+
+  expect(container.textContent).toContain("thread run-9/step-9");
+  await cleanup();
 });
 
 it("moves an issue out of Following on the frame that closes its cycle", async () => {
@@ -181,12 +172,13 @@ it("moves an issue out of Following on the frame that closes its cycle", async (
   conversations = loaded([
     conversationEntry({
       step_status: "succeeded",
+      read: true,
       issue: { id: "issue-1", identifier: "OTO-1", title: "Ship it", cycle: null },
     }),
   ]);
   await rerender(<ConversationsView />);
 
-  expect(sectionOf()).toEqual(["Recently finished11 unread"]);
+  expect(sectionOf()).toEqual(["Recently finished1"]);
   await cleanup();
 });
 
@@ -265,7 +257,7 @@ it("drops the loader and folds its issue back on the frame the thread settles", 
   await cleanup();
 });
 
-it("opens and marks a terminal without selecting a cockpit step", async () => {
+it("opens a terminal and hands it to reading without selecting a cockpit step", async () => {
   const entry = terminalConversationEntry();
   conversations = {
     data: snapshot([conversationEntry(), entry]),
@@ -276,10 +268,6 @@ it("opens and marks a terminal without selecting a cockpit step", async () => {
   const { container, cleanup } = await mount(<ConversationsView />);
   expect(container.textContent).toContain(`terminal ${entry.terminal.id}`);
   expect(container.textContent).not.toContain("thread run-1/step-1");
-  expect(mutate).toHaveBeenCalledWith({
-    marks: [
-      { entry_id: entry.id, read: true, archived: false, evidence_updated_at: entry.updated_at },
-    ],
-  });
+  expect(seen).toHaveBeenLastCalledWith({ terminal: entry.terminal.id });
   await cleanup();
 });

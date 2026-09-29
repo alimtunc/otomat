@@ -85,6 +85,23 @@ describe("ConversationRow", () => {
     await cleanup();
   });
 
+  it("offers no reading to flip on a finished thread, only archiving", async () => {
+    const entry = conversationEntry({
+      read: true,
+      step_status: "succeeded",
+      issue: { id: "issue-1", identifier: "OTO-1", title: "Ship it", cycle: null },
+    });
+    const { link, onMark, cleanup } = await render({ entry });
+
+    await act(async () => control("Conversation actions").click());
+    expect(findMenuItem("Mark as unread")).toBeUndefined();
+    expect(findMenuItem("Archive")).toBeDefined();
+    link.dispatchEvent(new KeyboardEvent("keydown", { key: "u", bubbles: true }));
+
+    expect(onMark).not.toHaveBeenCalled();
+    await cleanup();
+  });
+
   it("shows the issue directly for a single thread and omits a success badge", async () => {
     const { container, cleanup } = await render({
       showIssue: true,
