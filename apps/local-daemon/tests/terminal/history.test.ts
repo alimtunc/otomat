@@ -45,7 +45,7 @@ it("lists project and issue terminals without runs and reads their output after 
     project: { id: "p1" },
     issue: null,
     terminal: { state: "exited", exit_code: 7 },
-    read: false,
+    read: true,
   });
   expect(snapshot.entries.find((entry) => entry.id === `terminal:${issue.id}`)).toMatchObject({
     issue: { id: "i1" },
