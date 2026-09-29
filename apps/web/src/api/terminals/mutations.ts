@@ -29,6 +29,10 @@ export function useCloseTerminal(client: DaemonClient) {
   return useMutation({
     mutationFn: ({ id, instance }: { id: string; instance: string }) =>
       client.closeTerminal(id, instance),
-    onSuccess: () => cache.invalidateQueries({ queryKey: keys.terminals(activeHost().daemonUrl) }),
+    onSuccess: () =>
+      Promise.all([
+        cache.invalidateQueries({ queryKey: keys.terminals(activeHost().daemonUrl) }),
+        cache.invalidateQueries({ queryKey: keys.conversations }),
+      ]),
   });
 }

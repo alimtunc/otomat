@@ -77,7 +77,6 @@ export function TerminalPanel(
         {({ instance }) => (
           <>
             <TerminalToolbar
-              client={client}
               host={host}
               project={projectId !== null}
               session={session}

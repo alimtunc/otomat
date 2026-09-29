@@ -1,18 +1,7 @@
 import type { ConversationThreadEntry } from "@otomat/domain";
-import {
-  cn,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  FOCUS_RING_INSET,
-  Icon,
-  IconButton,
-  LiveDot,
-  RelativeTime,
-  StepStatusChip,
-} from "@otomat/ui";
+import { cn, FOCUS_RING_INSET, Icon, LiveDot, RelativeTime, StepStatusChip } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
+import { ConversationRowActions } from "@web/components/conversations/row-actions";
 import { conversationLine } from "@web/lib/conversations/line";
 import { conversationStatus } from "@web/lib/conversations/status";
 import { conversationTitle } from "@web/lib/conversations/title";
@@ -119,27 +108,7 @@ export function ConversationRow({
           </span>
         </span>
       </Link>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          disabled={pending}
-          render={
-            <IconButton
-              size="sm"
-              label="Conversation actions"
-              icon={<Icon name="more-horizontal" aria-hidden />}
-              className="mr-1 self-center text-text-tertiary"
-            />
-          }
-        />
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem disabled={pending} onClick={() => onMark({ read: !entry.read })}>
-            {entry.read ? "Mark as unread" : "Mark as read"}
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled={pending} onClick={() => onMark({ archived: true })}>
-            Archive
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <ConversationRowActions entry={entry} pending={pending} onMark={onMark} />
     </div>
   );
 }
