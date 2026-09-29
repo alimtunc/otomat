@@ -5,6 +5,7 @@ import { type ReactNode, useId } from "react";
 
 export interface ConversationGroupItemProps {
   group: ConversationGroup;
+  nested: boolean;
   collapsed: boolean;
   onToggle: () => void;
   children: ReactNode;
@@ -12,16 +13,18 @@ export interface ConversationGroupItemProps {
 
 export function ConversationGroupItem({
   group,
+  nested,
   collapsed,
   onToggle,
   children,
 }: ConversationGroupItemProps) {
+  const Heading = nested ? "h4" : "h3";
   const rowsId = useId();
   const unread = group.entries.some((entry) => !entry.read);
   const status = conversationStatus(group.entries);
   return (
     <li className="flex flex-col">
-      <h3>
+      <Heading>
         <button
           type="button"
           aria-expanded={!collapsed}
@@ -59,7 +62,7 @@ export function ConversationGroupItem({
             </>
           ) : null}
         </button>
-      </h3>
+      </Heading>
       {collapsed ? null : (
         <ul id={rowsId} className="flex flex-col gap-0.5 pl-3">
           {children}

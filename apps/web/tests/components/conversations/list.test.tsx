@@ -4,7 +4,11 @@ import { groupConversations } from "@web/lib/conversations/sections";
 import { act } from "react";
 import { expect, it, vi } from "vitest";
 
-import { conversationEntry, terminalConversationEntry } from "#support/conversations";
+import {
+  conversationEntry,
+  crmConversationEntry,
+  terminalConversationEntry,
+} from "#support/conversations";
 import { mountRouted } from "#support/router";
 
 const sections = groupConversations([
@@ -113,5 +117,36 @@ it("reveals the selected project terminal group without an issue", async () => {
   expect(container.querySelector('[aria-current="true"]')?.getAttribute("href")).toBe(
     "/conversations?terminal=second",
   );
+  await cleanup();
+});
+
+it("heads each project once threads span several, and folds one project on its own", async () => {
+  const { container, cleanup } = await mountRouted(
+    <ConversationList
+      sections={groupConversations([
+        crmConversationEntry(),
+        conversationEntry(),
+        conversationEntry({ id: "conversation:step-2", step_run_id: "step-2" }),
+      ])}
+      selectedId={null}
+      pending={false}
+      onMark={vi.fn()}
+    />,
+  );
+  const [crmHeader, otomatHeader] = headers(container);
+
+  expect(headers(container).map((header) => header.textContent)).toEqual([
+    expect.stringContaining("CRM"),
+    expect.stringContaining("Otomat"),
+  ]);
+  expect(container.querySelector("h4 button")?.textContent).toContain("Ship it");
+  expect(container.querySelectorAll("[data-conversation-row]")).toHaveLength(3);
+
+  await act(async () => crmHeader?.click());
+  expect(crmHeader?.getAttribute("aria-expanded")).toBe("false");
+  expect(crmHeader?.textContent).toContain("1 unread");
+  expect(otomatHeader?.getAttribute("aria-expanded")).toBe("true");
+  expect(container.textContent).not.toContain("Import leads");
+  expect(container.querySelectorAll("[data-conversation-row]")).toHaveLength(2);
   await cleanup();
 });

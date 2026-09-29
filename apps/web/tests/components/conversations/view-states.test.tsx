@@ -2,10 +2,16 @@
 import type { ConversationEntry, ConversationSnapshot, StepRunState } from "@otomat/domain";
 import type { ConversationsSearch } from "@web/components/conversations/search";
 import { ConversationsView } from "@web/components/conversations/view";
+import type { ConversationFilters } from "@web/lib/conversations/filters";
 import { act, type ReactNode } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
-import { conversationEntry, terminalConversationEntry } from "#support/conversations";
+import {
+  conversationEntry,
+  crmConversationEntry,
+  terminalConversationEntry,
+} from "#support/conversations";
+import { findButton } from "#support/dom-queries";
 import type { FakeQueryState } from "#support/fake-query";
 import { mount } from "#support/mount";
 
@@ -63,6 +69,20 @@ vi.mock("@web/components/conversations/thread-body", () => ({
   ),
 }));
 
+vi.mock("@web/components/conversations/filters-menu", () => ({
+  ConversationFiltersMenu: ({
+    filters,
+    onChange,
+  }: {
+    filters: ConversationFilters;
+    onChange: (filters: ConversationFilters) => void;
+  }) => (
+    <button type="button" onClick={() => onChange({ ...filters, projects: ["crm"] })}>
+      Only CRM
+    </button>
+  ),
+}));
+
 vi.mock("@web/components/diagnostics/error-report", () => ({
   ErrorReport: ({ context }: { context?: string }) => <div>{context}</div>,
 }));
@@ -92,6 +112,19 @@ function groupHeader(container: HTMLElement, title: string): HTMLButtonElement {
   if (header === undefined) throw new Error(`no group ${title}`);
   return header;
 }
+
+function control(label: string): HTMLButtonElement {
+  const found = findButton(label);
+  if (found === undefined) throw new Error(`no button ${label}`);
+  return found;
+}
+
+const unreadAcrossProjects = (): ConversationEntry[] => [
+  conversationEntry({ updated_at: "2026-09-29T09:00:00.000Z" }),
+  crmConversationEntry({ updated_at: "2026-09-29T08:00:00.000Z" }),
+  conversationEntry({ id: "conversation:seen", step_run_id: "seen", read: true }),
+  conversationEntry({ id: "conversation:shelved", step_run_id: "shelved", archived: true }),
+];
 
 const spinningRows = (container: HTMLElement): Element[] =>
   [...container.querySelectorAll("a")].filter((row) => row.querySelector(".animate-spin") !== null);
@@ -269,5 +302,68 @@ it("opens a terminal and hands it to reading without selecting a cockpit step", 
   expect(container.textContent).toContain(`terminal ${entry.terminal.id}`);
   expect(container.textContent).not.toContain("thread run-1/step-1");
   expect(seen).toHaveBeenLastCalledWith({ terminal: entry.terminal.id });
+  await cleanup();
+});
+
+it("marks every unread thread the list shows, across projects, in one request stamped with its evidence", async () => {
+  conversations = loaded(unreadAcrossProjects());
+  const { cleanup } = await mount(<ConversationsView />);
+
+  await act(async () => control("Mark all read").click());
+
+  expect(mutate).toHaveBeenCalledOnce();
+  expect(mutate).toHaveBeenCalledWith({
+    marks: [
+      {
+        entry_id: "conversation:step-1",
+        evidence_updated_at: "2026-09-29T09:00:00.000Z",
+        read: true,
+        archived: false,
+      },
+      {
+        entry_id: "conversation:crm-1",
+        evidence_updated_at: "2026-09-29T08:00:00.000Z",
+        read: true,
+        archived: false,
+      },
+    ],
+  });
+  await cleanup();
+});
+
+it("keeps Mark all read inside the active filter and idles once nothing there is unread", async () => {
+  conversations = loaded(unreadAcrossProjects());
+  const { container, rerender, cleanup } = await mount(<ConversationsView />);
+
+  await act(async () => control("Only CRM").click());
+  await act(async () => control("Mark all read").click());
+
+  expect(mutate).toHaveBeenCalledWith({
+    marks: [expect.objectContaining({ entry_id: "conversation:crm-1", read: true })],
+  });
+
+  conversations = loaded(
+    unreadAcrossProjects().map((entry) =>
+      entry.project.id === "crm" ? { ...entry, read: true } : entry,
+    ),
+  );
+  await rerender(<ConversationsView />);
+  expect(control("Mark all read").disabled).toBe(true);
+  expect(container.textContent).toContain("Import leads");
+  await cleanup();
+});
+
+it("reopens a folded project when one of its threads becomes the selection", async () => {
+  conversations = loaded(unreadAcrossProjects());
+  const { container, rerender, cleanup } = await mount(<ConversationsView />);
+
+  await act(async () => groupHeader(container, "CRM").click());
+  expect(groupHeader(container, "CRM").getAttribute("aria-expanded")).toBe("false");
+  expect(container.textContent).not.toContain("Import leads");
+
+  search = { step: "crm-1" };
+  await rerender(<ConversationsView />);
+  expect(groupHeader(container, "CRM").getAttribute("aria-expanded")).toBe("true");
+  expect(container.textContent).toContain("Import leads");
   await cleanup();
 });

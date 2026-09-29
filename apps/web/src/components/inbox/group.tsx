@@ -6,6 +6,7 @@ const HEADING_CLASS = "flex h-8 items-center gap-2 px-2.5 text-sm font-medium te
 
 export interface InboxGroupProps {
   label: string;
+  level?: "h2" | "h3";
   count: number;
   unreadCount?: number;
   collapsed?: boolean;
@@ -15,6 +16,7 @@ export interface InboxGroupProps {
 
 export function InboxGroup({
   label,
+  level: Heading = "h2",
   count,
   unreadCount = 0,
   collapsed = false,
@@ -35,9 +37,9 @@ export function InboxGroup({
   return (
     <section className="flex flex-col">
       {onToggle === undefined ? (
-        <h2 className={HEADING_CLASS}>{heading}</h2>
+        <Heading className={HEADING_CLASS}>{heading}</Heading>
       ) : (
-        <h2>
+        <Heading>
           <button
             type="button"
             aria-expanded={!collapsed}
@@ -53,7 +55,7 @@ export function InboxGroup({
             />
             {heading}
           </button>
-        </h2>
+        </Heading>
       )}
       {collapsed ? null : (
         <ul id={rowsId} className="flex flex-col gap-0.5 px-2 pb-2">
