@@ -1,6 +1,7 @@
 import {
   ISSUE_CLOSED_STATES,
   RUN_SETTLED_STATES,
+  STEP_RUN_FAILURE_STATES,
   STEP_RUN_SETTLED_STATES,
   type ActivityEvidence,
 } from "@otomat/domain";
@@ -35,7 +36,9 @@ function haltedSteps(db: Db, runIds: string[]): Map<string, string> {
     db
       .select({ run_id: stepRuns.run_id, name: stepRuns.name })
       .from(stepRuns)
-      .where(and(inArray(stepRuns.run_id, runIds), inArray(stepRuns.status, ["failed", "stale"])))
+      .where(
+        and(inArray(stepRuns.run_id, runIds), inArray(stepRuns.status, STEP_RUN_FAILURE_STATES)),
+      )
       .orderBy(asc(stepRuns.idx))
       .all()
       .map((row) => [row.run_id, row.name]),

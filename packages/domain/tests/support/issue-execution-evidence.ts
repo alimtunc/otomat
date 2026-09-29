@@ -14,6 +14,7 @@ export function issueExecutionEvidence(
     run_abandoned_at: null,
     worktree_status: "active",
     halted_step: null,
+    interrupted_step: null,
     pr_status: null,
     pr_publication: null,
     adopted_pr_status: null,

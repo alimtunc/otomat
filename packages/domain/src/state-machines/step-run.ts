@@ -55,6 +55,12 @@ export const STEP_RUN_SETTLED_STATES = [
 ] as const satisfies readonly StepRunState[];
 export type StepRunSettledState = (typeof STEP_RUN_SETTLED_STATES)[number];
 
+/** Step states that fail their run; `canceled` stays out, since a fail-fast cascade cancels the steps it strands. */
+export const STEP_RUN_FAILURE_STATES = [
+  "failed",
+  "stale",
+] as const satisfies readonly StepRunState[];
+
 const stepSettledSet: ReadonlySet<string> = new Set(STEP_RUN_SETTLED_STATES);
 
 export function isStepSettled(status: string): status is StepRunSettledState {

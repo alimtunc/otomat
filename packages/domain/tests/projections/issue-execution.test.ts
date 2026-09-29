@@ -50,20 +50,20 @@ it("keeps a quota wait ahead of a review or a PR of the same instant", () => {
   ).toEqual({ state: "waiting_for_provider", run_id: "r1" });
 });
 
-it("projects a stopped run holding its workspace as failed, never back to its source status", () => {
-  const halted_step = { id: "step-2", name: "Reviewer" };
-  const reasons = {
-    failed: "failed",
-    canceled: "canceled",
-    awaiting_human: "interrupted",
-  } as const;
-  // SAFETY: Object.entries widens the keys; reasons is keyed by the three stopped statuses.
-  const cases = Object.entries(reasons) as [keyof typeof reasons, string][];
-  for (const [run_status, reason] of cases) {
-    expect(projectIssueExecution([ev({ run_id: "r1", run_status, halted_step })])).toEqual({
+it("projects a stopped run holding its workspace as failed, naming the step its reason stopped on", () => {
+  const halted_step = { id: "step-1", name: "Implement", stopped_at: "2026-01-01T00:00:00Z" };
+  const interrupted_step = { id: "step-2", name: "Reviewer", stopped_at: "2026-01-02T00:00:00Z" };
+  const cases = [
+    ["failed", "failed", halted_step],
+    ["canceled", "canceled", halted_step],
+    ["awaiting_human", "interrupted", interrupted_step],
+  ] as const;
+  for (const [run_status, reason, step] of cases) {
+    const evidence = ev({ run_id: "r1", run_status, halted_step, interrupted_step });
+    expect(projectIssueExecution([evidence])).toEqual({
       state: "failed",
       run_id: "r1",
-      failure: { reason, step: halted_step },
+      failure: { reason, step },
     });
   }
 });

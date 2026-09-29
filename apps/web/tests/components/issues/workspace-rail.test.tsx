@@ -4,7 +4,7 @@ import { IssueMetadata } from "@web/components/issues/issue/metadata";
 import { WorkspaceRail } from "@web/components/issues/workspace/rail/workspace-rail";
 import { afterEach, expect, it } from "vitest";
 
-import { issueContract, openWorkspace } from "#support/issue";
+import { issueContract, openWorkspace, stoppedStep } from "#support/issue";
 import { type Mounted } from "#support/mount";
 import { withQueryClient } from "#support/query";
 import { mountRouted } from "#support/router";
@@ -70,7 +70,7 @@ it("keeps the stopped cycle of a done issue readable in the rail", async () => {
       execution: {
         state: "failed",
         run_id: "run-1",
-        failure: { reason: "failed", step: { id: "step-1", name: "Reviewer" } },
+        failure: { reason: "failed", step: stoppedStep("step-1", "Reviewer") },
       },
       workspace: openWorkspace("run-1", "failed"),
     }),
@@ -79,4 +79,29 @@ it("keeps the stopped cycle of a done issue readable in the rail", async () => {
   expect(rowValue(container, "Issue status")).toBe("Done");
   expect(container.querySelector('[aria-label="Execution: failed"]')?.textContent).toBe("Failed");
   expect(container.textContent).toContain("Failed at Reviewer");
+});
+
+it("says which step an interrupted cycle stopped on and since when, and points to the run logs", async () => {
+  const container = await render(
+    issueContract({
+      status: "ready",
+      execution: {
+        state: "failed",
+        run_id: "run-1",
+        failure: {
+          reason: "interrupted",
+          step: { id: "step-2", name: "review", stopped_at: "2026-01-01T00:00:00Z" },
+        },
+      },
+      workspace: openWorkspace("run-1", "awaiting_human"),
+    }),
+  );
+
+  expect(rowValue(container, "Reason")).toBe("Interrupted at review");
+  const since = [...container.querySelectorAll("dt")].find((term) => term.textContent === "Since");
+  expect(since?.nextElementSibling?.querySelector("time")?.getAttribute("datetime")).toBe(
+    "2026-01-01T00:00:00.000Z",
+  );
+  expect(container.textContent).toContain("Read the run logs");
+  expect(container.textContent).not.toContain("failure logs");
 });

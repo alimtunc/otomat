@@ -175,7 +175,7 @@ export const appendRunStepRequestSchema = z
     depends_on: z.array(z.string().min(1)).default([]),
     /** The operator's explicit choice; never implied by an empty `depends_on`. */
     parallel: z.boolean().default(false),
-    /** Halted step this one recovers; once it succeeds, that failure stops holding the run in `failed`. */
+    /** Stopped step this one recovers; once it succeeds, that stop no longer holds the run. */
     replaces: z.string().min(1).optional(),
   })
   .strict()

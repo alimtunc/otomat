@@ -18,6 +18,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { click, setInputValue, setTextareaValue } from "#support/dom-events";
 import { findButton, findLabelled } from "#support/dom-queries";
 import { executionDefaultsQueryResult } from "#support/execution-defaults";
+import { stoppedStep } from "#support/issue";
 import { repositoriesQueryResult, repositoryBranchesQueryResult } from "#support/launch-target";
 import { mount } from "#support/mount";
 import { chainRunDetail } from "#support/run";
@@ -580,7 +581,7 @@ const STOPPED: IssueContract = {
   execution: {
     state: "failed",
     run_id: "run-7",
-    failure: { reason: "failed", step: { id: "step-2", name: "Reviewer" } },
+    failure: { reason: "failed", step: stoppedStep("step-2", "Reviewer") },
   },
 };
 

@@ -126,6 +126,43 @@ it("keeps a required failure standing under an unlinked step that merely succeed
   expect(landedStatus(runId)).toBe("failed");
 });
 
+async function launchInterruptedRun(
+  supervisor: Supervisor,
+): Promise<{ runId: string; stepId: string }> {
+  const run = await supervisor.start({ issue_id: "i-work" });
+  await supervisor.settle();
+  const stepId = listStepRunsForRun(fix.db, run.id)[0]?.id;
+  if (stepId === undefined) throw new Error("the launched run has no step");
+  expect(getRun(fix.db, run.id)?.status).toBe("awaiting_human");
+  expect(stepStatus(run.id, stepId)).toBe("awaiting_human");
+  return { runId: run.id, stepId };
+}
+
+it("releases an interruption once a linked recovery step succeeds, keeping the stopped step", async () => {
+  const { supervisor } = makeSupervisor(fix, ["crash", "complete"]);
+  const { runId, stepId } = await launchInterruptedRun(supervisor);
+
+  await supervisor.appendStep(runId, { ...RECOVERY_STEP, replaces: stepId });
+  await supervisor.settle();
+
+  expect(getRun(fix.db, runId)?.status).toBe("review_ready");
+  expect(stepStatus(runId, stepId)).toBe("awaiting_human");
+  expect(landedStatus(runId)).toBe("review_ready");
+});
+
+it("keeps an interruption standing under a later unlinked step that succeeded", async () => {
+  const { supervisor } = makeSupervisor(fix, ["crash", "complete"]);
+  const { runId, stepId } = await launchInterruptedRun(supervisor);
+
+  await supervisor.appendStep(runId, RECOVERY_STEP);
+  await supervisor.settle();
+
+  const appended = listStepRunsForRun(fix.db, runId).find((step) => step.id !== stepId);
+  expect(appended?.status).toBe("succeeded");
+  expect(getRun(fix.db, runId)?.status).toBe("awaiting_human");
+  expect(landedStatus(runId)).toBe("awaiting_human");
+});
+
 it("reconciles a recovered plan on boot exactly as the live settle did", async () => {
   const { supervisor } = makeSupervisor(fix, "complete");
   seedWorkflowRun(fix.db, {

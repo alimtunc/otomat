@@ -1,13 +1,16 @@
 import {
   isPullRequestLive,
-  type HaltedStepEvidence,
+  STEP_RUN_FAILURE_STATES,
   type IssueExecutionEvidence,
+  type IssueExecutionStoppedStep,
   type PullRequestState,
+  type StepRunState,
 } from "@otomat/domain";
 import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 
 import type { Db } from "../client.js";
 import { issues, pullRequests, runs, stepRuns, worktrees } from "../schema/index.js";
+import { sqliteToIso } from "./instants.js";
 
 /** Evidence for the per-issue execution projection; `issue_id` groups the rows the domain reducer consumes. */
 type IssueExecutionEvidenceRow = IssueExecutionEvidence & { issue_id: string };
@@ -21,17 +24,30 @@ function scopeFilters(options: IssueExecutionScope): SQL[] {
   return filters;
 }
 
-/** The last step of each run that failed or went stale — the step a reader is sent to, not the ones a fail-fast cascade canceled. */
-function lastHaltedSteps(db: Db, filters: SQL[]): Map<string, HaltedStepEvidence> {
+function lastStepsIn(
+  db: Db,
+  filters: SQL[],
+  statuses: readonly StepRunState[],
+): Map<string, IssueExecutionStoppedStep> {
   const rows = db
-    .select({ run_id: stepRuns.run_id, id: stepRuns.id, name: stepRuns.name })
+    .select({
+      run_id: stepRuns.run_id,
+      id: stepRuns.id,
+      name: stepRuns.name,
+      stopped_at: stepRuns.updated_at,
+    })
     .from(stepRuns)
     .innerJoin(runs, eq(stepRuns.run_id, runs.id))
     .innerJoin(issues, eq(runs.issue_id, issues.id))
-    .where(and(inArray(stepRuns.status, ["failed", "stale"]), ...filters))
+    .where(and(inArray(stepRuns.status, statuses), ...filters))
     .orderBy(asc(stepRuns.idx))
     .all();
-  return new Map(rows.map((row) => [row.run_id, { id: row.id, name: row.name }]));
+  return new Map(
+    rows.map((row) => [
+      row.run_id,
+      { id: row.id, name: row.name, stopped_at: sqliteToIso(row.stopped_at) },
+    ]),
+  );
 }
 
 /** The adopted pull request that still stands for each issue: any live one outranks every settled one. */
@@ -56,17 +72,18 @@ function adoptedPullRequests(db: Db, filters: SQL[]): Map<string, PullRequestSta
 
 /**
  * One query per fact returning every run with its worktree, optional pull
- * request and last halted step for the selected issues, so the daemon projects
- * each issue's execution and workspace state without an N+1. Rows are raw
- * persisted facts; `projectIssueExecution` and `projectIssueWorkspace` own the
- * interpretation.
+ * request and last halted and interrupted steps for the selected issues, so the
+ * daemon projects each issue's execution and workspace state without an N+1.
+ * Rows are raw persisted facts; `projectIssueExecution` and
+ * `projectIssueWorkspace` own the interpretation.
  */
 export function listIssueExecutionEvidence(
   db: Db,
   options: IssueExecutionScope = {},
 ): IssueExecutionEvidenceRow[] {
   const filters = scopeFilters(options);
-  const halted = lastHaltedSteps(db, filters);
+  const halted = lastStepsIn(db, filters, STEP_RUN_FAILURE_STATES);
+  const interrupted = lastStepsIn(db, filters, ["awaiting_human"]);
   const adopted = adoptedPullRequests(db, filters);
   return db
     .select({
@@ -90,6 +107,7 @@ export function listIssueExecutionEvidence(
     .map((row) => ({
       ...row,
       halted_step: halted.get(row.run_id) ?? null,
+      interrupted_step: interrupted.get(row.run_id) ?? null,
       adopted_pr_status: adopted.get(row.issue_id) ?? null,
     }));
 }
