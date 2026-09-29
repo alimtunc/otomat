@@ -4,15 +4,19 @@ Everything below happens in the run's **Conversation** tab, on the step selected
 
 ## Messages
 
-Type in the composer and press **Send message** (⌘↵). The message is attached to the selected
-step and its current session, never to the run at large. Its delivery depends on what the runtime
-can do:
+Type in the composer at the bottom of the conversation and press **Send message** (⌘↵). The
+message is attached to the selected step and its current session, never to the run at large. Its
+delivery depends on what the runtime can do:
 
-- Claude Code accepts a message into its **live session** without waiting for the turn to end;
+- Claude Code accepts a message into its **live session** without waiting for the turn to end,
+  unless the next turn's model or effort was changed: the message then waits for the turn to end;
 - Codex delivers it at the **next safe turn boundary**;
 - a step that has not started receives it in its first turn, and a run waiting for capacity or on
   a quota carries it in the turn that resumes it. The composer says which of these applies before
   you send, and shows **Queue message** when it will wait.
+
+While the agent is waiting on a question or a permission request, answer it in its card: a message
+sent from the composer does not answer it.
 
 A message is never lost or delivered twice: it stays visible with its state — queued, delivered,
 acknowledged, or failed with the reason — and a failed one can be retried.
@@ -62,10 +66,16 @@ written reason — the run's history then records that a human accepted it.
 
 ## Change the model or mode for the next turn
 
-**Settings for next turn**, next to the composer, changes the model or approval mode of the
-_next_ turn on that step. The active turn continues unchanged; the first message you send after
-that carries the new configuration, and the session records what it was asked for and what the
-provider reported. A runtime that cannot resume with another model says so and offers an appended
+The **Next turn** control in the composer shows the model and effort the _next_ turn on that step
+will use. Pick another model or effort from its menu and it applies at once — only the models and
+efforts the step's own runtime announces on this host are offered, and the runtime itself never
+changes. Codex also shows its next-turn approval mode beside it. The active turn and the turns
+already launched keep their configuration; the next message you send, or **Resume run**, starts
+the turn with the new one — at the bottom of a stopped run, the control appears only on the step
+**Resume run** reopens — and the session records what it was asked for and what the provider
+reported. A model that does not offer the current effort is not applied with another one in its
+place: the menu asks you to choose an effort it offers, or to switch without one when the model
+takes none. A runtime that cannot resume with another model says so in the menu; add a follow-up
 step instead.
 
 ## Stop, cancel, resume
@@ -82,10 +92,11 @@ step instead.
   **Cancel run**.
 - **Cancel run** (run actions menu, `⋯`) stops every unfinished step. The branch, the worktree and
   the diff stay exactly as they are.
-- A stopped run is **resumed** by sending a message: Otomat reattaches the provider's own session
-  when it still exists, and otherwise opens a recovery session on the same step and worktree, with
-  the run's goal, plan, diff and failure as context. The composer states which of the two will
-  happen. A run that finished normally takes new work as a
+- An interrupted step resumes with the next message you send. A failed or canceled run is
+  **resumed** with **Resume run**, at the bottom of its conversation: Otomat reattaches the
+  provider's own session when it still exists, and otherwise opens a recovery session on the same
+  step and worktree, with the run's goal, plan, diff and failure as context. The conversation states
+  which of the two will happen. A run that finished normally takes new work as a
   [follow-up step](./runs.md#one-issue-one-workspace) instead.
 - **Abandon workspace…** stamps the run as abandoned and stops the plan. It deletes no branch,
   worktree or commit, and shows what stays reachable before asking; it is refused while a turn is

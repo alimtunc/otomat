@@ -407,7 +407,11 @@ it("tells the cockpit what a resume would do before it runs", async () => {
   seedTerminalRun(t.db, runId);
   const app = makeApiApp(t, {
     supervisor: stubSupervisor({
-      resumePlan: () => ({ mode: "recovery", reason: "No provider session was recorded" }),
+      resumePlan: () => ({
+        mode: "recovery",
+        reason: "No provider session was recorded",
+        step_run_ids: ["step-1"],
+      }),
     }),
   });
 
@@ -416,6 +420,7 @@ it("tells the cockpit what a resume would do before it runs", async () => {
   expect(detail.resume).toEqual({
     mode: "recovery",
     reason: "No provider session was recorded",
+    step_run_ids: ["step-1"],
   });
 });
 

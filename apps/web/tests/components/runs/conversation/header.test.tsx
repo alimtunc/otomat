@@ -31,8 +31,6 @@ const PENDING: ResolvedAgentConfig = {
   config_hash: "pending-hash",
 };
 
-let capability: RuntimeDescriptor["capabilities"]["resume_model"] = { status: "supported" };
-
 const stopStep = vi.fn();
 const cancelStep = vi.fn();
 
@@ -53,7 +51,7 @@ vi.mock("@web/api/daemon/queries", () => ({
           steering: "live",
           abort: true,
           resume: true,
-          resume_model: capability,
+          resume_model: { status: "supported" },
           permissions: false,
           diff_hints: false,
           images: { status: "supported", standalone: true },
@@ -63,12 +61,6 @@ vi.mock("@web/api/daemon/queries", () => ({
       } satisfies RuntimeDescriptor,
     ],
   }),
-}));
-
-vi.mock("@web/components/runs/conversation/next-turn/dialog", () => ({
-  NextTurnModelDialog: ({ config }: { config: ResolvedAgentConfig }) => (
-    <button type="button">Change {config.model?.id}</button>
-  ),
 }));
 
 const DETAIL: RunDetail = {
@@ -152,7 +144,6 @@ const DETAIL: RunDetail = {
 };
 
 afterEach(() => {
-  capability = { status: "supported" };
   document.body.replaceChildren();
 });
 
@@ -162,7 +153,6 @@ it("shows the last launched turn's reported model separately from the pending mo
   expect(view.container.textContent).toContain("claude-sonnet-provider · high");
   expect(view.container.textContent).toContain("Model differs from request");
   expect(view.container.textContent).toContain("Next turn: claude-opus");
-  expect(view.container.textContent).not.toContain("Change claude-opus");
   await act(async () => {
     [...view.container.querySelectorAll("button")]
       .find((button) => button.getAttribute("aria-label") === "Session details")
@@ -171,22 +161,6 @@ it("shows the last launched turn's reported model separately from the pending mo
   expect(document.body.textContent).toContain(
     "Requested: claude-sonnet · Reported: claude-sonnet-provider",
   );
-  expect(document.body.textContent).toContain("Change claude-opus");
-  await view.cleanup();
-});
-
-it("shows the installed runtime's refusal and the follow-up-step fallback", async () => {
-  capability = { status: "unsupported", reason: "This version cannot resume with a model." };
-  const view = await mount(<ConversationHeader detail={DETAIL} stepRunId="step-1" />);
-
-  expect(view.container.textContent).not.toContain("Model change unavailable");
-  await act(async () => {
-    [...view.container.querySelectorAll("button")]
-      .find((button) => button.getAttribute("aria-label") === "Session details")
-      ?.click();
-  });
-  expect(document.body.textContent).toContain("Model change unavailable · Add follow-up step");
-  expect(document.body.textContent).toContain("This version cannot resume with a model.");
   await view.cleanup();
 });
 

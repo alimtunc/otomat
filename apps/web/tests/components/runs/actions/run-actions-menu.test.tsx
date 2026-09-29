@@ -54,7 +54,11 @@ afterEach(() => {
 });
 
 it("leads a stopped run with Resume and names the fallback before it runs", async () => {
-  detail = runDetail("failed", { mode: "recovery", reason: "No provider session was recorded" });
+  detail = runDetail("failed", {
+    mode: "recovery",
+    reason: "No provider session was recorded",
+    step_run_ids: ["step-1"],
+  });
   const mounted = await mount(<RunActionsMenu runId="run-1" />);
 
   const button = findButton("Resume run");

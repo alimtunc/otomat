@@ -166,6 +166,7 @@ describe("runDetailSchema", () => {
     expect(recovery.resume).toEqual({
       mode: "recovery",
       reason: "No provider session was recorded for this step",
+      step_run_ids: [],
     });
     expect(recovery.holds_workspace).toBe(true);
     expect(

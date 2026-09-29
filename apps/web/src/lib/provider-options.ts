@@ -8,6 +8,37 @@ import {
 import { runtimeDefaultOptionLabel } from "@web/lib/execution/labels";
 import { providerOptionValueLabel } from "@web/lib/provider-option-labels";
 
+function isEffortKey(key: ProviderOptionKey): boolean {
+  return key === "effort" || key === "reasoning_effort";
+}
+
+export function effortValue(options: ProviderOptions): string | undefined {
+  return options.effort ?? options.reasoning_effort;
+}
+
+export function effortDescriptor(
+  set: ProviderOptionSet | undefined,
+): ProviderOptionDescriptor | undefined {
+  return set?.options.find((option) => isEffortKey(option.key));
+}
+
+export function offersEffort(set: ProviderOptionSet, effort: string): boolean {
+  return effortDescriptor(set)?.choices.some((choice) => choice.value === effort) ?? false;
+}
+
+/** Claude and Codex name their effort differently, so a new value replaces whichever key the config carried. */
+export function withEffort(
+  options: ProviderOptions,
+  key: ProviderOptionKey,
+  value: string | undefined,
+): ProviderOptions {
+  const next = { ...options };
+  delete next.effort;
+  delete next.reasoning_effort;
+  if (value !== undefined) next[key] = value;
+  return next;
+}
+
 /** One option a profile stores, with the value it stores it as. */
 export interface StoredProviderOption {
   key: ProviderOptionKey;

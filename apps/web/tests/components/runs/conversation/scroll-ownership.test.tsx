@@ -57,7 +57,7 @@ const detail: RunDetail = {
   worktree_path: null,
   base_branch: "main",
   wait: null,
-  resume: { mode: "native" },
+  resume: { mode: "native", step_run_ids: [] },
   holds_workspace: true,
 };
 
@@ -102,7 +102,6 @@ vi.mock("@web/api/runs/run-event-stream", () => ({
 }));
 
 vi.mock("@web/api/runs/step-mutations", () => ({
-  useSetNextTurnModel: () => ({ mutate: vi.fn(), isPending: false }),
   useStopRunStep: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
@@ -119,6 +118,10 @@ vi.mock("@web/api/runs/mutations", () => ({
 vi.mock("@web/api/daemon/queries", () => ({
   useDaemonStatus: () => ({ connectionState: "online" }),
   useRuntimes: () => ({ data: [] }),
+}));
+
+vi.mock("@web/components/runs/conversation/next-turn/menu", () => ({
+  NextTurnMenu: () => null,
 }));
 
 let observers: ResizeObserverStub;

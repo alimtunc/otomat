@@ -40,6 +40,10 @@ vi.mock("@web/api/daemon/queries", () => ({
   useRuntimes: () => ({ data: new Array<RuntimeDescriptor>() }),
 }));
 
+vi.mock("@web/components/runs/conversation/next-turn/menu", () => ({
+  NextTurnMenu: () => null,
+}));
+
 const detail: RunDetail = {
   run: {
     id: "run-1",

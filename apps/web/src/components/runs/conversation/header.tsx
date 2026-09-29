@@ -13,8 +13,8 @@ import { useRuntimes } from "@web/api/daemon/queries";
 import { useStopRunStep } from "@web/api/runs/step-mutations";
 import { CancelStepButton } from "@web/components/runs/cockpit/steps/cancel-step-button";
 import { CodexPermissions } from "@web/components/runs/conversation/codex-permissions";
-import { NextTurnModelDialog } from "@web/components/runs/conversation/next-turn/dialog";
 import { agentLabel, modelLabel } from "@web/lib/execution/labels";
+import { effortValue } from "@web/lib/provider-options";
 import { stepParticipant } from "@web/lib/run/participant";
 
 export function ConversationHeader({
@@ -40,22 +40,13 @@ export function ConversationHeader({
   const runtime = runtimes.data?.find(
     (descriptor) => descriptor.id === (launched?.agent_id ?? current.runtime),
   );
-  const capability = runtime?.capabilities.resume_model;
-  const effort = current.options.effort ?? current.options.reasoning_effort;
+  const effort = effortValue(current.options);
   const requestedModel = modelLabel(current.model);
   const reportedModel = launched?.reported_model ?? null;
   const effectiveModel = reportedModel ?? requestedModel;
   const requestedBy = `Requested by ${current.sources?.model ?? "step"}${effort ? ` · effort ${effort}` : ""}`;
   const diverged =
     current.model !== null && reportedModel !== null && reportedModel !== current.model.id;
-  let fallback = { label: "Model change unavailable · Add follow-up step", title: "" };
-  if (capability?.status === "unsupported") {
-    fallback = { ...fallback, title: capability.reason };
-  } else if (runtimes.isPending) {
-    fallback = { label: "Checking model support…", title: "Checking runtime capabilities…" };
-  } else {
-    fallback = { ...fallback, title: "This participant has no resumable provider session." };
-  }
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border-subtle px-4 py-2 [overflow-wrap:anywhere]">
@@ -110,20 +101,6 @@ export function ConversationHeader({
             Requested: {requestedModel} · Reported: {reportedModel ?? "not reported"}
           </p>
           <p>{requestedBy}</p>
-          {capability?.status === "supported" && session?.provider_session_id ? (
-            <NextTurnModelDialog
-              key={pending?.config_hash ?? current.config_hash}
-              runId={detail.run.id}
-              stepId={stepRunId}
-              sessionId={session.id}
-              config={pending ?? session.config ?? current}
-            />
-          ) : (
-            <div>
-              <p>{fallback.label}</p>
-              <p className="mt-1 text-text-tertiary">{fallback.title}</p>
-            </div>
-          )}
         </PopoverContent>
       </Popover>
       {current.runtime === "codex" ? (

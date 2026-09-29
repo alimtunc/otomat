@@ -1,5 +1,11 @@
 import type { RunResumePlan } from "@otomat/domain";
 
+export function resumeReopensStep(plan: RunResumePlan, stepRunId: string): boolean {
+  return (
+    (plan.mode === "native" || plan.mode === "recovery") && plan.step_run_ids.includes(stepRunId)
+  );
+}
+
 /** A fallback is never dressed up as a native resume: the reason the session could not be reattached is part of the sentence. */
 export function resumeModeNote(plan: RunResumePlan): string {
   if (plan.mode === "native") {
