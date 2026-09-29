@@ -125,7 +125,7 @@ describe("shared UI boundaries", () => {
     expect(button?.querySelector('[data-slot="spinner"]')?.getAttribute("aria-hidden")).toBe(
       "true",
     );
-    expect(button?.querySelector(".otomat-pulse")).not.toBeNull();
+    expect(button?.querySelector(".otomat-orbit")).not.toBeNull();
   });
 
   it("shows avatar initials while an image is unavailable", async () => {

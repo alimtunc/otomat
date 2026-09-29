@@ -2574,12 +2574,18 @@ surfaces yield as soon as startup finishes, without waiting for the entrance, an
 the cockpit's startup screen skips it under the desktop shell, where the splash
 already played it.
 `Spinner` renders the O alone with an accessible `label`, or with visible context
-as its children. Its default `motion="pulse"` varies opacity without moving the
-O, so inline statuses and loading buttons stay quiet; `motion="breathe"` reserves
-the split breathing for large, full-panel loading states. Skeletons retain their
-place for content with a known layout.
+as its children. Its default `motion="orbit"` keeps the O fixed and dimmed while a
+`currentColor` arc travels around its contour for inline statuses, inputs,
+fetching, and loading buttons; `motion="breathe"` reserves the split breathing for
+large, full-panel loading states. Skeletons retain their place for content with a
+known layout.
 Brand motion has its own reduced-motion rule because the desktop splash does
 not load the cockpit's tokens. The design-system gallery shows these usages.
+`pnpm --filter @otomat/desktop brand:icons` exports this same CSS mark through
+Electron to the packaged app icon, native-dialog icon, template menu-bar icons
+at 1×/2×, and web/docs favicons. On headless Linux, run it under `xvfb-run -a`.
+The desktop sets that app icon on its windows, and on the macOS Dock in dev, where
+no app bundle provides it.
 
 Base UI mounts a popup with `data-open` already set, so an `opacity-0
 data-[open]:opacity-100` pair never transitions on enter — it only fades on exit.

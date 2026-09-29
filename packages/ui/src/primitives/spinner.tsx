@@ -5,14 +5,14 @@ import { cn } from "../lib/utils";
 export interface SpinnerProps extends ComponentPropsWithoutRef<"output"> {
   size?: number;
   label?: string;
-  motion?: "breathe" | "pulse";
+  motion?: "breathe" | "orbit";
 }
 
 export function Spinner({
   className,
   size = 14,
   label,
-  motion = "pulse",
+  motion = "orbit",
   children,
   ...props
 }: SpinnerProps) {
@@ -25,9 +25,16 @@ export function Spinner({
     >
       <span
         aria-hidden="true"
-        className={cn("otomat-mark", motion === "breathe" ? "otomat-loader" : "otomat-pulse")}
+        className={cn("otomat-mark", motion === "breathe" ? "otomat-loader" : "otomat-orbit")}
         style={{ fontSize: size }}
-      />
+      >
+        {motion === "orbit" ? (
+          <>
+            <span className="otomat-orbit-ring" />
+            <span className="otomat-orbit-ring" />
+          </>
+        ) : null}
+      </span>
       {children}
     </output>
   );

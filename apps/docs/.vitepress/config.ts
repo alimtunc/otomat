@@ -7,6 +7,7 @@ export default defineConfig({
   description:
     "Local-first, issue-first cockpit for running coding agents, reviewing real git diffs and shipping pull requests.",
   lang: "en-US",
+  head: [["link", { rel: "icon", type: "image/png", href: "/favicon.png" }]],
   cleanUrls: true,
   lastUpdated: true,
   themeConfig: {
