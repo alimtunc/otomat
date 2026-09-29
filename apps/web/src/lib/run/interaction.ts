@@ -18,6 +18,10 @@ const STATE_LABEL = {
   canceled: "No longer answerable",
 } satisfies Record<RunInteractionContract["state"], string>;
 
+export function interactionAnchor(interactionId: string): string {
+  return `interaction-${interactionId}`;
+}
+
 export function interactionStateTone(state: RunInteractionContract["state"]): StatusTone {
   return STATE_TONE[state];
 }

@@ -28,3 +28,8 @@ export function conversationStatus(
 export function isConversationRunning(entry: ConversationThreadEntry): boolean {
   return "terminal" in entry ? entry.terminal.state !== "exited" : entry.step_status === "running";
 }
+
+export function isConversationWaiting(entry: ConversationThreadEntry): boolean {
+  const status = conversationStatus([entry]);
+  return status === "awaiting_permission" || status === "awaiting_human";
+}

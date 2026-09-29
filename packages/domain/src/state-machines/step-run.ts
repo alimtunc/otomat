@@ -82,6 +82,8 @@ export function isStepBusy(status: StepRunState): boolean {
 export function liveStepStatus(
   status: StepRunState,
   latestSessionStatus: AgentSessionState | null,
+  asking: boolean,
 ): StepRunState {
-  return status === "succeeded" && latestSessionStatus === "active" ? "running" : status;
+  if (status !== "succeeded" || latestSessionStatus !== "active") return status;
+  return asking ? "awaiting_permission" : "running";
 }

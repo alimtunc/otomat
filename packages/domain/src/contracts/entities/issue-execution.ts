@@ -5,6 +5,7 @@ import type { IssueState } from "../entity-states.js";
 /** What Otomat is locally doing for an issue — never the issue's business/source `status`, which a run, review, or PR must not mutate. */
 export const ISSUE_EXECUTION_STATES = [
   "running",
+  "awaiting_input",
   "waiting_for_provider",
   "reviewing",
   "pr_open",
@@ -15,13 +16,15 @@ export type IssueExecutionState = (typeof ISSUE_EXECUTION_STATES)[number];
 
 /**
  * Where an issue is shown once its local execution is taken into account: its
- * source status, plus the `failed` and `waiting_for_provider` executions that
- * must never fold back into `ready`. Ordered as the board reads, left to right.
+ * source status, plus the `awaiting_input`, `failed` and `waiting_for_provider`
+ * executions that must never fold back into `ready`. Ordered as the board reads,
+ * left to right.
  */
 export const ISSUE_BOARD_COLUMNS = [
   "backlog",
   "ready",
   "running",
+  "awaiting_input",
   "waiting_for_provider",
   "failed",
   "reviewing",
@@ -49,9 +52,20 @@ const issueExecutionFailureSchema = z.object({
 });
 export type IssueExecutionFailure = z.infer<typeof issueExecutionFailureSchema>;
 
+const issueExecutionRequestSchema = z.object({
+  id: z.string().min(1),
+  step_run_id: z.string().min(1),
+});
+export type IssueExecutionRequest = z.infer<typeof issueExecutionRequestSchema>;
+
 const activeExecutionSchema = z.object({
   state: z.enum(["running", "waiting_for_provider", "reviewing", "pr_open"]),
   run_id: z.string().min(1),
+});
+const awaitingExecutionSchema = z.object({
+  state: z.literal("awaiting_input"),
+  run_id: z.string().min(1),
+  request: issueExecutionRequestSchema.nullable(),
 });
 const failedExecutionSchema = z.object({
   state: z.literal("failed"),
@@ -63,6 +77,7 @@ const noExecutionSchema = z.object({ state: z.literal("none"), run_id: z.null() 
 /** A projected state always names its run; `none` always has no run. The illegal in-between cannot be represented. */
 export const issueExecutionSchema = z.union([
   activeExecutionSchema,
+  awaitingExecutionSchema,
   failedExecutionSchema,
   noExecutionSchema,
 ]);

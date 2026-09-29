@@ -41,7 +41,7 @@ or by project. Archived threads stay hidden until they speak again.
 Selecting a row switches to its owning project and opens its thread in the active view tab:
 recent chats and terminal sessions are also listed under each project in the sidebar, grouped under
 their issue's identifier and title — or under _no issue_ for the project's own threads. A group opens
-while one of its threads is running or selected, and folds or unfolds on demand.
+while one of its threads is running, waiting on you or selected, and folds or unfolds on demand.
 **All conversations** returns to the host-wide list; navigating to a thread never adds a tab.
 A cockpit chat uses the same header, messages, question cards and composer as its exact run step.
 The composer names its recipient and says

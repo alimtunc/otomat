@@ -56,6 +56,21 @@ it("names execution in the header and keeps the issue control in the rail", asyn
   ).toBe(false);
 });
 
+it("lets a wait on the operator speak for a running status in the header", async () => {
+  const container = await render(
+    issueContract({
+      status: "running",
+      execution: { state: "awaiting_input", run_id: "run-1", request: null },
+      workspace: openWorkspace("run-1", "awaiting_permission"),
+    }),
+  );
+
+  expect(container.querySelector('[aria-label^="Issue status:"]')).toBeNull();
+  expect(container.querySelector('[aria-label="Execution: awaiting_input"]')?.textContent).toBe(
+    "Waiting on you",
+  );
+});
+
 it("stops naming an execution once the cycle is closed", async () => {
   const container = await render(issueContract({ status: "ready", execution: REVIEWING }));
 

@@ -51,6 +51,12 @@ a desktop notification. Answer it there: pick the options the runtime offered, o
 answer when it allowed one. **Approve** or **Refuse** a permission, **Send answer** for a question
 or choice; the request is settled once and a duplicate click cannot reach the provider twice.
 
+While it waits, its issue reads **Waiting on you** instead of **Running** on the board, in the
+issue list and on the issue page, and its [sidebar group](./conversations.md#reading-and-answering)
+stays open. Opening the card or the row lands on the request itself. Once you answer and the agent resumes, every view returns to
+**Running** together. The issue's own status — Linear's **In Progress**, for instance — is left
+as it is.
+
 What an agent may do without asking is the **permission mode** frozen at launch: Claude Code's own
 modes (`auto` by default, where the provider's classifier decides each call) and Codex's sandbox
 (`workspace-write` by default). Codex's `exec` transport has no approval channel, so a Codex run

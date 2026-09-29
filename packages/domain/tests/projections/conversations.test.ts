@@ -232,6 +232,29 @@ describe("projectConversations", () => {
       "canceled",
     );
   });
+
+  it("reads a live follow-up turn blocked on a question as waiting, never as running", () => {
+    const asking = {
+      kind: "choice",
+      prompt: "Which parser?",
+      requested_at: "2026-09-19T10:05:00.000Z",
+    } as const;
+    const [entry] = projectConversations(
+      [
+        conversationEvidence({
+          step_status: "succeeded",
+          latest_session_status: "active",
+          run_status: "awaiting_permission",
+          pending_interaction: asking,
+        }),
+      ],
+      [],
+      NO_CYCLES,
+    );
+
+    expect(entry?.step_status).toBe("awaiting_permission");
+    expect(entry?.pending_interaction).toEqual({ kind: "choice", prompt: "Which parser?" });
+  });
 });
 
 describe("projectTerminalConversations", () => {
@@ -264,14 +287,28 @@ const FOLLOWED_WITH_WORKTREE = {
   queued: "running",
   preparing: "running",
   running: "running",
-  awaiting_permission: "running",
+  awaiting_permission: "awaiting_input",
   awaiting_human: "failed",
-  awaiting_selection: "running",
+  awaiting_selection: "awaiting_input",
   waiting_for_provider: "waiting_for_provider",
   review_ready: "reviewing",
   completed: null,
   failed: "failed",
   canceled: "failed",
+} satisfies Record<RunState, string | null>;
+
+const FOLLOWED_WITHOUT_WORKTREE = {
+  queued: "running",
+  preparing: "running",
+  running: "running",
+  awaiting_permission: "awaiting_input",
+  awaiting_human: "awaiting_input",
+  awaiting_selection: "awaiting_input",
+  waiting_for_provider: null,
+  review_ready: null,
+  completed: null,
+  failed: null,
+  canceled: null,
 } satisfies Record<RunState, string | null>;
 
 describe("projectFollowedCycle", () => {
@@ -284,16 +321,8 @@ describe("projectFollowedCycle", () => {
   });
 
   it("follows only a live run once the worktree is gone or not created yet", () => {
-    const live = [
-      "queued",
-      "preparing",
-      "running",
-      "awaiting_permission",
-      "awaiting_human",
-      "awaiting_selection",
-    ];
     for (const run_status of RUN_STATES) {
-      const expected = live.includes(run_status) ? "running" : null;
+      const expected = FOLLOWED_WITHOUT_WORKTREE[run_status];
       for (const worktree_status of [null, "removed"] as const) {
         expect(
           projectFollowedCycle([execution({ run_status, worktree_status })])?.state ?? null,

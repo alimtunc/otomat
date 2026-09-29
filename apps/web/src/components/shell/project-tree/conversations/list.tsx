@@ -1,7 +1,7 @@
 import type { ConversationThreadEntry } from "@otomat/domain";
 import { FOCUS_RING_INSET } from "@otomat/ui";
 import { type ConversationGroup, groupConversationsByOwner } from "@web/lib/conversations/sections";
-import { isConversationRunning } from "@web/lib/conversations/status";
+import { isConversationRunning, isConversationWaiting } from "@web/lib/conversations/status";
 import { useState } from "react";
 
 import { SidebarConversationGroup } from "./group";
@@ -39,7 +39,13 @@ export function SidebarConversations({
       {visible.map((group) => {
         const isSelected = holdsSelection(group);
         const isCollapsed =
-          collapsed.get(group.id) ?? !(isSelected || group.entries.some(isConversationRunning));
+          collapsed.get(group.id) ??
+          !(
+            isSelected ||
+            group.entries.some(
+              (entry) => isConversationWaiting(entry) || isConversationRunning(entry),
+            )
+          );
         return (
           <SidebarConversationGroup
             key={group.id}

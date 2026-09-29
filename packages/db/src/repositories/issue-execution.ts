@@ -2,6 +2,7 @@ import {
   isPullRequestLive,
   STEP_RUN_FAILURE_STATES,
   type IssueExecutionEvidence,
+  type IssueExecutionRequest,
   type IssueExecutionStoppedStep,
   type PullRequestState,
   type StepRunState,
@@ -9,7 +10,14 @@ import {
 import { and, asc, eq, inArray, isNull, type SQL } from "drizzle-orm";
 
 import type { Db } from "../client.js";
-import { issues, pullRequests, runs, stepRuns, worktrees } from "../schema/index.js";
+import {
+  issues,
+  pullRequests,
+  runInteractions,
+  runs,
+  stepRuns,
+  worktrees,
+} from "../schema/index.js";
 import { sqliteToIso } from "./instants.js";
 
 /** Evidence for the per-issue execution projection; `issue_id` groups the rows the domain reducer consumes. */
@@ -50,6 +58,26 @@ function lastStepsIn(
   );
 }
 
+function pendingRequests(db: Db, filters: SQL[]): Map<string, IssueExecutionRequest> {
+  const rows = db
+    .select({
+      run_id: runInteractions.run_id,
+      id: runInteractions.id,
+      step_run_id: runInteractions.step_run_id,
+    })
+    .from(runInteractions)
+    .innerJoin(runs, eq(runInteractions.run_id, runs.id))
+    .innerJoin(issues, eq(runs.issue_id, issues.id))
+    .where(and(eq(runInteractions.state, "pending"), ...filters))
+    .orderBy(asc(runInteractions.requested_at), asc(runInteractions.id))
+    .all();
+  const oldest = new Map<string, IssueExecutionRequest>();
+  for (const { run_id, ...request } of rows) {
+    if (!oldest.has(run_id)) oldest.set(run_id, request);
+  }
+  return oldest;
+}
+
 /** The adopted pull request that still stands for each issue: any live one outranks every settled one. */
 function adoptedPullRequests(db: Db, filters: SQL[]): Map<string, PullRequestState> {
   const rows = db
@@ -72,8 +100,9 @@ function adoptedPullRequests(db: Db, filters: SQL[]): Map<string, PullRequestSta
 
 /**
  * One query per fact returning every run with its worktree, optional pull
- * request and last halted and interrupted steps for the selected issues, so the
- * daemon projects each issue's execution and workspace state without an N+1.
+ * request, last halted and interrupted steps and oldest pending question for
+ * the selected issues, so the daemon projects each issue's execution and
+ * workspace state without an N+1.
  * Rows are raw persisted facts; `projectIssueExecution` and
  * `projectIssueWorkspace` own the interpretation.
  */
@@ -84,6 +113,7 @@ export function listIssueExecutionEvidence(
   const filters = scopeFilters(options);
   const halted = lastStepsIn(db, filters, STEP_RUN_FAILURE_STATES);
   const interrupted = lastStepsIn(db, filters, ["awaiting_human"]);
+  const requests = pendingRequests(db, filters);
   const adopted = adoptedPullRequests(db, filters);
   return db
     .select({
@@ -108,6 +138,7 @@ export function listIssueExecutionEvidence(
       ...row,
       halted_step: halted.get(row.run_id) ?? null,
       interrupted_step: interrupted.get(row.run_id) ?? null,
+      pending_request: requests.get(row.run_id) ?? null,
       adopted_pr_status: adopted.get(row.issue_id) ?? null,
     }));
 }

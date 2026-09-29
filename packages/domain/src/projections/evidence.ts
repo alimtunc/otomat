@@ -1,4 +1,7 @@
-import type { IssueExecutionStoppedStep } from "../contracts/entities/issue-execution.js";
+import type {
+  IssueExecutionRequest,
+  IssueExecutionStoppedStep,
+} from "../contracts/entities/issue-execution.js";
 import type { WorktreeStatus } from "../contracts/entities/workspace.js";
 import type { IssueState } from "../state-machines/issue.js";
 import type { PullRequestPublicationState } from "../state-machines/pull-request-publication.js";
@@ -19,6 +22,7 @@ export interface IssueExecutionEvidence {
   /** Null when no step of this run ever failed — a run canceled before its first failure, or one that never failed at all. */
   halted_step: IssueExecutionStoppedStep | null;
   interrupted_step: IssueExecutionStoppedStep | null;
+  pending_request: IssueExecutionRequest | null;
   pr_status: PullRequestState | null;
   pr_publication: PullRequestPublicationState | null;
   /** State of the pull request the issue adopted without a run of its own; it stands against every run of that issue. */

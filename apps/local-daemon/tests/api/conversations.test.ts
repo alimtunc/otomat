@@ -9,6 +9,7 @@ import type { ConversationSnapshot } from "@otomat/domain";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { readIssue } from "#api/reads";
 import type { RuntimeEvent } from "#runtime";
 
 import { json, makeApiApp, post, request } from "../support/api.js";
@@ -158,6 +159,41 @@ describe("GET /api/conversations", () => {
     if (!entry || !("last" in entry)) throw new Error("Missing cockpit thread");
     expect(entry.last).toEqual({ kind: "agent", text: "Root cause found.", at: SPOKE_AT });
     expect(entry?.updated_at).toBe(SPOKE_AT);
+  });
+
+  it("reads a follow-up turn's choice question as one wait on its thread and its issue, on every read", async () => {
+    const seed = seedRun(t.db, {
+      runId: "run-9",
+      runStatus: "awaiting_permission",
+      stepStatus: "succeeded",
+      sessionStatus: "active",
+    });
+    recordRunInteraction(t.db, {
+      id: "q-9",
+      run_id: "run-9",
+      step_run_id: seed.stepRunId,
+      agent_session_id: seed.agentSessionId,
+      provider_request_id: "req-9",
+      kind: "choice",
+      prompt: "Which parser should I keep?",
+      tool: "AskUserQuestion",
+      reason: null,
+      questions_json: [],
+      requested_at: SPOKE_AT,
+    });
+
+    for (const read of [1, 2]) {
+      expect((await readSnapshot()).entries[0], `read ${read}`).toMatchObject({
+        step_status: "awaiting_permission",
+        pending_interaction: { kind: "choice", prompt: "Which parser should I keep?" },
+        issue: { cycle: "awaiting_input" },
+      });
+    }
+    expect(readIssue(t.db, "i1")?.execution).toEqual({
+      state: "awaiting_input",
+      run_id: "run-9",
+      request: { id: "q-9", step_run_id: seed.stepRunId },
+    });
   });
 
   it("surfaces a pending question and keeps a mark only until the thread moves past it", async () => {

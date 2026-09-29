@@ -462,6 +462,16 @@ run and its step on the already-reachable `awaiting_permission` state, which is
 what makes the Activity Center entry, the Inbox kind and the shell badge appear
 without a projection of their own.
 
+A wait on the operator is never live work. `projectIssueExecution` keeps
+`running` for a turn in flight (`isRunWorking`) and projects every other unsettled
+run short of review — a question, a winner to choose, a paused run with no
+workspace — as `awaiting_input`, its own board column. The execution names the oldest pending request
+(`request: { id, step_run_id }`, null when no runtime asked), which lets the board
+card and the list row open the issue on that step, anchored on the request's card
+(`issueTarget`, `interaction-<id>`), and it is recomputed from the rows on every
+read, so a reload or a reconnect finds the same wait without a new alert. The
+source status stays untouched: this is the execution axis only.
+
 The answer travels back on the channel that already writes into a running turn's
 stdin: `live-input.jsonl` carries a steering message and an interaction answer as
 two kinds of the same item, with the same per-item receipts and the same
@@ -1134,8 +1144,9 @@ external operation (a Linear write, a publication) never turns this projection t
 
 The projection answers for the issue's **last** run, not for the most specific
 thing any run ever did: rows are elected on `run_created_at`, then on how much
-their state has to say (active work, then an open PR, then a run awaiting review,
-then a stopped cycle), then on `run_id`. A row that classifies to nothing still
+their state has to say (a wait on the operator, so a tie can never hide a
+question, then live work, a quota wait, an open PR, a run awaiting review and a
+stopped cycle), then on `run_id`. A row that classifies to nothing still
 competes, which is what lets a `completed` run neutralize the failures of the
 cycle it replaced; the rank only separates the rows of one run and genuine
 timestamp ties, and the id keeps equal or missing timestamps deterministic.
@@ -1159,7 +1170,9 @@ the primary state; every surface that names the execution axis on its own — th
 rail's `Workspace execution` row, the list's `Execution` column — reads
 `projectOpenCycleExecution` rather than the raw contract field, so a closed
 cycle stops advertising the run it stopped on. Only the source status a column
-hides is a display concern (`lib/issue/divergent-status.ts`). The issue page
+hides is a display concern (`lib/issue/divergent-status.ts`), and so is a
+`running` status a wait on the operator speaks for (`waitSupersedesRunning`): the
+card, the list's status column and the issue header drop it. The issue page
 keeps both axes legible in its rail (`Issue status`, `Workspace execution`), and
 the run history stays readable there and in the conversations without
 contaminating the principal state.
@@ -1660,8 +1673,10 @@ turn's frozen configuration (the plan node's, for a step that has not started)
 and status — a supervision turn is not one of the step's turns. `succeeded` is
 final in the step machine, so a message to a succeeded step runs its next turn on
 a new session while the step row stays `succeeded`; `liveStepStatus` reads such a
-step as `running` while that session is `active`, and the entry's `step_status`,
-`ConversationHeader` and the thread's working row all go through it.
+step as `running` while that session is `active` — `awaiting_permission` while
+that turn has a pending request, since the daemon cannot move a final step — and
+the entry's `step_status`, `ConversationHeader` and the thread's working row all
+go through it.
 `projectConversations` stamps each entry with its issue's followed cycle
 (`issue.cycle`, null once nothing is left to follow) and derives one `updated_at`
 per thread from the moves that are worth reading — an agent answer, a step
@@ -1681,9 +1696,9 @@ its threads is running and folds back when none is; a manual fold or unfold
 overrides that default for the rest of the visit. The project sidebar applies
 `groupConversationsByOwner` to the project's unarchived threads without sections,
 headed by identifier and title (`<project> · no issue` without an issue); a group
-opens while one of its threads is live or in view, and a folded group keeps the
-selection, live and unread marks on its header. It shows five groups plus, always,
-the one holding the open thread.
+opens while one of its threads is live, waiting on the operator or in view, and a
+folded group keeps the selection, live and unread marks on its header. It shows
+five groups plus, always, the one holding the open thread.
 
 Reading marks reuse `inbox_marks` and `POST /api/inbox/marks` unchanged; the
 projection only ever looks up its own ids, so the two projections cannot see
@@ -1890,6 +1905,11 @@ opening a modal never interrupts it; the snapshot query it writes into is the
 same one the header reads, so a reload rebuilds the panel from the daemon and a
 host that stops answering leaves its last activities on screen behind the stale
 notice instead of erasing them.
+It is also the one freshness signal every route keeps open: a frame whose run
+statuses differ from the stream's previous frame — never the cached snapshot, which
+the activity poll also writes — invalidates the issues, the runs and the
+conversations, so the board, the lists and the sidebar follow a run into and out
+of a wait on the operator without a run stream of their own.
 
 The panel offers only what the domain authorizes. A run that has not settled can
 be cancelled, because `POST /api/runs/:id/abort` is exactly that command. A

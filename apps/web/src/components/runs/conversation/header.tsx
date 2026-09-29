@@ -10,6 +10,7 @@ import {
   StepStatusChip,
 } from "@otomat/ui";
 import { useRuntimes } from "@web/api/daemon/queries";
+import { useRunInteractions } from "@web/api/runs/queries";
 import { useStopRunStep } from "@web/api/runs/step-mutations";
 import { CancelStepButton } from "@web/components/runs/cockpit/steps/cancel-step-button";
 import { CodexPermissions } from "@web/components/runs/conversation/codex-permissions";
@@ -25,6 +26,7 @@ export function ConversationHeader({
   stepRunId: string;
 }) {
   const runtimes = useRuntimes();
+  const interactions = useRunInteractions(detail.run.id);
   const stopStep = useStopRunStep(detail.run.id);
   const step = detail.steps.find((candidate) => candidate.id === stepRunId);
   const {
@@ -34,7 +36,11 @@ export function ConversationHeader({
     pending,
   } = stepParticipant(detail, stepRunId);
   if (!step || current === null) return null;
-  const status = liveStepStatus(step.status, session?.status ?? null);
+  const asking =
+    interactions.data?.interactions.some(
+      (interaction) => interaction.step_run_id === stepRunId && interaction.state === "pending",
+    ) === true;
+  const status = liveStepStatus(step.status, session?.status ?? null, asking);
   const live = isStepBusy(status);
   const cancelable = step.status === "queued" && step.compete_group_id === null;
   const runtime = runtimes.data?.find(

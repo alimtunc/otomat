@@ -43,6 +43,38 @@ it("names the execution of an open cycle next to the untouched source status", a
   expect(container.textContent).toContain("Reviewing");
 });
 
+it("names a wait on the operator and opens the row on the pending question", async () => {
+  const container = await renderRow(
+    issueContract({
+      status: "backlog",
+      execution: {
+        state: "awaiting_input",
+        run_id: "run-1",
+        request: { id: "q-1", step_run_id: "step-2" },
+      },
+      workspace: openWorkspace("run-1", "awaiting_permission"),
+    }),
+  );
+
+  expect(container.textContent).toContain("Waiting on you");
+  expect(container.querySelector("a")?.getAttribute("href")).toBe(
+    "/issues/issue-1?run=run-1&step=step-2#interaction-q-1",
+  );
+});
+
+it("leaves a running status to the wait that speaks for it", async () => {
+  const container = await renderRow(
+    issueContract({
+      status: "running",
+      execution: { state: "awaiting_input", run_id: "run-1", request: null },
+      workspace: openWorkspace("run-1", "awaiting_permission"),
+    }),
+  );
+
+  expect(container.textContent).toContain("Waiting on you");
+  expect(container.textContent).not.toContain("Running");
+});
+
 it("stops naming the execution of a cycle an abandon closed", async () => {
   const container = await renderRow(
     issueContract({ status: "backlog", execution: { state: "reviewing", run_id: "run-1" } }),

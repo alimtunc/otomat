@@ -19,19 +19,44 @@ it("projects none when every run is terminal and holds no workspace", () => {
   ).toEqual({ state: "none", run_id: null });
 });
 
-it("treats every busy state as active work", () => {
-  for (const run_status of [
-    "queued",
-    "preparing",
-    "running",
-    "awaiting_permission",
-    "awaiting_selection",
-  ] as const) {
+it("reads only a turn in flight as active work", () => {
+  for (const run_status of ["queued", "preparing", "running"] as const) {
     expect(projectIssueExecution([ev({ run_id: "r1", run_status })])).toEqual({
       state: "running",
       run_id: "r1",
     });
   }
+});
+
+it("projects a run blocked on a permission or a question as waiting on the operator, naming the request", () => {
+  const request = { id: "interaction-1", step_run_id: "step-2" };
+  expect(
+    projectIssueExecution([
+      ev({ run_id: "r1", run_status: "awaiting_permission", pending_request: request }),
+    ]),
+  ).toEqual({ state: "awaiting_input", run_id: "r1", request });
+});
+
+it("projects every other wait on the operator the same way, even with no request to open", () => {
+  for (const over of [
+    { run_status: "awaiting_selection" },
+    { run_status: "awaiting_human", worktree_status: null },
+  ] as const) {
+    expect(projectIssueExecution([ev({ run_id: "r1", ...over })])).toEqual({
+      state: "awaiting_input",
+      run_id: "r1",
+      request: null,
+    });
+  }
+});
+
+it("keeps a wait on the operator ahead of live work of the same instant", () => {
+  expect(
+    projectIssueExecution([
+      ev({ run_id: "r2", run_status: "running" }),
+      ev({ run_id: "r1", run_status: "awaiting_permission" }),
+    ]),
+  ).toEqual({ state: "awaiting_input", run_id: "r1", request: null });
 });
 
 it("projects a quota wait as its own state, neither live work nor a failure", () => {

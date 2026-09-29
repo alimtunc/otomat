@@ -52,3 +52,35 @@ it("names the divergent source status alone while the execution owns the card", 
   expect(container.textContent).toContain("Backlog");
   expect(container.textContent).not.toContain("Reviewing");
 });
+
+it("names a run blocked on a question as waiting on you and opens straight on the question", async () => {
+  const container = await renderCard(
+    issueContract({
+      status: "running",
+      execution: {
+        state: "awaiting_input",
+        run_id: "run-1",
+        request: { id: "q-1", step_run_id: "step-2" },
+      },
+      workspace: openWorkspace("run-1", "awaiting_permission"),
+    }),
+  );
+
+  expect(container.textContent).toContain("Waiting on you");
+  expect(container.textContent).not.toContain("Running");
+  expect(container.querySelector("a")?.getAttribute("href")).toBe(
+    "/issues/issue-1?run=run-1&step=step-2#interaction-q-1",
+  );
+});
+
+it("opens a wait no runtime asked on the issue itself", async () => {
+  const container = await renderCard(
+    issueContract({
+      execution: { state: "awaiting_input", run_id: "run-1", request: null },
+      workspace: openWorkspace("run-1", "awaiting_selection"),
+    }),
+  );
+
+  expect(container.textContent).toContain("Waiting on you");
+  expect(container.querySelector("a")?.getAttribute("href")).toBe("/issues/issue-1");
+});
