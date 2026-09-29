@@ -1,5 +1,5 @@
 import type { ConversationThreadEntry } from "@otomat/domain";
-import { EmptyState } from "@otomat/ui";
+import { Button, EmptyState } from "@otomat/ui";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useSelector } from "@tanstack/react-store";
 import { useMarkConversations } from "@web/api/conversations/mutations";
@@ -45,6 +45,8 @@ export function ConversationsView() {
   const filtered = activeConversationFilterCount(filters) > 0;
 
   const entries = conversations.data?.entries ?? [];
+  const visible = applyConversationFilters(entries, filters);
+  const unread = visible.filter((entry) => !entry.read);
   const selected = findConversationThread(entries, { step, terminal });
   useMarkConversationSeen(terminal === undefined ? null : { terminal });
 
@@ -67,8 +69,8 @@ export function ConversationsView() {
         />
       }
     >
-      {(data) => {
-        const sections = groupConversations(applyConversationFilters(data.entries, filters));
+      {() => {
+        const sections = groupConversations(visible);
         return sections.length === 0 ? (
           <CenteredState>
             <EmptyState
@@ -154,11 +156,21 @@ export function ConversationsView() {
       titleNote="Cockpit chats and terminal sessions on this host."
       breadcrumbs={[{ label: "Conversations", current: true }]}
       actions={
-        <ConversationFiltersMenu
-          filters={filters}
-          projects={conversationProjectOptions(entries)}
-          onChange={setFilters}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={mark.isPending || unread.length === 0}
+            onClick={() => mark.mutate(markInboxRequest(unread, { read: true }))}
+          >
+            Mark all read
+          </Button>
+          <ConversationFiltersMenu
+            filters={filters}
+            projects={conversationProjectOptions(entries)}
+            onChange={setFilters}
+          />
+        </div>
       }
     >
       <div className="mx-auto h-full max-w-5xl overflow-auto">{list}</div>

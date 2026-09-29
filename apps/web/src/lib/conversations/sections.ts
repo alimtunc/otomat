@@ -14,10 +14,15 @@ export interface ConversationGroup {
   entries: ConversationThreadEntry[];
 }
 
+export interface ConversationProjectGroup {
+  project: ConversationThreadEntry["project"];
+  groups: ConversationGroup[];
+}
+
 export interface ConversationSection {
   key: ConversationSectionKey;
   label: string;
-  groups: ConversationGroup[];
+  projects: ConversationProjectGroup[];
 }
 
 export function sectionOf(entry: ConversationThreadEntry): ConversationSectionKey {
@@ -39,17 +44,25 @@ export function groupConversationsByOwner(
   return [...groups.values()];
 }
 
+function groupByProject(groups: readonly ConversationGroup[]): ConversationProjectGroup[] {
+  const projects = new Map<string, ConversationProjectGroup>();
+  for (const group of groups) {
+    const project = projects.get(group.project.id);
+    if (project === undefined)
+      projects.set(group.project.id, { project: group.project, groups: [group] });
+    else project.groups.push(group);
+  }
+  return [...projects.values()];
+}
+
 export function groupConversations(
   entries: readonly ConversationThreadEntry[],
 ): ConversationSection[] {
-  return SECTIONS.map((section) => {
-    const groups = groupConversationsByOwner(
-      entries.filter((entry) => sectionOf(entry) === section.key),
-    );
-    return {
-      key: section.key,
-      label: section.label,
-      groups,
-    };
-  }).filter((section) => section.groups.length > 0);
+  return SECTIONS.map((section) => ({
+    key: section.key,
+    label: section.label,
+    projects: groupByProject(
+      groupConversationsByOwner(entries.filter((entry) => sectionOf(entry) === section.key)),
+    ),
+  })).filter((section) => section.projects.length > 0);
 }

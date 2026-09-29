@@ -25,6 +25,18 @@ export function conversationEntry(overrides: Partial<ConversationEntry> = {}): C
   };
 }
 
+export function crmConversationEntry(
+  overrides: Partial<ConversationEntry> = {},
+): ConversationEntry {
+  return conversationEntry({
+    id: "conversation:crm-1",
+    step_run_id: "crm-1",
+    project: { id: "crm", name: "CRM" },
+    issue: { id: "crm-issue", identifier: "CRM-1", title: "Import leads", cycle: "running" },
+    ...overrides,
+  });
+}
+
 export function terminalConversationEntry(
   overrides: Partial<TerminalConversationEntry> = {},
 ): TerminalConversationEntry {
