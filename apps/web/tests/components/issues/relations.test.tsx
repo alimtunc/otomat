@@ -15,6 +15,7 @@ import { IssueRelationsSection } from "@web/components/issues/relations/section"
 import { act } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
+import { focusVisibly } from "#support/dom-events";
 import { findLabelled } from "#support/dom-queries";
 import { issueContract } from "#support/issue";
 import { mountWithQuery, type Mounted } from "#support/mount";
@@ -121,11 +122,7 @@ it.each([
     const link = mounted.container.querySelector<HTMLAnchorElement>('a[target="_blank"]');
     expect(link).not.toBeNull();
     if (link === null) throw new Error("Neighbor link missing");
-    const matches = link.matches.bind(link);
-    vi.spyOn(link, "matches").mockImplementation(
-      (selector) => selector === ":focus-visible" || matches(selector),
-    );
-    await act(async () => link?.focus());
+    await focusVisibly(link);
     await vi.waitFor(() =>
       expect(document.querySelector('[role="tooltip"]')?.textContent).toContain(description),
     );

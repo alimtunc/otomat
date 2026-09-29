@@ -1659,7 +1659,12 @@ by `issue.cycle` alone — an unread finished thread sits in *Recently finished*
 with its dot, never in *Following* — and the state filter reads `sectionOf`, so a
 filter and a section cannot disagree. An issue group opens by default while one of
 its threads is running and folds back when none is; a manual fold or unfold
-overrides that default for the rest of the visit.
+overrides that default for the rest of the visit. The project sidebar applies
+`groupConversationsByOwner` to the project's unarchived threads without sections,
+headed by identifier and title (`<project> · no issue` without an issue); a group
+opens while one of its threads is live or in view, and a folded group keeps the
+selection, live and unread marks on its header. It shows five groups plus, always,
+the one holding the open thread.
 
 Reading marks reuse `inbox_marks` and `POST /api/inbox/marks` unchanged; the
 projection only ever looks up its own ids, so the two projections cannot see
