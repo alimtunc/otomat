@@ -2594,6 +2594,12 @@ the copied value and uses the same control when its text is hidden. Navigation
 actions retain link semantics. Page and diff toolbars wrap to their available
 width; only the tab strip scrolls when the group itself cannot fit.
 
+Prose keeps a reading measure however wide its surface grows: an issue
+description with its comments, and every agent reply, agent question and
+operator message in a thread, stops at `max-w-reading`. Ledger rows and tool
+output keep the thread's full width, where a cap would only wrap or scroll them
+sooner.
+
 ### Motion
 
 Motion is a budget, not a finish. `tokens.css` owns interface durations and curves

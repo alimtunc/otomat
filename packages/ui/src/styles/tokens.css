@@ -119,6 +119,7 @@
   --text-lg: 18px;
   --text-xl: 21px;
   --text-2xl: 26px;
+  --reading-width: 45rem;
 
   /* z-index */
   --z-sticky: 10;

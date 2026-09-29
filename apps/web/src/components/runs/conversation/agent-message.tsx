@@ -3,7 +3,7 @@ import { AgentAvatar, CopyButton, Markdown, RelativeTime } from "@otomat/ui";
 
 export function AgentMessage({ event, text }: { event: EventEnvelope; text: string }) {
   return (
-    <li className="flex flex-col gap-1.5 px-6 py-3">
+    <li className="flex max-w-reading flex-col gap-1.5 px-6 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <AgentAvatar name={event.source} size="sm" />
         <span className="text-xs font-semibold text-foreground">Agent</span>

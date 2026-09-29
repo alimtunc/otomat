@@ -25,7 +25,7 @@ export function ConversationMessage({
   const cancelable = isRunContributionCancelable(contribution);
 
   return (
-    <li className="flex flex-col items-end gap-1.5 px-6 py-3">
+    <li className="ml-auto flex max-w-reading flex-col items-end gap-1.5 px-6 py-3">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <span className="text-xs font-semibold text-foreground">You</span>
         <RelativeTime date={contribution.created_at} className="text-xs" />

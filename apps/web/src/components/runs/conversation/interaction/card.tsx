@@ -25,7 +25,7 @@ export function InteractionCard({
   const anchorRef = useNotificationAnchor(anchorId);
 
   return (
-    <li id={anchorId} ref={anchorRef} className="flex flex-col gap-2 px-6 py-3">
+    <li id={anchorId} ref={anchorRef} className="flex max-w-reading flex-col gap-2 px-6 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-text-secondary">Agent is asking</span>
         <RelativeTime date={interaction.requested_at} className="text-xs" />
