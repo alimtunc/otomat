@@ -1,6 +1,7 @@
 import type { ConnectionState } from "@otomat/ui";
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { queryOptions, skipToken, useQuery } from "@tanstack/react-query";
 import { daemon } from "@web/api/client";
+import type { HostQueryKeys } from "@web/api/query-keys";
 import { useQueryKeys } from "@web/api/use-query-keys";
 
 export function useHealth() {
@@ -101,9 +102,12 @@ export function usePullRequestGenerator() {
 }
 
 /** Model-scoped because Codex publishes its reasoning levels per model. */
-export function useRuntimeProviderOptions(runtimeId: string | null, model: string | null) {
-  const keys = useQueryKeys();
-  return useQuery({
+export function providerOptionSetOptions(
+  keys: HostQueryKeys,
+  runtimeId: string | null,
+  model: string | null,
+) {
+  return queryOptions({
     queryKey: keys.runtimeOptions(runtimeId, model),
     queryFn:
       runtimeId === null
@@ -111,4 +115,9 @@ export function useRuntimeProviderOptions(runtimeId: string | null, model: strin
         : () => daemon.runtimeProviderOptions(runtimeId, model ?? undefined),
     staleTime: 60_000,
   });
+}
+
+export function useRuntimeProviderOptions(runtimeId: string | null, model: string | null) {
+  const keys = useQueryKeys();
+  return useQuery(providerOptionSetOptions(keys, runtimeId, model));
 }

@@ -89,7 +89,10 @@ it("keeps a native resume on the dossier its own session was given", async () =>
   const { supervisor, spawn } = makeSupervisor(fix, ["crash", "complete"]);
   const run = await supervisor.start({ issue_id: "i-work", note: "start here" });
   await supervisor.settle();
-  expect(supervisor.resumePlan(run.id)).toEqual({ mode: "native" });
+  expect(supervisor.resumePlan(run.id)).toEqual({
+    mode: "native",
+    step_run_ids: [listAgentSessionsForRun(fix.db, run.id)[0]?.step_run_id],
+  });
 
   await supervisor.resume(run.id);
   await supervisor.settle();

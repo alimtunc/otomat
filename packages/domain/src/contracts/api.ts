@@ -24,6 +24,7 @@ export * from "./project-health.js";
 export * from "./provider-options.js";
 export * from "./pull-request/index.js";
 export * from "./repository.js";
+export * from "./resume.js";
 export * from "./review.js";
 export * from "./run.js";
 export * from "./runtime.js";

@@ -57,9 +57,13 @@ export interface ContributionGate {
 }
 
 const RESTING_NOTE = "Resumes this step's agent session as a new turn.";
-const STEERING_NOTE = "The agent is working — this message is delivered at its next safe turn.";
-const LIVE_NOTE =
-  "The agent is working — this message goes into its live session without waiting for the turn to end.";
+const WORKING_LEAD = "The agent is working.";
+const QUESTION_LEAD = "The agent is waiting on its request above — answer it there, not here.";
+const STEERING_DELIVERY = "This message is delivered at its next safe turn.";
+const LIVE_DELIVERY =
+  "This message goes into its live session without waiting for the turn to end.";
+const REVISED_DELIVERY =
+  "This message waits for the turn to end, then starts the next one with the next-turn settings.";
 const FIRST_TURN_NOTE = "This step has not started — this message is delivered in its first turn.";
 const CAPACITY_NOTE =
   "This run is waiting for capacity — this message is delivered in its next turn.";
@@ -69,6 +73,16 @@ const PROVIDER_WAIT_NOTE =
 /** No turn is live yet while the run waits on the semaphore, so the composer must not claim the agent is working. */
 function isWaitingForCapacity(status: RunDetail["run"]["status"]): boolean {
   return status === "queued" || status === "preparing";
+}
+
+function workingNote(
+  stepStatus: StepRunContract["status"],
+  live: boolean,
+  revised: boolean,
+): string {
+  const lead = stepStatus === "awaiting_permission" ? QUESTION_LEAD : WORKING_LEAD;
+  if (revised) return `${lead} ${REVISED_DELIVERY}`;
+  return `${lead} ${live ? LIVE_DELIVERY : STEERING_DELIVERY}`;
 }
 
 export function settledRunNote(status: RunDetail["run"]["status"]): string {
@@ -176,8 +190,10 @@ export function resolveContributionGate(
     return { ...routed, note: PROVIDER_WAIT_NOTE, queues: true };
   }
   if (!canFollowUpRun(detail.run.status)) {
-    const live = runtime.capabilities.steering === "live";
-    return { ...routed, note: live ? LIVE_NOTE : STEERING_NOTE, queues: !live };
+    // The daemon hands a live session only messages frozen against that session's own configuration.
+    const revised = session?.config?.config_hash !== config.config_hash;
+    const live = runtime.capabilities.steering === "live" && !revised;
+    return { ...routed, note: workingNote(target.step.status, live, revised), queues: !live };
   }
   // A resting run starts no turn on its own, so the daemon fails a message whose step has no session left to resume.
   if (!isSteerable(detail, target.step.id)) {

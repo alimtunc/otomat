@@ -76,8 +76,8 @@ See the [official CLI reference](https://learn.chatgpt.com/docs/developer-comman
 
 The shared execution picker exposes identical descriptors and explanations in
 profiles, host settings, simple launches, workflows, competitors and added steps.
-**Settings for next turn** exposes the same permission choices before resume or
-follow-up. Conflicting combinations display explanations and the daemon validates
+**Approval mode for next turn**, beside **Next turn** in the composer and the
+closure bar, exposes the same permission choices before resume or follow-up. Conflicting combinations display explanations and the daemon validates
 again. Unsupported saved choices remain visible as stale values. Next-turn
 settings can explicitly return to runtime permission defaults.
 

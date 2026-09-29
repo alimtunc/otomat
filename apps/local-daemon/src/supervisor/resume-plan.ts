@@ -160,12 +160,17 @@ export function resolveResumeAction(state: SupervisorState, run: RunRow): Resume
 
 function toResumePlan(action: ResumeAction): RunResumePlan {
   if (action.kind === "unavailable") return { mode: "unavailable", reason: action.reason };
-  if (action.kind === "recovery") return { mode: "recovery", reason: action.reason };
+  if (action.kind === "recovery") {
+    return { mode: "recovery", reason: action.reason, step_run_ids: [action.step.id] };
+  }
   if (action.kind === "next_step") {
     const name = action.work.kind === "step" ? action.work.step.name : action.work.group.name;
     return { mode: "next_step", step_name: name };
   }
-  return { mode: "native" };
+  if (action.kind === "compete_group") {
+    return { mode: "native", step_run_ids: action.competitors.map((step) => step.id) };
+  }
+  return { mode: "native", step_run_ids: [action.step.id] };
 }
 
 /** Wire answer for a run the cockpit is showing; an unknown run resumes nothing. */

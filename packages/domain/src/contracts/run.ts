@@ -17,6 +17,7 @@ import {
   executionOptionSelectionsSchema,
   selectsOneAgent,
 } from "./execution-config.js";
+import { runResumePlanSchema, type RunResumePlan } from "./resume.js";
 import { modelSelectionSchema } from "./runtime-model.js";
 import { supervisionRequestSchema } from "./supervision.js";
 
@@ -39,15 +40,6 @@ export const runWaitSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 export type RunWait = z.infer<typeof runWaitSchema>;
-
-/** What **Resume run** would actually do, resolved before the user commits to it; a fallback is shown as itself, never behind one hopeful label. */
-export const runResumePlanSchema = z.discriminatedUnion("mode", [
-  z.object({ mode: z.literal("native") }),
-  z.object({ mode: z.literal("recovery"), reason: z.string() }),
-  z.object({ mode: z.literal("next_step"), step_name: z.string() }),
-  z.object({ mode: z.literal("unavailable"), reason: z.string() }),
-]);
-export type RunResumePlan = z.infer<typeof runResumePlanSchema>;
 
 const UNKNOWN_RESUME_PLAN: RunResumePlan = {
   mode: "unavailable",
@@ -189,14 +181,6 @@ export const appendRunStepRequestSchema = z
   .strict()
   .refine(selectsOneAgent, { message: AGENT_SELECTION_MESSAGE });
 export type AppendRunStepRequest = z.infer<typeof appendRunStepRequestSchema>;
-
-/** Why a resume was refused. Both are caller-fixable, and the daemon's own sentence says which precondition failed. */
-export const RUN_RESUME_ERRORS = ["run_not_resumable", "issue_closed"] as const;
-
-export const runResumeErrorSchema = z.object({
-  error: z.enum(RUN_RESUME_ERRORS),
-  message: z.string(),
-});
 
 /** Why a step could not be appended. `workspace_closed` and `issue_closed` are the merge guard; `invalid_revision` is a plan the append would have broken. */
 export const RUN_STEP_APPEND_ERRORS = [

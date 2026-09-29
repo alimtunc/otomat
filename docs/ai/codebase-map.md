@@ -407,6 +407,14 @@ the result as `step_runs.next_turn_config_json`. The active session is untouched
 The first queued contribution freezes that pending hash, and the spawned resume
 turn persists the requested configuration and any provider-reported model on its
 own session row before clearing only the pending value it consumed.
+`NextTurnMenu` (composer and closure bar) writes that revision on each pick,
+with no draft to lose. A model whose announced efforts exclude the current one
+is held in the open menu until an effort it offers is picked, or, for a model
+that takes none, until **Switch without an effort** is chosen; the effort is
+never dropped silently, and a pick made while another is in flight is ignored so
+every write carries the current hash. The closure bar offers it only on a step
+the resume plan's `step_run_ids` names, because **Resume run** reopens the step
+the daemon resolves, which is not necessarily the one on screen.
 
 `RuntimeCapabilities.steering` is a guarantee level (`live`, `turn_boundary` or
 `unsupported`), not a boolean. A model override never upgrades that guarantee:

@@ -115,7 +115,7 @@ export function sandboxRunDetail(id: string): RunDetail | null {
     wait: null,
     resume: live
       ? { mode: "unavailable", reason: "A turn is already running." }
-      : { mode: "native" },
+      : { mode: "native", step_run_ids: [`${id}-step-2`] },
     holds_workspace: true,
   };
 }

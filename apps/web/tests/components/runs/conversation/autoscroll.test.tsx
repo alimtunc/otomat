@@ -65,6 +65,10 @@ vi.mock("@web/api/daemon/queries", () => ({
   useRuntimes: () => ({ data: [claudeDescriptor()] }),
 }));
 
+vi.mock("@web/components/runs/conversation/next-turn/menu", () => ({
+  NextTurnMenu: () => null,
+}));
+
 vi.mock("@otomat/ui", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useMediaQuery: () => reducedMotion,

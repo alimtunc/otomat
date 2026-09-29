@@ -5,7 +5,7 @@ import {
   type ResolvedModel,
   type RuntimeModelCatalog,
 } from "@otomat/domain";
-import { PROVIDER_DEFAULT_MODEL_LABEL } from "@web/lib/execution/labels";
+import { modelLabel, PROVIDER_DEFAULT_MODEL_LABEL } from "@web/lib/execution/labels";
 import { EXECUTION_INHERIT_VALUE } from "@web/lib/execution/selection";
 
 /** Radio sentinels a model picker adds to the shared inherit one: a selection is either an intent or a catalog model id. */
@@ -21,6 +21,14 @@ export function frozenModelLabel(model: ResolvedModel | null): string {
 
 function isCatalogModel(catalog: RuntimeModelCatalog | undefined, id: string): boolean {
   return catalog?.models.some((model) => model.id === id) ?? false;
+}
+
+export function catalogModelLabel(
+  catalog: RuntimeModelCatalog | undefined,
+  id: string | null,
+): string {
+  if (id === null) return modelLabel(null);
+  return catalog?.models.find((model) => model.id === id)?.label ?? id;
 }
 
 /** A runtime that lists nothing and takes no custom identifier can only run its provider default. */

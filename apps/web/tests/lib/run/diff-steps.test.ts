@@ -62,7 +62,7 @@ function detail(steps: StepRunContract[], sessions: AgentSessionContract[]): Run
     worktree_path: "/tmp/wt",
     base_branch: "main",
     wait: null,
-    resume: { mode: "native" },
+    resume: { mode: "native", step_run_ids: [] },
     holds_workspace: true,
   };
 }

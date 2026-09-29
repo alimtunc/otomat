@@ -126,7 +126,7 @@ export function ConversationThread({
                   </div>
                 )}
                 {isRunSettled(detail.run.status) ? (
-                  <RunClosureBar detail={detail} />
+                  <RunClosureBar detail={detail} stepRunId={stepRunId} />
                 ) : (
                   // Keyed per step: a draft written for one recipient must never travel to another thread.
                   <ConversationComposer

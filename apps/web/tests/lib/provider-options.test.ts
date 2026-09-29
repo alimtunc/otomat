@@ -3,10 +3,14 @@ import { withOptionSelection } from "@web/lib/execution/selection";
 import { providerOptionValueLabel } from "@web/lib/provider-option-labels";
 import {
   effectiveProviderOptionLabel,
+  offersEffort,
   storedProviderOptions,
   unofferedProviderOptions,
+  withEffort,
 } from "@web/lib/provider-options";
 import { expect, it } from "vitest";
+
+import { providerOptionSet } from "#support/runtime-options";
 
 const permissionMode: ProviderOptionDescriptor = {
   key: "permission_mode",
@@ -88,4 +92,32 @@ it("names Claude's permission modes as Claude does, and only under that option",
     "Bypass permissions",
   );
   expect(providerOptionValueLabel("approval_policy", "default")).toBe("Default");
+});
+
+it("replaces whichever effort key the options carried, or removes it", () => {
+  const options = { effort: "high", approval_mode: "auto" };
+
+  expect(withEffort(options, "reasoning_effort", "low")).toEqual({
+    reasoning_effort: "low",
+    approval_mode: "auto",
+  });
+  expect(withEffort(options, "effort", undefined)).toEqual({ approval_mode: "auto" });
+});
+
+it("offers an effort only when the model announces that value", () => {
+  const efforts = providerOptionSet({
+    runtime: "codex",
+    options: [
+      {
+        key: "reasoning_effort",
+        description: "Reasoning effort",
+        choices: [{ value: "high", description: null, dangerous: false }],
+        default_value: null,
+      },
+    ],
+  });
+
+  expect(offersEffort(efforts, "high")).toBe(true);
+  expect(offersEffort(efforts, "max")).toBe(false);
+  expect(offersEffort(providerOptionSet(), "high")).toBe(false);
 });

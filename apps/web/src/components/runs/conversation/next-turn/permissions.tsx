@@ -55,9 +55,9 @@ export function NextTurnPermissions({
     <div>
       <ConfigMenu>
         <ConfigMenuTrigger
+          size="xs"
           label="Approval mode for next turn"
           summary={approvalSummary(mode, hasSavedPermissions)}
-          announce="Approval mode for next turn"
         />
         <ConfigMenuContent>
           {unsupportedProviderOptions(value, support)

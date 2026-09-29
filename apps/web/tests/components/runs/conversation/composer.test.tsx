@@ -7,10 +7,11 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { findLabelled } from "#support/dom-queries";
+import { findButton, findLabelled } from "#support/dom-queries";
 
 let nextMutationError: Error | null = null;
 let contributionError: Error | null = null;
+let contributionPending = false;
 const mutate = vi.fn(
   (_variables: CreateRunContributionVariables, callbacks?: { onSuccess?: () => void }) => {
     if (nextMutationError === null) {
@@ -37,7 +38,17 @@ const CONFIG: ResolvedAgentConfig = {
 };
 
 vi.mock("@web/api/runs/mutations", () => ({
-  useCreateRunContribution: () => ({ mutate, isPending: false, error: contributionError }),
+  useCreateRunContribution: () => ({
+    mutate,
+    isPending: contributionPending,
+    error: contributionError,
+  }),
+}));
+
+vi.mock("@web/components/runs/conversation/next-turn/menu", () => ({
+  NextTurnMenu: ({ stepRunId }: { stepRunId: string }) => (
+    <button type="button">Next turn {stepRunId}</button>
+  ),
 }));
 
 vi.mock("@web/api/daemon/queries", () => ({
@@ -170,6 +181,7 @@ afterEach(async () => {
   runtimesData = undefined;
   nextMutationError = null;
   contributionError = null;
+  contributionPending = false;
 });
 
 async function renderComposer(detail: RunDetail) {
@@ -276,6 +288,58 @@ describe("ConversationComposer", () => {
     );
   });
 
+  it("says what sending does before anything is typed", async () => {
+    runtimesData = [claudeDescriptor()];
+    await renderComposer(runDetail("awaiting_human"));
+
+    const note = document.getElementById(sendButton().getAttribute("aria-describedby") ?? "");
+    expect(note?.textContent).toBe("Resumes this step's agent session as a new turn.");
+    expect(findButton("Next turn s1")).toBeDefined();
+  });
+
+  it("freezes the message against the next-turn model and effort chosen for the step", async () => {
+    runtimesData = [claudeDescriptor()];
+    const detail = runDetail("awaiting_human");
+    const nextTurn: ResolvedAgentConfig = {
+      ...CONFIG,
+      model: { id: "claude-fast", source: "manual" },
+      options: { effort: "low" },
+      config_hash: "config-next",
+    };
+    await renderComposer({
+      ...detail,
+      steps: [{ ...detail.steps[0]!, next_turn_config: nextTurn }],
+    });
+    await typePrompt("try the faster model");
+
+    await act(async () => {
+      sendButton().click();
+    });
+
+    expect(mutate.mock.calls[0]?.[0]?.request).toEqual({
+      step_run_id: "s1",
+      target_agent_session_id: "as1",
+      target_config_hash: "config-next",
+      body: "try the faster model",
+    });
+  });
+
+  it("does not send while a message is already in flight", async () => {
+    runtimesData = [claudeDescriptor()];
+    contributionPending = true;
+    await renderComposer(runDetail("awaiting_human"));
+    await typePrompt("only once");
+
+    await act(async () => {
+      promptTextarea().dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", metaKey: true, bubbles: true }),
+      );
+    });
+
+    expect(sendButton().disabled).toBe(true);
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
   it("does not submit a blank message", async () => {
     runtimesData = [claudeDescriptor()];
     await renderComposer(runDetail("awaiting_human"));
@@ -297,7 +361,7 @@ describe("ConversationComposer", () => {
 
     expect(sendButton().disabled).toBe(false);
     expect(sendButton().textContent).toContain("Queue message");
-    expect(sendButton().title).toContain("next safe turn");
+    expect(document.body.textContent).toContain("next safe turn");
 
     await act(async () => {
       promptTextarea().dispatchEvent(
@@ -325,9 +389,10 @@ describe("ConversationComposer", () => {
 
     expect(sendButton().disabled).toBe(true);
     expect(document.body.textContent).toContain(
-      "To: Agent turn · Implementer · claude · claude-opus · Session as1",
+      "To Agent turn · Implementer · claude · Session as1",
     );
     expect(document.body.textContent).toContain("This run is finished");
+    expect(findButton("Next turn s1")).toBeUndefined();
   });
 
   it("disables the action while the daemon is offline", async () => {

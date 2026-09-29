@@ -327,6 +327,13 @@ it("resumes only interrupted competitors after an explicit action", async () => 
   expect(getRun(fix.db, run.id)?.status).toBe("awaiting_human");
   expect(spawn.calls).toBe(2);
   const originalSessions = new Set(spawn.jobs.map((job) => job.agentSessionId));
+  const candidates = listStepRunsForRun(fix.db, run.id).filter(
+    (step) => step.status === "awaiting_human",
+  );
+  expect(supervisor.resumePlan(run.id)).toEqual({
+    mode: "native",
+    step_run_ids: expect.arrayContaining(candidates.map((step) => step.id)),
+  });
 
   await supervisor.resume(run.id);
   await supervisor.settle();

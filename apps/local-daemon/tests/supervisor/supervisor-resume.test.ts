@@ -46,7 +46,10 @@ it("reattaches the provider session of a run a quota error stopped, in the same 
     providerSessionId: "ps-429",
   });
 
-  expect(supervisor.resumePlan("r429")).toEqual({ mode: "native" });
+  expect(supervisor.resumePlan("r429")).toEqual({
+    mode: "native",
+    step_run_ids: [seeded.stepRunId],
+  });
   await supervisor.resume("r429");
   await supervisor.settle();
 
@@ -72,7 +75,10 @@ it("falls back to a recovery session, in the same run and step, when nothing can
     providerSessionId: null,
   });
 
-  expect(supervisor.resumePlan("rnp")).toMatchObject({ mode: "recovery" });
+  expect(supervisor.resumePlan("rnp")).toMatchObject({
+    mode: "recovery",
+    step_run_ids: [seeded.stepRunId],
+  });
   await supervisor.resume("rnp");
   await supervisor.settle();
 

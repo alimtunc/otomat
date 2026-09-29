@@ -207,6 +207,43 @@ it("sends into the live session, rather than queueing, when the runtime steers l
   expect(gate.note).toContain("live session");
 });
 
+it("queues for the next turn, never the live session, once the next turn has other settings", () => {
+  const live = { ...CLAUDE, capabilities: { ...CLAUDE.capabilities, steering: "live" as const } };
+  const revised = { ...CONFIG, model: { id: "claude-fast", source: "manual" }, config_hash: "c-2" };
+  const running = detail("running");
+  const withPending: RunDetail = {
+    ...running,
+    steps: [{ ...running.steps[0]!, next_turn_config: revised }],
+  };
+  const gate = resolveContributionGate(withPending, [live], "online", "s1");
+
+  expect(gate.targetConfig).toEqual(revised);
+  expect(gate.queues).toBe(true);
+  expect(gate.note).toContain("starts the next one with the next-turn settings");
+});
+
+it("points a pending question to its own card instead of claiming the agent is working", () => {
+  const waiting = detail("awaiting_permission");
+  const asking: RunDetail = {
+    ...waiting,
+    steps: [{ ...waiting.steps[0]!, status: "awaiting_permission" }],
+  };
+  const gate = resolveContributionGate(asking, [CLAUDE], "online", "s1");
+
+  expect(gate.stepRunId).toBe("s1");
+  expect(gate.note).toContain("answer it there");
+  expect(gate.note).toContain("next safe turn");
+  expect(gate.note).not.toContain("is working");
+});
+
+it("gives a working step the working note while another step's request is pending", () => {
+  const gate = resolveContributionGate(detail("awaiting_permission"), [CLAUDE], "online", "s1");
+
+  expect(gate.note).toContain("is working");
+  expect(gate.note).toContain("next safe turn");
+  expect(gate.queues).toBe(true);
+});
+
 it("says a runtime without steering cannot take a message once its session started", () => {
   const noSteering = {
     ...CLAUDE,
