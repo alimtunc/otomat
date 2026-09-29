@@ -25,7 +25,10 @@ const PR_OPEN: IssueExecution = { state: "pr_open", run_id: "run-1" };
 const FAILED: IssueExecution = {
   state: "failed",
   run_id: "run-1",
-  failure: { reason: "failed", step: { id: "step-1", name: "Reviewer" } },
+  failure: {
+    reason: "failed",
+    step: { id: "step-1", name: "Reviewer", stopped_at: "2026-01-01T00:00:00Z" },
+  },
 };
 
 function issue(status: IssueState, execution: IssueExecution, workspace: IssueWorkspace = OPEN) {

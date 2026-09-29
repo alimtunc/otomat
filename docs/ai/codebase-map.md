@@ -1124,7 +1124,13 @@ its plan left failed.
 `Failed` is then a projected execution state, never a stored issue status:
 `projectIssueExecution` reports it while a run that stopped (`failed`, `canceled`
 or the `awaiting_human` an interruption leaves) still holds the issue's
-workspace, with the reason and the last step that failed or went stale.
+workspace, with the reason and the step it stopped on and since when. That step
+matches the reason: an interrupted run names its last interrupted step — never an
+earlier failure, nor a later step that merely succeeded — and any other stop names
+its last failed or stale one. Naming it is also what lets an appended step declare
+that it recovers an interruption, exactly as it recovers a failure. A failed
+external operation (a Linear write, a publication) never turns this projection to
+`Failed`: it fails and retries on its own surface.
 
 The projection answers for the issue's **last** run, not for the most specific
 thing any run ever did: rows are elected on `run_created_at`, then on how much

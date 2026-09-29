@@ -83,6 +83,8 @@ function addWorktree(db: Db, runId: string): void {
     .run();
 }
 
+const STEP_UPDATED_AT = "2026-01-01 00:00:00";
+
 function addStep(
   db: Db,
   step: { runId: string; id: string; idx: number; status: StepRunState; name: string },
@@ -94,6 +96,27 @@ function addStep(
       idx: step.idx,
       name: step.name,
       status: step.status,
+      updated_at: STEP_UPDATED_AT,
+    })
+    .run();
+}
+
+function stoppedStep(id: string, name: string) {
+  return { id, name, stopped_at: "2026-01-01T00:00:00Z" };
+}
+
+function addFailedLinearPrLink(db: Db, runId: string): void {
+  db.insert(schema.linearWrites)
+    .values({
+      id: `${runId}-pr-link`,
+      issue_id: "i1",
+      run_id: runId,
+      kind: "pr_link",
+      status: "failed",
+      idempotency_key: `${runId}-pr-link`,
+      payload_json: { url: "https://github.com/o/r/pull/1", title: "PR #1" },
+      error_code: "linear_request_failed",
+      error_message: "Linear returned an unexpected response.",
     })
     .run();
 }
@@ -174,7 +197,7 @@ it("projects a failed run that still holds its workspace as failed, never back t
   expect(issue.execution).toEqual({
     state: "failed",
     run_id: "r1",
-    failure: { reason: "failed", step: { id: "s2", name: "Reviewer" } },
+    failure: { reason: "failed", step: stoppedStep("s2", "Reviewer") },
   });
   expect(issue.status).toBe("backlog");
   expect(issue.workspace).toMatchObject({ state: "open", run_id: "r1" });
@@ -190,7 +213,7 @@ it("keeps the failure and its step after a restart, from persisted rows alone", 
     expect(readIssue(reopened.db, "i1")?.execution).toEqual({
       state: "failed",
       run_id: "r1",
-      failure: { reason: "failed", step: { id: "s1", name: "Implement" } },
+      failure: { reason: "failed", step: stoppedStep("s1", "Implement") },
     });
   } finally {
     reopened.sqlite.close();
@@ -225,8 +248,54 @@ it("projects the failure of the last run, not the outcome of the run before it",
   expect(readI1(t.db).execution).toEqual({
     state: "failed",
     run_id: "new",
-    failure: { reason: "failed", step: { id: "s1", name: "Implement" } },
+    failure: { reason: "failed", step: stoppedStep("s1", "Implement") },
   });
+});
+
+it("names the interrupted step of an interrupted run, never an earlier stale one", () => {
+  addRun(t.db, { id: "r1", status: "awaiting_human" });
+  addWorktree(t.db, "r1");
+  addStep(t.db, { runId: "r1", id: "s1", idx: 0, status: "stale", name: "Implement" });
+  addStep(t.db, { runId: "r1", id: "s2", idx: 1, status: "succeeded", name: "Implement again" });
+  addStep(t.db, { runId: "r1", id: "s3", idx: 2, status: "awaiting_human", name: "Reviewer" });
+
+  expect(readI1(t.db).execution).toEqual({
+    state: "failed",
+    run_id: "r1",
+    failure: { reason: "interrupted", step: stoppedStep("s3", "Reviewer") },
+  });
+});
+
+it("keeps an older interruption standing beside a later unlinked success and a failed Linear write, restart included", () => {
+  addRun(t.db, { id: "r1", status: "awaiting_human" });
+  addWorktree(t.db, "r1");
+  addStep(t.db, { runId: "r1", id: "s0", idx: 0, status: "succeeded", name: "Agent turn" });
+  addStep(t.db, { runId: "r1", id: "s1", idx: 1, status: "awaiting_human", name: "review" });
+  addStep(t.db, { runId: "r1", id: "s2", idx: 2, status: "withdrawn", name: "review" });
+  addStep(t.db, { runId: "r1", id: "s3", idx: 3, status: "succeeded", name: "review" });
+  addFailedLinearPrLink(t.db, "r1");
+
+  const expected = {
+    state: "failed",
+    run_id: "r1",
+    failure: { reason: "interrupted", step: stoppedStep("s1", "review") },
+  };
+  expect(readI1(t.db).execution).toEqual(expected);
+  const reopened = createClient(t.dbPath);
+  try {
+    expect(readIssue(reopened.db, "i1")?.execution).toEqual(expected);
+  } finally {
+    reopened.sqlite.close();
+  }
+});
+
+it("never lets a failed Linear write turn a finished run into a failure", () => {
+  addRun(t.db, { id: "r1", status: "review_ready" });
+  addWorktree(t.db, "r1");
+  addStep(t.db, { runId: "r1", id: "s1", idx: 0, status: "succeeded", name: "Implement" });
+  addFailedLinearPrLink(t.db, "r1");
+
+  expect(readI1(t.db).execution).toEqual({ state: "reviewing", run_id: "r1" });
 });
 
 it("projects none for an issue with no runs", () => {

@@ -1,8 +1,8 @@
-import type { IssueExecutionFailure } from "@otomat/domain";
+import type { IssueExecutionStoppedStep } from "@otomat/domain";
 import { Checkbox } from "@otomat/ui";
 
 export interface RecoveryLinkFieldProps {
-  step: NonNullable<IssueExecutionFailure["step"]>;
+  step: IssueExecutionStoppedStep;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 }
@@ -21,8 +21,7 @@ export function RecoveryLinkField({ step, checked, onCheckedChange }: RecoveryLi
           This step recovers <b className="font-medium text-foreground">{step.name}</b>
         </span>
         <span className="text-xs text-text-tertiary">
-          Its failure stays in the history, but stops holding the run in <b>failed</b> once this
-          step succeeds.
+          Its stop stays in the history, but no longer holds the run once this step succeeds.
         </span>
       </span>
     </div>

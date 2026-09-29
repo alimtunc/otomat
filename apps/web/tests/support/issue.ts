@@ -1,4 +1,9 @@
-import type { IssueContract, IssueWorkspace, RunState } from "@otomat/domain";
+import type {
+  IssueContract,
+  IssueExecutionStoppedStep,
+  IssueWorkspace,
+  RunState,
+} from "@otomat/domain";
 import { CLOSED_ISSUE_WORKSPACE } from "@otomat/domain";
 
 export function openWorkspace(runId: string, runStatus: RunState): IssueWorkspace {
@@ -9,6 +14,10 @@ export function openWorkspace(runId: string, runStatus: RunState): IssueWorkspac
     run_status: runStatus,
     busy: false,
   };
+}
+
+export function stoppedStep(id: string, name: string): IssueExecutionStoppedStep {
+  return { id, name, stopped_at: "2026-01-01T00:00:00Z" };
 }
 
 export function referencedIssue(): IssueContract {

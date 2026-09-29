@@ -1,5 +1,5 @@
 import type { IssueExecution } from "@otomat/domain";
-import { Button, Icon } from "@otomat/ui";
+import { Button, Icon, RelativeTime } from "@otomat/ui";
 import { Link } from "@tanstack/react-router";
 import {
   RailMeta,
@@ -17,6 +17,11 @@ export function StoppedSection({ execution }: { execution: IssueExecution }) {
         <RailRow label="Reason">
           <span className="text-xs text-danger">{failureSummary(failure)}</span>
         </RailRow>
+        {failure.step === null ? null : (
+          <RailRow label="Since">
+            <RelativeTime date={failure.step.stopped_at} className="text-xs" />
+          </RailRow>
+        )}
       </RailMeta>
       <p className="mt-2 text-xs leading-relaxed text-text-tertiary">
         This issue keeps its branch, its worktree and its history. Resume the run or add a step to
@@ -29,7 +34,7 @@ export function StoppedSection({ execution }: { execution: IssueExecution }) {
           render={
             <Link to="/runs/$runId/logs" params={{ runId }}>
               <Icon name="terminal" aria-hidden />
-              Read the failure logs
+              Read the run logs
             </Link>
           }
         />

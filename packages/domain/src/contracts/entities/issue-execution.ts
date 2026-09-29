@@ -36,10 +36,16 @@ export type IssueBoardColumn = (typeof ISSUE_BOARD_COLUMNS)[number];
 export const ISSUE_EXECUTION_FAILURE_REASONS = ["failed", "canceled", "interrupted"] as const;
 export type IssueExecutionFailureReason = (typeof ISSUE_EXECUTION_FAILURE_REASONS)[number];
 
+const issueExecutionStoppedStepSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  stopped_at: z.iso.datetime(),
+});
+export type IssueExecutionStoppedStep = z.infer<typeof issueExecutionStoppedStepSchema>;
+
 const issueExecutionFailureSchema = z.object({
   reason: z.enum(ISSUE_EXECUTION_FAILURE_REASONS),
-  /** Last step of the holding run that failed or went stale; null when the run stopped before any step did. */
-  step: z.object({ id: z.string().min(1), name: z.string().min(1) }).nullable(),
+  step: issueExecutionStoppedStepSchema.nullable(),
 });
 export type IssueExecutionFailure = z.infer<typeof issueExecutionFailureSchema>;
 

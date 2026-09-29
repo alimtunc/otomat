@@ -91,6 +91,7 @@ export {
   type IssueExecutionFailure,
   type IssueExecutionFailureReason,
   type IssueExecutionState,
+  type IssueExecutionStoppedStep,
   type AgentSessionKind,
   type IssueSource,
   type IssueSourceContract,

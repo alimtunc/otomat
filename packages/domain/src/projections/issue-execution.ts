@@ -91,7 +91,13 @@ function toExecution(winner: Winner): IssueExecution {
   return {
     state: "failed",
     run_id: winner.evidence.run_id,
-    failure: { reason: winner.reason, step: winner.evidence.halted_step },
+    failure: {
+      reason: winner.reason,
+      step:
+        winner.reason === "interrupted"
+          ? winner.evidence.interrupted_step
+          : winner.evidence.halted_step,
+    },
   };
 }
 

@@ -1,7 +1,7 @@
 import { groupIssues } from "@web/lib/issue/grouping";
 import { describe, expect, it } from "vitest";
 
-import { issueContract, linearIssueContract, openWorkspace } from "#support/issue";
+import { issueContract, linearIssueContract, openWorkspace, stoppedStep } from "#support/issue";
 
 const PROJECT_NAMES = new Map([["project-1", "Otomat"]]);
 
@@ -45,7 +45,7 @@ describe("groupIssues", () => {
       execution: {
         state: "failed",
         run_id: "r1",
-        failure: { reason: "failed", step: { id: "s1", name: "Reviewer" } },
+        failure: { reason: "failed", step: stoppedStep("s1", "Reviewer") },
       },
       workspace: openWorkspace("r1", "failed"),
     });

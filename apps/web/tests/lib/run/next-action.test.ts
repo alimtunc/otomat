@@ -28,7 +28,7 @@ const EXPECTED = {
   preparing: { kind: "follow", cta: "Follow live" },
   running: { kind: "follow", cta: "Follow live" },
   awaiting_permission: { kind: "answer", cta: "Answer the request" },
-  awaiting_human: { kind: "answer", cta: "Answer in the conversation" },
+  awaiting_human: { kind: "answer", cta: "Open the waiting step" },
   awaiting_selection: { kind: "choose", cta: "Choose the winner" },
   waiting_for_provider: { kind: "wait", cta: null },
   review_ready: { kind: "review", cta: "Review the diff" },
@@ -132,7 +132,7 @@ describe("resolveNextAction", () => {
   });
 
   it("deep-links the failing step when it is known", () => {
-    const action = resolveNextAction({ status: "failed", failedStepId: "step-9" });
+    const action = resolveNextAction({ status: "failed", stoppedStepId: "step-9" });
     expect(action.cta?.target).toEqual({ type: "conversation", stepId: "step-9" });
   });
 });
@@ -149,7 +149,7 @@ describe("ctaTargetsCurrentTab", () => {
   });
 
   it("keeps a step deep-link and external links everywhere", () => {
-    const failing = resolveNextAction({ status: "failed", failedStepId: "s9" }).cta;
+    const failing = resolveNextAction({ status: "failed", stoppedStepId: "s9" }).cta;
     expect(failing && ctaTargetsCurrentTab(failing, "/runs/r1", "r1")).toBe(false);
     const open = resolveNextAction({ status: "completed", pullRequest: pr() }).cta;
     expect(open && ctaTargetsCurrentTab(open, "/runs/r1/pr", "r1")).toBe(false);
@@ -166,6 +166,40 @@ describe("runNextAction", () => {
       undefined,
     );
     expect(action.cta?.target).toEqual({ type: "conversation", stepId: "s2" });
+  });
+
+  it("deep-links the stale step a reconciled failure left, as the issue names it", () => {
+    const action = runNextAction(
+      runDetailFixture("failed", [
+        { id: "s1", status: "failed" },
+        { id: "s2", status: "stale" },
+      ]),
+      undefined,
+    );
+    expect(action.cta?.target).toEqual({ type: "conversation", stepId: "s2" });
+  });
+
+  it("sends an interrupted run to its stopped step, not to a later one that succeeded", () => {
+    const action = runNextAction(
+      runDetailFixture("awaiting_human", [
+        { id: "s1", status: "succeeded" },
+        { id: "s2", status: "awaiting_human" },
+        { id: "s3", status: "succeeded" },
+      ]),
+      undefined,
+    );
+    expect(action.cta?.target).toEqual({ type: "conversation", stepId: "s2" });
+  });
+
+  it("sends an interrupted run to its interrupted step, not to a later failed one", () => {
+    const action = runNextAction(
+      runDetailFixture("awaiting_human", [
+        { id: "s1", status: "awaiting_human" },
+        { id: "s2", status: "failed" },
+      ]),
+      undefined,
+    );
+    expect(action.cta?.target).toEqual({ type: "conversation", stepId: "s1" });
   });
 
   it("treats a loaded empty publication as publishable", () => {

@@ -41,7 +41,9 @@ context.
 ## A run stopped
 
 - **Interrupted** — the daemon or the provider process stopped mid-turn (a crash, a quit, **Stop
-  step**). Send a message to [resume](./steering.md#stop-cancel-resume).
+  step**). The issue's **Stopped** section names the step and since when. Send a message to
+  [resume](./steering.md#stop-cancel-resume) it, or add a follow-up step with **This step
+  recovers …** ticked; a later step added without that link does not release it.
 - **Failed** — open the failing step; its last messages and the provider's own error are there.
   The branch and the worktree are intact; resume, add a step, or abandon.
 - **Waiting on provider** — the provider's quota is exhausted; Otomat

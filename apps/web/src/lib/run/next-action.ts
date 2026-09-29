@@ -1,4 +1,5 @@
 import type { PullRequestDetail, PullRequestState, RunDetail, RunState } from "@otomat/domain";
+import { STEP_RUN_FAILURE_STATES } from "@otomat/domain";
 import type { StatusTone } from "@otomat/ui";
 
 type NextActionKind =
@@ -46,8 +47,8 @@ export interface NextActionInput {
   status: RunState;
   /** `undefined` when publication state is unknown (the runs list); `null` when known absent. */
   pullRequest?: NextActionPullRequest | null;
-  /** Latest failed step, when the caller has the run's step graph. */
-  failedStepId?: string | null;
+  /** Latest step the run stopped on, when the caller has the run's step graph. */
+  stoppedStepId?: string | null;
 }
 
 const FOLLOW_CTA: NextActionCta = { label: "Follow live", target: { type: "conversation" } };
@@ -150,12 +151,15 @@ export function resolveNextAction(input: NextActionInput): NextAction {
     case "awaiting_human":
       return {
         kind: "answer",
-        description: "The agent asked a question and waits on your answer.",
+        description: "The run is paused and waits on you — resume it when ready.",
         tone: "warning",
         cta: {
-          label: "Answer in the conversation",
-          shortLabel: "Answer",
-          target: { type: "conversation" },
+          label: "Open the waiting step",
+          shortLabel: "Open step",
+          target:
+            input.stoppedStepId == null
+              ? { type: "conversation" }
+              : { type: "conversation", stepId: input.stoppedStepId },
         },
       };
     case "awaiting_selection":
@@ -194,9 +198,9 @@ export function resolveNextAction(input: NextActionInput): NextAction {
           label: "Open the failing step",
           shortLabel: "Open step",
           target:
-            input.failedStepId == null
+            input.stoppedStepId == null
               ? { type: "conversation" }
-              : { type: "conversation", stepId: input.failedStepId },
+              : { type: "conversation", stepId: input.stoppedStepId },
         },
       };
     case "canceled":
@@ -235,9 +239,11 @@ export function runNextAction(
   detail: RunDetail,
   pullRequestDetail: PullRequestDetail | undefined,
 ): NextAction {
+  const stoppedOn: readonly string[] =
+    detail.run.status === "awaiting_human" ? ["awaiting_human"] : STEP_RUN_FAILURE_STATES;
   return resolveNextAction({
     status: detail.run.status,
-    failedStepId: detail.steps.findLast((step) => step.status === "failed")?.id ?? null,
+    stoppedStepId: detail.steps.findLast((step) => stoppedOn.includes(step.status))?.id ?? null,
     pullRequest: pullRequestFacts(pullRequestDetail),
   });
 }
