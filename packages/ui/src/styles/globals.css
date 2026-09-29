@@ -87,6 +87,8 @@
   --radius-xl: var(--radius-xl);
   --radius-full: var(--radius-full);
 
+  --container-reading: var(--reading-width);
+
   --font-sans: var(--font-ui);
   --font-mono: var(--font-mono);
 

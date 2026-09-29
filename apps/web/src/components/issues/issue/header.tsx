@@ -22,7 +22,7 @@ function LocalIssueDescription({
   body: string;
   hasRun: boolean | null;
 }) {
-  if (hasRun === null) return <Skeleton height={64} />;
+  if (hasRun === null) return <Skeleton height={64} className="max-w-reading" />;
   return (
     <IssueDescription key={`${issueId}:${hasRun}`} body={body} collapsed={hasRun}>
       <Markdown value={body} className="text-sm text-foreground" allowMedia />

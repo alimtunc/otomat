@@ -21,7 +21,7 @@ export function IssueDescription({
 }) {
   const [open, setOpen] = useState(!collapsed);
   return (
-    <section id="issue-description">
+    <section id="issue-description" className="max-w-reading">
       <Collapsible open={open} onOpenChange={setOpen}>
         {open || !body ? null : (
           <div

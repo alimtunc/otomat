@@ -68,7 +68,7 @@ export function LinearIssueHeader({
       <DraftBar editing={editing} />
       {children}
       {hasRun === null ? (
-        <Skeleton height={64} />
+        <Skeleton height={64} className="max-w-reading" />
       ) : (
         <LinearMediaProvider issueId={issue.id}>
           <IssueDescription

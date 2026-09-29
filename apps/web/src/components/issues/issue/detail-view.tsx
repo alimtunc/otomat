@@ -87,7 +87,7 @@ export function IssueDetailView() {
 
   const main = (
     <div className={cn("min-w-0 px-4 py-6.5 sm:px-8", wide && "h-full overflow-auto")}>
-      <div className="flex max-w-180 flex-col gap-4">
+      <div className="mx-auto flex max-w-5xl flex-col gap-4">
         <IssueHeader
           query={issue}
           hasRun={runs.data === undefined && !runs.isError ? null : followedRun !== null}
