@@ -1,8 +1,8 @@
 diff --git a/lib/unixTerminal.js b/lib/unixTerminal.js
+index 1ec12f796a822c78fba9ad7f6448c3987e325c23..ad01cda6181804967ec1aa4c5905045a8dd7d8a7 100644
 --- a/lib/unixTerminal.js
 +++ b/lib/unixTerminal.js
-@@ -28,8 +28,8 @@
- var native = utils_1.loadNativeModule('pty');
+@@ -28,8 +28,8 @@ var native = utils_1.loadNativeModule('pty');
  var pty = native.module;
  var helperPath = native.dir + '/spawn-helper';
  helperPath = path.resolve(__dirname, helperPath);
@@ -12,3 +12,19 @@ diff --git a/lib/unixTerminal.js b/lib/unixTerminal.js
 +helperPath = helperPath.replace(/node_modules\.asar(?!\.unpacked)/, 'node_modules.asar.unpacked');
  var DEFAULT_FILE = 'sh';
  var DEFAULT_NAME = 'xterm';
+ var DESTROY_SOCKET_TIMEOUT_MS = 200;
+diff --git a/scripts/post-install.js b/scripts/post-install.js
+index 8dbac507ea9c64169ea500a0115816056c0bc309..8ca4aee63cb09a22ed625e04a4ef0064352a2dda 100644
+--- a/scripts/post-install.js
++++ b/scripts/post-install.js
+@@ -77,4 +77,10 @@ if (os.platform() !== 'win32') {
+   }
+ }
+ 
++const PREBUILDS_DIR = path.join(__dirname, '../prebuilds');
++for (const dir of fs.existsSync(PREBUILDS_DIR) ? fs.readdirSync(PREBUILDS_DIR) : []) {
++  const helper = path.join(PREBUILDS_DIR, dir, 'spawn-helper');
++  if (fs.existsSync(helper)) fs.chmodSync(helper, 0o755);
++}
++
+ process.exit(0);
