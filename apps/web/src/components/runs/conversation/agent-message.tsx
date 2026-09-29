@@ -6,7 +6,7 @@ export function AgentMessage({ event, text }: { event: EventEnvelope; text: stri
     <li className="flex flex-col gap-1.5 px-6 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <AgentAvatar name={event.source} size="sm" />
-        <span className="text-xs font-semibold text-text-secondary">Agent</span>
+        <span className="text-xs font-semibold text-foreground">Agent</span>
         <RelativeTime date={event.occurred_at} className="text-xs" />
         <CopyButton value={text} label="Copy message" className="ml-auto" />
       </div>
