@@ -2201,8 +2201,11 @@ across daemon restarts is not supported.
 
 `prepare-daemon.mjs` stages the host's native PTY binding and macOS spawn helper
 outside asar. The node-pty patch prevents a second `.unpacked` suffix when the
-whole daemon is already unpacked. The packaged smoke launches a real PTY through
-the shipped Electron binary, covering helper resolution as well as native loading.
+whole daemon is already unpacked, and its postinstall marks the spawn helper
+executable: the published tarball ships it without the execute bit, which makes
+every macOS spawn fail with `posix_spawnp failed`. The packaged smoke launches a
+real PTY through the shipped Electron binary, covering helper resolution as well
+as native loading.
 
 ## Opening a Worktree Outside Otomat
 

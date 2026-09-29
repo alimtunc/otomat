@@ -164,7 +164,7 @@ settings:
 
 patchedDependencies:
   '@git-diff-view/react@0.1.7': 88818be447bb7ee5862261de7792056c19ec351cfd58174a3a2e5f9ac089cb64
-  node-pty@1.1.0: 78e64e176b9919d8c510afaeb0ecc7b56498b4953abadaaefe7931a54cbca607
+  node-pty@1.1.0: 05c2b7dd797d0c1a836dca185e7df312bc0d76eabe8b885bb6047d60a5efb8de
 
 importers:
 
@@ -250,7 +250,7 @@ importers:
         version: 4.13.8
       node-pty:
         specifier: 1.1.0
-        version: 1.1.0(patch_hash=78e64e176b9919d8c510afaeb0ecc7b56498b4953abadaaefe7931a54cbca607)
+        version: 1.1.0(patch_hash=05c2b7dd797d0c1a836dca185e7df312bc0d76eabe8b885bb6047d60a5efb8de)
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -9505,7 +9505,7 @@ snapshots:
 
   node-int64@0.4.0: {}
 
-  node-pty@1.1.0(patch_hash=78e64e176b9919d8c510afaeb0ecc7b56498b4953abadaaefe7931a54cbca607):
+  node-pty@1.1.0(patch_hash=05c2b7dd797d0c1a836dca185e7df312bc0d76eabe8b885bb6047d60a5efb8de):
     dependencies:
       node-addon-api: 7.1.1
 
