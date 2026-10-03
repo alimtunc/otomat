@@ -35,9 +35,9 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
-    "lucide-react": "^1.47.0",
+    "lucide-react": "^1.49.0",
     "markdown-to-jsx": "^9.10.3",
-    "react-resizable-panels": "^4.13.2",
+    "react-resizable-panels": "^4.14.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0"
   },
@@ -48,7 +48,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.3"
   },
   "peerDependencies": {
     "react": "^19.0.0",
